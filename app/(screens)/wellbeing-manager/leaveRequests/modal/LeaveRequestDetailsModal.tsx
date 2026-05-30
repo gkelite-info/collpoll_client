@@ -589,20 +589,20 @@ export default function LeaveRequestDetailsModal({
 
                         <div
                           onClick={(e) => {
-                            if (isSelectionMode) {
-                              // Selection click is handled at the row level
-                              return;
-                            }
-                            if (canEdit) {
-                              setActiveMessageActionsId(
-                                activeMessageActionsId === msg.chatId ? null : msg.chatId
-                              );
-                            }
-                          }}
-                          className={`px-3 py-2 rounded-xl text-[12px] relative ${isMe
-                              ? "bg-[#43C17A] text-white rounded-tr-sm shadow-sm"
-                              : "bg-white text-[#282828] rounded-tl-sm border border-gray-200 shadow-sm"
-                            } ${canEdit && !isSelectionMode ? "cursor-pointer select-none" : ""}`}
+                          if (isSelectionMode) {
+                            // Selection click is handled at the row level
+                            return;
+                          }
+                          if (canEdit || canDelete) {
+                            setActiveMessageActionsId(
+                              activeMessageActionsId === msg.chatId ? null : msg.chatId
+                            );
+                          }
+                        }}
+                        className={`px-3 py-2 rounded-xl text-[12px] relative ${isMe
+                            ? "bg-[#43C17A] text-white rounded-tr-sm shadow-sm"
+                            : "bg-white text-[#282828] rounded-tl-sm border border-gray-200 shadow-sm"
+                          } ${(canEdit || canDelete) && !isSelectionMode ? "cursor-pointer select-none" : ""}`}
                         >
                           {msg.mediaUrl && (
                             <div className="mb-1.5">
@@ -690,35 +690,39 @@ export default function LeaveRequestDetailsModal({
                         </div>
 
                         <div className="flex items-center gap-1 mt-0.5 px-0.5">
-                          {canEdit && !isEditing && !isSelectionMode && (
+                          {(canEdit || canDelete) && !isEditing && !isSelectionMode && (
                             <span
                               className={`flex items-center gap-0.5 transition-opacity ${activeMessageActionsId === msg.chatId
                                   ? "opacity-100"
                                   : "opacity-0 group-hover:opacity-100"
                                 }`}
                             >
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  startEditingMessage(msg);
-                                }}
-                                className="cursor-pointer rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-[#43C17A] hover:bg-[#E7F8EE] transition-colors"
-                                title="Edit message"
-                              >
-                                <PencilSimple size={12} weight="bold" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  initiateDeleteMessage(msg.chatId);
-                                }}
-                                className="cursor-pointer rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-[#FF4B4B] hover:bg-[#FFE5E5] transition-colors"
-                                title="Delete message"
-                              >
-                                <Trash size={12} weight="bold" />
-                              </button>
+                              {canEdit && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    startEditingMessage(msg);
+                                  }}
+                                  className="cursor-pointer rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-[#43C17A] hover:bg-[#E7F8EE] transition-colors"
+                                  title="Edit message"
+                                >
+                                  <PencilSimple size={12} weight="bold" />
+                                </button>
+                              )}
+                              {canDelete && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    initiateDeleteMessage(msg.chatId);
+                                  }}
+                                  className="cursor-pointer rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-[#FF4B4B] hover:bg-[#FFE5E5] transition-colors"
+                                  title="Delete message"
+                                >
+                                  <Trash size={12} weight="bold" />
+                                </button>
+                              )}
                             </span>
                           )}
                           <span className="text-[9px] text-gray-400 font-medium">

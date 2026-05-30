@@ -179,8 +179,7 @@ async function attachProfileUrls(rows: EmployeeLeaveRequestRecord[]) {
     .from("user_profile")
     .select("userId, profileUrl")
     .in("userId", userIds)
-    .eq("is_deleted", false)
-    .is("deletedAt", null);
+    .eq("is_deleted", false);
 
   if (error) throw error;
 

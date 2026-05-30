@@ -77,7 +77,7 @@ export default function WellbeingExecutiveRight({
   const isFullWidth = button ? true : false
 
   const SidebarContent = (
-    <div className="flex min-h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       {showHeaderCards ? (
         <div className={`grid w-full shrink-0 items-end justify-end ${button ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
           {HeaderAction || '  '} 
@@ -112,7 +112,8 @@ export default function WellbeingExecutiveRight({
         <AnnouncementsCard
           announceCard={wellbeingAnnouncements}
           height={bounded ? announcementHeight : "100%"}
-          readOnly
+          refreshAnnouncements={async () => {}}
+          currentView="my"
         />
       </div>
     </div>
