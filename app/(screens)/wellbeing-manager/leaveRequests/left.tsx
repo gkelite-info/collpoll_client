@@ -472,7 +472,7 @@ function WellbeingLeavesContent() {
         </div>
 
         {!isLoading && totalCount > itemsPerPage && (
-          <div className="mt-4">
+          <div className="mt-1">
             <Pagination
               currentPage={page}
               totalItems={totalCount}
