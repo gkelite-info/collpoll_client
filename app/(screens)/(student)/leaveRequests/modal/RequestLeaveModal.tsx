@@ -399,6 +399,7 @@ import { X, CaretDown, Check, File as FileIcon } from "@phosphor-icons/react";
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/app/utils/Avatar";
+import toast from "react-hot-toast";
 
 interface RequestLeaveModalProps {
   isOpen: boolean;
@@ -421,6 +422,9 @@ export default function RequestLeaveModal({
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [isLeaveTypeDropdownOpen, setIsLeaveTypeDropdownOpen] = useState(false);
+  const leaveTypeDropdownRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState({
     leaveType: "",
@@ -455,13 +459,38 @@ export default function RequestLeaveModal({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isDropdownOpen]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        leaveTypeDropdownRef.current &&
+        !leaveTypeDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsLeaveTypeDropdownOpen(false);
+      }
+    };
+    if (isLeaveTypeDropdownOpen)
+      document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isLeaveTypeDropdownOpen]);
+
   if (!isOpen) return null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
+
+      const containsApk = newFiles.some(file =>
+        file.name.toLowerCase().endsWith(".apk") ||
+        file.type === "application/vnd.android.package-archive"
+      );
+
+      if (containsApk) {
+        toast.error("APK files are not allowed.");
+        return;
+      }
+
       if (files.length + newFiles.length > 5) {
-        alert(t("You can only upload a maximum of 5 files"));
+        toast.error(t("You can only upload a maximum of 5 files"));
         return;
       }
       setFiles((prev) => [...prev, ...newFiles]);
@@ -474,8 +503,20 @@ export default function RequestLeaveModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.leaveType) {
+      toast.error(t("Select Leave Type"));
+      return;
+    }
+    if (!formData.startDate) {
+      toast.error(t("Start Date"));
+      return;
+    }
+    if (!formData.endDate) {
+      toast.error(t("End Date"));
+      return;
+    }
     if (!formData.faculty) {
-      alert(t("Please select a faculty"));
+      toast.error(t("Please select a faculty"));
       return;
     }
 
@@ -537,27 +578,58 @@ export default function RequestLeaveModal({
               <label className="text-[15px] font-semibold text-[#282828]">
                 {t("Leave Type")} <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <select
-                  required
-                  value={formData.leaveType}
-                  onChange={(e) =>
-                    setFormData({ ...formData, leaveType: e.target.value })
-                  }
-                  className="w-full appearance-none border border-[#E0E0E0] rounded-md px-3 py-2.5 text-sm text-[#525252] outline-none focus:border-[#43C17A] cursor-pointer bg-white"
+              <div className="relative" ref={leaveTypeDropdownRef}>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => setIsLeaveTypeDropdownOpen((isOpen) => !isOpen)}
+                  className="flex h-11 w-full cursor-pointer items-center justify-between rounded border border-[#E0E0E0] bg-white px-3 py-2.5 text-sm text-[#525252] outline-none disabled:cursor-not-allowed disabled:opacity-70 focus:border-[#43C17A]"
                 >
-                  <option value="" disabled>
-                    {t("Select Leave Type")}
-                  </option>
-                  <option value="leave">{t("Leave")}</option>
-                  <option value="attendanceregularization">
-                    {t("Attendance Regularization")}
-                  </option>
-                </select>
-                <CaretDown
-                  size={16}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                />
+                  {formData.leaveType === "leave"
+                    ? t("Leave")
+                    : formData.leaveType === "attendanceregularization"
+                    ? t("Attendance Regularization")
+                    : t("Select Leave Type")}
+                  <CaretDown
+                    size={16}
+                    className={`text-gray-500 transition-transform duration-200 ${
+                      isLeaveTypeDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {isLeaveTypeDropdownOpen && (
+                  <div className="absolute left-0 right-0 z-50 mt-1 max-h-[320px] overflow-hidden rounded border border-gray-200 bg-white shadow-xl py-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, leaveType: "leave" });
+                        setIsLeaveTypeDropdownOpen(false);
+                      }}
+                      className={`flex h-10 w-full cursor-pointer items-center px-4 text-left text-sm transition-colors duration-150 ${
+                        formData.leaveType === "leave"
+                          ? "bg-[#E7F8EE] text-[#43C17A] font-semibold"
+                          : "text-[#282828] hover:bg-gray-50"
+                      }`}
+                    >
+                      {t("Leave")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, leaveType: "attendanceregularization" });
+                        setIsLeaveTypeDropdownOpen(false);
+                      }}
+                      className={`flex h-10 w-full cursor-pointer items-center px-4 text-left text-sm transition-colors duration-150 ${
+                        formData.leaveType === "attendanceregularization"
+                          ? "bg-[#E7F8EE] text-[#43C17A] font-semibold"
+                          : "text-[#282828] hover:bg-gray-50"
+                      }`}
+                    >
+                      {t("Attendance Regularization")}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -575,9 +647,14 @@ export default function RequestLeaveModal({
                     required
                     min={new Date().toISOString().split("T")[0]}
                     value={formData.startDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, startDate: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const newStart = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        startDate: newStart,
+                        endDate: prev.endDate && prev.endDate < newStart ? "" : prev.endDate,
+                      }));
+                    }}
                     className="w-full border border-[#E0E0E0] rounded-md px-3 py-2.5 text-sm text-[#525252] outline-none focus:border-[#43C17A] cursor-pointer"
                   />
                 </div>
@@ -588,6 +665,7 @@ export default function RequestLeaveModal({
                   <input
                     type="date"
                     required
+                    disabled={!formData.startDate}
                     min={
                       formData.startDate ||
                       new Date().toISOString().split("T")[0]
@@ -596,7 +674,7 @@ export default function RequestLeaveModal({
                     onChange={(e) =>
                       setFormData({ ...formData, endDate: e.target.value })
                     }
-                    className="w-full border border-[#E0E0E0] rounded-md px-3 py-2.5 text-sm text-[#525252] outline-none focus:border-[#43C17A] cursor-pointer"
+                    className="w-full border border-[#E0E0E0] rounded-md px-3 py-2.5 text-sm text-[#525252] outline-none focus:border-[#43C17A] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -622,11 +700,6 @@ export default function RequestLeaveModal({
                   <span>{t("No faculties assigned")}</span>
                 ) : formData.faculty ? (
                   <div className="flex items-center gap-2 overflow-hidden pr-2">
-                    {/* <img
-                      src={formData.faculty.avatar}
-                      alt="faculty"
-                      className="w-6 h-6 rounded-full shrink-0 object-cover"
-                    /> */}
                     <Avatar
                       src={formData.faculty.avatar}
                       size={24}
@@ -731,32 +804,34 @@ export default function RequestLeaveModal({
                     return (
                       <div
                         key={i}
-                        className="relative shrink-0 w-16 h-16 border border-gray-200 rounded-md overflow-hidden bg-white shadow-sm flex flex-col items-center justify-center group"
+                        className="relative shrink-0 w-16 h-16 border border-gray-200 rounded-md bg-white shadow-sm flex flex-col items-center justify-center group"
                       >
-                        {isImage ? (
-                          <img
-                            src={URL.createObjectURL(f)}
-                            className="w-full h-full object-cover"
-                            alt="preview"
-                          />
-                        ) : (
-                          <div className="flex flex-col items-center justify-center p-1">
-                            <FileIcon
-                              size={20}
-                              weight="fill"
-                              className="text-gray-400"
+                        <div className="w-full h-full rounded-md overflow-hidden flex items-center justify-center">
+                          {isImage ? (
+                            <img
+                              src={URL.createObjectURL(f)}
+                              className="w-full h-full object-cover"
+                              alt="preview"
                             />
-                            <span className="text-[10px] text-gray-500 truncate w-14 text-center mt-1">
-                              {f.name}
-                            </span>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="flex flex-col items-center justify-center p-1">
+                              <FileIcon
+                                size={20}
+                                weight="fill"
+                                className="text-gray-400"
+                              />
+                              <span className="text-[10px] text-gray-500 truncate w-14 text-center mt-1">
+                                {f.name}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                         <button
                           type="button"
                           onClick={() => removeFile(i)}
-                          className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 text-red-500 shadow-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+                          className="absolute -top-1.5 -right-1.5 bg-white rounded-full p-0.5 text-red-500 shadow-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10 border border-gray-100"
                         >
-                          <X size={12} weight="bold" />
+                          <X size={10} weight="bold" />
                         </button>
                       </div>
                     );

@@ -138,3 +138,37 @@ export async function markMessagesAsRead(
     .eq("senderRole", senderRoleToMark)
     .eq("isRead", false);
 }
+
+export async function editLeaveChatMessage(chatId: number, message: string) {
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("leave_request_chats")
+    .update({
+      message: message.trim(),
+      updatedAt: now,
+    })
+    .eq("chatId", chatId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return formatChatMessage(data);
+}
+
+export async function deleteLeaveChatMessage(chatId: number) {
+  const { error } = await supabase
+    .from("leave_request_chats")
+    .delete()
+    .eq("chatId", chatId);
+
+  if (error) throw error;
+}
+
+export async function deleteLeaveChatMessages(chatIds: number[]) {
+  const { error } = await supabase
+    .from("leave_request_chats")
+    .delete()
+    .in("chatId", chatIds);
+
+  if (error) throw error;
+}
