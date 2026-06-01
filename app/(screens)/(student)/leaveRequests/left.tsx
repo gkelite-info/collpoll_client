@@ -8,12 +8,13 @@ import {
   MagnifyingGlass,
   CalendarIcon,
   Paperclip,
+  X,
 } from "@phosphor-icons/react";
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
 import RequestLeaveModal from "./modal/RequestLeaveModal";
 import toast from "react-hot-toast";
-import { Pagination } from "@/app/(screens)/faculty/assignments/components/pagination";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 import {
@@ -23,6 +24,9 @@ import {
 } from "@/lib/helpers/student/leave request/studentLeaveAPI";
 import StudentLeaveDetailsModal from "./modal/LeaveRequestDetailsModal";
 import { useTranslations } from "next-intl";
+
+const formatDateKey = (dateKey: string) =>
+  new Date(`${dateKey}T00:00:00`).toLocaleDateString("en-GB");
 
 function LeaveLeftContent() {
   const { userId } = useUser();
@@ -50,7 +54,10 @@ function LeaveLeftContent() {
   const [selectedLeaveData, setSelectedLeaveData] = useState<any>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  const itemsPerPage = 2;
+  const [selectedDateKey, setSelectedDateKey] = useState("");
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+
+  const itemsPerPage = 10;
 
   const COLUMNS = [
     { title: t("SNo"), key: "sNo" },
@@ -70,6 +77,8 @@ function LeaveLeftContent() {
     }, 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+
 
   useEffect(() => {
     if (!userId) return;
@@ -94,8 +103,9 @@ function LeaveLeftContent() {
           itemsPerPage,
           activeTab,
           debouncedSearch,
+          selectedDateKey || undefined,
         ),
-        fetchStudentLeaveCounts(studentId),
+        fetchStudentLeaveCounts(studentId, selectedDateKey || undefined),
       ]);
       setTableData(tableRes.data);
       setTotalItems(tableRes.totalCount);
@@ -109,7 +119,7 @@ function LeaveLeftContent() {
 
   useEffect(() => {
     loadData();
-  }, [studentId, activeTab, debouncedSearch, page]);
+  }, [studentId, activeTab, debouncedSearch, page, selectedDateKey]);
 
   const handleTabChange = (tabId: any) => {
     setActiveTab(tabId);
@@ -127,6 +137,8 @@ function LeaveLeftContent() {
       toast.error(t("Failed to submit request Please try again"));
     }
   };
+
+
 
   const finalTableData = useMemo(() => {
     return tableData.map((item, index) => ({
@@ -261,7 +273,7 @@ function LeaveLeftContent() {
         }
       `}</style>
 
-      <div className="flex flex-col p-6 max-md:p-1 w-full max-w-[68%] mx-auto min-h-screen max-md:max-w-[100%]">
+      <div className="flex flex-col p-2 max-md:p-1 w-full mx-auto min-h-screen">
         <div className="flex justify-between items-start mb-6 max-md:gap-4">
           <div className="flex flex-col gap-1 max-md:gap-0">
             <h1 className="text-[#282828] font-bold text-2xl max-md:text-lg">
@@ -304,26 +316,76 @@ function LeaveLeftContent() {
           })}
         </div>
 
-        <div className="flex justify-between items-center rounded-xl px-4 py-3 max-md:px-0 gap-2">
-          <div className="relative w-full max-w-[300px] max-md:max-w-[100%] flex items-center ">
-            <MagnifyingGlass
-              size={20}
-              className="absolute left-3 text-[#43C17A] pointer-events-none"
-            />
-            <input
-              type="text"
-              placeholder={t("Search")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-gray-200 rounded-full pl-10 pr-4 py-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] placeholder-gray-500"
-            />
-          </div>
+        <div className="flex flex-col sm:flex-row justify-between items-center rounded-xl px-4 py-3 max-md:px-0 gap-2">
+          {/* <div className="order-2 sm:order-1 flex flex-1 items-center gap-3"> */}
+            <div className="order-2 sm:order-1 relative w-full max-w-full sm:max-w-[300px] flex items-center ">
+              <MagnifyingGlass
+                size={20}
+                className="absolute left-3 text-[#43C17A] pointer-events-none"
+              />
+              <input
+                type="text"
+                placeholder="Search by leave type or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-gray-200 rounded-full pl-10 pr-4 py-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] placeholder-gray-500"
+              />
+            </div>
+          {/* </div> */}
 
-          <div className="flex items-center gap-2 bg-[#DAE9E1] px-4 py-1.5 rounded-md max-md:hidden">
-            <CalendarIcon size={18} className="text-[#43C17A]" weight="fill" />
-            <span className="text-[#43C17A] font-bold text-sm tracking-wide cursor-pointer">
-              {new Date().toLocaleDateString("en-GB")}
-            </span>
+          <div className="order-1 sm:order-2 self-end sm:self-center">
+            {!isDatePickerOpen ? (
+              <button
+                type="button"
+                onClick={() => setIsDatePickerOpen(true)}
+                className="flex items-center gap-2 bg-[#DAE9E1] px-4 py-1.5 rounded-md text-[#43C17A] font-bold text-sm tracking-wide cursor-pointer hover:bg-[#cbe6d7] transition-colors"
+                title="Select date"
+              >
+                <CalendarIcon size={18} weight="fill" />
+                {selectedDateKey
+                  ? formatDateKey(selectedDateKey)
+                  : new Date().toLocaleDateString("en-GB")}
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 rounded-md border border-[#43C17A] bg-white p-1 shadow-sm h-[32px]">
+                <CalendarIcon
+                  size={18}
+                  className="ml-1 text-[#43C17A]"
+                  weight="fill"
+                />
+                <input
+                  type="date"
+                  value={selectedDateKey}
+                  onChange={(event) => {
+                    if (event.target.value) {
+                      setSelectedDateKey(event.target.value);
+                      setIsDatePickerOpen(false);
+                    }
+                  }}
+                  className="cursor-pointer rounded border border-gray-300 px-1 py-0.5 text-xs text-gray-700 outline-none focus:border-[#43C17A]"
+                />
+                {selectedDateKey && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedDateKey("");
+                      setIsDatePickerOpen(false);
+                    }}
+                    className="cursor-pointer rounded px-1 text-xs font-semibold text-red-500 hover:text-red-700"
+                  >
+                    Clear
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsDatePickerOpen(false)}
+                  className="cursor-pointer rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                  title="Close"
+                >
+                  <X size={12} weight="bold" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -337,7 +399,7 @@ function LeaveLeftContent() {
         </div>
 
         {!isLoading && totalItems > itemsPerPage && (
-          <div className="mt-4">
+          <div className="mt-2">
             <Pagination
               currentPage={page}
               totalItems={totalItems}
@@ -378,3 +440,5 @@ export default function LeavesLeft() {
     </Suspense>
   );
 }
+
+

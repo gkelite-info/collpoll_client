@@ -7,6 +7,9 @@ import {
   PaperPlaneRight,
   FilePdf,
   Checks,
+  PencilSimple,
+  Trash,
+  Check,
 } from "@phosphor-icons/react";
 import { supabase } from "@/lib/supabaseClient";
 import {
@@ -14,10 +17,14 @@ import {
   fetchSingleChatMessage,
   sendLeaveChatMessage,
   markMessagesAsRead,
+  editLeaveChatMessage,
+  deleteLeaveChatMessage,
+  deleteLeaveChatMessages,
 } from "@/lib/helpers/student/leave request/leaveChatAPI";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/app/utils/Avatar";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
 interface StudentLeaveDetailsModalProps {
   isOpen: boolean;
@@ -49,8 +56,22 @@ export default function StudentLeaveDetailsModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const channelRef = useRef<any>(null);
+
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const [isUpdatingMessage, setIsUpdatingMessage] = useState(false);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [messageIdToDelete, setMessageIdToDelete] = useState<number | null>(null);
+  const [isDeletingMessage, setIsDeletingMessage] = useState(false);
+  const [activeMessageActionsId, setActiveMessageActionsId] = useState<number | null>(null);
+
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<number[]>([]);
+  const [isBulkDelete, setIsBulkDelete] = useState(false);
 
   useEffect(() => {
     if (isOpen && leaveData) {
@@ -157,7 +178,28 @@ export default function StudentLeaveDetailsModal({
           table: "leave_request_chats",
           filter: `studentLeaveId=eq.${leaveData.id}`,
         },
-        () => setMessages((prev) => prev.map((m) => ({ ...m, isRead: true }))),
+        async (payload) => {
+          const updated = payload.new;
+          const formatted = await fetchSingleChatMessage(updated.chatId);
+          if (formatted) {
+            setMessages((prev) =>
+              prev.map((m) => (m.chatId === updated.chatId ? formatted : m))
+            );
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "leave_request_chats",
+          filter: `studentLeaveId=eq.${leaveData.id}`,
+        },
+        (payload) => {
+          const deletedChatId = payload.old.chatId;
+          setMessages((prev) => prev.filter((m) => m.chatId !== deletedChatId));
+        },
       )
       .on("broadcast", { event: "typing" }, (payload) => {
         if (payload.payload.role !== "STUDENT") {
@@ -191,12 +233,88 @@ export default function StudentLeaveDetailsModal({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const startEditingMessage = (msg: any) => {
+    setEditingMessageId(msg.chatId);
+    setEditingText(msg.message || "");
+  };
+
+  const cancelEditingMessage = () => {
+    setEditingMessageId(null);
+    setEditingText("");
+  };
+
+  const handleUpdateMessage = async (chatId: number) => {
+    if (!editingText.trim()) return;
+
+    setIsUpdatingMessage(true);
+    try {
+      const updatedMsg = await editLeaveChatMessage(chatId, editingText);
+      if (updatedMsg) {
+        setMessages((prev) =>
+          prev.map((m) => (m.chatId === chatId ? updatedMsg : m))
+        );
+      }
+      cancelEditingMessage();
+    } catch (err) {
+      toast.error("Failed to update message.");
+    } finally {
+      setIsUpdatingMessage(false);
+    }
+  };
+
+  const initiateDeleteMessage = (chatId: number) => {
+    setMessageIdToDelete(chatId);
+    setIsDeleteModalOpen(true);
+  };
+
+  const initiateBulkDelete = () => {
+    setIsBulkDelete(true);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteMessage = async () => {
+    setIsDeletingMessage(true);
+    try {
+      if (isBulkDelete) {
+        await deleteLeaveChatMessages(selectedMessageIds);
+        setMessages((prev) =>
+          prev.filter((m) => !selectedMessageIds.includes(m.chatId))
+        );
+        if (editingMessageId && selectedMessageIds.includes(editingMessageId)) {
+          cancelEditingMessage();
+        }
+        toast.success("Messages deleted successfully.");
+        setIsSelectionMode(false);
+        setSelectedMessageIds([]);
+        setIsBulkDelete(false);
+      } else if (messageIdToDelete !== null) {
+        await deleteLeaveChatMessage(messageIdToDelete);
+        setMessages((prev) => prev.filter((m) => m.chatId !== messageIdToDelete));
+        if (editingMessageId === messageIdToDelete) cancelEditingMessage();
+        setMessageIdToDelete(null);
+        toast.success("Message deleted successfully.");
+      }
+      setIsDeleteModalOpen(false);
+    } catch (err) {
+      toast.error("Failed to delete message.");
+    } finally {
+      setIsDeletingMessage(false);
+    }
+  };
+
+  const cancelDeleteMessage = () => {
+    setIsDeleteModalOpen(false);
+    setMessageIdToDelete(null);
+    setIsBulkDelete(false);
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() && !selectedFile) return;
 
     const msgText = newMessage;
     const fileObj = selectedFile;
+
     setNewMessage("");
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -224,11 +342,12 @@ export default function StudentLeaveDetailsModal({
       });
       setTimeout(() => scrollToBottom(), 50);
     } catch (err: any) {
-      toast.error(err.message || t("Failed to send message"));
+      toast.error(err.message || "Failed to send message.");
       setNewMessage(msgText);
       setSelectedFile(fileObj);
     } finally {
       setIsSending(false);
+      setTimeout(() => messageInputRef.current?.focus(), 50);
     }
   };
 
@@ -300,8 +419,32 @@ export default function StudentLeaveDetailsModal({
           </div>
         </div>
 
-        <div className="px-5 py-3 flex items-center gap-1.5 text-[#282828] font-bold shrink-0 bg-gray-50 border-b border-gray-100 text-[13px]">
-          {t("Communication History")}
+        <div className="px-5 py-3 flex items-center justify-between gap-2 text-[#282828] font-bold shrink-0 bg-gray-50 border-b border-gray-100 text-[13px] whitespace-nowrap overflow-hidden">
+          <span>{isSelectionMode ? `${selectedMessageIds.length} Selected` : t("Communication History")}</span>
+          <div className="flex items-center gap-2.5">
+            {isSelectionMode && selectedMessageIds.length > 0 && (
+              <button
+                type="button"
+                onClick={initiateBulkDelete}
+                className="text-[#FF4B4B] text-[11px] font-bold hover:underline cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap"
+              >
+                <Trash size={13} weight="bold" />
+                Delete ({selectedMessageIds.length})
+              </button>
+            )}
+            {(isSelectionMode || messages.some((msg) => msg.senderRole === "STUDENT" && !msg.isRead)) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSelectionMode(!isSelectionMode);
+                  setSelectedMessageIds([]);
+                }}
+                className="text-[#43C17A] text-[11px] font-bold hover:underline cursor-pointer shrink-0 whitespace-nowrap"
+              >
+                {isSelectionMode ? "Cancel" : "Select Messages"}
+              </button>
+            )}
+          </div>
         </div>
 
         <div
@@ -336,14 +479,34 @@ export default function StudentLeaveDetailsModal({
                 messages.map((msg, idx) => {
                   const isMe = msg.senderRole === "STUDENT";
                   const showNewBadge = !isMe && !msg.isRead;
+                  const canEdit = isMe && !msg.isRead && !!msg.message;
+                  const canDelete = isMe && !msg.isRead;
+                  const isEditing = editingMessageId === msg.chatId;
 
                   return (
                     <div
                       key={`${msg.chatId}-${idx}`}
-                      className={`flex gap-1.5 w-full max-w-[85%] ${isMe ? "ml-auto flex-row-reverse" : "mr-auto"}`}
+                      onClick={() => {
+                        if (isSelectionMode && canDelete) {
+                          setSelectedMessageIds((prev) =>
+                            prev.includes(msg.chatId)
+                              ? prev.filter((id) => id !== msg.chatId)
+                              : [...prev, msg.chatId]
+                          );
+                        }
+                      }}
+                      className={`group flex gap-1.5 w-full max-w-[85%] ${isMe ? "ml-auto flex-row-reverse" : "mr-auto"} ${isSelectionMode && canDelete ? "cursor-pointer select-none" : ""}`}
                     >
-                      
-
+                      {isSelectionMode && canDelete && (
+                        <div className="flex items-center self-center px-1 mr-2 flex-shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={selectedMessageIds.includes(msg.chatId)}
+                            onChange={() => {}}
+                            className="w-4 h-4 accent-[#43C17A] pointer-events-none"
+                          />
+                        </div>
+                      )}
                       <Avatar src={msg.senderAvatar} size={24} alt=""/>
 
                       <div
@@ -356,7 +519,18 @@ export default function StudentLeaveDetailsModal({
                         )}
 
                         <div
-                          className={`px-3 py-2 rounded-xl text-[12px] relative ${isMe ? "bg-[#43C17A] text-white rounded-tr-sm shadow-sm" : "bg-white text-[#282828] rounded-tl-sm border border-gray-200 shadow-sm"}`}
+                          onClick={(e) => {
+                            if (isSelectionMode) return;
+                            if (canEdit || canDelete) {
+                              setActiveMessageActionsId(
+                                activeMessageActionsId === msg.chatId ? null : msg.chatId
+                              );
+                            }
+                          }}
+                          className={`px-3 py-2 rounded-xl text-[12px] relative ${isMe
+                              ? "bg-[#43C17A] text-white rounded-tr-sm shadow-sm"
+                              : "bg-white text-[#282828] rounded-tl-sm border border-gray-200 shadow-sm"
+                            } ${(canEdit || canDelete) && !isSelectionMode ? "cursor-pointer select-none" : ""}`}
                         >
                           {msg.mediaUrl && (
                             <div className="mb-1.5">
@@ -364,16 +538,22 @@ export default function StudentLeaveDetailsModal({
                                 <img
                                   src={msg.mediaUrl}
                                   alt="attachment"
-                                  className="max-w-[160px] rounded-md cursor-pointer hover:opacity-90"
-                                  onClick={() =>
-                                    window.open(msg.mediaUrl, "_blank")
-                                  }
+                                  className="max-w-[150px] rounded-md cursor-pointer hover:opacity-90"
+                                  onClick={(e) => {
+                                    if (isSelectionMode) return;
+                                    e.stopPropagation();
+                                    window.open(msg.mediaUrl, "_blank");
+                                  }}
                                 />
                               ) : (
                                 <a
                                   href={msg.mediaUrl}
                                   target="_blank"
                                   rel="noreferrer"
+                                  onClick={(e) => {
+                                    if (isSelectionMode) return;
+                                    e.stopPropagation();
+                                  }}
                                   className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition ${isMe ? "bg-black/10 hover:bg-black/20" : "bg-gray-100 hover:bg-gray-200"}`}
                                 >
                                   <FilePdf size={14} weight="fill" />
@@ -384,14 +564,89 @@ export default function StudentLeaveDetailsModal({
                               )}
                             </div>
                           )}
-                          {msg.message && (
+                          {isEditing ? (
+                            <div
+                              className="flex min-w-45 items-center gap-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <input
+                                value={editingText}
+                                onChange={(event) => setEditingText(event.target.value)}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    handleUpdateMessage(msg.chatId);
+                                  }
+                                  if (event.key === "Escape") {
+                                    event.preventDefault();
+                                    cancelEditingMessage();
+                                  }
+                                }}
+                                disabled={isUpdatingMessage}
+                                className="h-8 flex-1 rounded-md border border-white/40 bg-white px-2 text-[12px] text-[#282828] outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateMessage(msg.chatId)}
+                                disabled={isUpdatingMessage || !editingText.trim()}
+                                className="rounded-full bg-white/20 p-1 text-white hover:bg-white/30 disabled:opacity-50 cursor-pointer"
+                                title="Save edit"
+                              >
+                                <Check size={12} weight="bold" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={cancelEditingMessage}
+                                disabled={isUpdatingMessage}
+                                className="rounded-full bg-white/20 p-1 text-white hover:bg-white/30 disabled:opacity-50 cursor-pointer"
+                                title="Cancel edit"
+                              >
+                                <X size={12} weight="bold" />
+                              </button>
+                            </div>
+                          ) : msg.message ? (
                             <p className="leading-snug whitespace-pre-wrap">
                               {msg.message}
                             </p>
-                          )}
+                          ) : null}
                         </div>
 
                         <div className="flex items-center gap-1 mt-0.5 px-0.5">
+                          {(canEdit || canDelete) && !isEditing && !isSelectionMode && (
+                            <span
+                              className={`flex items-center gap-0.5 transition-opacity ${activeMessageActionsId === msg.chatId
+                                  ? "opacity-100"
+                                  : "opacity-0 group-hover:opacity-100"
+                                }`}
+                            >
+                              {canEdit && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    startEditingMessage(msg);
+                                  }}
+                                  className="cursor-pointer rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-[#43C17A] hover:bg-[#E7F8EE] transition-colors"
+                                  title="Edit message"
+                                >
+                                  <PencilSimple size={12} weight="bold" />
+                                </button>
+                              )}
+                              {canDelete && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    initiateDeleteMessage(msg.chatId);
+                                  }}
+                                  className="cursor-pointer rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-[#FF4B4B] hover:bg-[#FFE5E5] transition-colors"
+                                  title="Delete message"
+                                >
+                                  <Trash size={12} weight="bold" />
+                                </button>
+                              )}
+                            </span>
+                          )}
                           <span className="text-[9px] text-gray-400 font-medium">
                             {formatChatTime(msg.createdAt)}
                           </span>
@@ -487,6 +742,7 @@ export default function StudentLeaveDetailsModal({
 
             <input
               type="text"
+              ref={messageInputRef}
               value={newMessage}
               onChange={handleTyping}
               placeholder={t("Type your message")}
@@ -503,6 +759,17 @@ export default function StudentLeaveDetailsModal({
           </div>
         </form>
       </div>
+
+      <ConfirmDeleteModal
+        open={isDeleteModalOpen}
+        onConfirm={confirmDeleteMessage}
+        onCancel={cancelDeleteMessage}
+        isDeleting={isDeletingMessage}
+        title="Delete"
+        name={isBulkDelete ? `${selectedMessageIds.length} message(s)` : "message"}
+        confirmText="Yes, Delete"
+        actionType="remove"
+      />
     </div>
   );
 }

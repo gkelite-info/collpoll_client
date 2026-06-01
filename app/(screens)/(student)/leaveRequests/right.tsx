@@ -258,7 +258,7 @@ export default function LeavesRight() {
 
   return (
     <>
-      <div className="w-[32%] p-2 flex flex-col max-md:hidden">
+      <div className="w-full lg:w-[32%] p-2 flex flex-col lg:flex max-lg:hidden">
         <CourseScheduleCard />
         <WorkWeekCalendar />
         <TaskPanel

@@ -3,11 +3,11 @@ import MyAttendanceRight from "./right";
 
 export default function Assignments() {
   return (
-    <>
-      <div className="flex items-start justify-between">
+    <main className="flex flex-col lg:flex-row w-full min-h-screen pb-5">
+      <div className="w-[100%] lg:w-[68%]">
         <MyAttendanceLeft />
-        <MyAttendanceRight />
       </div>
-    </>
+      <MyAttendanceRight />
+    </main>
   );
 }

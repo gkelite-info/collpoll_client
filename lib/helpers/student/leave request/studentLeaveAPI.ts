@@ -134,12 +134,20 @@ export async function submitLeaveRequest(studentId: number, payload: any) {
   return leaveData;
 }
 
-export async function fetchStudentLeaveCounts(studentId: number) {
-  const { data, error } = await supabase
+export async function fetchStudentLeaveCounts(studentId: number, date?: string) {
+  let query = supabase
     .from("student_leaves")
     .select(`status`)
     .eq("studentId", studentId)
     .is("deletedAt", null);
+
+  if (date) {
+    query = query
+      .lte("startDate", date)
+      .gte("endDate", date);
+  }
+
+  const { data, error } = await query;
 
   if (error) return { all: 0, approved: 0, pending: 0, rejected: 0 };
 
@@ -159,6 +167,7 @@ export async function fetchStudentLeaves(
   limit: number,
   statusFilter: string,
   searchQuery: string,
+  date?: string,
 ) {
   let query = supabase
     .from("student_leaves")
@@ -183,6 +192,12 @@ export async function fetchStudentLeaves(
 
   if (searchQuery.trim() !== "") {
     query = query.ilike("description", `%${searchQuery.trim()}%`);
+  }
+
+  if (date) {
+    query = query
+      .lte("startDate", date)
+      .gte("endDate", date);
   }
 
   const from = (page - 1) * limit;
@@ -237,4 +252,20 @@ export async function fetchStudentLeaves(
   });
 
   return { data: mappedData, totalCount: count || 0 };
+}
+
+export async function deleteStudentLeave(studentLeaveId: number) {
+  const { error } = await supabase
+    .from("student_leaves")
+    .update({ deletedAt: new Date().toISOString() })
+    .eq("studentLeaveId", studentLeaveId);
+  if (error) throw error;
+}
+
+export async function bulkDeleteStudentLeaves(studentLeaveIds: number[]) {
+  const { error } = await supabase
+    .from("student_leaves")
+    .update({ deletedAt: new Date().toISOString() })
+    .in("studentLeaveId", studentLeaveIds);
+  if (error) throw error;
 }
