@@ -100,6 +100,7 @@ export default function SummaryPage() {
   };
 
   const isInter = ["Inter"].includes(role);
+  const isNotVisible = !["WellbeingManager"].includes(role);
 
   const systemId = identifierId || (wellBeingId ? `ID-${wellBeingId}` : `ID-${userId}`);
   return (
@@ -118,10 +119,12 @@ export default function SummaryPage() {
         </div>
         <div className="flex flex-col items-center justify-center space-y-0.5">
           <InfoRow label={`${role} ID`} value={systemId} />
-          <InfoRow
-            label={isInter ? "Group" : "Education Type"}
-            value={collegeEducationType}
-          />
+          {isNotVisible && (
+            <InfoRow
+              label={isInter ? "Group" : "Education Type"}
+              value={collegeEducationType}
+            />
+          )}
           <InfoRow label="Mobile" value={mobile} />
           <InfoRow label="Email" value={email} />
           <InfoRow label="Date of Joining" value={formatDate(dateOfJoining)} />

@@ -163,8 +163,8 @@ const AttendancePage = () => {
 
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex gap-4 mb-4 w-full">
+    <div className="flex flex-col h-full max-md:px-2">
+      <div className="flex max-md:flex-col gap-4 mb-4 w-full">
         {infoLoading || !profile
           ? <FacultyInfoCardShimmer />
           :

@@ -65,7 +65,7 @@ const AttendancePerformanceChart: FC<Props> = ({ data }) => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5 w-full">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5 w-full max-md:p-3 max-md:mb-3">
       <h3 className="text-[#282828] font-bold text-[15px] mb-6">
         Attendance & Performance Trend
       </h3>

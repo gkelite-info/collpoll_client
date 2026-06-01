@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WipOverlay from "@/app/utils/WipOverlay";
+import { useUser } from "@/app/utils/context/UserContext";
 
 export interface VerificationMethod {
   id: string;
@@ -138,10 +139,13 @@ const TwoStepVerification: React.FC<TwoStepVerificationProps> = ({
   onToggleOrNavigate,
 }) => {
   const router = useRouter();
+  const {role} = useUser()
 
   const handleBack = () => {
     router.back();
   };
+  
+  const isNOtVisible = !['WellbeingExecutive', 'WellbeingManager'].includes(role!)
 
   return (
     <div className="p-2 space-y-6 sm:p-2 max-md:p-0 max-md:bg-[#F4F5F6] min-h-screen">
@@ -161,7 +165,7 @@ const TwoStepVerification: React.FC<TwoStepVerificationProps> = ({
           </p>
         </div>
         <div className="w-[32%] max-md:hidden">
-          <CourseScheduleCard />
+          <CourseScheduleCard isVisibile={isNOtVisible}/>
         </div>
       </div>
 

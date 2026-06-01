@@ -137,10 +137,12 @@ const AccountRow: React.FC<AccountRowProps> = ({
 };
 
 export default function LinkedAccounts() {
-  const { userId } = useUser();
+  const { userId, role } = useUser();
   const [accounts, setAccounts] = useState<LinkedAccount[]>(initialAccountData);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const pathname = usePathname();
+
+  const isNOtVisible = !['WellbeingExecutive', 'WellbeingManager'].includes(role!)
 
   const loadFromSession = async (user: any) => {
     if (!user) return;
@@ -256,7 +258,7 @@ export default function LinkedAccounts() {
           </p>
         </div>
         <div className="w-[32%] max-md:hidden">
-          <CourseScheduleCard />
+          <CourseScheduleCard isVisibile={isNOtVisible}/>
         </div>
       </div>
 
