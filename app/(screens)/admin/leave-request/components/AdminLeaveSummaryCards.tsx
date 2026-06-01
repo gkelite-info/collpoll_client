@@ -107,7 +107,7 @@ export default function AdminLeaveSummaryCards() {
   };
 
   return (
-    <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <section className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
       {cards.map((card) => {
         const isActive = activeStatus === card.status;
         const palette = cardPalette[card.status];
@@ -115,7 +115,7 @@ export default function AdminLeaveSummaryCards() {
         return isLoading ? (
           <div
             key={card.label}
-            className="h-24 w-full animate-pulse rounded-sm bg-white shadow-sm"
+            className="h-32 w-full animate-pulse rounded-lg bg-white shadow-sm"
           >
             <div className="flex h-full flex-col justify-between p-4">
               <div className="h-9 w-9 rounded-md bg-gray-200" />
@@ -136,7 +136,7 @@ export default function AdminLeaveSummaryCards() {
             iconBgColor={
               isActive ? "rgba(255,255,255,0.2)" : palette.iconBg
             }
-            style={`${isActive ? palette.active : palette.inactive} h-24 w-full rounded-sm shadow-sm transition-all duration-300`}
+            style={`w-full transition-all duration-300 ${isActive ? palette.active : palette.inactive}`}
             textSize={isActive ? "text-white" : "text-[#282828]"}
             onClick={() => handleCardClick(card.status)}
           />

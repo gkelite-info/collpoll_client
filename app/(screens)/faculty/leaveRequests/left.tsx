@@ -30,6 +30,8 @@ import { Loader } from "../../(student)/calendar/right/timetable";
 import { ConfirmStatusModal } from "./modal/ConfirmStatusModal";
 import FacultyLeaveDetailsModal from "./modal/facultyLeaveStatusModal";
 import { Avatar } from "@/app/utils/Avatar";
+import EmployeeLeaveDetailsModal from "@/app/(screens)/finance-manager/leave-request/components/LeaveRequestDetailsModal";
+import type { FinanceLeaveRequest } from "@/app/(screens)/finance-manager/leave-request/data";
 
 const STUDENT_COLUMNS = [
   { title: "S.No", key: "sNo" },
@@ -53,16 +55,43 @@ const MY_LEAVES_COLUMNS = [
   { title: "Leave Type", key: "leaveType" },
   { title: "Description", key: "description" },
   { title: "Status", key: "statusBadge" },
+  { title: "Details", key: "details" },
 ];
+
+type LeaveStatusTab = "all" | "approved" | "pending" | "rejected";
+
+type FacultyLeaveFormData = {
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+};
+
+type FacultyLeaveTableRow = {
+  id: number;
+  employeeLeaveRequestId?: number;
+  employeeId?: string;
+  fromDate: string;
+  toDate: string;
+  days: string;
+  leaveType: string;
+  description: string;
+  status: string;
+  rollNo?: string;
+  photo?: string | null;
+  name?: string;
+  role?: string;
+  requestedDate?: string;
+  branch?: string;
+  attachments?: string[];
+};
 
 function FacultyLeavesContent() {
   const { userId } = useUser();
   const [facultyId, setFacultyId] = useState<number | null>(null);
 
   const [mainTab, setMainTab] = useState<"students" | "my_leaves">("students");
-  const [activeTab, setActiveTab] = useState<
-    "all" | "approved" | "pending" | "rejected"
-  >("all");
+  const [activeTab, setActiveTab] = useState<LeaveStatusTab>("all");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -70,7 +99,7 @@ function FacultyLeavesContent() {
 
   const [page, setPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [tableData, setTableData] = useState<any[]>([]);
+  const [tableData, setTableData] = useState<FacultyLeaveTableRow[]>([]);
   const [counts, setCounts] = useState({
     all: 0,
     approved: 0,
@@ -86,8 +115,11 @@ function FacultyLeavesContent() {
     action: "Approved" | "Rejected" | null;
   }>({ isOpen: false, leaveId: null, action: null });
   const [editingRows, setEditingRows] = useState<Set<number>>(new Set());
-  const [selectedLeaveData, setSelectedLeaveData] = useState<any>(null);
+  const [selectedLeaveData, setSelectedLeaveData] =
+    useState<FacultyLeaveTableRow | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedEmployeeLeave, setSelectedEmployeeLeave] =
+    useState<FinanceLeaveRequest | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -137,7 +169,7 @@ function FacultyLeavesContent() {
         setTotalItems(tableRes.totalCount);
         setCounts(countRes);
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to load data");
     } finally {
       setIsLoading(false);
@@ -149,7 +181,7 @@ function FacultyLeavesContent() {
     setEditingRows(new Set());
   }, [mainTab, facultyId, activeTab, debouncedSearch, page]);
 
-  const handleTabChange = (tabId: any) => {
+  const handleTabChange = (tabId: LeaveStatusTab) => {
     setActiveTab(tabId);
     setPage(1);
   };
@@ -179,13 +211,13 @@ function FacultyLeavesContent() {
         const newCounts = await fetchStudentLeaveCounts(facultyId);
         setCounts(newCounts);
       }
-    } catch (err) {
+    } catch {
       toast.error(`Failed to ${action.toLowerCase()} leave`);
       loadData();
     }
   };
 
-  const handleMyLeaveSubmit = async (formData: any) => {
+  const handleMyLeaveSubmit = async (formData: FacultyLeaveFormData) => {
     if (!facultyId) return;
     try {
       await submitFacultyLeaveRequest(facultyId, formData);
@@ -193,7 +225,11 @@ function FacultyLeavesContent() {
       setIsModalOpen(false);
       loadData();
     } catch (error) {
-      toast.error("Failed to submit request. Please try again.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to submit request. Please try again.",
+      );
     }
   };
 
@@ -334,6 +370,33 @@ function FacultyLeavesContent() {
               {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
             </span>
           ),
+          details: (
+            <button
+              type="button"
+              onClick={() =>
+                setSelectedEmployeeLeave({
+                  employeeLeaveRequestId: item.employeeLeaveRequestId,
+                  serialNo: String(
+                    (page - 1) * itemsPerPage + index + 1,
+                  ).padStart(2, "0"),
+                  employeeId: item.employeeId ?? "",
+                  name: item.name ?? "Faculty",
+                  role: item.role ?? "Faculty",
+                  photo: item.photo ?? "",
+                  requestedDate: item.requestedDate ?? "",
+                  dateRange: `${item.fromDate} - ${item.toDate}`,
+                  days: item.days,
+                  leaveType: item.leaveType,
+                  description: item.description,
+                  status: item.status as FinanceLeaveRequest["status"],
+                  chat: [],
+                })
+              }
+              className="cursor-pointer text-xs font-bold text-blue-600 hover:underline"
+            >
+              View Details
+            </button>
+          ),
         };
       }
     });
@@ -411,10 +474,10 @@ function FacultyLeavesContent() {
         }
       `}</style>
 
-      <div className="flex flex-col p-6 w-full max-w-[68%] mx-auto min-h-screen">
-        <div className="flex justify-between items-start mb-6">
+      <div className="flex min-h-screen w-full max-w-full flex-col p-2">
+        <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row">
           <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-2xl font-bold">
+            <div className="flex flex-col items-start gap-2 text-lg font-bold md:flex-row md:items-center md:text-2xl">
               <span
                 onClick={() => setMainTab("students")}
                 className={`cursor-pointer transition-colors ${mainTab === "students" ? "text-[#43C17A]" : "text-[#282828] hover:text-gray-500"}`}
@@ -432,7 +495,7 @@ function FacultyLeavesContent() {
             <p className="text-[#525252] text-sm font-medium">
               {mainTab === "students"
                 ? "Review, Approve, and Manage Student Leave Applications Effortlessly"
-                : "Submit leave applications and view approval updates from HR/Admin."}
+                : "Submit leave applications and view approval updates from HR."}
             </p>
           </div>
 
@@ -446,7 +509,7 @@ function FacultyLeavesContent() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
           {cards.map((card) => {
             const isActive = activeTab === card.id;
             return (
@@ -466,8 +529,8 @@ function FacultyLeavesContent() {
           })}
         </div>
 
-        <div className="flex justify-between items-center rounded-xl px-4 py-3 ">
-          <div className="relative w-full max-w-[300px] flex items-center ">
+        <div className="flex flex-col items-center justify-between gap-2 py-3 sm:flex-row">
+          <div className="relative flex w-full max-w-full items-center sm:max-w-[300px]">
             <MagnifyingGlass
               size={20}
               className="absolute left-3 text-[#43C17A] pointer-events-none"
@@ -531,6 +594,10 @@ function FacultyLeavesContent() {
         onClose={() => setIsDetailsModalOpen(false)}
         leaveData={selectedLeaveData}
         currentFacultyId={facultyId!}
+      />
+      <EmployeeLeaveDetailsModal
+        request={selectedEmployeeLeave}
+        onClose={() => setSelectedEmployeeLeave(null)}
       />
     </>
   );

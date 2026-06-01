@@ -3,11 +3,11 @@
 import { CaretDown, X } from "@phosphor-icons/react";
 import { FormEvent, useState } from "react";
 import toast from "react-hot-toast";
-import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { useUser } from "@/app/utils/context/UserContext";
 import { createEmployeeLeaveRequest } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
 
-type AdminRequestLeaveModalProps = {
+type RequestLeaveModalProps = {
   open: boolean;
   onClose: () => void;
 };
@@ -34,12 +34,12 @@ const initialFormData: LeaveFormData = {
   description: "",
 };
 
-export default function AdminRequestLeaveModal({
+export default function RequestLeaveModal({
   open,
   onClose,
-}: AdminRequestLeaveModalProps) {
+}: RequestLeaveModalProps) {
   const { userId, role } = useUser();
-  const { collegeId, loading: adminContextLoading } = useAdmin();
+  const { collegeId, loading: financeContextLoading } = useFinanceManager();
   const [formData, setFormData] = useState<LeaveFormData>(initialFormData);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,13 +59,8 @@ export default function AdminRequestLeaveModal({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!userId || !collegeId || !role || adminContextLoading) {
-      toast.error("Admin session not found. Please re-login.");
-      return;
-    }
-
-    if (role !== "Admin") {
-      toast.error("This request is available for admins only.");
+    if (!userId || !collegeId || role !== "Finance" || financeContextLoading) {
+      toast.error("Finance executive session not found. Please re-login.");
       return;
     }
 
@@ -99,7 +94,7 @@ export default function AdminRequestLeaveModal({
       await createEmployeeLeaveRequest({
         userId,
         collegeId,
-        role: "Admin",
+        role: "Finance",
         leaveType: formData.leaveType,
         leaveFromDate: formData.startDate,
         leaveToDate: formData.endDate,
@@ -111,8 +106,7 @@ export default function AdminRequestLeaveModal({
       resetForm();
       onClose();
     } catch (error) {
-      const message = getSubmitErrorMessage(error);
-      toast.error(message);
+      toast.error(getSubmitErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -120,25 +114,16 @@ export default function AdminRequestLeaveModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-      <style>{`
-        .request-leave-date-input::-webkit-calendar-picker-indicator {
-          margin-left: auto;
-          cursor: pointer;
-        }
-      `}</style>
       <div className="custom-scrollbar relative max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-md bg-white p-6 shadow-2xl">
         <button
+          type="button"
           onClick={handleClose}
           disabled={isSubmitting}
-          className="absolute right-5 top-5 flex h-8 w-8 cursor-pointer items-center justify-center text-[#525252] hover:text-[#282828]"
-          type="button"
+          className="absolute right-5 top-5 cursor-pointer text-[#525252]"
         >
           <X size={22} />
         </button>
-        <h2 className="pr-10 text-xl font-semibold text-[#282828]">
-          Request Leave
-        </h2>
-
+        <h2 className="text-xl font-semibold text-[#282828]">Request Leave</h2>
         <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-[#282828]">
@@ -199,64 +184,39 @@ export default function AdminRequestLeaveModal({
               )}
             </div>
           </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-[#282828]">
-              Leave Date
-              <RequiredMark />
-            </label>
+          <Field label="Leave Date">
             <div className="grid grid-cols-2 gap-5">
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold text-[#282828]">
-                  Start Date
-                  <RequiredMark />
-                </span>
-                <label className="relative">
-                  <input
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(event) =>
-                      setFormData({
-                        ...formData,
-                        startDate: event.target.value,
-                        endDate:
-                          formData.endDate &&
-                          formData.endDate < event.target.value
-                            ? ""
-                            : formData.endDate,
-                      })
-                    }
-                    className="request-leave-date-input h-12 w-full rounded-xl border border-[#CFCFCF] px-5 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
-                  />
-                </label>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold text-[#282828]">
-                  End Date
-                  <RequiredMark />
-                </span>
-                <label className="relative">
-                  <input
-                    type="date"
-                    value={formData.endDate}
-                    min={formData.startDate || undefined}
-                    onChange={(event) =>
-                      setFormData({ ...formData, endDate: event.target.value })
-                    }
-                    className="request-leave-date-input h-12 w-full rounded-xl border border-[#CFCFCF] px-5 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
-                  />
-                </label>
-              </div>
+              <input
+                required
+                type="date"
+                value={formData.startDate}
+                onChange={(event) =>
+                  setFormData({
+                    ...formData,
+                    startDate: event.target.value,
+                    endDate:
+                      formData.endDate && formData.endDate < event.target.value
+                        ? ""
+                        : formData.endDate,
+                  })
+                }
+                className="h-12 rounded-xl border border-[#CFCFCF] px-4 text-sm outline-none focus:border-[#43C17A]"
+              />
+              <input
+                required
+                type="date"
+                value={formData.endDate}
+                min={formData.startDate || undefined}
+                onChange={(event) =>
+                  setFormData({ ...formData, endDate: event.target.value })
+                }
+                className="h-12 rounded-xl border border-[#CFCFCF] px-4 text-sm outline-none focus:border-[#43C17A]"
+              />
             </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-[#282828]">
-              Description
-              <RequiredMark />
-            </label>
+          </Field>
+          <Field label="Description">
             <textarea
+              required
               rows={5}
               maxLength={255}
               value={formData.description}
@@ -264,24 +224,12 @@ export default function AdminRequestLeaveModal({
                 setFormData({ ...formData, description: event.target.value })
               }
               placeholder="Provide a short explanation for your leave request............"
-              className="w-full resize-none rounded border border-[#CFCFCF] px-4 py-3 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
+              className="w-full resize-none rounded border border-[#CFCFCF] px-4 py-3 text-sm outline-none focus:border-[#43C17A]"
             />
-          </div>
-
-          <div className="mt-1 grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="h-11 cursor-pointer rounded bg-[#E0E0E0] text-sm font-semibold text-[#282828] hover:bg-[#D5D5D5] disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="h-11 cursor-pointer rounded bg-[#43C17A] text-sm font-semibold text-white hover:bg-[#34A565] disabled:cursor-not-allowed disabled:opacity-70"
-            >
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <button type="button" onClick={handleClose} disabled={isSubmitting} className="h-11 cursor-pointer rounded bg-[#E0E0E0] text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70">Cancel</button>
+            <button type="submit" disabled={isSubmitting} className="h-11 cursor-pointer rounded bg-[#43C17A] text-sm font-semibold text-white hover:bg-[#34A565] disabled:cursor-not-allowed disabled:opacity-70">
               {isSubmitting ? "Submitting..." : "Submit Request"}
             </button>
           </div>
@@ -291,19 +239,48 @@ export default function AdminRequestLeaveModal({
   );
 }
 
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="flex flex-col gap-2 text-sm font-semibold text-[#282828]">
+      <span>
+        {label}
+        <RequiredMark />
+      </span>
+      {children}
+    </label>
+  );
+}
+
 function RequiredMark() {
   return <span className="ml-1 text-[#FF2020]">*</span>;
 }
 
 function getSubmitErrorMessage(error: unknown) {
   if (
+    error &&
     typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
-    typeof (error as { message?: unknown }).message === "string"
+    "code" in error &&
+    error.code === "22P02"
   ) {
-    return (error as { message: string }).message;
+    return "This leave type is not allowed in the database enum yet.";
   }
 
-  return "Failed to submit leave request.";
+  if (
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    error.code === "42501"
+  ) {
+    return "Database policy is blocking this leave request. Please update the RLS insert policy for employee_leave_requests.";
+  }
+
+  return error instanceof Error
+    ? error.message
+    : "Unable to submit leave request.";
 }

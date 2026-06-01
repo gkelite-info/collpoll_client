@@ -20,12 +20,11 @@ type LeaveFormData = {
 };
 
 const defaultLeaveTypes = [
-  "Casual",
   "Sick",
   "Personal",
   "Emergency",
   "Travel",
-  "Medical",
+  "Others",
 ];
 
 const initialFormData: LeaveFormData = {
@@ -42,10 +41,7 @@ export default function RequestLeaveModal({
   const { userId, role } = useUser();
   const { collegeId, loading: financeContextLoading } = useFinanceManager();
   const [formData, setFormData] = useState<LeaveFormData>(initialFormData);
-  const [leaveTypes, setLeaveTypes] = useState(defaultLeaveTypes);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isOtherInputOpen, setIsOtherInputOpen] = useState(false);
-  const [customLeaveType, setCustomLeaveType] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!open) return null;
@@ -53,38 +49,11 @@ export default function RequestLeaveModal({
   const resetForm = () => {
     setFormData(initialFormData);
     setIsDropdownOpen(false);
-    setIsOtherInputOpen(false);
-    setCustomLeaveType("");
   };
 
   const handleClose = () => {
     resetForm();
     onClose();
-  };
-
-  const handleAddCustomLeaveType = () => {
-    const trimmedLeaveType = customLeaveType.trim();
-
-    if (!trimmedLeaveType) {
-      toast.error("Please enter a leave type.");
-      return;
-    }
-
-    setLeaveTypes((currentTypes) =>
-      currentTypes.some(
-        (leaveType) =>
-          leaveType.toLowerCase() === trimmedLeaveType.toLowerCase(),
-      )
-        ? currentTypes
-        : [...currentTypes, trimmedLeaveType],
-    );
-    setFormData((currentFormData) => ({
-      ...currentFormData,
-      leaveType: trimmedLeaveType,
-    }));
-    setCustomLeaveType("");
-    setIsOtherInputOpen(false);
-    setIsDropdownOpen(false);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -176,7 +145,7 @@ export default function RequestLeaveModal({
               Leave Type
               <RequiredMark />
             </label>
-            <div>
+            <div className="relative">
               <button
                 type="button"
                 disabled={isSubmitting}
@@ -184,11 +153,16 @@ export default function RequestLeaveModal({
                 className="flex h-11 w-full cursor-pointer items-center justify-between rounded border border-[#43C17A] bg-white px-4 text-sm text-[#525252] outline-none disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {formData.leaveType || "Select Leave Type"}
-                <CaretDown size={18} className="text-[#282828]" />
+                <CaretDown
+                  size={18}
+                  className={`text-[#282828] transition-transform duration-200 ${
+                    isDropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
               </button>
 
               {isDropdownOpen && (
-                <div className="mt-1 max-h-[320px] overflow-hidden rounded border border-[#CFCFCF] bg-white shadow-lg">
+                <div className="absolute left-0 right-0 z-50 mt-1 max-h-[320px] overflow-hidden rounded border border-[#CFCFCF] bg-white shadow-lg">
                   <button
                     type="button"
                     onClick={() =>
@@ -199,63 +173,28 @@ export default function RequestLeaveModal({
                     Select Leave Type
                   </button>
 
-                  <div className="custom-scrollbar max-h-[205px] overflow-y-auto">
-                    {leaveTypes.map((leaveType) => (
-                      <button
-                        key={leaveType}
-                        type="button"
-                        onClick={() => {
-                          setFormData({ ...formData, leaveType });
-                          setIsDropdownOpen(false);
-                          setIsOtherInputOpen(false);
-                        }}
-                        className="flex h-10 w-full cursor-pointer items-center px-4 text-left text-sm text-[#282828] hover:bg-[#F3F7F5]"
-                      >
-                        {leaveType}
-                      </button>
-                    ))}
-                  </div>
-
-                  {!isOtherInputOpen ? (
-                    <button
-                      type="button"
-                      onClick={() => setIsOtherInputOpen(true)}
-                      className="flex h-10 w-full cursor-pointer items-center px-4 text-left text-sm font-semibold text-[#43C17A] hover:bg-[#F3F7F5]"
-                    >
-                      Others
-                    </button>
-                  ) : (
-                    <div className="border-t border-[#E5E5E5] p-3">
-                      <input
-                        autoFocus
-                        value={customLeaveType}
-                        onChange={(event) =>
-                          setCustomLeaveType(event.target.value)
-                        }
-                        placeholder="Enter leave type"
-                        className="h-10 w-full rounded border border-[#CFCFCF] px-3 text-sm outline-none focus:border-[#43C17A]"
-                      />
-                      <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div className="custom-scrollbar max-h-[260px] overflow-y-auto">
+                    {defaultLeaveTypes.map((leaveType) => {
+                      const isSelected = formData.leaveType === leaveType;
+                      return (
                         <button
+                          key={leaveType}
                           type="button"
                           onClick={() => {
-                            setCustomLeaveType("");
-                            setIsOtherInputOpen(false);
+                            setFormData({ ...formData, leaveType });
+                            setIsDropdownOpen(false);
                           }}
-                          className="h-9 cursor-pointer rounded bg-[#E0E0E0] text-sm font-semibold text-[#282828]"
+                          className={`flex h-10 w-full cursor-pointer items-center px-4 text-left text-sm transition-colors duration-150 ${
+                            isSelected
+                              ? "bg-[#E7F8EE] font-semibold text-[#43C17A]"
+                              : "text-[#282828] hover:bg-gray-50"
+                          }`}
                         >
-                          Cancel
+                          {leaveType}
                         </button>
-                        <button
-                          type="button"
-                          onClick={handleAddCustomLeaveType}
-                          className="h-9 cursor-pointer rounded bg-[#43C17A] text-sm font-semibold text-white"
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

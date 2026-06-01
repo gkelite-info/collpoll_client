@@ -262,13 +262,16 @@ export default function AdminLeaveRequestsTable() {
 
   return (
     <section className="mt-3 flex min-h-0 flex-1 flex-col">
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <label className="flex h-11 w-full items-center gap-3 rounded-full bg-[#EEEEEE] px-4 sm:max-w-[620px]">
-          <MagnifyingGlass size={21} color="#43C17A" />
+      <style>{`
+        .leave-request-table table { min-width: 900px; }
+      `}</style>
+      <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <label className="flex w-full max-w-full items-center gap-3 rounded-full bg-gray-200 px-4 py-2.5 sm:max-w-[300px]">
+          <MagnifyingGlass size={20} color="#43C17A" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search By From - To"
+            placeholder="Search by leave type or description..."
             className="h-full w-full bg-transparent text-sm text-[#282828] outline-none placeholder:text-[#282828]"
           />
         </label>
@@ -278,7 +281,7 @@ export default function AdminLeaveRequestsTable() {
             <button
               type="button"
               onClick={() => setIsDatePickerOpen(true)}
-              className="flex h-11 cursor-pointer items-center justify-center gap-3 rounded-md bg-[#DFF3E9] px-8 text-sm font-bold tracking-wide text-[#43C17A] transition-colors hover:bg-[#cbe6d7]"
+              className="flex cursor-pointer items-center gap-2 rounded-md bg-[#DAE9E1] px-4 py-1.5 text-sm font-bold tracking-wide text-[#43C17A] transition-colors hover:bg-[#cbe6d7]"
               title="Select date"
             >
               <CalendarBlank size={18} weight="fill" />
@@ -287,7 +290,7 @@ export default function AdminLeaveRequestsTable() {
                 : new Date().toLocaleDateString("en-GB")}
             </button>
           ) : (
-            <div className="flex h-11 items-center gap-2 rounded-lg border border-[#43C17A] bg-white p-1 shadow-sm">
+            <div className="flex h-8 items-center gap-2 rounded-md border border-[#43C17A] bg-white p-1 shadow-sm">
               <CalendarBlank
                 size={18}
                 className="ml-2 text-[#43C17A]"
@@ -329,13 +332,12 @@ export default function AdminLeaveRequestsTable() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1">
+      <div className="leave-request-table min-h-0 flex-1">
         <TableComponent
           columns={tableColumns}
           tableData={isLoading ? [] : tableData}
-          height="calc(100vh - 10rem)"
+          height="55vh"
           isLoading={isLoading}
-          fillHeight
         />
       </div>
 

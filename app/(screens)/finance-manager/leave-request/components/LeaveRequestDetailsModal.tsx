@@ -2,8 +2,10 @@
 
 import { Avatar } from "@/app/utils/Avatar";
 import { useUser } from "@/app/utils/context/UserContext";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import {
   deleteEmployeeLeaveChatMessage,
+  deleteEmployeeLeaveChatMessages,
   fetchEmployeeLeaveChatHistory,
   fetchSingleEmployeeLeaveChatMessage,
   markEmployeeLeaveMessagesAsRead,
@@ -56,6 +58,14 @@ export default function LeaveRequestDetailsModal({
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [messageIdToDelete, setMessageIdToDelete] = useState<number | null>(
+    null,
+  );
+  const [isDeletingMessage, setIsDeletingMessage] = useState(false);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<number[]>([]);
+  const [isBulkDelete, setIsBulkDelete] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -345,24 +355,74 @@ export default function LeaveRequestDetailsModal({
     }
   };
 
-  const handleDeleteMessage = async (chatId: number) => {
+  const initiateDeleteMessage = (chatId: number) => {
+    setMessageIdToDelete(chatId);
+    setIsDeleteModalOpen(true);
+  };
+
+  const initiateBulkDelete = () => {
+    setIsBulkDelete(true);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteMessage = async () => {
     if (!userId) return;
 
+    setIsDeletingMessage(true);
     try {
-      const deletedChatId = await deleteEmployeeLeaveChatMessage({
-        chatId,
-        senderUserId: Number(userId),
-        senderRole,
-      });
-      setMessages((prev) =>
-        prev.filter((message) => message.chatId !== deletedChatId),
-      );
-      if (editingMessageId === chatId) cancelEditingMessage();
+      if (isBulkDelete) {
+        const deletedIds = await deleteEmployeeLeaveChatMessages({
+          chatIds: selectedMessageIds,
+          senderUserId: Number(userId),
+          senderRole,
+        });
+
+        setMessages((prev) =>
+          prev.filter((message) => !deletedIds.includes(message.chatId)),
+        );
+        if (editingMessageId && deletedIds.includes(editingMessageId)) {
+          cancelEditingMessage();
+        }
+
+        if (deletedIds.length > 0) {
+          toast.success(`Deleted ${deletedIds.length} message(s).`);
+        }
+        const failedCount = selectedMessageIds.length - deletedIds.length;
+        if (failedCount > 0) {
+          toast.error(
+            `Could not delete ${failedCount} message(s) because they may have been seen or already deleted.`,
+          );
+        }
+
+        setIsSelectionMode(false);
+        setSelectedMessageIds([]);
+        setIsBulkDelete(false);
+      } else if (messageIdToDelete !== null) {
+        const deletedChatId = await deleteEmployeeLeaveChatMessage({
+          chatId: messageIdToDelete,
+          senderUserId: Number(userId),
+          senderRole,
+        });
+        setMessages((prev) =>
+          prev.filter((message) => message.chatId !== deletedChatId),
+        );
+        if (editingMessageId === messageIdToDelete) cancelEditingMessage();
+        setMessageIdToDelete(null);
+      }
+      setIsDeleteModalOpen(false);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Unable to delete message",
       );
+    } finally {
+      setIsDeletingMessage(false);
     }
+  };
+
+  const cancelDeleteMessage = () => {
+    setIsDeleteModalOpen(false);
+    setMessageIdToDelete(null);
+    setIsBulkDelete(false);
   };
 
   const formatChatTime = (date: string) =>
@@ -414,8 +474,40 @@ export default function LeaveRequestDetailsModal({
           </div>
         </div>
 
-        <div className="shrink-0 border-b border-gray-100 bg-gray-50 px-5 py-3 text-[13px] font-bold text-[#282828]">
-          Communication History
+        <div className="flex shrink-0 items-center justify-between gap-2 overflow-hidden whitespace-nowrap border-b border-gray-100 bg-gray-50 px-5 py-3 text-[13px] font-bold text-[#282828]">
+          <span>
+            {isSelectionMode
+              ? `${selectedMessageIds.length} Selected`
+              : "Communication History"}
+          </span>
+          <div className="flex items-center gap-2.5">
+            {isSelectionMode && selectedMessageIds.length > 0 && (
+              <button
+                type="button"
+                onClick={initiateBulkDelete}
+                className="flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap text-[11px] font-bold text-[#FF4B4B] hover:underline"
+              >
+                <Trash size={13} weight="bold" />
+                Delete ({selectedMessageIds.length})
+              </button>
+            )}
+            {(isSelectionMode ||
+              messages.some(
+                (message) =>
+                  message.senderUserId === Number(userId) && !message.isRead,
+              )) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSelectionMode((current) => !current);
+                  setSelectedMessageIds([]);
+                }}
+                className="shrink-0 cursor-pointer whitespace-nowrap text-[11px] font-bold text-[#43C17A] hover:underline"
+              >
+                {isSelectionMode ? "Cancel" : "Select Messages"}
+              </button>
+            )}
+          </div>
         </div>
 
         <div
@@ -442,15 +534,35 @@ export default function LeaveRequestDetailsModal({
                   const isMe = message.senderUserId === Number(userId);
                   const showNewBadge = !isMe && !message.isRead;
                   const canEdit = isMe && !message.isRead && !!message.message;
+                  const canDelete = isMe && !message.isRead;
                   const isEditing = editingMessageId === message.chatId;
 
                   return (
                     <div
                       key={message.chatId}
+                      onClick={() => {
+                        if (isSelectionMode && canDelete) {
+                          setSelectedMessageIds((prev) =>
+                            prev.includes(message.chatId)
+                              ? prev.filter((id) => id !== message.chatId)
+                              : [...prev, message.chatId],
+                          );
+                        }
+                      }}
                       className={`group flex w-full max-w-[85%] gap-1.5 ${
                         isMe ? "ml-auto flex-row-reverse" : "mr-auto"
-                      }`}
+                      } ${isSelectionMode && canDelete ? "cursor-pointer select-none" : ""}`}
                     >
+                      {isSelectionMode && canDelete && (
+                        <div className="mr-2 flex shrink-0 items-center self-center px-1">
+                          <input
+                            type="checkbox"
+                            checked={selectedMessageIds.includes(message.chatId)}
+                            onChange={() => {}}
+                            className="pointer-events-none h-4 w-4 accent-[#43C17A]"
+                          />
+                        </div>
+                      )}
                       <Avatar
                         src={message.senderAvatar}
                         size={24}
@@ -557,7 +669,7 @@ export default function LeaveRequestDetailsModal({
                         </div>
 
                         <div className="mt-0.5 flex items-center gap-1 px-0.5">
-                          {canEdit && !isEditing && (
+                          {canEdit && !isEditing && !isSelectionMode && (
                             <span className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                               <button
                                 type="button"
@@ -569,7 +681,9 @@ export default function LeaveRequestDetailsModal({
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleDeleteMessage(message.chatId)}
+                                onClick={() =>
+                                  initiateDeleteMessage(message.chatId)
+                                }
                                 className="cursor-pointer rounded px-1 text-[9px] font-semibold text-[#FF4B4B] hover:bg-[#FFE5E5]"
                                 title="Delete message"
                               >
@@ -690,6 +804,19 @@ export default function LeaveRequestDetailsModal({
           </div>
         </form>
       </div>
+
+      <ConfirmDeleteModal
+        open={isDeleteModalOpen}
+        onConfirm={confirmDeleteMessage}
+        onCancel={cancelDeleteMessage}
+        isDeleting={isDeletingMessage}
+        title="Delete"
+        name={
+          isBulkDelete ? `${selectedMessageIds.length} message(s)` : "message"
+        }
+        confirmText="Yes, Delete"
+        actionType="remove"
+      />
     </div>
   );
 }
@@ -727,3 +854,5 @@ function DetailStat({
     </div>
   );
 }
+
+

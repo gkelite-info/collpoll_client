@@ -5,7 +5,6 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type AnnouncementItem = {
@@ -51,18 +50,9 @@ const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function AdminLeaveRequestRightPanel() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { role, collegeId, userId } = useUser();
   const [announcements, setAnnouncements] = useState<AnnouncementCardItem[]>([]);
   const [view, setView] = useState<"my" | "others">("my");
-
-  const openRequestModal = () => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("modal", "request-leave");
-    router.push(`${pathname}?${params.toString()}`);
-  };
 
   const fetchAnnouncements = async () => {
     try {
@@ -108,13 +98,7 @@ export default function AdminLeaveRequestRightPanel() {
 
   return (
     <aside className="hidden min-h-0 w-[32%] flex-col p-2 pr-0 md:flex">
-      <div className="grid self-end gap-2 grid-cols-2">
-        <button
-          onClick={openRequestModal}
-          className="h-[54px] whitespace-nowrap cursor-pointer rounded-sm bg-[#16284F] px-3 text-sm font-semibold text-white shadow-md hover:bg-[#20365F]"
-        >
-          Request Leave
-        </button>
+      <div className="flex justify-end">
         <div className="w-[160px]">
           <CourseScheduleCard isVisibile={false} fullWidth={true} />
         </div>
