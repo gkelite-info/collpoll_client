@@ -2,12 +2,28 @@
 
 import { X, CaretDown } from "@phosphor-icons/react";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 interface FacultyRequestLeaveModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: FacultyLeaveFormData) => Promise<void>;
 }
+
+type FacultyLeaveFormData = {
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+};
+
+const defaultLeaveTypes = [
+  "Sick",
+  "Personal",
+  "Emergency",
+  "Travel",
+  "Others",
+];
 
 export default function FacultyRequestLeaveModal({
   isOpen,
@@ -15,6 +31,7 @@ export default function FacultyRequestLeaveModal({
   onSubmit,
 }: FacultyRequestLeaveModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     leaveType: "",
@@ -25,17 +42,48 @@ export default function FacultyRequestLeaveModal({
 
   if (!isOpen) return null;
 
+  const resetForm = () => {
+    setFormData({
+      leaveType: "",
+      startDate: "",
+      endDate: "",
+      description: "",
+    });
+    setIsDropdownOpen(false);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.leaveType) {
+      toast.error("Please select a leave type.");
+      return;
+    }
+
+    if (!formData.startDate || !formData.endDate) {
+      toast.error("Please select the leave dates.");
+      return;
+    }
+
+    if (formData.endDate < formData.startDate) {
+      toast.error("End date cannot be before start date.");
+      return;
+    }
+
+    if (!formData.description.trim()) {
+      toast.error("Please enter a description.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
-      setFormData({
-        leaveType: "",
-        startDate: "",
-        endDate: "",
-        description: "",
-      });
+      resetForm();
     } finally {
       setIsSubmitting(false);
     }
@@ -43,11 +91,11 @@ export default function FacultyRequestLeaveModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-[500px] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between p-5 pb-2">
-          <h2 className="text-2xl font-bold text-[#282828]">Request Leave</h2>
+      <div className="custom-scrollbar relative max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-md bg-white p-6 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-[#282828]">Request Leave</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             disabled={isSubmitting}
             className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-md cursor-pointer disabled:opacity-50"
           >
@@ -55,105 +103,147 @@ export default function FacultyRequestLeaveModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[15px] font-semibold text-[#282828]">
+        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-[#282828]">
               Leave Type
+              <RequiredMark />
             </label>
             <div className="relative">
-              <select
-                required
-                value={formData.leaveType}
-                onChange={(e) =>
-                  setFormData({ ...formData, leaveType: e.target.value })
-                }
-                className="w-full appearance-none border border-[#E0E0E0] rounded-md px-3 py-2.5 text-sm text-[#525252] outline-none focus:border-[#43C17A] cursor-pointer bg-white"
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => setIsDropdownOpen((isOpen) => !isOpen)}
+                className="flex h-11 w-full cursor-pointer items-center justify-between rounded border border-[#43C17A] bg-white px-4 text-sm text-[#525252] outline-none disabled:cursor-not-allowed disabled:opacity-70"
               >
-                <option value="" disabled>
-                  Select Leave Type
-                </option>
-                <option value="Sick">Sick Leave</option>
-                <option value="Personal">Personal Leave</option>
-                <option value="Emergency">Emergency</option>
-                <option value="Travel">Travel</option>
-                <option value="Function">Function</option>
-              </select>
-              <CaretDown
-                size={16}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-              />
+                {formData.leaveType || "Select Leave Type"}
+                <CaretDown
+                  size={18}
+                  className={`text-[#282828] transition-transform duration-200 ${
+                    isDropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              {isDropdownOpen && (
+                <div className="absolute left-0 right-0 z-50 mt-1 overflow-hidden rounded border border-[#CFCFCF] bg-white shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({ ...formData, leaveType: "" })
+                    }
+                    className="flex h-10 w-full items-center bg-[#1F6FD6] px-4 text-left text-sm font-semibold text-white"
+                  >
+                    Select Leave Type
+                  </button>
+                  {defaultLeaveTypes.map(
+                    (leaveType) => (
+                      <button
+                        key={leaveType}
+                        type="button"
+                        onClick={() => {
+                          setFormData({ ...formData, leaveType });
+                          setIsDropdownOpen(false);
+                        }}
+                        className={`flex h-10 w-full cursor-pointer items-center px-4 text-left text-sm ${
+                          formData.leaveType === leaveType
+                            ? "bg-[#E7F8EE] font-semibold text-[#43C17A]"
+                            : "text-[#282828] hover:bg-gray-50"
+                        }`}
+                      >
+                        {leaveType}
+                      </button>
+                    ),
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[15px] font-semibold text-[#282828]">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-[#282828]">
               Leave Date
+              <RequiredMark />
             </label>
-            <div className="flex gap-4">
-              <div className="flex-1 flex flex-col gap-1">
-                <span className="text-xs font-semibold text-[#525252]">
+            <div className="grid grid-cols-2 gap-5">
+              <div className="flex flex-col gap-1">
+                <span className="text-[11px] font-semibold text-[#282828]">
                   Start Date
+                  <RequiredMark />
                 </span>
                 <input
                   type="date"
                   required
-                  min={new Date().toISOString().split("T")[0]}
                   value={formData.startDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, startDate: e.target.value })
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      startDate: event.target.value,
+                      endDate:
+                        formData.endDate &&
+                        formData.endDate < event.target.value
+                          ? ""
+                          : formData.endDate,
+                    })
                   }
-                  className="w-full border border-[#E0E0E0] rounded-md px-3 py-2.5 text-sm text-[#525252] outline-none focus:border-[#43C17A] cursor-pointer"
+                  className="request-leave-date-input h-12 w-full rounded-xl border border-[#CFCFCF] px-5 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
                 />
               </div>
-              <div className="flex-1 flex flex-col gap-1">
-                <span className="text-xs font-semibold text-[#525252]">
+              <div className="flex flex-col gap-1">
+                <span className="text-[11px] font-semibold text-[#282828]">
                   End Date
+                  <RequiredMark />
                 </span>
                 <input
                   type="date"
                   required
-                  min={
-                    formData.startDate || new Date().toISOString().split("T")[0]
-                  }
+                  min={formData.startDate || undefined}
                   value={formData.endDate}
                   onChange={(e) =>
                     setFormData({ ...formData, endDate: e.target.value })
                   }
-                  className="w-full border border-[#E0E0E0] rounded-md px-3 py-2.5 text-sm text-[#525252] outline-none focus:border-[#43C17A] cursor-pointer"
+                  className="request-leave-date-input h-12 w-full rounded-xl border border-[#CFCFCF] px-5 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[15px] font-semibold text-[#282828]">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-[#282828]">
               Description
+              <RequiredMark />
             </label>
             <textarea
               required
-              rows={4}
+              rows={5}
+              maxLength={255}
               value={formData.description}
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
               }
-              placeholder="Provide a short explanation for your leave request.........."
-              className="w-full resize-none border border-[#E0E0E0] rounded-md px-3 py-2.5 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
+              placeholder="Provide a short explanation for your leave request............"
+              className="w-full resize-none rounded border border-[#CFCFCF] px-4 py-3 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
             />
           </div>
 
-          <div className="flex gap-3 mt-2">
+          <div className="mt-1 grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isSubmitting}
-              className="flex-1 py-2.5 bg-[#EAEAEA] cursor-pointer text-[#525252] rounded-md font-bold text-sm hover:bg-[#dfdfdf] transition-colors disabled:opacity-50"
+              className="h-11 cursor-pointer rounded bg-[#E0E0E0] text-sm font-semibold text-[#282828] hover:bg-[#D5D5D5] disabled:cursor-not-allowed disabled:opacity-70"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="flex-1 py-2.5 bg-[#43C17A] cursor-pointer text-white rounded-md font-bold text-sm hover:bg-[#3ba869] transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              disabled={
+                isSubmitting ||
+                !formData.leaveType ||
+                !formData.startDate ||
+                !formData.endDate ||
+                !formData.description.trim()
+              }
+              className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded bg-[#43C17A] text-sm font-semibold text-white hover:bg-[#34A565] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
@@ -169,4 +259,8 @@ export default function FacultyRequestLeaveModal({
       </div>
     </div>
   );
+}
+
+function RequiredMark() {
+  return <span className="ml-1 text-[#FF2020]">*</span>;
 }

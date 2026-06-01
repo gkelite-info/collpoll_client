@@ -1,4 +1,9 @@
 import { supabase } from "@/lib/supabaseClient";
+import {
+  createEmployeeLeaveRequest,
+  fetchEmployeeLeaveRequestCounts,
+  fetchPaginatedEmployeeLeaveRequests,
+} from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
 
 function getOrdinalSuffix(i: number) {
   const j = i % 10,
@@ -80,6 +85,7 @@ export async function fetchStudentLeavesForFaculty(
     const { data, error, count } = await query;
     if (error) throw error;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mappedData = (data || []).map((l: any) => {
       const student = Array.isArray(l.students) ? l.students[0] : l.students;
       const branch = Array.isArray(student?.college_branch)
@@ -96,7 +102,10 @@ export async function fetchStudentLeavesForFaculty(
         ? student.student_academic_history
         : [student?.student_academic_history];
 
-      const currentHistory = historyArr.find((h: any) => h?.isCurrent === true);
+      const currentHistory = historyArr.find(
+        (h: { isCurrent?: boolean } | null | undefined) =>
+          h?.isCurrent === true,
+      );
       const semNumber = currentHistory?.college_semester?.collegeSemester;
 
       const semString = semNumber
@@ -163,22 +172,24 @@ export async function updateStudentLeaveStatus(
 }
 
 export async function fetchFacultyLeaveCounts(facultyId: number) {
-  const { data, error } = await supabase
-    .from("faculty_leaves")
-    .select(`status`)
-    .eq("facultyId", facultyId)
-    .is("deletedAt", null);
+  try {
+    const scope = await getFacultyEmployeeLeaveScope(facultyId);
+    const counts = await fetchEmployeeLeaveRequestCounts({
+      userId: scope.userId,
+      collegeId: scope.collegeId,
+      role: "Faculty",
+    });
 
-  if (error) return { all: 0, approved: 0, pending: 0, rejected: 0 };
-
-  const counts = { all: data.length, approved: 0, pending: 0, rejected: 0 };
-  data.forEach((d) => {
-    const s = d.status?.toLowerCase();
-    if (s === "approved") counts.approved++;
-    if (s === "pending") counts.pending++;
-    if (s === "rejected") counts.rejected++;
-  });
-  return counts;
+    return {
+      all: counts.total,
+      approved: counts.approved,
+      pending: counts.pending,
+      rejected: counts.rejected,
+    };
+  } catch (error) {
+    console.error("Error fetching faculty employee leave counts:", error);
+    return { all: 0, approved: 0, pending: 0, rejected: 0 };
+  }
 }
 
 export async function fetchFacultyLeaves(
@@ -188,79 +199,105 @@ export async function fetchFacultyLeaves(
   statusFilter: string,
   searchQuery: string,
 ) {
-  let query = supabase
-    .from("faculty_leaves")
-    .select("*", { count: "exact" })
-    .eq("facultyId", facultyId)
-    .is("deletedAt", null);
+  try {
+    const scope = await getFacultyEmployeeLeaveScope(facultyId);
+    const { data, totalCount } = await fetchPaginatedEmployeeLeaveRequests({
+      userId: scope.userId,
+      collegeId: scope.collegeId,
+      role: "Faculty",
+      status:
+        statusFilter === "all"
+          ? undefined
+          : (statusFilter as "approved" | "pending" | "rejected"),
+      page,
+      pageSize: limit,
+      search: searchQuery,
+    });
 
-  if (statusFilter !== "all") {
-    query = query.eq(
-      "status",
-      statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1),
-    );
-  }
+    const mappedData = data.map((leave) => {
+      const days = calculateLeaveDays(leave.leaveFromDate, leave.leaveToDate);
 
-  if (searchQuery.trim() !== "") {
-    query = query.ilike("description", `%${searchQuery.trim()}%`);
-  }
+      return {
+        id: leave.employeeLeaveRequestId,
+        employeeLeaveRequestId: leave.employeeLeaveRequestId,
+        employeeId: leave.employee?.employeeId ?? String(leave.employeeId),
+        name: leave.user?.fullName ?? "Faculty",
+        role: titleCase(leave.role),
+        photo: leave.user?.profileUrl ?? "",
+        requestedDate: formatLeaveDate(leave.createdAt.slice(0, 10)),
+        fromDate: formatLeaveDate(leave.leaveFromDate),
+        toDate: formatLeaveDate(leave.leaveToDate),
+        days: String(days).padStart(2, "0"),
+        leaveType: titleCase(leave.leaveType || "Personal"),
+        description: leave.description?.trim() || "",
+        status: leave.status ? leave.status.toLowerCase() : "pending",
+      };
+    });
 
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
-  query = query.order("createdAt", { ascending: false }).range(from, to);
-
-  const { data, error, count } = await query;
-
-  if (error) {
-    console.warn(
-      "faculty_leaves table might not exist yet, returning empty.",
-      error,
-    );
+    return { data: mappedData, totalCount };
+  } catch (error) {
+    console.error("Error fetching faculty employee leaves:", error);
     return { data: [], totalCount: 0 };
   }
-
-  const mappedData = (data || []).map((l: any) => {
-    const sDate = new Date(l.startDate);
-    const eDate = new Date(l.endDate);
-    const diffTime = Math.abs(eDate.getTime() - sDate.getTime());
-    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-    return {
-      id: l.facultyLeaveId,
-      fromDate: sDate.toLocaleDateString("en-GB"),
-      toDate: eDate.toLocaleDateString("en-GB"),
-      days: String(days).padStart(2, "0"),
-      leaveType: l.leaveType || "Personal",
-      description: l.description?.trim() || "",
-      status: l.status ? l.status.toLowerCase() : "pending",
-    };
-  });
-
-  return { data: mappedData, totalCount: count || 0 };
 }
+
+type FacultyLeaveRequestPayload = {
+  startDate: string;
+  endDate: string;
+  leaveType: string;
+  description: string;
+};
 
 export async function submitFacultyLeaveRequest(
   facultyId: number,
-  payload: any,
+  payload: FacultyLeaveRequestPayload,
 ) {
   const { startDate, endDate, leaveType, description } = payload;
-  const now = new Date().toISOString();
+  const scope = await getFacultyEmployeeLeaveScope(facultyId);
 
+  return createEmployeeLeaveRequest({
+    userId: scope.userId,
+    collegeId: scope.collegeId,
+    role: "Faculty",
+    leaveType,
+    leaveFromDate: startDate,
+    leaveToDate: endDate,
+    description,
+  });
+}
+
+async function getFacultyEmployeeLeaveScope(facultyId: number) {
   const { data, error } = await supabase
-    .from("faculty_leaves")
-    .insert({
-      facultyId,
-      startDate,
-      endDate,
-      leaveType,
-      description,
-      status: "Pending",
-      createdAt: now,
-      updatedAt: now,
-    })
-    .select()
-    .single();
+    .from("faculty")
+    .select("userId, collegeId")
+    .eq("facultyId", facultyId)
+    .eq("isActive", true)
+    .maybeSingle();
 
   if (error) throw error;
-  return data;
+  if (!data?.userId || !data?.collegeId) {
+    throw new Error("Faculty context not found.");
+  }
+
+  return {
+    userId: data.userId as number,
+    collegeId: data.collegeId as number,
+  };
 }
+
+const formatLeaveDate = (date: string) =>
+  new Date(`${date}T00:00:00`).toLocaleDateString("en-GB");
+
+const calculateLeaveDays = (fromDate: string, toDate: string) => {
+  const from = new Date(`${fromDate}T00:00:00`);
+  const to = new Date(`${toDate}T00:00:00`);
+  const diff = Math.max(0, to.getTime() - from.getTime());
+  return Math.floor(diff / 86_400_000) + 1;
+};
+
+const titleCase = (value: string) =>
+  value
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");

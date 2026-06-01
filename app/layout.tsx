@@ -134,6 +134,7 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <body
+        suppressHydrationWarning
         // className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen w-screen overflow-hidden flex justify-between`}
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen w-screen flex justify-between`}
       >

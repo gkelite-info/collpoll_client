@@ -133,6 +133,7 @@ export const ROLE_BASED_ROUTES: Record<string, SearchRoute[]> = {
     { label: "Finance / Analytics", subLabel: "Student Analytics", path: "/finance/finance-analytics/students", category: "Finance", keywords: ["student fees", "dues", "collection"] },
     { label: "Add Fee Structure", path: "/finance/add-fee-structure", category: "Finance", keywords: ["create fees", "tuition", "pricing"] },
     { label: "Calendar", path: "/finance/calendar", category: "Academics", keywords: [] },
+    { label: "Leave Request", path: "/finance/leave-request", category: "Requests", keywords: ["leave", "permission"] },
     { label: "Drive", path: "/finance/drive", category: "Resources", keywords: ["files", "documents", "storage"] },
     { label: "Meetings", subLabel: "Upcoming Meetings", path: "/finance/meetings?type=upcoming", category: "Collaboration", keywords: ["upcoming meetings", "new meetings"] },
     { label: "Meetings", subLabel: "Previous Meetings", path: "/finance/meetings?type=previous", category: "Collaboration", keywords: ["previous meetings", "old meetings"] },

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, ReactNode, useEffect } from "react";
+import { ReactNode } from "react";
 import {
   CalendarIcon,
+  CalendarCheck,
   ChartLineIcon,
   CheckCircle,
   FolderOpen,
@@ -24,7 +25,6 @@ type NavItem = {
 
 export default function FinanceNavbar() {
   const pathname = usePathname();
-  const [active, setActive] = useState("");
   const t = useTranslations("Navbars");
 
   const items: NavItem[] = [
@@ -61,6 +61,13 @@ export default function FinanceNavbar() {
     },
     {
       icon: (isActive) => (
+        <CalendarCheck size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Leave Request",
+      path: "/finance/leave-request",
+    },
+    {
+      icon: (isActive) => (
         <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: t("Drive"),
@@ -94,33 +101,9 @@ export default function FinanceNavbar() {
     },
   ];
 
-  useEffect(() => {
-    if (pathname === "/finance") {
-      setActive(t("Home"));
-      return;
-    }
-
-    if (pathname === "/finance/finance-analytics/students") {
-      setActive(t("Finance / Analytics"));
-      return;
-    }
-
-    if (
-      pathname.startsWith("/finance/finance-analytics") &&
-      pathname !== "/finance/finance-analytics/students"
-    ) {
-      setActive(t("Finance / Analytics"));
-      return;
-    }
-
-    const current = items.find((item) => item.path === pathname);
-    if (current) {
-      setActive(current.label);
-      return;
-    }
-
-    setActive(t("Home"));
-  }, [pathname, items, t]);
+  const activeLabel = pathname.startsWith("/finance/finance-analytics")
+    ? t("Finance / Analytics")
+    : (items.find((item) => item.path === pathname)?.label ?? t("Home"));
 
   return (
     <div className="bg-[#43C17A] flex flex-col items-center h-full w-full rounded-tr-3xl shadow-md">
@@ -130,7 +113,7 @@ export default function FinanceNavbar() {
 
       <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4 pl-4">
         {items.map((item) => {
-          const isActive = active === item.label;
+          const isActive = activeLabel === item.label;
 
           return (
             <Link
