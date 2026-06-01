@@ -3,6 +3,7 @@ import { Monitor, IconProps, Phone, CaretLeft } from "@phosphor-icons/react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { useRouter } from "next/navigation";
 import WipOverlay from "@/app/utils/WipOverlay";
+import { useUser } from "@/app/utils/context/UserContext";
 
 export interface TrustedDevice {
   id: string;
@@ -118,10 +119,13 @@ const TrustedDevicesList: React.FC<TrustedDevicesListProps> = ({
   onRemoveDevice,
 }) => {
   const router = useRouter();
+  const {role} = useUser()
 
   const handleBack = () => {
     router.back();
   };
+
+  const isNOtVisible = !['WellbeingExecutive', 'WellbeingManager'].includes(role!)
   return (
     <div className="min-h-screen p-2 sm:p-2 max-md:bg-[#F4F5F6] max-md:p-0">
       <div className="mx-auto font-sans w-full">
@@ -141,7 +145,7 @@ const TrustedDevicesList: React.FC<TrustedDevicesListProps> = ({
             </p>
           </div>
           <div className="w-[32%] max-md:hidden">
-            <CourseScheduleCard />
+            <CourseScheduleCard isVisibile={isNOtVisible}/>
           </div>
         </div>
 
