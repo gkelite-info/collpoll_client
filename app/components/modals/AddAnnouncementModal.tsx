@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
@@ -49,48 +49,69 @@ const roleOptionsMap: Record<string, string[]> = {
     "Faculty",
     "Student",
     "Parent",
-    "Finance",
-    "CollegeHr",
+    "FinanceManager",
+    "PlacementOfficer",
     "WellbeingExecutive",
     "WellbeingManager",
-    "PlacementOfficer",
   ],
   FinanceManager: [
     "CollegeAdmin",
     "Admin",
     "Faculty",
-    "Student",
-    "Parent",
-    "Finance",
     "CollegeHr",
+    "Finance",
+    "PlacementOfficer",
     "WellbeingExecutive",
     "WellbeingManager",
-    "PlacementOfficer",
   ],
   CollegeAdmin: [
     "Admin",
     "Faculty",
-    "Student",
-    "Parent",
-    "Finance",
-    "Finance Manager",
-    "PlacementOfficer",
     "CollegeHr",
+    "Finance",
+    "FinanceManager",
+    "PlacementOfficer",
+    "WellbeingExecutive",
+    "WellbeingManager",
   ],
   Admin: [
     "CollegeAdmin",
     "Faculty",
     "Student",
     "Parent",
-    "Finance",
-    "Finance Manager",
-    "PlacementOfficer",
     "CollegeHr",
+    "Finance",
+    "FinanceManager",
+    "PlacementOfficer",
+    "WellbeingExecutive",
+    "WellbeingManager",
   ],
-  Faculty: ["CollegeAdmin", "Admin", "Student", "Parent"],
+  Faculty: [
+    "CollegeAdmin",
+    "Admin",
+    "Student",
+    "Parent",
+    "CollegeHr",
+    "Finance",
+    "FinanceManager",
+    "PlacementOfficer",
+    "WellbeingExecutive",
+    "WellbeingManager",
+  ],
   Student: ["Admin", "Faculty", "Finance", "PlacementOfficer", "CollegeHr"],
   Parent: ["Admin", "Faculty", "Finance", "PlacementOfficer"],
-  CollegeHr: ["CollegeAdmin", "Admin", "Faculty", "PlacementOfficer"],
+  CollegeHr: [
+    "CollegeAdmin",
+    "Admin",
+    "Faculty",
+    "Student",
+    "Parent",
+    "PlacementOfficer",
+    "Finance",
+    "FinanceManager",
+    "WellbeingExecutive",
+    "WellbeingManager",
+  ],
   PlacementOfficer: [
     "CollegeAdmin",
     "Admin",
@@ -98,6 +119,34 @@ const roleOptionsMap: Record<string, string[]> = {
     "Student",
     "Parent",
     "CollegeHr",
+    "WellbeingExecutive",
+    "WellbeingManager",
+    "Finance",
+    "FinanceManager",
+  ],
+  WellbeingExecutive: [
+    "CollegeAdmin",
+    "Admin",
+    "Faculty",
+    "Student",
+    "Parent",
+    "CollegeHr",
+    "Finance",
+    "FinanceManager",
+    "PlacementOfficer",
+    "WellbeingManager",
+  ],
+  WellbeingManager: [
+    "CollegeAdmin",
+    "Admin",
+    "Faculty",
+    "Student",
+    "Parent",
+    "CollegeHr",
+    "Finance",
+    "FinanceManager",
+    "PlacementOfficer",
+    "WellbeingExecutive",
   ],
 };
 
@@ -131,6 +180,7 @@ export default function AddAnnouncementModal({
   const [targetRoles, setTargetRoles] = useState<string[]>([]);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [type, setType] = useState<string>("notice");
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
   const { userId, collegeId, role } = useUser();
   const availableRoles = role ? roleOptionsMap[role] || [] : [];
 
@@ -256,8 +306,25 @@ export default function AddAnnouncementModal({
       setDate("");
       setType("");
       setTargetRoles([]);
+      setShowRoleDropdown(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !showRoleDropdown) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        roleDropdownRef.current &&
+        !roleDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowRoleDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [open, showRoleDropdown]);
 
   const resetForm = () => {
     setTitle("");
@@ -386,7 +453,10 @@ export default function AddAnnouncementModal({
                 )}
               </div>
 
-              <div className="flex flex-col w-1/2 relative role-dropdown">
+              <div
+                ref={roleDropdownRef}
+                className="flex flex-col w-1/2 relative role-dropdown"
+              >
                 <label className="text-base font-medium text-[#2F2F2F] mb-1">
                   {t("Select Roles")}
                 </label>

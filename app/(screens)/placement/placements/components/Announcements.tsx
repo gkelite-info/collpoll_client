@@ -50,7 +50,7 @@ const formatRole = (role: string) =>
 export default function Announcements() {
   const { collegeId, userId, role } = useUser();
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
-  const [view, setView] = useState<"my" | "others">("my");
+  const [view, setView] = useState<"my" | "others">("others");
 
   const fetchData = useCallback(async () => {
     try {
@@ -105,6 +105,7 @@ export default function Announcements() {
     <AnnouncementsCard
       announceCard={announcements}
       height="74vh"
+      currentView={view}
       onViewChange={(selectedView) => setView(selectedView)}
       refreshAnnouncements={fetchData}
     />

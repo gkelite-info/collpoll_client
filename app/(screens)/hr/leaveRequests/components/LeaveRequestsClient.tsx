@@ -269,6 +269,16 @@ export default function LeaveRequestsClient() {
     loadRequests();
   }, [loadRequests]);
 
+  useEffect(() => {
+    const handleCreated = () => {
+      loadCounts();
+      loadRequests();
+    };
+    window.addEventListener("employee-leave-request-created", handleCreated);
+    return () =>
+      window.removeEventListener("employee-leave-request-created", handleCreated);
+  }, [loadCounts, loadRequests]);
+
   const setRouteStatus = (status: HrLeaveStatus) => {
     const params = new URLSearchParams(searchParams.toString());
 

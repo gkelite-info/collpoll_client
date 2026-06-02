@@ -13,10 +13,9 @@ import CardComponent from "@/app/utils/card";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { useUser } from "@/app/utils/context/UserContext";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
-import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import LiveAnnouncementsCard from "@/app/utils/liveAnnouncementsCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { financeAnnouncements } from "@/app/(screens)/finance-manager/(dashboard)/components/data";
 import {
   leaveSummaryCards,
   type FinanceLeaveRequest,
@@ -161,7 +160,13 @@ function LeaveRequestContent() {
 
     setIsCardsLoading(true);
     try {
-      setCounts(await fetchEmployeeLeaveRequestCounts({ userId, collegeId }));
+      setCounts(
+        await fetchEmployeeLeaveRequestCounts({
+          userId,
+          collegeId,
+          role: "Finance",
+        }),
+      );
     } catch (error) {
       console.error("Error fetching finance leave summary counts:", error);
       setCounts({ total: 0, approved: 0, pending: 0, rejected: 0 });
@@ -206,6 +211,7 @@ function LeaveRequestContent() {
       const result = await fetchPaginatedEmployeeLeaveRequests({
         userId,
         collegeId,
+        role: "Finance",
         status:
           activeStatus === "total"
             ? undefined
@@ -463,12 +469,7 @@ function LeaveRequestContent() {
         </div>
         <WorkWeekCalendar style="mt-3 max-w-full" />
         <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto">
-          <AnnouncementsCard
-            announceCard={financeAnnouncements}
-            height="80vh"
-            currentView="others"
-            readOnly
-          />
+          <LiveAnnouncementsCard />
         </div>
       </aside>
 

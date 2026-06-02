@@ -14,6 +14,7 @@ import {
 } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { Avatar } from "@/app/utils/Avatar";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import {
   deleteEmployeeLeaveChatMessage,
@@ -55,6 +56,9 @@ export default function HrLeaveDetailsModal({
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const [editingText, setEditingText] = useState("");
   const [isUpdatingMessage, setIsUpdatingMessage] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [messageIdToDelete, setMessageIdToDelete] = useState<number | null>(null);
+  const [isDeletingMessage, setIsDeletingMessage] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -344,24 +348,39 @@ export default function HrLeaveDetailsModal({
     }
   };
 
-  const handleDeleteMessage = async (chatId: number) => {
-    if (!collegeHrId) return;
+  const initiateDeleteMessage = (chatId: number) => {
+    setMessageIdToDelete(chatId);
+    setIsDeleteModalOpen(true);
+  };
 
+  const confirmDeleteMessage = async () => {
+    if (!collegeHrId || messageIdToDelete === null) return;
+
+    setIsDeletingMessage(true);
     try {
       const deletedChatId = await deleteEmployeeLeaveChatMessage({
-        chatId,
+        chatId: messageIdToDelete,
         senderCollegeHrId: collegeHrId,
         senderRole: SENDER_ROLE,
       });
       setMessages((prev) =>
         prev.filter((message) => message.chatId !== deletedChatId),
       );
-      if (editingMessageId === chatId) cancelEditingMessage();
+      if (editingMessageId === messageIdToDelete) cancelEditingMessage();
+      setMessageIdToDelete(null);
+      setIsDeleteModalOpen(false);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Unable to delete message",
       );
+    } finally {
+      setIsDeletingMessage(false);
     }
+  };
+
+  const cancelDeleteMessage = () => {
+    setIsDeleteModalOpen(false);
+    setMessageIdToDelete(null);
   };
 
   const formatChatTime = (date: string) =>
@@ -620,7 +639,7 @@ export default function HrLeaveDetailsModal({
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    handleDeleteMessage(message.chatId)
+                                    initiateDeleteMessage(message.chatId)
                                   }
                                   className="cursor-pointer rounded px-1 text-[9px] font-semibold text-[#FF4B4B] hover:bg-[#FFE5E5]"
                                   title="Delete message"
@@ -743,6 +762,17 @@ export default function HrLeaveDetailsModal({
           </form>
         </section>
       </div>
+
+      <ConfirmDeleteModal
+        open={isDeleteModalOpen}
+        onConfirm={confirmDeleteMessage}
+        onCancel={cancelDeleteMessage}
+        isDeleting={isDeletingMessage}
+        title="Delete"
+        name="message"
+        confirmText="Yes, Delete"
+        actionType="remove"
+      />
     </div>
   );
 }

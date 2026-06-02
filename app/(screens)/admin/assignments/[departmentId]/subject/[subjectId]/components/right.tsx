@@ -42,7 +42,7 @@ export default function AssignmentsRight({ facultyId, collegeSubjectId }: props)
   const [openTaskModal, setOpenTaskModal] = useState(false);
   const { collegeId, userId, role } = useUser();
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [view, setView] = useState<"my" | "others">("my");
+  const [view, setView] = useState<"my" | "others">("others");
 
   useEffect(() => {
     if (!facultyId) return;
@@ -205,6 +205,7 @@ export default function AssignmentsRight({ facultyId, collegeSubjectId }: props)
         <AnnouncementsCard
           announceCard={announcements}
           height="80vh"
+          currentView={view}
           onViewChange={(v) => setView(v)}
           refreshAnnouncements={fetchData}
         />

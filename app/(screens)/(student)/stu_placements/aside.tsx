@@ -36,14 +36,6 @@ export default function AssignmentsRight() {
   const [view, setView] = useState<"my" | "others">("others");
   const { collegeId, userId, role } = useUser();
 
-  const allowedCreatorRoles = [
-    "Admin",
-    "Faculty",
-    "Finance",
-    "Placement",
-    "CollegeHr",
-  ];
-
   useEffect(() => {
     if (!studentId) return;
     loadStudentTasks();
@@ -112,11 +104,7 @@ export default function AssignmentsRight() {
         limit: 20,
       });
 
-      const filtered = res.data.filter((item: any) =>
-        allowedCreatorRoles.includes(item.createdByRole),
-      );
-
-      const formatted = filtered.map((item: any) => ({
+      const formatted = res.data.map((item) => ({
         collegeAnnouncementId: item.collegeAnnouncementId,
         title: item.title,
         date: item.date,

@@ -61,7 +61,13 @@ export default function AdminLeaveSummaryCards() {
 
     setIsLoading(true);
     try {
-      setCounts(await fetchEmployeeLeaveRequestCounts({ userId, collegeId }));
+      setCounts(
+        await fetchEmployeeLeaveRequestCounts({
+          userId,
+          collegeId,
+          role: "Admin",
+        }),
+      );
     } catch (error) {
       console.error("Error fetching admin leave summary counts:", error);
       setCounts({ total: 0, approved: 0, pending: 0, rejected: 0 });

@@ -130,14 +130,6 @@ export default function StuDashRight() {
     }
   };
 
-  const allowedCreatorRoles = [
-    "Admin",
-    "Faculty",
-    "Finance",
-    "Placement",
-    "CollegeHr",
-  ];
-
   const myTasks = [
     {
       facultytaskId: 1,
@@ -180,11 +172,7 @@ export default function StuDashRight() {
         limit: 20,
       });
 
-      const filtered = res.data.filter((item: any) =>
-        allowedCreatorRoles.includes(item.createdByRole),
-      );
-
-      const formatted = filtered.map((item: any) => ({
+      const formatted = res.data.map((item) => ({
         collegeAnnouncementId: item.collegeAnnouncementId,
         title: item.title,
         date: item.date,
@@ -197,7 +185,7 @@ export default function StuDashRight() {
         cardBg: "#E8F8EF",
         imageBg: "#D3F1E0",
 
-        professor: t("byRole", { role: item.createdByRole }),
+        professor: t("By {role}", { role: item.createdByRole }),
       }));
 
       setAnnouncements(formatted);

@@ -18,6 +18,7 @@ export type CollegeAnnouncementRow = {
 
 type AnnouncementRoleRelation = {
   role: string;
+  deletedAt?: string | null;
 };
 
 type CollegeAnnouncementListRow = {
@@ -73,6 +74,28 @@ const normalizeAnnouncementCreatorRole = (role: string) => {
   return role;
 };
 
+const getAnnouncementTargetRoleValues = (role: string) => {
+  const normalizedRole = role.toLowerCase().replace(/[^a-z]/g, "");
+  const canonicalRoles: Record<string, string> = {
+    admin: "Admin",
+    collegeadmin: "CollegeAdmin",
+    collegehr: "CollegeHr",
+    faculty: "Faculty",
+    finance: "Finance",
+    financemanager: "FinanceManager",
+    hr: "CollegeHr",
+    parent: "Parent",
+    placement: "PlacementOfficer",
+    placementofficer: "PlacementOfficer",
+    superadmin: "SuperAdmin",
+    student: "Student",
+    wellbeingexecutive: "WellbeingExecutive",
+    wellbeingmanager: "WellbeingManager",
+  };
+
+  return [canonicalRoles[normalizedRole] ?? role];
+};
+
 /* =====================================================
    FETCH ANNOUNCEMENTS (STRICT SEPARATION)
 ===================================================== */
@@ -113,6 +136,11 @@ export async function fetchCollegeAnnouncements({
     .is("is_deleted", false)
     .lt("date", today);
 
+  const roleRelation =
+    view === "others"
+      ? "college_announcements_roles!inner ( role, deletedAt )"
+      : "college_announcements_roles ( role, deletedAt )";
+
   let query = supabase
     .from("college_announcements")
     .select(
@@ -124,9 +152,7 @@ export async function fetchCollegeAnnouncements({
             createdBy,
             createdByRole,
             createdAt,
-            college_announcements_roles (
-                role
-            )
+            ${roleRelation}
         `,
       { count: "exact" },
     )
@@ -138,7 +164,13 @@ export async function fetchCollegeAnnouncements({
   if (view === "my") {
     query = query.eq("createdBy", numericUserId);
   } else {
-    query = query.neq("createdBy", numericUserId);
+    query = query
+      .neq("createdBy", numericUserId)
+      .in(
+        "college_announcements_roles.role",
+        getAnnouncementTargetRoleValues(role),
+      )
+      .is("college_announcements_roles.deletedAt", null);
   }
 
   const { data, error, count } = await query
@@ -161,7 +193,9 @@ export async function fetchCollegeAnnouncements({
   const formatted = rows
     .map((item) => {
       const targetRoles =
-        item.college_announcements_roles?.map((roleRow) => roleRow.role) || [];
+        item.college_announcements_roles
+          ?.filter((roleRow) => !roleRow.deletedAt)
+          .map((roleRow) => roleRow.role) || [];
 
       const formattedDate = new Date(item.date).toLocaleDateString("en-GB", {
         day: "2-digit",
@@ -375,7 +409,7 @@ export async function fetchAnnouncementDetails(announcementId: number) {
             createdBy,
             createdByRole,
             createdAt,
-            college_announcements_roles ( role ),
+            college_announcements_roles ( role, deletedAt ),
             users!college_announcements_createdBy_fkey (
                 fullName,
                 user_profile ( profileUrl )
@@ -391,7 +425,9 @@ export async function fetchAnnouncementDetails(announcementId: number) {
 
   const detail = data as unknown as AnnouncementDetailsRow;
   const targetRoles =
-    detail.college_announcements_roles?.map((roleRow) => roleRow.role) || [];
+    detail.college_announcements_roles
+      ?.filter((roleRow) => !roleRow.deletedAt)
+      .map((roleRow) => roleRow.role) || [];
 
   const userObj = Array.isArray(detail.users) ? detail.users[0] : detail.users;
   const creatorName = userObj?.fullName || "Unknown User";

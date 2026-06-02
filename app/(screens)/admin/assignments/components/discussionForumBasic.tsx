@@ -735,7 +735,7 @@ export default function DiscussionForumBasic({
   const [facultyTasks, setFacultyTasks] = useState<Task[]>([]);
   const [openTaskModal, setOpenTaskModal] = useState(false);
   const { collegeId, role } = useUser();
-  const [view, setView] = useState<"my" | "others">("my");
+  const [view, setView] = useState<"my" | "others">("others");
   const [announcements, setAnnouncements] = useState<any[]>([]);
 
   useEffect(() => {
@@ -1279,6 +1279,7 @@ export default function DiscussionForumBasic({
             <AnnouncementsCard
               announceCard={announcements}
               height="80vh"
+              currentView={view}
               onViewChange={(v) => setView(v)}
               refreshAnnouncements={fetchData}
             />

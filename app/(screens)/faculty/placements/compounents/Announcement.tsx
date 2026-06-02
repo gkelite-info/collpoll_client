@@ -23,7 +23,7 @@ const formatRole = (role: string) =>
 
 export default function Announcements() {
     const [announcements, setAnnouncements] = useState<any[]>([]);
-    const [view, setView] = useState<"my" | "others">("my");
+    const [view, setView] = useState<"my" | "others">("others");
     const { collegeId, userId, role } = useUser();
 
 
@@ -87,6 +87,7 @@ export default function Announcements() {
                 <AnnouncementsCard
                     announceCard={announcements}
                     height="80vh"
+                    currentView={view}
                     onViewChange={(v) => setView(v)}
                     refreshAnnouncements={fetchAnnouncements}
                 />

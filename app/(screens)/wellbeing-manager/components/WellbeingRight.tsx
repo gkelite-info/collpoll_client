@@ -4,7 +4,27 @@ import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { Plus, X } from "@phosphor-icons/react";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useUser } from "@/app/utils/context/UserContext";
+import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
+
+const typeIcons: Record<string, string> = {
+  class: "/class.png",
+  exam: "/exam.png",
+  meeting: "/meeting.png",
+  holiday: "/calendar-3d.png",
+  event: "/event.png",
+  notice: "/clip.png",
+  result: "/result.jpg",
+  timetable: "/timetable.png",
+  placement: "/placement.png",
+  emergency: "/emergency.png",
+  finance: "/finance.jpg",
+  other: "/others.png",
+};
+
+const formatRole = (role: string) =>
+  role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 type WellbeingRightProps = {
   button?: boolean;
@@ -27,6 +47,9 @@ export default function WellbeingRight({
   onCloseDrawer,
   hideDefaultMobileContent = false,
 }: WellbeingRightProps) {
+  const { collegeId, userId, role } = useUser();
+  const [view, setView] = useState<"my" | "others">("others");
+
   useEffect(() => {
     if (isMobileDrawerOpen) {
       document.body.style.overflow = "hidden";
@@ -80,6 +103,55 @@ export default function WellbeingRight({
     },
   ];
 
+  const [announcements, setAnnouncements] = useState(
+    staticAnnouncements.slice(0, 0),
+  );
+
+  const fetchAnnouncements = useCallback(async () => {
+    if (!collegeId || !userId || !role) return;
+
+    try {
+      const res = await fetchCollegeAnnouncements({
+        collegeId,
+        userId,
+        role,
+        view,
+        page: 1,
+        limit: 20,
+      });
+
+      setAnnouncements(
+        res.data.map((item) => ({
+          collegeAnnouncementId: item.collegeAnnouncementId,
+          title: item.title,
+          date: item.date,
+          createdAt: item.createdAt,
+          type: item.type,
+          targetRoles: item.targetRoles,
+          image: typeIcons[item.type] || "/clip.png",
+          imgHeight: "h-10",
+          cardBg: "#E8F8EF",
+          imageBg: "#D3F1E0",
+          professor:
+            view === "my"
+              ? `For ${item.targetRoles.map(formatRole).join(", ")}`
+              : `By ${formatRole(item.createdByRole)}`,
+        })),
+      );
+    } catch (error) {
+      console.error("Wellbeing manager announcements fetch failed", error);
+      setAnnouncements([]);
+    }
+  }, [collegeId, role, userId, view]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void fetchAnnouncements();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [fetchAnnouncements]);
+
   const SidebarContent = (
     <div className="flex h-full min-h-0 flex-col">
       <div className="grid grid-cols-2 gap-4 w-full items-center justify-center shrink-0">
@@ -107,10 +179,11 @@ export default function WellbeingRight({
 
       <div className="min-h-[360px] flex-1">
         <AnnouncementsCard
-          announceCard={staticAnnouncements}
+          announceCard={announcements}
           height="100%"
-          refreshAnnouncements={async () => { }}
-          currentView="my"
+          refreshAnnouncements={fetchAnnouncements}
+          currentView={view}
+          onViewChange={setView}
         />
       </div>
     </div>

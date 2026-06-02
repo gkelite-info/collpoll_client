@@ -58,7 +58,7 @@ export default function MyAttendanceRight() {
   const { facultyId, subjectIds, collegeId, userId, role, loading: facultyLoading } = useFaculty();
   const collegeSubjectId = subjectIds?.[0] ?? null;
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [view, setView] = useState<"my" | "others">("my");
+  const [view, setView] = useState<"my" | "others">("others");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -186,6 +186,7 @@ export default function MyAttendanceRight() {
         <AnnouncementsCard
           announceCard={announcements}
           height="80vh"
+          currentView={view}
           onViewChange={(v) => setView(v)}
           refreshAnnouncements={fetchAnnouncements}
         />

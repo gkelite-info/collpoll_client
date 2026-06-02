@@ -1,35 +1,9 @@
 "use client";
 
-import AnnouncementsCard from "@/app/utils/announcementsCard";
-import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { useCallback, useEffect, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
-
-type AnnouncementItem = {
-  collegeAnnouncementId?: number;
-  image: string;
-  imgHeight: string;
-  title: string;
-  professor: string;
-  date?: string;
-  createdAt?: string;
-  cardBg: string;
-  imageBg: string;
-  type?: string;
-  targetRoles?: string[];
-};
-
-type CollegeAnnouncementResponseItem = {
-  collegeAnnouncementId: number;
-  title: string;
-  date?: string;
-  createdAt?: string;
-  type: string;
-  targetRoles?: string[];
-  createdByRole: string;
-};
+import AnnouncementsCard from "./announcementsCard";
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -49,15 +23,37 @@ const typeIcons: Record<string, string> = {
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-export default function SemwiseDetailsRight() {
+type LiveAnnouncementsCardProps = {
+  height?: string;
+  readOnly?: boolean;
+};
+
+export default function LiveAnnouncementsCard({
+  height = "80vh",
+  readOnly,
+}: LiveAnnouncementsCardProps) {
   const { collegeId, userId, role } = useUser();
-  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
+  const [announcements, setAnnouncements] = useState<
+    {
+      collegeAnnouncementId: number;
+      title: string;
+      date: string;
+      createdAt: string;
+      type: string;
+      targetRoles: string[];
+      image: string;
+      imgHeight: string;
+      cardBg: string;
+      imageBg: string;
+      professor: string;
+    }[]
+  >([]);
   const [view, setView] = useState<"my" | "others">("others");
 
-  const fetchData = useCallback(async () => {
-    try {
-      if (!collegeId || !userId || !role) return;
+  const fetchAnnouncements = useCallback(async () => {
+    if (!collegeId || !userId || !role) return;
 
+    try {
       const res = await fetchCollegeAnnouncements({
         collegeId,
         userId,
@@ -67,8 +63,8 @@ export default function SemwiseDetailsRight() {
         limit: 20,
       });
 
-      const formatted = (res.data as CollegeAnnouncementResponseItem[]).map(
-        (item) => ({
+      setAnnouncements(
+        res.data.map((item) => ({
           collegeAnnouncementId: item.collegeAnnouncementId,
           title: item.title,
           date: item.date,
@@ -81,39 +77,32 @@ export default function SemwiseDetailsRight() {
           imageBg: "#D3F1E0",
           professor:
             view === "my"
-              ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
+              ? `For ${item.targetRoles.map(formatRole).join(", ")}`
               : `By ${formatRole(item.createdByRole)}`,
-        }),
+        })),
       );
-
-      setAnnouncements(formatted);
-    } catch (err) {
-      console.error("Placement dashboard announcements fetch failed", err);
+    } catch (error) {
+      console.error("Announcements fetch failed", error);
       setAnnouncements([]);
     }
   }, [collegeId, role, userId, view]);
 
   useEffect(() => {
-    if (!collegeId || !userId || !role) return;
-
     const timer = window.setTimeout(() => {
-      void fetchData();
+      void fetchAnnouncements();
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [collegeId, userId, role, fetchData]);
+  }, [fetchAnnouncements]);
 
   return (
-    <div className="w-[32%] p-2 flex flex-col">
-      <CourseScheduleCard isVisibile={false} />
-      <WorkWeekCalendar />
-      <AnnouncementsCard
-        announceCard={announcements} 
-        height="80vh"
-        currentView={view}
-        onViewChange={(v) => setView(v)} 
-        refreshAnnouncements={fetchData} 
-      />
-    </div>
+    <AnnouncementsCard
+      announceCard={announcements}
+      height={height}
+      currentView={view}
+      onViewChange={setView}
+      refreshAnnouncements={fetchAnnouncements}
+      readOnly={readOnly}
+    />
   );
 }

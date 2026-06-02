@@ -1,9 +1,8 @@
 "use client";
 
-import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import LiveAnnouncementsCard from "@/app/utils/liveAnnouncementsCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { financeAnnouncements } from "../../(dashboard)/components/data";
 
 export default function LeaveRequestRightPanel() {
   return (
@@ -17,12 +16,7 @@ export default function LeaveRequestRightPanel() {
       <WorkWeekCalendar style="mt-3 max-w-full" />
 
       <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto">
-        <AnnouncementsCard
-          announceCard={financeAnnouncements}
-          height="80vh"
-          currentView="others"
-          readOnly
-        />
+        <LiveAnnouncementsCard />
       </div>
     </aside>
   );

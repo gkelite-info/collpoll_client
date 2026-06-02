@@ -26,7 +26,7 @@ export default function Announcements() {
 
     const { userId, collegeId, role } = useUser();
     const [announcements, setAnnouncements] = useState<any[]>([]);
-    const [view, setView] = useState<"my" | "others">("my");
+    const [view, setView] = useState<"my" | "others">("others");
 
     const fetchAnnouncements = async () => {
         try {
@@ -88,6 +88,7 @@ export default function Announcements() {
                 <AnnouncementsCard
                     announceCard={announcements}
                     height="80vh"
+                    currentView={view}
                     onViewChange={(v) => setView(v)}
                     refreshAnnouncements={fetchAnnouncements}
                 />

@@ -3,7 +3,7 @@
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
 
@@ -22,14 +22,26 @@ const typeIcons: Record<string, string> = {
   other: "/others.png",
 };
 
+type AnnouncementCard = {
+  collegeAnnouncementId: number;
+  title: string;
+  date: string;
+  createdAt: string;
+  type: string;
+  targetRoles: string[];
+  image: string;
+  imgHeight: string;
+  cardBg: string;
+  imageBg: string;
+  professor: string;
+};
+
 export default function ParentRight() {
   const { collegeId, userId, role } = useUser();
-  const allowedCreatorRoles = ["Admin", "Faculty", "Finance"];
-
-  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<AnnouncementCard[]>([]);
   const [view] = useState<"my" | "others">("others");
 
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = useCallback(async () => {
     try {
       if (!collegeId || !userId || !role) return;
 
@@ -42,11 +54,7 @@ export default function ParentRight() {
         limit: 20,
       });
 
-      const filtered = res.data.filter((item: any) =>
-        allowedCreatorRoles.includes(item.createdByRole),
-      );
-
-      const formatted = filtered.map((item: any) => ({
+      const formatted = res.data.map((item) => ({
         collegeAnnouncementId: item.collegeAnnouncementId,
         title: item.title,
         date: item.date,
@@ -65,12 +73,16 @@ export default function ParentRight() {
     } catch (err) {
       console.error("Parent announcements error:", err);
     }
-  };
+  }, [collegeId, role, userId, view]);
 
   useEffect(() => {
     if (!collegeId || !userId || !role) return;
-    fetchAnnouncements();
-  }, [collegeId, userId, role]);
+    const timer = window.setTimeout(() => {
+      void fetchAnnouncements();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [collegeId, fetchAnnouncements, role, userId]);
 
   return (
     <div className="w-[32%] px-1 flex min-h-full flex-col max-md:hidden">
