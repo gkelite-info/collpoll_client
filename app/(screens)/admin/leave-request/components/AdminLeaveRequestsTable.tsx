@@ -166,6 +166,7 @@ export default function AdminLeaveRequestsTable() {
       const { data, totalCount } = await fetchPaginatedEmployeeLeaveRequests({
         userId,
         collegeId,
+        role: "Admin",
         status:
           activeStatus === "total"
             ? undefined

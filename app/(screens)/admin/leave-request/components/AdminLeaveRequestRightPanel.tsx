@@ -52,7 +52,7 @@ const formatRole = (role: string) =>
 export default function AdminLeaveRequestRightPanel() {
   const { role, collegeId, userId } = useUser();
   const [announcements, setAnnouncements] = useState<AnnouncementCardItem[]>([]);
-  const [view, setView] = useState<"my" | "others">("my");
+  const [view, setView] = useState<"my" | "others">("others");
 
   const fetchAnnouncements = async () => {
     try {
@@ -110,6 +110,7 @@ export default function AdminLeaveRequestRightPanel() {
         <AnnouncementsCard
           announceCard={announcements}
           height="80vh"
+          currentView={view}
           onViewChange={(nextView) => setView(nextView)}
           refreshAnnouncements={fetchAnnouncements}
         />

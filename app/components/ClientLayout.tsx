@@ -501,7 +501,7 @@ export default function ClientLayout({
           )}
 
           {/* <div className="bg-yellow-00 flex flex-col h-full w-[100%] md:w-[100%] lg:w-[83%]"> */}
-          <div className="flex flex-col min-h-screen w-full lg:w-[83%]">
+          <div className="flex h-screen min-h-0 flex-col w-full lg:w-[83%]">
             {/* <div className="bg-red-00 h-[100px] landscape:h-[110px] md:h-[120px] md:landscape:h-[120px] lg:h-[13%] lg:landscape:h-[13%] flex justify-end bg-[#F4F4F4]"> */}
             <div className="shrink-0 h-auto w-full lg:h-[13%] flex justify-end bg-[#F4F4F4] z-40">
               <Header
@@ -512,7 +512,7 @@ export default function ClientLayout({
             </div>
 
             {/* <div className="h-full lg:h-[87%] overflow-auto bg-[#F4F4F4] px-2"> */}
-            <div className="flex-1 overflow-y-auto bg-[#F4F4F4] px-2 overscroll-contain custom-scrollbar max-md:scrollbar-hide">
+            <div className="min-h-0 flex-1 overflow-y-auto bg-[#F4F4F4] px-2 overscroll-contain custom-scrollbar max-md:scrollbar-hide">
               {children}
             </div>
           </div>

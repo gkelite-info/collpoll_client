@@ -34,7 +34,7 @@ export default function AssignmentsRight() {
   const [loading, setLoading] = useState(true);
   const { facultyId, subjectIds, collegeId, userId, role, loading: facultyLoading } = useFaculty();
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [view, setView] = useState<"my" | "others">("my");
+  const [view, setView] = useState<"my" | "others">("others");
   const collegeSubjectId = subjectIds?.[0] ?? null;
 
 
@@ -169,6 +169,7 @@ export default function AssignmentsRight() {
         <AnnouncementsCard
           announceCard={announcements}
           height="80vh"
+          currentView={view}
           onViewChange={(v) => setView(v)}
           refreshAnnouncements={fetchAnnouncements}
         />

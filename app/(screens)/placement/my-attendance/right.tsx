@@ -1,115 +1,45 @@
 "use client";
-import AnnouncementsCard from "@/app/utils/announcementsCard";
+
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import LiveAnnouncementsCard from "@/app/utils/liveAnnouncementsCard";
 import TaskPanel from "@/app/utils/taskPanel";
-import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import type { Task } from "@/app/utils/taskPanel";
 import WipOverlay from "@/app/utils/WipOverlay";
+import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 
 export default function MyAttendanceRight() {
-  // const myTasks = [
-  //   {
-  //     title: "Complete Python Lab",
-  //     description: "Finish all 10 lab programs and upload to portal.",
-  //     time: "12:40 PM",
-  //   },
-  //   {
-  //     title: "Group Discussion Prep",
-  //     description:
-  //       "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
-  //     time: "02:40 PM",
-  //   },
-  //   {
-  //     title: "Resume Update",
-  //     description:
-  //       "Add latest internship experience to resume builder section.",
-  //     time: "03:40 PM",
-  //   },
-  // ];
-
   const myTasks: Task[] = [
     {
       facultyTaskId: 1,
       title: "Complete Python Lab",
       description: "Finish all 10 lab programs and upload to portal.",
       time: "12:40 PM",
-      date : new Date().toLocaleString()
+      date: new Date().toLocaleString(),
     },
     {
       facultyTaskId: 2,
       title: "Group Discussion Prep",
       description:
-        "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
+        'Research topic "Impact of AI on Education" for tomorrow\'s discussion.',
       time: "02:40 PM",
-      date : new Date().toLocaleString()
+      date: new Date().toLocaleString(),
     },
     {
       facultyTaskId: 3,
       title: "Resume Update",
-      description:
-        "Add latest internship experience to resume builder section.",
+      description: "Add latest internship experience to resume builder section.",
       time: "03:40 PM",
-      date : new Date().toLocaleString()
-    },
-  ];
-
-  const card = [
-    {
-      image: "/clip.png",
-      imgHeight: "h-10",
-      title: "Submit internal marks for all subjects before 25 Oct 2025.",
-      professor: "By Justin Orom",
-      time: "Just now",
-      cardBg: "#E8F8EF",
-      imageBg: "#D3F1E0",
-    },
-    {
-      image: "/class.png",
-      imgHeight: "h-10",
-      title: "Upload your mini project abstracts by 12 Nov 2025.",
-      professor: "By John",
-      time: "12 mins ago.",
-      cardBg: "#EEEDFF",
-      imageBg: "#E3E1FF",
-    },
-    {
-      image: "/book.png",
-      imgHeight: "h-10",
-      title: "DBMS Lab Report submissions are due by 10 Nov 2025.",
-      professor: "By Simran",
-      time: "1 min ago.",
-      cardBg: "#FBF5EA",
-      imageBg: "#F7EBD5",
-    },
-    {
-      image: "/exam.png",
-      imgHeight: "h-10",
-      title: "Mid-semester exams are scheduled from 15–20 Nov 2025.",
-      professor: "By Rajesh",
-      time: "9 mins ago.",
-      cardBg: "#E8F8EF",
-      imageBg: "#D3F1E0",
-    },
-    {
-      image: "/attendance.png",
-      imgHeight: "h-10",
-      title: "Attendance reports for October will be reviewed on 08 Nov 2025.",
-      professor: "By Sundar",
-      time: "6 mins ago.",
-      cardBg: "#E6F0FF",
-      imageBg: "#C9DEFF",
+      date: new Date().toLocaleString(),
     },
   ];
 
   return (
-    <>
-      <div className="relative w-[32%] p-2 flex flex-col">
-        <WipOverlay fullHeight={true}/>
-        <CourseScheduleCard />
-        <WorkWeekCalendar />
-        <TaskPanel studentTasks={myTasks} role="student" />
-        <AnnouncementsCard announceCard={card} />
-      </div>
-    </>
+    <div className="relative flex w-[32%] flex-col p-2">
+      <WipOverlay fullHeight />
+      <CourseScheduleCard />
+      <WorkWeekCalendar />
+      <TaskPanel studentTasks={myTasks} role="student" />
+      <LiveAnnouncementsCard />
+    </div>
   );
 }

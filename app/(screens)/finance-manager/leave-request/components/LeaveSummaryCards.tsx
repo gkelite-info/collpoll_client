@@ -61,7 +61,13 @@ export default function LeaveSummaryCards() {
 
     setIsLoading(true);
     try {
-      setCounts(await fetchEmployeeLeaveRequestCounts({ userId, collegeId }));
+      setCounts(
+        await fetchEmployeeLeaveRequestCounts({
+          userId,
+          collegeId,
+          role: "FinanceManager",
+        }),
+      );
     } catch (error) {
       console.error("Error fetching leave summary counts:", error);
       setCounts({ total: 0, approved: 0, pending: 0, rejected: 0 });

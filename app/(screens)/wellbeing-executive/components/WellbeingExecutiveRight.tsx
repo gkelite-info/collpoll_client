@@ -4,8 +4,28 @@ import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { Plus, X } from "@phosphor-icons/react";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { wellbeingAnnouncements } from "../(dashboard)/data";
+import { useUser } from "@/app/utils/context/UserContext";
+import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
+
+const typeIcons: Record<string, string> = {
+  class: "/class.png",
+  exam: "/exam.png",
+  meeting: "/meeting.png",
+  holiday: "/calendar-3d.png",
+  event: "/event.png",
+  notice: "/clip.png",
+  result: "/result.jpg",
+  timetable: "/timetable.png",
+  placement: "/placement.png",
+  emergency: "/emergency.png",
+  finance: "/finance.jpg",
+  other: "/others.png",
+};
+
+const formatRole = (role: string) =>
+  role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 type WellbeingExecutiveRightProps = {
   button?: boolean;
@@ -44,6 +64,11 @@ export default function WellbeingExecutiveRight({
   showHeaderCards = true,
   showCourseScheduleCard = false,
 }: WellbeingExecutiveRightProps) {
+  const { collegeId, userId, role } = useUser();
+  const [announcements, setAnnouncements] =
+    useState<typeof wellbeingAnnouncements>([]);
+  const [view, setView] = useState<"my" | "others">("others");
+
   useEffect(() => {
     if (isMobileDrawerOpen) {
       document.body.style.overflow = "hidden";
@@ -55,6 +80,51 @@ export default function WellbeingExecutiveRight({
       document.body.style.overflow = "auto";
     };
   }, [isMobileDrawerOpen]);
+
+  const fetchAnnouncements = useCallback(async () => {
+    if (!collegeId || !userId || !role) return;
+
+    try {
+      const res = await fetchCollegeAnnouncements({
+        collegeId,
+        userId,
+        role,
+        view,
+        page: 1,
+        limit: 20,
+      });
+
+      setAnnouncements(
+        res.data.map((item) => ({
+          collegeAnnouncementId: item.collegeAnnouncementId,
+          title: item.title,
+          date: item.date,
+          createdAt: item.createdAt,
+          type: item.type,
+          targetRoles: item.targetRoles,
+          image: typeIcons[item.type] || "/clip.png",
+          imgHeight: "h-10",
+          cardBg: "#E8F8EF",
+          imageBg: "#D3F1E0",
+          professor:
+            view === "my"
+              ? `For ${item.targetRoles.map(formatRole).join(", ")}`
+              : `By ${formatRole(item.createdByRole)}`,
+        })),
+      );
+    } catch (error) {
+      console.error("Wellbeing executive announcements fetch failed", error);
+      setAnnouncements([]);
+    }
+  }, [collegeId, role, userId, view]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void fetchAnnouncements();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [fetchAnnouncements]);
 
   const HeaderAction = (button && headerActionLabel !== "Alerts") ? (
     <button
@@ -110,10 +180,11 @@ export default function WellbeingExecutiveRight({
         style={bounded ? { minHeight: announcementHeight } : undefined}
       >
         <AnnouncementsCard
-          announceCard={wellbeingAnnouncements}
+          announceCard={announcements}
           height={bounded ? announcementHeight : "100%"}
-          refreshAnnouncements={async () => {}}
-          currentView="my"
+          refreshAnnouncements={fetchAnnouncements}
+          currentView={view}
+          onViewChange={setView}
         />
       </div>
     </div>
@@ -161,4 +232,3 @@ export default function WellbeingExecutiveRight({
   );
 }
 
- 

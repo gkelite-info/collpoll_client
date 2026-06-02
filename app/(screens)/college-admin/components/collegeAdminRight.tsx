@@ -27,11 +27,10 @@ export default function CollegeAdminRight() {
   const { userId, collegeId, role } = useUser();
 
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [view, setView] = useState<"my" | "others">("my");
+  const [view, setView] = useState<"my" | "others">("others");
 
   const fetchData = async () => {
     try {
-      // ✅ FIX: include role
       if (!collegeId || !userId || !role) return;
 
       const res = await fetchCollegeAnnouncements({
@@ -50,13 +49,12 @@ export default function CollegeAdminRight() {
         createdAt: item.createdAt,
         type: item.type,
 
-        targetRoles: item.targetRoles, // ✅ FIXED
+        targetRoles: item.targetRoles, 
 
         image: typeIcons[item.type] || "/clip.png",
         imgHeight: "h-10",
         cardBg: "#E8F8EF",
         imageBg: "#D3F1E0",
-
         professor:
           view === "my"
             ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
@@ -83,6 +81,7 @@ export default function CollegeAdminRight() {
       <AnnouncementsCard
         announceCard={announcements}
         height="80vh"
+        currentView={view}
         onViewChange={(v) => setView(v)}
         refreshAnnouncements={fetchData}
       />

@@ -29,7 +29,7 @@ const formatRole = (role: string) =>
 export default function MyAttendanceRight() {
   const { collegeId, userId, role } = useUser();
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [view, setView] = useState<"my" | "others">("my");
+  const [view, setView] = useState<"my" | "others">("others");
   const myTasks: Task[] = [
     {
       facultyTaskId: 1,
@@ -109,6 +109,7 @@ export default function MyAttendanceRight() {
         <AnnouncementsCard
           announceCard={announcements}
           height="80vh"
+          currentView={view}
           onViewChange={(v) => setView(v)}
           refreshAnnouncements={fetchData}
         />

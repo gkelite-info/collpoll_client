@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 import {
   BuildingOffice,
   Calendar,
+  CalendarCheck,
   CheckCircle,
   FolderOpen,
   Gear,
@@ -54,6 +55,13 @@ export default function PlacementNavbar() {
       ),
       label: t("Placements"),
       path: `${BASE}/placements`,
+    },
+    {
+      icon: (isActive) => (
+        <CalendarCheck size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Leave Request",
+      path: `${BASE}/leaveRequests`,
     },
     {
       icon: (isActive) => (

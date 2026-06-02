@@ -1,9 +1,8 @@
 "use client";
 
-import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import LiveAnnouncementsCard from "@/app/utils/liveAnnouncementsCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { managerAnnouncements } from "../data";
 
 export default function WellbeingManagerRight() {
   return (
@@ -12,11 +11,7 @@ export default function WellbeingManagerRight() {
         <CourseScheduleCard isVisibile={false} fullWidth />
       </div>
       <WorkWeekCalendar />
-      <AnnouncementsCard
-        announceCard={managerAnnouncements}
-        height="80vh"
-        readOnly
-      />
+      <LiveAnnouncementsCard />
     </aside>
   );
 }

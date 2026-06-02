@@ -37,7 +37,7 @@ export default function AdminDashRight() {
   const [isAddPolicyModalOpen, setIsAddPolicyModalOpen] = useState(false);
   const { collegeId, userId, role } = useUser();
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [view, setView] = useState<"my" | "others">("my");
+  const [view, setView] = useState<"my" | "others">("others");
   const searchParams = useSearchParams();
   const isAutomationsPage = searchParams.get("view") === "automations";
   const isPolicyPage = searchParams.get("view") === "policy-setup";
@@ -139,6 +139,7 @@ export default function AdminDashRight() {
         <AnnouncementsCard
           announceCard={announcements}
           height="80vh"
+          currentView={view}
           onViewChange={(v) => setView(v)}
           refreshAnnouncements={fetchData}
         />

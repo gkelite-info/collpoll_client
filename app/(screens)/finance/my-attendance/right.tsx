@@ -28,7 +28,7 @@ const formatRole = (role: string) =>
 export default function MyAttendanceRight() {
   const { role, collegeId, userId } = useUser()
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [view, setView] = useState<"my" | "others">("my");
+  const [view, setView] = useState<"my" | "others">("others");
 
   const fetchAnnouncements = async () => {
     try {
@@ -83,6 +83,7 @@ export default function MyAttendanceRight() {
         <AnnouncementsCard
           announceCard={announcements}
           height="80vh"
+          currentView={view}
           onViewChange={(v) => setView(v)}
           refreshAnnouncements={fetchAnnouncements}
         />

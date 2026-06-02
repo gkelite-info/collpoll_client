@@ -97,7 +97,7 @@ function FacultyAttendanceDashboard() {
   const { userId, role } = useUser();
 
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [view, setView] = useState<"my" | "others">("my");
+  const [view, setView] = useState<"my" | "others">("others");
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
@@ -450,6 +450,7 @@ function FacultyAttendanceDashboard() {
           <AnnouncementsCard
             announceCard={announcements}
             height="80vh"
+            currentView={view}
             onViewChange={(v) => setView(v)}
             refreshAnnouncements={fetchAnnouncements}
           />

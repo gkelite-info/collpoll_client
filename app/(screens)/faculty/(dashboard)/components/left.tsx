@@ -112,7 +112,7 @@ export default function FacultyDashLeft() {
 
   return (
     <>
-      <div className="w-full md:w-[65%] lg:w-[68%] mt-2 md:mt-0 lg:mt-0 p-1 lg:p-2 pb-7 landscape:pb-7 md:pb-0 lg:pb-0">
+      <div className="h-full w-full overflow-y-auto md:w-[65%] lg:w-[68%] mt-2 md:mt-0 lg:mt-0 p-1 lg:p-2 pb-7 landscape:pb-7 md:pb-0 lg:pb-0">
         <UserInfoCard cardProps={card} />
         <div className="mt-4 rounded-lg grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-3 text-xs">
           {cardData.map((item, index) => (

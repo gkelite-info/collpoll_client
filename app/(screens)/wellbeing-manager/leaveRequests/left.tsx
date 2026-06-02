@@ -70,6 +70,15 @@ const mapDbRequestToRow = (request: EmployeeLeaveRequestRecord) => {
   };
 };
 
+type EmployeeLeaveRequestRow = ReturnType<typeof mapDbRequestToRow>;
+
+type EmployeeLeaveRequestFormData = {
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+};
+
 function WellbeingLeavesContent() {
   const { userId, collegeId, loading: userContextLoading } = useUser();
   const router = useRouter();
@@ -89,7 +98,7 @@ function WellbeingLeavesContent() {
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
 
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<EmployeeLeaveRequestRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [counts, setCounts] = useState({
     all: 0,
@@ -99,7 +108,8 @@ function WellbeingLeavesContent() {
   });
 
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedLeaveData, setSelectedLeaveData] = useState<any>(null);
+  const [selectedLeaveData, setSelectedLeaveData] =
+    useState<EmployeeLeaveRequestRow | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedDateKey, setSelectedDateKey] = useState("");
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -118,6 +128,7 @@ function WellbeingLeavesContent() {
       const res = await fetchEmployeeLeaveRequestCounts({
         userId,
         collegeId,
+        role: "WellbeingManager",
         date: selectedDateKey || undefined,
       });
       setCounts({
@@ -144,6 +155,7 @@ function WellbeingLeavesContent() {
       const { data, totalCount } = await fetchPaginatedEmployeeLeaveRequests({
         userId,
         collegeId,
+        role: "WellbeingManager",
         status: activeTab === "all" ? undefined : activeTab,
         page,
         pageSize: itemsPerPage,
@@ -199,7 +211,7 @@ function WellbeingLeavesContent() {
     router.replace(query ? `${pathname}?${query}` : pathname);
   };
 
-  const handleMyLeaveSubmit = async (formData: any) => {
+  const handleMyLeaveSubmit = async (formData: EmployeeLeaveRequestFormData) => {
     if (!userId || !collegeId) {
       toast.error("User session not found.");
       return;
@@ -224,7 +236,7 @@ function WellbeingLeavesContent() {
   };
 
   const finalTableData = useMemo(() => {
-    return requests.map((item: any, index) => {
+    return requests.map((item, index) => {
       return {
         sNo: String((page - 1) * itemsPerPage + index + 1).padStart(2, "0"),
         dateRange: `${item.fromDate} - ${item.toDate}`,

@@ -7,8 +7,10 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
+import { createEmployeeLeaveRequest } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
 import { LEAVE_PANEL_HEIGHT } from "./data";
-import RequestLeaveModal from "@/app/(screens)/finance-manager/leave-request/components/RequestLeaveModal";
+import RequestLeaveModal from "@/app/(screens)/wellbeing-manager/leaveRequests/modal/RequestLeaveModal";
+import toast from "react-hot-toast";
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -57,6 +59,13 @@ type LeaveRequestsRightProps = {
   onDateSelect: (date: Date) => void;
 };
 
+type LeaveRequestFormData = {
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+};
+
 export default function LeaveRequestsRight({
   activeDate,
   onDateSelect,
@@ -64,7 +73,7 @@ export default function LeaveRequestsRight({
   const { collegeId } = useCollegeHr();
   const { userId, role } = useUser();
   const [announcements, setAnnouncements] = useState<AnnouncementCard[]>([]);
-  const [view, setView] = useState<"my" | "others">("my");
+  const [view, setView] = useState<"my" | "others">("others");
   const [isLoading, setIsLoading] = useState(true);
   const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
 
@@ -111,6 +120,31 @@ export default function LeaveRequestsRight({
     fetchAnnouncements();
   }, [fetchAnnouncements]);
 
+  const handleRequestLeave = async (formData: LeaveRequestFormData) => {
+    if (!userId || !collegeId) {
+      toast.error("HR session not found. Please re-login.");
+      return;
+    }
+
+    try {
+      await createEmployeeLeaveRequest({
+        userId,
+        collegeId,
+        role: "CollegeHr",
+        leaveType: formData.leaveType,
+        leaveFromDate: formData.startDate,
+        leaveToDate: formData.endDate,
+        description: formData.description.trim(),
+      });
+      toast.success("Leave request submitted successfully!");
+      window.dispatchEvent(new Event("employee-leave-request-created"));
+      setIsRequestLeaveOpen(false);
+    } catch (error) {
+      console.error("HR leave request submission error:", error);
+      throw error;
+    }
+  };
+
   return (
     <aside className="flex w-[32%] flex-col gap-3 h-fit">
       <div className="grid grid-cols-[1fr_1fr] gap-3">
@@ -140,8 +174,9 @@ export default function LeaveRequestsRight({
       </div>
 
       <RequestLeaveModal
-        open={isRequestLeaveOpen}
+        isOpen={isRequestLeaveOpen}
         onClose={() => setIsRequestLeaveOpen(false)}
+        onSubmit={handleRequestLeave}
       />
     </aside>
   );

@@ -29,7 +29,7 @@ export default function SemwiseDetailsRight() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const { collegeId, userId, role } = useUser();
   const [editAnnouncement, setEditAnnouncement] = useState<any | null>(null);
-  const [view, setView] = useState<"my" | "others">("my");
+  const [view, setView] = useState<"my" | "others">("others");
 
   const loadAnnouncements = async () => {
     if (!collegeId || !userId || !role) return;
@@ -86,6 +86,7 @@ export default function SemwiseDetailsRight() {
       <AnnouncementsCard
         announceCard={announcements}
         height="80vh"
+        currentView={view}
         onAddClick={() => {
           setEditAnnouncement(null);
           setOpenModal(true);

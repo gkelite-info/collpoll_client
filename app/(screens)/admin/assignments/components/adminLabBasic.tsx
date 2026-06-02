@@ -93,6 +93,7 @@ type AdminLabRightPanelProps = {
     taskId?: number,
   ) => Promise<void>;
   onDeleteTask: (taskId: number) => Promise<void>;
+  currentAnnouncementsView: "my" | "others";
   onAnnouncementsViewChange: (view: "my" | "others") => void;
   refreshAnnouncements: () => Promise<void>;
 };
@@ -105,6 +106,7 @@ function AdminLabRightPanel({
   announcements,
   onSaveTask,
   onDeleteTask,
+  currentAnnouncementsView,
   onAnnouncementsViewChange,
   refreshAnnouncements,
 }: AdminLabRightPanelProps) {
@@ -124,6 +126,7 @@ function AdminLabRightPanel({
       <AnnouncementsCard
         announceCard={announcements}
         height="80vh"
+        currentView={currentAnnouncementsView}
         onViewChange={onAnnouncementsViewChange}
         refreshAnnouncements={refreshAnnouncements}
       />
@@ -172,7 +175,7 @@ export default function AdminLabBasic() {
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [announcementView, setAnnouncementView] = useState<"my" | "others">(
-    "my",
+    "others",
   );
   const [branchYearLabel, setBranchYearLabel] = useState({
     branch: "",
@@ -517,6 +520,7 @@ export default function AdminLabBasic() {
           announcements={announcements}
           onSaveTask={handleSaveFacultyTask}
           onDeleteTask={handleDeleteTask}
+          currentAnnouncementsView={announcementView}
           onAnnouncementsViewChange={setAnnouncementView}
           refreshAnnouncements={fetchAnnouncements}
         />
@@ -764,6 +768,7 @@ export default function AdminLabBasic() {
         announcements={announcements}
         onSaveTask={handleSaveFacultyTask}
         onDeleteTask={handleDeleteTask}
+        currentAnnouncementsView={announcementView}
         onAnnouncementsViewChange={setAnnouncementView}
         refreshAnnouncements={fetchAnnouncements}
       />

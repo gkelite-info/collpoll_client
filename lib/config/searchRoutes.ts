@@ -174,6 +174,7 @@ export const ROLE_BASED_ROUTES: Record<string, SearchRoute[]> = {
     { label: "Placements", subLabel: "Company Management", path: "/placement/placements?tab=company-management", category: "Career", keywords: ["management", "company management"] },
     { label: "Placements", subLabel: "Placement Drives", path: "/placement/placements?tab=placement-drives", category: "Career", keywords: ["jobs", "interviews", "companies", "drives", "recruitment"] },
     { label: "Placements", subLabel: "Results & Offers", path: "/placement/placements?tab=results-offers", category: "Career", keywords: ["results and offers", "results", "offers"] },
+    { label: "Leave Request", path: "/placement/leaveRequests", category: "Requests", keywords: ["leave", "permission"] },
     { label: "Meetings", path: "/placement/meetings", category: "Collaboration", keywords: [] },
     { label: "Drive", path: "/placement/drive", category: "Resources", keywords: ["files", "documents", "storage"] },
     { label: "My Attendance", path: "/placement/my-attendance?main=attendance", category: "Academics", keywords: ["personal attendance"] },

@@ -30,7 +30,7 @@ export default function Right() {
     const { collegeId, userId, role } = useUser();
 
     const [announcements, setAnnouncements] = useState<any[]>([]);
-    const [view, setView] = useState<"my" | "others">("my");
+    const [view, setView] = useState<"my" | "others">("others");
 
     const fetchData = async () => {
         try {
@@ -86,6 +86,7 @@ export default function Right() {
                 <AnnouncementsCard
                     announceCard={announcements}
                     height="80vh"
+                    currentView={view}
                     onViewChange={(v) => setView(v)}
                     refreshAnnouncements={fetchData}
                 />

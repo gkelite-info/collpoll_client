@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
@@ -40,6 +40,7 @@ export default function FacultyDashRight() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("others");
   const [isAnnouncementsLoading, setIsAnnouncementsLoading] = useState(true);
+  const announcementRequestId = useRef(0);
 
   const {
     facultyId,
@@ -77,9 +78,18 @@ export default function FacultyDashRight() {
     }
   };
 
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = useCallback(async () => {
+    if (facultyLoading) return;
+
+    if (!collegeId || !userId || !role) {
+      setAnnouncements([]);
+      setIsAnnouncementsLoading(false);
+      return;
+    }
+
+    const requestId = ++announcementRequestId.current;
+
     try {
-      if (!collegeId || !userId || !role) return;
       setIsAnnouncementsLoading(true);
       const res = await fetchCollegeAnnouncements({
         collegeId,
@@ -109,13 +119,20 @@ export default function FacultyDashRight() {
             : `By ${formatRole(item.createdByRole)}`,
       }));
 
-      setAnnouncements(formatted);
+      if (requestId === announcementRequestId.current) {
+        setAnnouncements(formatted);
+      }
     } catch (err) {
       console.error("Fetch announcements error:", err);
+      if (requestId === announcementRequestId.current) {
+        setAnnouncements([]);
+      }
     } finally {
-      setIsAnnouncementsLoading(false);
+      if (requestId === announcementRequestId.current) {
+        setIsAnnouncementsLoading(false);
+      }
     }
-  };
+  }, [collegeId, facultyLoading, role, userId, view]);
 
   useEffect(() => {
     if (!facultyLoading && collegeSubjectId && facultyId) {
@@ -156,12 +173,17 @@ export default function FacultyDashRight() {
   };
 
   useEffect(() => {
-    if (!collegeId || !userId || !role) return;
-    fetchAnnouncements();
-  }, [collegeId, userId, role, view]);
+    if (facultyLoading) return;
+
+    const timer = window.setTimeout(() => {
+      void fetchAnnouncements();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [facultyLoading, fetchAnnouncements]);
 
   return (
-    <div className="hidden md:w-[35%] lg:w-[32%] p-2 flex flex-col hidden md:flex lg:flex">
+    <div className="hidden h-full min-h-0 flex-col overflow-hidden p-2 md:flex md:w-[35%] lg:w-[32%]">
       <CourseScheduleCard />
       <WorkWeekCalendar />
 
@@ -197,14 +219,16 @@ export default function FacultyDashRight() {
         />
       )}
 
-      <AnnouncementsCard
-        announceCard={announcements}
-        height="80vh"
-        currentView={view}
-        isLoading={isAnnouncementsLoading}
-        onViewChange={(v) => setView(v)}
-        refreshAnnouncements={fetchAnnouncements}
-      />
+      <div className="min-h-0 flex-1">
+        <AnnouncementsCard
+          announceCard={announcements}
+          height="100%"
+          currentView={view}
+          isLoading={isAnnouncementsLoading}
+          onViewChange={(v) => setView(v)}
+          refreshAnnouncements={fetchAnnouncements}
+        />
+      </div>
     </div>
   );
 }

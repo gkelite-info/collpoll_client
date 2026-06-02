@@ -71,6 +71,7 @@ export async function saveAnnouncementRole(
             {
                 collegeAnnouncementId: payload.collegeAnnouncementId,
                 role: payload.role,
+                deletedAt: null,
                 createdAt: now,
                 updatedAt: now
             },
