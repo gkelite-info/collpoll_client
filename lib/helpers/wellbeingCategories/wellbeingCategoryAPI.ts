@@ -227,3 +227,50 @@ export async function deleteWellbeingCategory(categoryId: number) {
 
   return { success: true };
 }
+
+export async function fetchAllActiveWellbeingCategories(
+  collegeId: number
+): Promise<WellbeingCategoryWithSubs[]> {
+  const { data, error } = await supabase
+    .from("wellbeing_categories")
+    .select(`
+      categoryId,
+      categoryName,
+      appliesTo,
+      collegeId,
+      createdBy,
+      isActive,
+      is_deleted,
+      createdAt,
+      updatedAt,
+      deletedAt,
+      wellbeing_sub_categories (
+        subCategoryId,
+        categoryId,
+        subCategoryName,
+        isActive,
+        is_deleted,
+        createdAt,
+        updatedAt,
+        deletedAt
+      )
+    `)
+    .eq("collegeId", collegeId)
+    .eq("isActive", true)
+    .eq("is_deleted", false);
+
+  if (error) {
+    console.error("fetchAllActiveWellbeingCategories error:", error);
+    throw error;
+  }
+
+  const parsed = (data ?? []).map((cat: any) => ({
+    ...cat,
+    wellbeing_sub_categories: (cat.wellbeing_sub_categories ?? []).filter(
+      (sub: any) => !sub.is_deleted && sub.isActive !== false,
+    ),
+  }));
+
+  return parsed as WellbeingCategoryWithSubs[];
+}
+
