@@ -5,11 +5,21 @@ import { FormEvent, useState } from "react";
 import toast from "react-hot-toast";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { useUser } from "@/app/utils/context/UserContext";
-import { createEmployeeLeaveRequest } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
+import {
+  createEmployeeLeaveRequest,
+  type EmployeeLeaveRequestRole,
+} from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
+import EmployeeLeaveRoutingFields, {
+  hasRequiredEmployeeLeaveTags,
+} from "@/app/components/modals/EmployeeLeaveRoutingFields";
+import { EmployeeLeaveTagSelection } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestTagsAPI";
 
 type AdminRequestLeaveModalProps = {
   open: boolean;
   onClose: () => void;
+  requestRole?: EmployeeLeaveRequestRole;
+  collegeIdOverride?: number | null;
+  contextLoadingOverride?: boolean;
 };
 
 type LeaveFormData = {
@@ -17,6 +27,7 @@ type LeaveFormData = {
   startDate: string;
   endDate: string;
   description: string;
+  tags: EmployeeLeaveTagSelection[];
 };
 
 const defaultLeaveTypes = [
@@ -32,14 +43,21 @@ const initialFormData: LeaveFormData = {
   startDate: "",
   endDate: "",
   description: "",
+  tags: [],
 };
 
 export default function AdminRequestLeaveModal({
   open,
   onClose,
+  requestRole = "Admin",
+  collegeIdOverride,
+  contextLoadingOverride,
 }: AdminRequestLeaveModalProps) {
   const { userId, role } = useUser();
   const { collegeId, loading: adminContextLoading } = useAdmin();
+  const effectiveCollegeId = collegeIdOverride ?? collegeId;
+  const effectiveContextLoading =
+    contextLoadingOverride ?? adminContextLoading;
   const [formData, setFormData] = useState<LeaveFormData>(initialFormData);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,13 +77,13 @@ export default function AdminRequestLeaveModal({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!userId || !collegeId || !role || adminContextLoading) {
+    if (!userId || !effectiveCollegeId || !role || effectiveContextLoading) {
       toast.error("Admin session not found. Please re-login.");
       return;
     }
 
-    if (role !== "Admin") {
-      toast.error("This request is available for admins only.");
+    if (role !== requestRole) {
+      toast.error("This request is not available for this role.");
       return;
     }
 
@@ -94,16 +112,22 @@ export default function AdminRequestLeaveModal({
       return;
     }
 
+    if (!hasRequiredEmployeeLeaveTags(role, formData.tags)) {
+      toast.error("Please select all required tagged users.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await createEmployeeLeaveRequest({
         userId,
-        collegeId,
-        role: "Admin",
+        collegeId: effectiveCollegeId,
+        role: requestRole,
         leaveType: formData.leaveType,
         leaveFromDate: formData.startDate,
         leaveToDate: formData.endDate,
         description: formData.description.trim(),
+        tags: formData.tags,
       });
 
       toast.success("Leave request submitted successfully.");
@@ -200,6 +224,11 @@ export default function AdminRequestLeaveModal({
             </div>
           </div>
 
+          <EmployeeLeaveRoutingFields
+            value={formData.tags}
+            onChange={(tags) => setFormData({ ...formData, tags })}
+          />
+
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-[#282828]">
               Leave Date
@@ -279,7 +308,9 @@ export default function AdminRequestLeaveModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting || !hasRequiredEmployeeLeaveTags(role, formData.tags)
+              }
               className="h-11 cursor-pointer rounded bg-[#43C17A] text-sm font-semibold text-white hover:bg-[#34A565] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isSubmitting ? "Submitting..." : "Submit Request"}

@@ -4,7 +4,11 @@ import CardComponent from "@/app/utils/card";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { useUser } from "@/app/utils/context/UserContext";
 import { leaveSummaryCards } from "@/app/(screens)/finance-manager/leave-request/data";
-import { fetchEmployeeLeaveRequestCounts } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
+import {
+  type EmployeeLeaveRequestRole,
+  fetchEmployeeLeaveRequestCounts,
+  fetchTaggedEmployeeLeaveRequestCounts,
+} from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
 import { UsersThree } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -35,9 +39,23 @@ const cardPalette: Record<
   },
 };
 
-export default function AdminLeaveSummaryCards() {
+type AdminLeaveSummaryCardsProps = {
+  view: "my" | "tagged";
+  requestRole?: EmployeeLeaveRequestRole;
+  collegeIdOverride?: number | null;
+  contextLoadingOverride?: boolean;
+};
+
+export default function AdminLeaveSummaryCards({
+  view,
+  requestRole = "Admin",
+  collegeIdOverride,
+  contextLoadingOverride,
+}: AdminLeaveSummaryCardsProps) {
   const { userId, loading: userLoading } = useUser();
   const { collegeId, loading: adminLoading } = useAdmin();
+  const effectiveCollegeId = collegeIdOverride ?? collegeId;
+  const effectiveContextLoading = contextLoadingOverride ?? adminLoading;
   const [isLoading, setIsLoading] = useState(true);
   const [counts, setCounts] = useState({
     total: 0,
@@ -51,9 +69,9 @@ export default function AdminLeaveSummaryCards() {
   const activeStatus = searchParams.get("status") || "total";
 
   const loadCounts = useCallback(async () => {
-    if (userLoading || adminLoading) return;
+    if (userLoading || effectiveContextLoading) return;
 
-    if (!userId || !collegeId) {
+    if (!userId || !effectiveCollegeId) {
       setCounts({ total: 0, approved: 0, pending: 0, rejected: 0 });
       setIsLoading(false);
       return;
@@ -61,20 +79,33 @@ export default function AdminLeaveSummaryCards() {
 
     setIsLoading(true);
     try {
-      setCounts(
-        await fetchEmployeeLeaveRequestCounts({
-          userId,
-          collegeId,
-          role: "Admin",
-        }),
-      );
+      const nextCounts =
+        view === "tagged"
+          ? await fetchTaggedEmployeeLeaveRequestCounts({
+              taggedUserId: userId,
+              collegeId: effectiveCollegeId,
+            })
+          : await fetchEmployeeLeaveRequestCounts({
+              userId,
+              collegeId: effectiveCollegeId,
+              role: requestRole,
+            });
+
+      setCounts(nextCounts);
     } catch (error) {
       console.error("Error fetching admin leave summary counts:", error);
       setCounts({ total: 0, approved: 0, pending: 0, rejected: 0 });
     } finally {
       setIsLoading(false);
     }
-  }, [adminLoading, collegeId, userId, userLoading]);
+  }, [
+    effectiveCollegeId,
+    effectiveContextLoading,
+    requestRole,
+    userId,
+    userLoading,
+    view,
+  ]);
 
   useEffect(() => {
     void loadCounts();

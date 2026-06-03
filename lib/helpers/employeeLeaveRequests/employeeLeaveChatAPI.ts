@@ -11,6 +11,7 @@ export type EmployeeLeaveChatMessage = {
   senderUserId: number | null;
   senderCollegeHrId: number | null;
   senderRole: string;
+  senderDisplayRole: string;
   isRead: boolean;
   is_deleted: boolean | null;
   createdAt: string;
@@ -21,6 +22,7 @@ export type EmployeeLeaveChatMessage = {
 type UserProfileJoin = { profileUrl: string | null } | { profileUrl: string | null }[] | null;
 type UserJoin = {
   fullName: string | null;
+  role?: string | null;
   user_profile?: UserProfileJoin;
 } | null;
 type HrJoin = {
@@ -69,6 +71,7 @@ const chatSelect = `
   createdAt,
   senderUser:senderUserId (
     fullName,
+    role,
     user_profile (
       profileUrl
     )
@@ -77,6 +80,7 @@ const chatSelect = `
     userId,
     users:userId (
       fullName,
+      role,
       user_profile (
         profileUrl
       )
@@ -92,6 +96,10 @@ function formatChatMessage(row: EmployeeLeaveChatRow): EmployeeLeaveChatMessage 
     senderUser?.fullName ??
     hrUser?.fullName ??
     (row.senderRole === "COLLEGE_HR" ? "HR Desk" : "Employee");
+  const senderDisplayRole =
+    row.senderRole === "COLLEGE_HR"
+      ? "College HR"
+      : senderUser?.role ?? hrUser?.role ?? "Employee";
 
   return {
     chatId: row.employeeLeaveRequestChatId,
@@ -102,6 +110,7 @@ function formatChatMessage(row: EmployeeLeaveChatRow): EmployeeLeaveChatMessage 
     senderUserId: row.senderUserId,
     senderCollegeHrId: row.senderCollegeHrId,
     senderRole: row.senderRole,
+    senderDisplayRole,
     isRead: row.isRead,
     is_deleted: row.is_deleted,
     createdAt: row.createdAt,

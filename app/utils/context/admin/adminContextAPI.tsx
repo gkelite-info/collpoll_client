@@ -11,6 +11,9 @@ type AdminJoin = {
   college: {
     collegeCode: string;
   };
+  college_education: {
+    collegeEducationType: string;
+  } | null;
 };
 
 type AdminEducationTypeJoin = {
@@ -32,6 +35,9 @@ export async function fetchAdminContext(userId: number | null) {
 
       college:collegeId!inner (
         collegeCode
+      ),
+      college_education:collegeEducationId (
+        collegeEducationType
       )
     `)
     .eq("userId", userId)
@@ -66,6 +72,9 @@ export async function fetchAdminContext(userId: number | null) {
     collegePublicId: admin.collegePublicId,
     collegeCode: admin.college.collegeCode,
     collegeEducationId: primaryEducation?.collegeEducationId ?? admin.collegeEducationId,
-    collegeEducationType: primaryEducation?.college_education?.collegeEducationType ?? null,
+    collegeEducationType:
+      primaryEducation?.college_education?.collegeEducationType ??
+      admin.college_education?.collegeEducationType ??
+      null,
   };
 }

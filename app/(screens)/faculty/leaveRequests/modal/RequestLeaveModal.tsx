@@ -3,6 +3,11 @@
 import { X, CaretDown } from "@phosphor-icons/react";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import EmployeeLeaveRoutingFields, {
+  hasRequiredEmployeeLeaveTags,
+} from "@/app/components/modals/EmployeeLeaveRoutingFields";
+import { EmployeeLeaveTagSelection } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestTagsAPI";
+import { useUser } from "@/app/utils/context/UserContext";
 
 interface FacultyRequestLeaveModalProps {
   isOpen: boolean;
@@ -15,6 +20,7 @@ type FacultyLeaveFormData = {
   startDate: string;
   endDate: string;
   description: string;
+  tags: EmployeeLeaveTagSelection[];
 };
 
 const defaultLeaveTypes = [
@@ -32,12 +38,14 @@ export default function FacultyRequestLeaveModal({
 }: FacultyRequestLeaveModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const { role } = useUser();
 
   const [formData, setFormData] = useState({
     leaveType: "",
     startDate: "",
     endDate: "",
     description: "",
+    tags: [] as EmployeeLeaveTagSelection[],
   });
 
   if (!isOpen) return null;
@@ -48,6 +56,7 @@ export default function FacultyRequestLeaveModal({
       startDate: "",
       endDate: "",
       description: "",
+      tags: [],
     });
     setIsDropdownOpen(false);
   };
@@ -77,6 +86,11 @@ export default function FacultyRequestLeaveModal({
 
     if (!formData.description.trim()) {
       toast.error("Please enter a description.");
+      return;
+    }
+
+    if (!hasRequiredEmployeeLeaveTags(role, formData.tags)) {
+      toast.error("Please select all required tagged users.");
       return;
     }
 
@@ -158,6 +172,11 @@ export default function FacultyRequestLeaveModal({
               )}
             </div>
           </div>
+
+          <EmployeeLeaveRoutingFields
+            value={formData.tags}
+            onChange={(tags) => setFormData({ ...formData, tags })}
+          />
 
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-[#282828]">
@@ -241,7 +260,8 @@ export default function FacultyRequestLeaveModal({
                 !formData.leaveType ||
                 !formData.startDate ||
                 !formData.endDate ||
-                !formData.description.trim()
+                !formData.description.trim() ||
+                !hasRequiredEmployeeLeaveTags(role, formData.tags)
               }
               className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded bg-[#43C17A] text-sm font-semibold text-white hover:bg-[#34A565] disabled:cursor-not-allowed disabled:opacity-50"
             >

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, ReactNode, useEffect } from "react";
+import { useState, ReactNode, useEffect, useMemo } from "react";
 import {
   BuildingApartment as BuildingApartmentIcon,
   Calendar,
   CheckCircle,
+  ClipboardText,
   FolderOpen,
   Gear,
   House,
@@ -39,7 +40,7 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
   const [loading, setLoading] = useState(false);
   const t = useTranslations("Navbars");
 
-  const items: NavItem[] = [
+  const items: NavItem[] = useMemo(() => [
     {
       icon: (isActive) => (
         <House size={18} weight={isActive ? "fill" : "regular"} />
@@ -80,6 +81,13 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
     },
     {
       icon: (isActive) => (
+        <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Leave Requests",
+      path: "/college-admin/leave-request",
+    },
+    {
+      icon: (isActive) => (
         <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: t("Drive"),
@@ -104,7 +112,7 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
       label: t("Settings"),
       path: "/college-admin/settings",
     },
-  ];
+  ], [t]);
 
   useEffect(() => {
     const current = items.find((item) => item.path === pathname);
@@ -130,7 +138,7 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
       } else {
         toast.error("Logout failed. Please try again.");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to logout")
     } finally {
       setLoading(false);

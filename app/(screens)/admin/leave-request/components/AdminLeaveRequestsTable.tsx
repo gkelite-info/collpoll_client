@@ -5,7 +5,9 @@ import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagi
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { useUser } from "@/app/utils/context/UserContext";
 import {
+  type EmployeeLeaveRequestRole,
   fetchPaginatedEmployeeLeaveRequests,
+  fetchPaginatedTaggedEmployeeLeaveRequests,
   type EmployeeLeaveRequestRecord,
 } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
 import { CalendarBlank, MagnifyingGlass, X } from "@phosphor-icons/react";
@@ -121,9 +123,23 @@ function StatusAction({ status }: { status: string }) {
   );
 }
 
-export default function AdminLeaveRequestsTable() {
+type AdminLeaveRequestsTableProps = {
+  view: "my" | "tagged";
+  requestRole?: EmployeeLeaveRequestRole;
+  collegeIdOverride?: number | null;
+  contextLoadingOverride?: boolean;
+};
+
+export default function AdminLeaveRequestsTable({
+  view,
+  requestRole = "Admin",
+  collegeIdOverride,
+  contextLoadingOverride,
+}: AdminLeaveRequestsTableProps) {
   const { userId, fullName, loading: userLoading } = useUser();
   const { collegeId, loading: adminLoading } = useAdmin();
+  const effectiveCollegeId = collegeIdOverride ?? collegeId;
+  const effectiveContextLoading = contextLoadingOverride ?? adminLoading;
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [requests, setRequests] = useState<FinanceLeaveRequest[]>([]);
@@ -149,12 +165,12 @@ export default function AdminLeaveRequestsTable() {
 
   useEffect(() => {
     setPage(1);
-  }, [activeStatus, selectedDateKey]);
+  }, [activeStatus, selectedDateKey, view]);
 
   const loadRequests = useCallback(async () => {
-    if (userLoading || adminLoading) return;
+    if (userLoading || effectiveContextLoading) return;
 
-    if (!userId || !collegeId) {
+    if (!userId || !effectiveCollegeId) {
       setRequests([]);
       setTotalCount(0);
       setIsLoading(false);
@@ -163,19 +179,31 @@ export default function AdminLeaveRequestsTable() {
 
     setIsLoading(true);
     try {
-      const { data, totalCount } = await fetchPaginatedEmployeeLeaveRequests({
-        userId,
-        collegeId,
-        role: "Admin",
-        status:
-          activeStatus === "total"
-            ? undefined
-            : (activeStatus as "approved" | "pending" | "rejected"),
-        page,
-        pageSize: ITEMS_PER_PAGE,
-        search: debouncedQuery,
-        date: selectedDateKey,
-      });
+      const status =
+        activeStatus === "total"
+          ? undefined
+          : (activeStatus as "approved" | "pending" | "rejected");
+      const { data, totalCount } =
+        view === "tagged"
+          ? await fetchPaginatedTaggedEmployeeLeaveRequests({
+              taggedUserId: userId,
+              collegeId: effectiveCollegeId,
+              status,
+              page,
+              pageSize: ITEMS_PER_PAGE,
+              search: debouncedQuery,
+              date: selectedDateKey,
+            })
+          : await fetchPaginatedEmployeeLeaveRequests({
+              userId,
+              collegeId: effectiveCollegeId,
+              role: requestRole,
+              status,
+              page,
+              pageSize: ITEMS_PER_PAGE,
+              search: debouncedQuery,
+              date: selectedDateKey,
+            });
 
       setRequests(
         data.map((request, index) => ({
@@ -183,7 +211,10 @@ export default function AdminLeaveRequestsTable() {
             request,
             (page - 1) * ITEMS_PER_PAGE + index + 1,
           ),
-          name: request.user?.fullName ?? fullName ?? "Admin",
+          name:
+            view === "tagged"
+              ? request.user?.fullName ?? "Employee"
+              : request.user?.fullName ?? fullName ?? "Admin",
         })),
       );
       setTotalCount(totalCount);
@@ -196,14 +227,16 @@ export default function AdminLeaveRequestsTable() {
     }
   }, [
     activeStatus,
-    adminLoading,
-    collegeId,
     debouncedQuery,
+    effectiveCollegeId,
+    effectiveContextLoading,
     fullName,
     page,
+    requestRole,
     selectedDateKey,
     userId,
     userLoading,
+    view,
   ]);
 
   useEffect(() => {
@@ -272,7 +305,11 @@ export default function AdminLeaveRequestsTable() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by leave type or description..."
+            placeholder={
+              view === "tagged"
+                ? "Search tagged requests..."
+                : "Search by leave type or description..."
+            }
             className="h-full w-full bg-transparent text-sm text-[#282828] outline-none placeholder:text-[#282828]"
           />
         </label>

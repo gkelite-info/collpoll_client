@@ -1,4 +1,8 @@
 import { supabase } from "@/lib/supabaseClient";
+import {
+  EmployeeLeaveTagSelection,
+  saveEmployeeLeaveRequestTags,
+} from "./employeeLeaveRequestTagsAPI";
 
 export type EmployeeLeaveRequestRole =
   | "CollegeAdmin"
@@ -19,6 +23,7 @@ export type EmployeeLeaveRequestPayload = {
   leaveFromDate: string;
   leaveToDate: string;
   description: string;
+  tags?: EmployeeLeaveTagSelection[];
 };
 
 export type FetchEmployeeLeaveRequestsParams = {
@@ -36,6 +41,17 @@ export type FetchPaginatedEmployeeLeaveRequestsParams =
     search?: string;
     date?: string;
   };
+
+export type FetchTaggedEmployeeLeaveRequestsParams = {
+  taggedUserId?: number;
+  collegeId?: number;
+  role?: EmployeeLeaveRequestRole | string;
+  status?: "approved" | "pending" | "rejected";
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  date?: string;
+};
 
 export type EmployeeLeaveRequestCounts = {
   total: number;
@@ -575,6 +591,11 @@ export async function createEmployeeLeaveRequest(
 
   if (error) throw error;
 
+  await saveEmployeeLeaveRequestTags(
+    data.employeeLeaveRequestId as number,
+    payload.tags ?? [],
+  );
+
   return data;
 }
 
@@ -672,6 +693,131 @@ export async function fetchPaginatedEmployeeLeaveRequests({
     data: await attachProfileUrls(mapEmployeeLeaveRows(rows)),
     totalCount: count ?? 0,
   };
+}
+
+async function fetchTaggedLeaveRequestIds(taggedUserId?: number) {
+  if (!taggedUserId) return [];
+
+  const { data, error } = await supabase
+    .from("employee_leave_request_tags")
+    .select("employeeLeaveRequestId")
+    .eq("taggedUserId", taggedUserId)
+    .eq("is_deleted", false);
+
+  if (error) throw error;
+
+  return Array.from(
+    new Set(
+      ((data ?? []) as { employeeLeaveRequestId?: number }[])
+        .map((row) => row.employeeLeaveRequestId)
+        .filter((id): id is number => typeof id === "number"),
+    ),
+  );
+}
+
+export async function fetchPaginatedTaggedEmployeeLeaveRequests({
+  page = 1,
+  pageSize = 10,
+  taggedUserId,
+  collegeId,
+  status,
+  search,
+  date,
+}: FetchTaggedEmployeeLeaveRequestsParams = {}) {
+  const taggedRequestIds = await fetchTaggedLeaveRequestIds(taggedUserId);
+
+  if (!taggedRequestIds.length) {
+    return {
+      data: [],
+      totalCount: 0,
+    };
+  }
+
+  const matchingRequestIds = await fetchMatchingLeaveRequestIds({
+    collegeId,
+    status,
+    search,
+    date,
+  });
+
+  const requestIds = matchingRequestIds
+    ? taggedRequestIds.filter((id) => matchingRequestIds.includes(id))
+    : taggedRequestIds;
+
+  if (!requestIds.length) {
+    return {
+      data: [],
+      totalCount: 0,
+    };
+  }
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const query = applyEmployeeLeaveFilters(
+    employeeLeaveRequestTable().select(employeeLeaveRequestSelect, {
+      count: "exact",
+    }),
+    {
+      collegeId,
+      status,
+      date,
+    },
+  )
+    .in("employeeLeaveRequestId", requestIds)
+    .order("createdAt", { ascending: false })
+    .range(from, to);
+
+  const { data, error, count } = await query;
+
+  if (error) throw error;
+
+  const rows = (data ?? []) as unknown as EmployeeLeaveRequestJoin[];
+
+  return {
+    data: await attachProfileUrls(mapEmployeeLeaveRows(rows)),
+    totalCount: count ?? 0,
+  };
+}
+
+export async function fetchTaggedEmployeeLeaveRequestCounts({
+  taggedUserId,
+  collegeId,
+  date,
+}: Omit<
+  FetchTaggedEmployeeLeaveRequestsParams,
+  "status" | "page" | "pageSize" | "search"
+> = {}): Promise<EmployeeLeaveRequestCounts> {
+  const fetchCount = async (status?: "approved" | "pending" | "rejected") => {
+    const taggedRequestIds = await fetchTaggedLeaveRequestIds(taggedUserId);
+
+    if (!taggedRequestIds.length) return 0;
+
+    const query = applyEmployeeLeaveFilters(
+      employeeLeaveRequestTable().select("employeeLeaveRequestId", {
+        count: "exact",
+        head: true,
+      }),
+      {
+        collegeId,
+        status,
+        date,
+      },
+    ).in("employeeLeaveRequestId", taggedRequestIds);
+
+    const { count, error } = await query;
+    if (error) throw error;
+    return count ?? 0;
+  };
+
+  const [total, approved, pending, rejected] = await Promise.all([
+    fetchCount(),
+    fetchCount("approved"),
+    fetchCount("pending"),
+    fetchCount("rejected"),
+  ]);
+
+  return { total, approved, pending, rejected };
 }
 
 export async function fetchEmployeeLeaveRequestCounts({
