@@ -3,11 +3,16 @@
 import { X, CaretDown } from "@phosphor-icons/react";
 import { useState, FormEvent } from "react";
 import toast from "react-hot-toast";
+import EmployeeLeaveRoutingFields, {
+  hasRequiredEmployeeLeaveTags,
+} from "@/app/components/modals/EmployeeLeaveRoutingFields";
+import { EmployeeLeaveTagSelection } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestTagsAPI";
+import { useUser } from "@/app/utils/context/UserContext";
 
 interface WellbeingRequestLeaveModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: LeaveFormData) => Promise<void>;
 }
 
 type LeaveFormData = {
@@ -15,6 +20,7 @@ type LeaveFormData = {
   startDate: string;
   endDate: string;
   description: string;
+  tags: EmployeeLeaveTagSelection[];
 };
 
 const defaultLeaveTypes = [
@@ -30,6 +36,7 @@ const initialFormData: LeaveFormData = {
   startDate: "",
   endDate: "",
   description: "",
+  tags: [],
 };
 
 export default function WellbeingRequestLeaveModal({
@@ -40,6 +47,7 @@ export default function WellbeingRequestLeaveModal({
   const [formData, setFormData] = useState<LeaveFormData>(initialFormData);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { role } = useUser();
 
   if (!isOpen) return null;
 
@@ -81,12 +89,17 @@ export default function WellbeingRequestLeaveModal({
       return;
     }
 
+    if (!hasRequiredEmployeeLeaveTags(role, formData.tags)) {
+      toast.error("Please select all required tagged users.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
       resetForm();
       onClose();
-    } catch (error) {
+    } catch {
       toast.error("Failed to submit leave request.");
     } finally {
       setIsSubmitting(false);
@@ -97,7 +110,8 @@ export default function WellbeingRequestLeaveModal({
     !formData.leaveType ||
     !formData.startDate ||
     !formData.endDate ||
-    !formData.description.trim();
+    !formData.description.trim() ||
+    !hasRequiredEmployeeLeaveTags(role, formData.tags);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
@@ -180,6 +194,11 @@ export default function WellbeingRequestLeaveModal({
               )}
             </div>
           </div>
+
+          <EmployeeLeaveRoutingFields
+            value={formData.tags}
+            onChange={(tags) => setFormData({ ...formData, tags })}
+          />
 
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-[#282828]">

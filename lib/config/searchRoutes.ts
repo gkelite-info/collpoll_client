@@ -97,6 +97,7 @@ export const ROLE_BASED_ROUTES: Record<string, SearchRoute[]> = {
     { label: "Add Admin", path: "/college-admin/add-admin", category: "Management", keywords: ["new admin", "register", "create admin"] },
     { label: "Calendar", path: "/college-admin/calendar", category: "Academics", keywords: [] },
     { label: "Club", path: "/college-admin/clubs", category: "Extracurricular", keywords: ["organizations", "view clubs"] },
+    { label: "Leave Requests", path: "/college-admin/leave-request", category: "HR", keywords: ["leave", "request", "tagged leave"] },
     { label: "Drive", path: "/college-admin/drive", category: "Resources", keywords: ["files", "documents", "storage"] },
     { label: "My Attendance", path: "/college-admin/my-attendance?main=attendance", category: "Academics", keywords: ["personal attendance"] },
     { label: "My Attendance", subLabel: "Payroll", path: "/college-admin/my-attendance?main=payroll&sub=summary", category: "Finance", keywords: ["payroll"] },

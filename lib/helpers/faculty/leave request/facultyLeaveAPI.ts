@@ -246,6 +246,7 @@ type FacultyLeaveRequestPayload = {
   endDate: string;
   leaveType: string;
   description: string;
+  tags?: import("@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestTagsAPI").EmployeeLeaveTagSelection[];
 };
 
 export async function submitFacultyLeaveRequest(
@@ -263,6 +264,7 @@ export async function submitFacultyLeaveRequest(
     leaveFromDate: startDate,
     leaveToDate: endDate,
     description,
+    tags: payload.tags,
   });
 }
 

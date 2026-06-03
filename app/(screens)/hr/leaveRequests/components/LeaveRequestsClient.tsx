@@ -18,9 +18,12 @@ import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagi
 import { ConfirmStatusModal } from "@/app/(screens)/faculty/leaveRequests/modal/ConfirmStatusModal";
 import { decryptId, encryptId } from "@/app/utils/encryption";
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
+import { useUser } from "@/app/utils/context/UserContext";
 import {
   fetchEmployeeLeaveRequestCounts,
+  fetchTaggedEmployeeLeaveRequestCounts,
   fetchPaginatedEmployeeLeaveRequests,
+  fetchPaginatedTaggedEmployeeLeaveRequests,
   updateEmployeeLeaveRequestStatus,
   type EmployeeLeaveRequestRecord,
 } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
@@ -146,6 +149,7 @@ const mapDbRequestToHrRow = (
 
 export default function LeaveRequestsClient() {
   const { collegeId, collegeHrId, loading: hrLoading } = useCollegeHr();
+  const { userId } = useUser();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -155,6 +159,7 @@ export default function LeaveRequestsClient() {
     const decryptedStatus = routeStatus ? decryptId(routeStatus) : null;
     return STATUS_BY_ROUTE_CODE[Number(decryptedStatus)] ?? "all";
   }, [routeStatus]);
+  const activeView = searchParams.get("view") === "tagged" ? "tagged" : "my";
 
   const [activeRole, setActiveRole] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -201,7 +206,17 @@ export default function LeaveRequestsClient() {
 
     setIsCardsLoading(true);
     try {
-      const nextCounts = await fetchEmployeeLeaveRequestCounts({ collegeId });
+      const nextCounts =
+        activeView === "tagged"
+          ? await fetchTaggedEmployeeLeaveRequestCounts({
+              collegeId,
+              taggedUserId: userId ?? undefined,
+            })
+          : await fetchEmployeeLeaveRequestCounts({
+              collegeId,
+              userId: userId ?? undefined,
+              role: "CollegeHr",
+            });
       setCounts({
         all: nextCounts.total,
         approved: nextCounts.approved,
@@ -214,7 +229,7 @@ export default function LeaveRequestsClient() {
     } finally {
       setIsCardsLoading(false);
     }
-  }, [collegeId, hrLoading]);
+  }, [activeView, collegeId, hrLoading, userId]);
 
   const loadRequests = useCallback(async () => {
     if (hrLoading) return;
@@ -232,15 +247,28 @@ export default function LeaveRequestsClient() {
         activeTab === "all"
           ? undefined
           : (activeTab as "approved" | "pending" | "rejected");
-      const { data, totalCount } = await fetchPaginatedEmployeeLeaveRequests({
-        collegeId,
-        status,
-        role: activeRole ? ROLE_FILTER_TO_DB[activeRole] : undefined,
-        page,
-        pageSize: ITEMS_PER_PAGE,
-        search: debouncedSearch,
-        date: selectedDateKey,
-      });
+      const { data, totalCount } =
+        activeView === "tagged"
+          ? await fetchPaginatedTaggedEmployeeLeaveRequests({
+              collegeId,
+              taggedUserId: userId ?? undefined,
+              status,
+              role: activeRole ? ROLE_FILTER_TO_DB[activeRole] : undefined,
+              page,
+              pageSize: ITEMS_PER_PAGE,
+              search: debouncedSearch,
+              date: selectedDateKey,
+            })
+          : await fetchPaginatedEmployeeLeaveRequests({
+              collegeId,
+              userId: userId ?? undefined,
+              status,
+              role: "CollegeHr",
+              page,
+              pageSize: ITEMS_PER_PAGE,
+              search: debouncedSearch,
+              date: selectedDateKey,
+            });
 
       setTableData(data.map(mapDbRequestToHrRow));
       setTotalItems(totalCount);
@@ -254,11 +282,13 @@ export default function LeaveRequestsClient() {
   }, [
     activeRole,
     activeTab,
+    activeView,
     collegeId,
     debouncedSearch,
     hrLoading,
     page,
     selectedDateKey,
+    userId,
   ]);
 
   useEffect(() => {
@@ -290,6 +320,23 @@ export default function LeaveRequestsClient() {
 
     const query = params.toString();
     router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    setPage(1);
+    setEditingRows(new Set());
+  };
+
+  const setActiveView = (view: "my" | "tagged") => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (view === "tagged") {
+      params.set("view", "tagged");
+    } else {
+      params.delete("view");
+    }
+
+    params.delete("status");
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    setActiveRole(null);
     setPage(1);
     setEditingRows(new Set());
   };
@@ -333,6 +380,16 @@ export default function LeaveRequestsClient() {
   };
 
   const columns = useMemo(() => {
+    if (activeView === "my") {
+      return [
+        ...BASE_COLUMNS.slice(0, 4),
+        ROLE_COLUMN,
+        ...BASE_COLUMNS.slice(4),
+        STATUS_ACTION_COLUMN,
+        DETAILS_COLUMN,
+      ];
+    }
+
     if (activeTab === "rejected") return REJECTED_COLUMNS;
     const columnsWithRole = [
       ...BASE_COLUMNS.slice(0, 4),
@@ -342,7 +399,7 @@ export default function LeaveRequestsClient() {
     return activeTab === "approved"
       ? [...columnsWithRole, STATUS_ACTION_COLUMN, DETAILS_COLUMN]
       : [...columnsWithRole, ACTION_COLUMN, DETAILS_COLUMN];
-  }, [activeTab]);
+  }, [activeTab, activeView]);
 
   const processedData = useMemo(
     () =>
@@ -415,6 +472,7 @@ export default function LeaveRequestsClient() {
             </button>
           ),
           action:
+            activeView === "my" ? null :
             isEditing ? (
               <div className="flex items-center justify-center gap-2">
                 <button
@@ -468,7 +526,7 @@ export default function LeaveRequestsClient() {
             ),
         };
       }),
-    [tableData, editingRows, page],
+    [activeView, tableData, editingRows, page],
   );
 
   const cards = [
@@ -526,10 +584,30 @@ export default function LeaveRequestsClient() {
         <section className="flex min-h-screen w-full flex-col pb-6 md:w-[68%]">
           <div className="mb-5 flex flex-col justify-start">
             <h1 className="text-xl font-bold text-[#282828]">
-               Leave Requests
+              <button
+                type="button"
+                onClick={() => setActiveView("my")}
+                className={`cursor-pointer ${
+                  activeView === "my" ? "text-[#43C17A]" : "text-[#282828]"
+                }`}
+              >
+                My Leave Request
+              </button>
+              <span className="mx-2 text-[#282828]">/</span>
+              <button
+                type="button"
+                onClick={() => setActiveView("tagged")}
+                className={`cursor-pointer ${
+                  activeView === "tagged" ? "text-[#43C17A]" : "text-[#282828]"
+                }`}
+              >
+                Tagged Leave Requests
+              </button>
             </h1>
             <p className="mt-1 text-sm text-[#525252]">
-              Review, approve, and manage faculty leave applications effortlessly
+              {activeView === "tagged"
+                ? "Review leave requests where you are tagged, approve when needed, and join the group chat."
+                : "Submit your leave request and view HR approval updates."}
             </p>
           </div>
 
@@ -571,25 +649,27 @@ export default function LeaveRequestsClient() {
             })}
           </div>
 
-          <div className="mb-3 flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-            {ROLE_FILTERS.map((role) => (
-              <button
-                key={role}
-                onClick={() => {
-                  setActiveRole(activeRole === role ? null : role);
-                  setPage(1);
-                  setEditingRows(new Set());
-                }}
-                className={`shrink-0 cursor-pointer rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-                  activeRole === role
-                    ? "border-[#22C55E] bg-[#E8F8EF] text-[#22C55E]"
-                    : "border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#22C55E] hover:text-[#22C55E]"
-                }`}
-              >
-                {role}
-              </button>
-            ))}
-          </div>
+          {activeView === "tagged" && (
+            <div className="mb-3 flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+              {ROLE_FILTERS.map((role) => (
+                <button
+                  key={role}
+                  onClick={() => {
+                    setActiveRole(activeRole === role ? null : role);
+                    setPage(1);
+                    setEditingRows(new Set());
+                  }}
+                  className={`shrink-0 cursor-pointer rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                    activeRole === role
+                      ? "border-[#22C55E] bg-[#E8F8EF] text-[#22C55E]"
+                      : "border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#22C55E] hover:text-[#22C55E]"
+                  }`}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex w-full items-center rounded-full bg-[#EAEAEA] px-4 py-2 sm:max-w-[430px]">

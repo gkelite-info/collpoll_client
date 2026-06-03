@@ -11,6 +11,7 @@ import { createEmployeeLeaveRequest } from "@/lib/helpers/employeeLeaveRequests/
 import { LEAVE_PANEL_HEIGHT } from "./data";
 import RequestLeaveModal from "@/app/(screens)/wellbeing-manager/leaveRequests/modal/RequestLeaveModal";
 import toast from "react-hot-toast";
+import { EmployeeLeaveTagSelection } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestTagsAPI";
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -64,6 +65,7 @@ type LeaveRequestFormData = {
   startDate: string;
   endDate: string;
   description: string;
+  tags: EmployeeLeaveTagSelection[];
 };
 
 export default function LeaveRequestsRight({
@@ -135,6 +137,7 @@ export default function LeaveRequestsRight({
         leaveFromDate: formData.startDate,
         leaveToDate: formData.endDate,
         description: formData.description.trim(),
+        tags: formData.tags,
       });
       toast.success("Leave request submitted successfully!");
       window.dispatchEvent(new Event("employee-leave-request-created"));

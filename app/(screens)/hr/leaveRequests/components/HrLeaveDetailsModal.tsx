@@ -42,6 +42,14 @@ const statusClassMap: Record<HrLeaveRow["status"], string> = {
 const LIMIT = 10;
 const SENDER_ROLE = "COLLEGE_HR";
 
+const formatRoleLabel = (role?: string | null) =>
+  role
+    ? role
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+    : "Employee";
+
 export default function HrLeaveDetailsModal({
   leave,
   onClose,
@@ -155,7 +163,12 @@ export default function HrLeaveDetailsModal({
           filter: `employeeLeaveRequestId=eq.${leave.id}`,
         },
         async (payload) => {
-          if (payload.new.senderRole === SENDER_ROLE) return;
+          if (
+            payload.new.senderRole === SENDER_ROLE &&
+            payload.new.senderCollegeHrId === collegeHrId
+          ) {
+            return;
+          }
 
           const newMsg = await fetchSingleEmployeeLeaveChatMessage(
             payload.new.employeeLeaveRequestChatId,
@@ -505,7 +518,9 @@ export default function HrLeaveDetailsModal({
                   </div>
                 ) : (
                   messages.map((message) => {
-                    const isMe = message.senderRole === SENDER_ROLE;
+                    const isMe =
+                      message.senderRole === SENDER_ROLE &&
+                      message.senderCollegeHrId === collegeHrId;
                     const showNewBadge = !isMe && !message.isRead;
                     const canEdit = isMe && !message.isRead && !!message.message;
                     const isEditing = editingMessageId === message.chatId;
@@ -518,7 +533,7 @@ export default function HrLeaveDetailsModal({
                         }`}
                       >
                         <Avatar
-                          src={isMe ? message.senderAvatar : leave.photo}
+                          src={message.senderAvatar}
                           size={24}
                           alt={message.senderName}
                         />
@@ -528,11 +543,16 @@ export default function HrLeaveDetailsModal({
                             isMe ? "items-end" : "items-start"
                           }`}
                         >
-                          {!isMe && (
-                            <span className="text-[10px] font-bold text-[#43C17A]">
-                              {message.senderName}
+                          <span
+                            className={`text-[10px] font-bold ${
+                              isMe ? "text-[#43C17A]" : "text-[#43C17A]"
+                            }`}
+                          >
+                            {isMe ? "You" : message.senderName}
+                            <span className="ml-1 font-semibold text-gray-400">
+                              - {formatRoleLabel(message.senderDisplayRole)}
                             </span>
-                          )}
+                          </span>
 
                           <div
                             className={`rounded-xl px-2.5 py-2 text-[12px] shadow-sm ${

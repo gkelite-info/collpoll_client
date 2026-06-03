@@ -24,6 +24,7 @@ import {
   createEmployeeLeaveRequest,
   type EmployeeLeaveRequestRecord,
 } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
+import { EmployeeLeaveTagSelection } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestTagsAPI";
 
 const MY_LEAVES_COLUMNS = [
   { title: "S.No", key: "sNo" },
@@ -77,6 +78,7 @@ type EmployeeLeaveRequestFormData = {
   startDate: string;
   endDate: string;
   description: string;
+  tags: EmployeeLeaveTagSelection[];
 };
 
 function WellbeingLeavesContent() {
@@ -225,6 +227,7 @@ function WellbeingLeavesContent() {
         leaveFromDate: formData.startDate,
         leaveToDate: formData.endDate,
         description: formData.description.trim(),
+        tags: formData.tags,
       });
       toast.success("Leave request submitted successfully!");
       window.dispatchEvent(new Event("employee-leave-request-created"));

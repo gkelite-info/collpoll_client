@@ -162,7 +162,12 @@ export default function LeaveRequestDetailsModal({
           filter: `employeeLeaveRequestId=eq.${requestId}`,
         },
         async (payload) => {
-          if (payload.new.senderRole === senderRole) return;
+          if (
+            payload.new.senderRole === senderRole &&
+            payload.new.senderUserId === userId
+          ) {
+            return;
+          }
 
           const newMsg = await fetchSingleEmployeeLeaveChatMessage(
             payload.new.employeeLeaveRequestChatId,
@@ -437,6 +442,12 @@ export default function LeaveRequestDetailsModal({
       })
       .replace(",", "");
 
+  const formatRoleLabel = (role: string) =>
+    role
+      .replace(/([A-Z])/g, " $1")
+      .replace(/^College Hr$/, "College HR")
+      .trim();
+
   if (!request) return null;
 
   return (
@@ -574,11 +585,16 @@ export default function LeaveRequestDetailsModal({
                           isMe ? "items-end" : "items-start"
                         }`}
                       >
-                        {!isMe && (
-                          <span className="text-[10px] font-bold text-[#43C17A]">
-                            {message.senderName}
+                        <span
+                          className={`text-[10px] font-bold ${
+                            isMe ? "text-[#43C17A]" : "text-[#43C17A]"
+                          }`}
+                        >
+                          {isMe ? "You" : message.senderName}
+                          <span className="ml-1 text-gray-400">
+                            • {formatRoleLabel(message.senderDisplayRole)}
                           </span>
-                        )}
+                        </span>
 
                         <div
                           className={`relative rounded-xl px-3 py-2 text-[12px] shadow-sm ${

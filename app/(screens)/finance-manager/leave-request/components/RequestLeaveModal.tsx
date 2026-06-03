@@ -6,6 +6,10 @@ import toast from "react-hot-toast";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { useUser } from "@/app/utils/context/UserContext";
 import { createEmployeeLeaveRequest } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
+import EmployeeLeaveRoutingFields, {
+  hasRequiredEmployeeLeaveTags,
+} from "@/app/components/modals/EmployeeLeaveRoutingFields";
+import { EmployeeLeaveTagSelection } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestTagsAPI";
 
 type RequestLeaveModalProps = {
   open: boolean;
@@ -17,6 +21,7 @@ type LeaveFormData = {
   startDate: string;
   endDate: string;
   description: string;
+  tags: EmployeeLeaveTagSelection[];
 };
 
 const defaultLeaveTypes = [
@@ -32,6 +37,7 @@ const initialFormData: LeaveFormData = {
   startDate: "",
   endDate: "",
   description: "",
+  tags: [],
 };
 
 export default function RequestLeaveModal({
@@ -94,6 +100,11 @@ export default function RequestLeaveModal({
       return;
     }
 
+    if (!hasRequiredEmployeeLeaveTags(role, formData.tags)) {
+      toast.error("Please select all required tagged users.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await createEmployeeLeaveRequest({
@@ -104,6 +115,7 @@ export default function RequestLeaveModal({
         leaveFromDate: formData.startDate,
         leaveToDate: formData.endDate,
         description: formData.description.trim(),
+        tags: formData.tags,
       });
 
       toast.success("Leave request submitted successfully.");
@@ -200,6 +212,11 @@ export default function RequestLeaveModal({
             </div>
           </div>
 
+          <EmployeeLeaveRoutingFields
+            value={formData.tags}
+            onChange={(tags) => setFormData({ ...formData, tags })}
+          />
+
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-[#282828]">
               Leave Date
@@ -279,7 +296,9 @@ export default function RequestLeaveModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting || !hasRequiredEmployeeLeaveTags(role, formData.tags)
+              }
               className="h-11 cursor-pointer rounded bg-[#43C17A] text-sm font-semibold text-white hover:bg-[#34A565] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isSubmitting ? "Submitting..." : "Submit Request"}
