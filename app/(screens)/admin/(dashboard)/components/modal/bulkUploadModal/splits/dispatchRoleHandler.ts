@@ -18,7 +18,7 @@ export default async function dispatchRoleHandler(
     timestamp: string,
 ) {
     const normalizedRole = row.role?.toLowerCase().replace(/[\s_\-]/g, "");
-    const isWellbeing = normalizedRole === "wellbeingexecutive" || normalizedRole === "wellbeingmanager";
+    const isWellbeing = normalizedRole === "wellbeingmanager";
 
     // ── Finance ──
     if (row.role === "Finance" || row.role === "FinanceManager") {
@@ -413,7 +413,7 @@ export default async function dispatchRoleHandler(
             await createWellbeing({
                 userId: targetUserId,
                 collegeId: adminContext.collegeId,
-                roleType: row.role === "WellbeingManager" ? "wellbeingManager" : "wellbeingExecutive",
+                roleType: "wellbeingManager",
                 gender: row.gender,
                 employeeId: row.identifierValue ?? "",
                 dateOfJoining: row.dateOfJoining ?? null,

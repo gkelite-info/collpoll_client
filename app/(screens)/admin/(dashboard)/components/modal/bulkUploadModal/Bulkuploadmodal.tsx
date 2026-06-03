@@ -258,7 +258,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                         .toLowerCase();
 
                     const isWellbeing =
-                        normalizedRole === "wellbeingexecutive" ||
                         normalizedRole === "wellbeingmanager";
 
                     

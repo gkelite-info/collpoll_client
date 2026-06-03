@@ -248,3 +248,153 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
     </div>
   );
 };
+
+interface SingleSelectProps {
+  label?: string;
+  placeholder: string;
+  options: string[];
+  selectedValue: string;
+  onChange: (val: string) => void;
+  required?: boolean;
+  disabled?: boolean;
+  paddingY?: string;
+  closedBorder?: string;
+  placeholderColorActive?: string;
+  gap?: string;
+}
+
+export const CustomSingleSelect: React.FC<SingleSelectProps> = ({
+  label,
+  placeholder,
+  options,
+  required,
+  selectedValue,
+  onChange,
+  disabled = false,
+  paddingY = "py-1.5",
+  closedBorder = "border-gray-200",
+  placeholderColorActive = "text-gray-400",
+  gap = "gap-1",
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className={`flex flex-col ${gap} w-full relative`} ref={wrapperRef}>
+      {label && (
+        <label className={`text-xs font-bold text-[#2D3748]`}>
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </label>
+      )}
+
+      <div
+        onClick={() => !disabled && setIsOpen((prev) => !prev)}
+        className={`
+          w-full
+          border
+          ${isOpen ? "border-[#48C78E] ring-1 ring-[#48C78E]" : closedBorder}
+          rounded-md
+          px-3
+          ${paddingY}
+          text-sm
+          flex
+          justify-between
+          items-center
+          bg-white
+          transition-all
+          ${
+            disabled
+              ? "bg-gray-50 cursor-not-allowed opacity-70"
+              : "cursor-pointer"
+          }
+        `}
+      >
+        <span
+          className={`truncate mr-2 ${
+            selectedValue ? "text-gray-700 font-medium" : placeholderColorActive
+          }`}
+        >
+          {selectedValue || placeholder}
+        </span>
+
+        <CaretDown
+          size={14}
+          className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </div>
+
+      {isOpen && !disabled && (
+        <div
+          className="
+            absolute
+            z-50
+            top-full
+            left-0
+            right-0
+            mt-1
+            bg-white
+            border
+            border-gray-100
+            rounded-md
+            shadow-xl
+            max-h-48
+            overflow-y-auto
+            custom-scrollbar
+          "
+        >
+          {options.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-gray-400">No options available</div>
+          ) : (
+            options.map((opt, idx) => (
+              <div
+                key={`${label}-${opt}-${idx}`}
+                onClick={() => {
+                  onChange(opt);
+                  setIsOpen(false);
+                }}
+                className="
+                  flex
+                  items-center
+                  justify-between
+                  px-3
+                  py-2
+                  hover:bg-gray-50
+                  cursor-pointer
+                  text-sm
+                  text-gray-700
+                "
+              >
+                <span>{opt}</span>
+
+                {selectedValue === opt && (
+                  <Check
+                    size={14}
+                    weight="bold"
+                    className="text-[#48C78E]"
+                  />
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};

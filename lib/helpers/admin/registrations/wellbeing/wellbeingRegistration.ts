@@ -11,12 +11,15 @@ export type WellbeingRoleType =
 export type WellbeingRegistrationType =
   | "college"
   | "hostel"
+  | "both"
   | "College"
-  | "Hostel";
+  | "Hostel"
+  | "Both";
 
 export type WellbeingHostelType =
   | "boyshostel"
-  | "girlshostel";
+  | "girlshostel"
+  | "both";
 
 export type CreateWellbeingCollegeDetail = {
   collegeEducationId: number;
@@ -50,7 +53,13 @@ const toWellbeingRoleType = (roleType: WellbeingRoleType) =>
 
 const toWellbeingRegistrationType = (
   registrationType: WellbeingRegistrationType,
-) => (registrationType.toLowerCase().trim() === "hostel" ? "hostel" : "college");
+) => {
+  const val = registrationType.toLowerCase().trim();
+  if (val === "hostel") return "hostel";
+  if (val === "both") return "both";
+  return "college";
+};
+
 
 const toEmployeeType = (roleType: WellbeingRoleType) =>
   roleType === "wellbeingManager" || roleType === "WellbeingManager"
@@ -107,7 +116,10 @@ export const createWellbeing = async (
     throw new Error("Gender is required for wellbeing registration");
   }
 
-  if (!payload.collegeDetails?.length && !payload.hostelDetails) {
+  const hasCollege = payload.collegeDetails && payload.collegeDetails.length > 0;
+  const hasHostel = !!payload.hostelDetails;
+
+  if (!hasCollege && !hasHostel) {
     throw new Error("Select at least one wellbeing registration detail");
   }
 
@@ -126,22 +138,27 @@ export const createWellbeing = async (
     }
   }
 
-  const createdWellBeingIds: number[] = [];
+  let regType: WellbeingRegistrationType = "college";
+  if (hasCollege && hasHostel) {
+    regType = "both";
+  } else if (hasHostel) {
+    regType = "hostel";
+  }
 
-  if (payload.collegeDetails?.length) {
-    const wellBeingId = await createWellbeingBase({
-      userId: payload.userId,
-      collegeId: payload.collegeId,
-      roleType: payload.roleType,
-      registrationType: "college",
-      createdBy: payload.createdBy,
-      createdAt: payload.createdAt,
-      updatedAt: payload.updatedAt,
-    });
+  const wellBeingId = await createWellbeingBase({
+    userId: payload.userId,
+    collegeId: payload.collegeId,
+    roleType: payload.roleType,
+    registrationType: regType,
+    createdBy: payload.createdBy,
+    createdAt: payload.createdAt,
+    updatedAt: payload.updatedAt,
+  });
 
+  if (hasCollege) {
     const uniqueRows = Array.from(
       new Map(
-        payload.collegeDetails.map((detail) => [
+        payload.collegeDetails!.map((detail) => [
           [
             detail.collegeEducationId,
             detail.collegeBranchId,
@@ -170,28 +187,16 @@ export const createWellbeing = async (
     if (error) {
       throw new Error(formatSupabaseError("createWellbeingCollegeDetails", error));
     }
-
-    createdWellBeingIds.push(wellBeingId);
   }
 
-  if (payload.hostelDetails) {
-    const wellBeingId = await createWellbeingBase({
-      userId: payload.userId,
-      collegeId: payload.collegeId,
-      roleType: payload.roleType,
-      registrationType: "hostel",
-      createdBy: payload.createdBy,
-      createdAt: payload.createdAt,
-      updatedAt: payload.updatedAt,
-    });
-
+  if (hasHostel) {
     const { error } = await supabase
       .from("wellbeing_hostel_details")
       .insert({
         wellBeingId,
-        block: payload.hostelDetails.block.trim(),
-        buildingNumber: payload.hostelDetails.buildingNumber.trim(),
-        hostelType: payload.hostelDetails.hostelType,
+        block: payload.hostelDetails!.block.trim(),
+        buildingNumber: payload.hostelDetails!.buildingNumber.trim(),
+        hostelType: payload.hostelDetails!.hostelType,
         isActive: true,
         is_deleted: false,
         createdAt: payload.createdAt,
@@ -201,8 +206,6 @@ export const createWellbeing = async (
     if (error) {
       throw new Error(formatSupabaseError("createWellbeingHostelDetails", error));
     }
-
-    createdWellBeingIds.push(wellBeingId);
   }
 
   if (payload.employeeId?.trim()) {
@@ -214,5 +217,5 @@ export const createWellbeing = async (
     });
   }
 
-  return createdWellBeingIds;
+  return [wellBeingId];
 };
