@@ -1,13 +1,69 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { CheckCircle, Clock, UploadSimple, X, CaretDown, ClockCountdownIcon } from "@phosphor-icons/react";
-import { wellbeingCategories, wellbeingSubCategories } from "../data";
+import { useRef, useState, useEffect } from "react";
+import { CheckCircle, UploadSimple, X, ClockCountdownIcon } from "@phosphor-icons/react";
+import { useUser } from "@/app/utils/context/UserContext";
+import { fetchAllActiveWellbeingCategories } from "@/lib/helpers/wellbeingCategories/wellbeingCategoryAPI";
+import toast, { Toaster } from "react-hot-toast";
+import CustomSelect from "@/app/utils/CustomSelect";
+import Field from "@/app/utils/Field";
 
 export default function IssueForm() {
+  const { fullName, email, collegeId } = useUser();
   const [files, setFiles] = useState<File[]>([]);
-  const [selectedVisibility, setSelectedVisibility] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [issueTitle, setIssueTitle] = useState("");
+  const [isExecutiveSelected, setIsExecutiveSelected] = useState(false);
+  const [appliesTo, setAppliesTo] = useState<"college" | "hostel" | "both">("college");
+  const [priority, setPriority] = useState<"High" | "Medium" | "Low">("Medium");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<number | null>(null);
+  const [description, setDescription] = useState("");
+
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+
+  useEffect(() => {
+    async function getCategories() {
+      if (!collegeId) return;
+      setLoadingCategories(true);
+      try {
+        const data = await fetchAllActiveWellbeingCategories(collegeId);
+        setCategories(data);
+      } catch (err) {
+        toast.error("Failed to load categories. Please try again later.");
+      } finally {
+        setLoadingCategories(false);
+      }
+    }
+
+    getCategories();
+  }, [collegeId]);
+
+  const filteredCategories = categories.filter((cat) => {
+    if (appliesTo === "both") return true;
+    return cat.appliesTo === appliesTo || cat.appliesTo === "both";
+  });
+
+  const activeCategory = categories.find((cat) => cat.categoryId === selectedCategoryId);
+  const subCategoryOptions = activeCategory
+    ? activeCategory.wellbeing_sub_categories.map((sub: any) => ({
+        label: sub.subCategoryName,
+        value: sub.subCategoryId,
+      }))
+    : [];
+
+  const handleAppliesToChange = (val: "college" | "hostel" | "both") => {
+    setAppliesTo(val);
+    setSelectedCategoryId(null);
+    setSelectedSubCategoryId(null);
+  };
+
+  const handleCategoryChange = (catId: number) => {
+    setSelectedCategoryId(catId);
+    setSelectedSubCategoryId(null);
+  };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -34,6 +90,36 @@ export default function IssueForm() {
     setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
 
+  const handleSubmit = () => {
+    if (!issueTitle.trim()) {
+      toast.error("Please enter an issue title");
+      return;
+    }
+    if (!selectedCategoryId) {
+      toast.error("Please select a category");
+      return;
+    }
+    if (!selectedSubCategoryId) {
+      toast.error("Please select a subcategory");
+      return;
+    }
+    if (!description.trim()) {
+      toast.error("Please describe your issue");
+      return;
+    }
+
+    toast.success("Wellbeing issue raised successfully!");
+
+    setIssueTitle("");
+    setSelectedCategoryId(null);
+    setSelectedSubCategoryId(null);
+    setAppliesTo("college");
+    setPriority("Medium");
+    setIsExecutiveSelected(false);
+    setDescription("");
+    setFiles([]);
+  };
+
   return (
     <div className="mx-auto mt-8 w-full max-w-2xl flex flex-col flex-1 min-h-[600px] overflow-hidden rounded-2xl bg-[#E8E8E8] shadow-sm">
       <div className="relative overflow-hidden bg-gradient-to-r from-[#205B3A] to-[#43C17A] px-5 sm:px-8 py-6 sm:py-8 text-white flex-shrink-0">
@@ -45,10 +131,9 @@ export default function IssueForm() {
           className="pointer-events-none absolute rounded-full bg-white/20"
           style={{ width: 80, height: 80, right: 75, bottom: -40 }}
         />
-        <h1 className="relative z-10 text-lg sm:text-xl font-bold">Raise Well being Issue</h1>
+        <h1 className="relative z-10 text-lg sm:text-xl font-bold">Raise Wellbeing Issue</h1>
         <p className="relative z-10 mt-1.5 sm:mt-2 max-w-md text-xs sm:text-sm leading-snug text-white/90">
-          Fill in the details below. Every submission is tracked and resolved
-          transparently.
+          Fill in the details below. Every submission is tracked and resolved transparently.
         </p>
       </div>
 
@@ -56,70 +141,136 @@ export default function IssueForm() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4 sm:gap-y-5">
           <Field label="Full Name">
             <input
-              value="Stephen Jones"
+              value={fullName || ""}
               readOnly
+              placeholder="Full Name"
               className="h-10 w-full rounded border border-[#D0D0D0] bg-transparent px-4 text-sm text-[#555555] outline-none"
             />
           </Field>
 
           <Field label="Email address">
             <input
-              value="Stephen Jones@gmail.com"
+              value={email || ""}
               readOnly
+              placeholder="Email address"
               className="h-10 w-full rounded border border-[#D0D0D0] bg-transparent px-4 text-sm text-[#555555] outline-none"
             />
           </Field>
 
-          <Field label="Role">
+          <Field label="Issue Title" htmlFor="issue-title">
             <input
-              value="Placement Officer"
-              readOnly
-              className="h-10 w-full rounded border border-[#D0D0D0] bg-transparent px-4 text-sm text-[#555555] outline-none"
+              id="issue-title"
+              type="text"
+              value={issueTitle}
+              onChange={(e) => setIssueTitle(e.target.value)}
+              placeholder="Enter Issue Title"
+              className="h-10 w-full rounded border border-[#D0D0D0] bg-transparent px-4 text-sm text-[#555555] outline-none placeholder:text-[#8A8A8A]"
             />
-          </Field>
-
-          <Field label="Category">
-            <SelectField options={wellbeingCategories} />
-          </Field>
-
-          <Field label="Sub Category">
-            <SelectField options={wellbeingSubCategories} />
           </Field>
 
           <Field label="Issue Visibility">
             <div className="grid grid-cols-2 gap-2">
-              {["Executive", "Manager"].map((visibility) => {
-                const isSelected = selectedVisibility === visibility;
+              <button
+                type="button"
+                onClick={() => setIsExecutiveSelected(!isExecutiveSelected)}
+                className={`flex h-10 cursor-pointer items-center justify-center gap-1.5 sm:gap-2 rounded border transition-colors text-xs sm:text-sm ${
+                  isExecutiveSelected
+                    ? "bg-[#16284F] border-[#16284F] text-white hover:bg-[#0f1c38]"
+                    : "border-[#D0D0D0] text-[#555555] hover:bg-black/5"
+                }`}
+              >
+                {isExecutiveSelected ? (
+                  <CheckCircle size={16} weight="fill" />
+                ) : (
+                  <div className="w-4 h-4 rounded-full border border-gray-400 bg-transparent flex-shrink-0" />
+                )}
+                Executive
+              </button>
+
+              <button
+                type="button"
+                className="flex h-10 items-center justify-center gap-1.5 sm:gap-2 rounded border transition-colors text-xs sm:text-sm bg-[#16284F] border-[#16284F] text-white opacity-100 cursor-default"
+              >
+                <CheckCircle size={16} weight="fill" />
+                Manager
+              </button>
+            </div>
+          </Field>
+
+          <Field label="Applies To">
+            <div className="flex flex-wrap py-[9px] w-full items-center max-[350px]:gap-3 gap-6 rounded border border-[#D0D0D0] bg-transparent px-4">
+              {(["college", "hostel", "both"] as const).map((option) => {
+                const isSelected = appliesTo === option;
                 return (
                   <button
-                    key={visibility}
+                    key={option}
                     type="button"
-                    onClick={() => setSelectedVisibility(visibility)}
-                    className={`flex h-10 cursor-pointer items-center justify-center gap-1.5 sm:gap-2 rounded border transition-colors text-xs sm:text-sm ${
-                      isSelected
-                        ? "bg-[#16284F] border-[#16284F] text-white hover:bg-[#0f1c38]"
-                        : "border-[#D0D0D0] text-[#555555] hover:bg-black/5"
-                    }`}
+                    onClick={() => handleAppliesToChange(option)}
+                    className="flex cursor-pointer items-center gap-2 text-sm text-[#555555] capitalize"
                   >
-                    <CheckCircle size={16} weight={isSelected ? "fill" : "regular"} />
-                    {visibility}
+                    {isSelected ? (
+                      <div className="flex h-4 w-4 items-center justify-center rounded-full bg-[#16284F] flex-shrink-0">
+                        <div className="h-3 w-3 rounded-full bg-[#16284F] border border-[#FFFFFF]" />
+                      </div>
+                    ) : (
+                      <div className="h-4 w-4 rounded-full border border-gray-400 bg-transparent flex-shrink-0" />
+                    )}
+                    {option}
                   </button>
                 );
               })}
             </div>
           </Field>
 
+          <Field label="Priority" htmlFor="priority-select">
+            <CustomSelect
+              id="priority-select"
+              label="Select Priority"
+              options={["High", "Medium", "Low"]}
+              value={priority}
+              onChange={(val) => setPriority(val)}
+            />
+          </Field>
+
+          <Field label="Category" htmlFor="category-select">
+            <CustomSelect
+              id="category-select"
+              label={loadingCategories ? "Loading..." : "Select category"}
+              options={filteredCategories.map((cat) => ({
+                label: cat.categoryName,
+                value: cat.categoryId,
+              }))}
+              value={selectedCategoryId}
+              onChange={handleCategoryChange}
+              disabled={loadingCategories}
+            />
+          </Field>
+
+          <Field label="Subcategory" htmlFor="subcategory-select">
+            <CustomSelect
+              id="subcategory-select"
+              label="Select Subcategory"
+              options={subCategoryOptions}
+              value={selectedSubCategoryId}
+              onChange={(val) => setSelectedSubCategoryId(val)}
+              disabled={!selectedCategoryId}
+            />
+          </Field>
+
           <div className="col-span-1 sm:col-span-2">
-            <Field label="Description">
+            <Field label="Description" htmlFor="description">
               <textarea
-                placeholder="Describe your issue in detail................"
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe you issue in detail................"
                 className="h-28 sm:h-32 w-full resize-none rounded border border-[#D0D0D0] bg-transparent px-4 py-3 text-sm text-[#555555] outline-none placeholder:text-[#8A8A8A]"
               />
             </Field>
           </div>
 
           <div className="col-span-1 sm:col-span-2">
-            <Field label="Attachments">
+            <Field label="Attachments" htmlFor="file-attachments">
               <div className={`flex gap-3 sm:gap-4 w-full ${files.length > 0 ? 'flex-col sm:flex-row sm:h-44 items-stretch' : 'flex-col'}`}>
                 <div
                   onDragOver={handleDragOver}
@@ -136,6 +287,7 @@ export default function IssueForm() {
                     Drag & Drop Your File here or
                   </p>
                   <input 
+                    id="file-attachments"
                     type="file" 
                     multiple 
                     ref={fileInputRef} 
@@ -203,45 +355,16 @@ export default function IssueForm() {
         <div className="mt-8 mb-4 flex justify-center">
           <button
             type="button"
-            className="h-12 w-full max-w-sm sm:h-14 cursor-pointer rounded-lg bg-[#16284F] text-base sm:text-lg font-semibold text-white transition-colors hover:bg-[#0f1c38] shadow-sm"
+            onClick={handleSubmit}
+            className="h-12 w-full max-w-[250px] sm:h-14 cursor-pointer rounded-lg bg-[#16284F] text-base sm:text-lg font-semibold text-white transition-colors hover:bg-[#0f1c38] shadow-sm"
           >
             Submit
           </button>
         </div>
       </div>
+      <Toaster position="top-right" containerStyle={{ zIndex: 99999 }} />
     </div>
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 sm:mb-2 block text-xs sm:text-sm font-semibold text-[#282828]">
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
 
-function SelectField({ options }: { options: string[] }) {
-  return (
-    <div className="relative">
-      <select className="h-10 w-full appearance-none rounded border border-[#D0D0D0] bg-transparent px-4 pr-10 text-sm text-[#555555] outline-none cursor-pointer">
-        {options.map((option) => (
-          <option key={option} value={option}>{option}</option>
-        ))}
-      </select>
-      <CaretDown
-        size={16}
-        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#282828] sm:w-[18px] sm:h-[18px]"
-      />
-    </div>
-  );
-}

@@ -749,7 +749,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
           </div>
         </div>
 
-        <div className="hidden md:hidden lg:flex w-[40%] flex justify-between ">
+        <div className="hidden md:hidden lg:flex w-[40%] flex justify-between items-center h-full">
           <div className="w-[40%] h-[100%] flex items-center justify-center gap-3">
             <button onClick={() => setIsNewsOpen(true)} className="relative">
               <Newspaper size={21} color="#282828" className="cursor-pointer" />
@@ -802,7 +802,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
             <ProfileShimmer />
           ) : (
             <div
-              className="w-[60%] flex items-center bg-[#43C17A] cursor-pointer rounded-l-full py-1.5"
+              className="w-[60%] flex items-center bg-[#43C17A] cursor-pointer rounded-l-full py-3 px-3 xl:px-0"
               onClick={() => setOpenProfile(true)}
             >
               <div className="w-[25%] flex items-center justify-center">
@@ -810,12 +810,12 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                   <img
                     src={profilePhoto}
                     alt="profile"
-                    className="w-11 h-11 rounded-full object-cover border-2 border-white shrink-0"
+                    className="w-12 h-12 rounded-full object-cover border-2 border-white shrink-0"
                   />
                 ) : (
-                  <div className="w-11 h-11 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center shrink-0">
+                  <div className="w-12 h-12 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center shrink-0">
                     <svg
-                      className="w-6 h-6 text-gray-400"
+                      className="w-8 h-8 text-gray-400"
                       fill="currentColor"
                       viewBox="0 0 24 24"
                     >
