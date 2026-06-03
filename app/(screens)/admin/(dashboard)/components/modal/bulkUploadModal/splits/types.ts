@@ -58,7 +58,6 @@ export const ROLE_OPTIONS: BulkRole[] = [
     "FinanceManager",
     "CollegeHr",
     "PlacementOfficer",
-    "WellbeingExecutive",
     "WellbeingManager",
 ];
 
@@ -71,7 +70,6 @@ export type BulkRole =
     | "FinanceManager"
     | "CollegeHr"
     | "PlacementOfficer"
-    | "WellbeingExecutive"
     | "WellbeingManager";
 
 export const TEMPLATE_HEADERS = [

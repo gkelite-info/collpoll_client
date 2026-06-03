@@ -129,9 +129,11 @@ const CustomSingleSelect: React.FC<CustomSingleSelectProps> = ({
 export default function CreateExecutiveModal({
   isOpen,
   onClose,
+  onSaveSuccess,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  onSaveSuccess?: () => void;
 }) {
   const { collegeId, collegePublicId, userId } = useUser();
   const [dbData, setDbData] = useState<{
@@ -174,6 +176,13 @@ export default function CreateExecutiveModal({
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedRegistrationType, setSelectedRegistrationType] = useState("");
+  const [hostelBlock, setHostelBlock] = useState("");
+  const [buildingNumber, setBuildingNumber] = useState("");
+  const [hostelType, setHostelType] = useState("");
+
+  const isWellbeingHostel = selectedRegistrationType === "Hostel" || selectedRegistrationType === "Both";
+  const isWellbeingCollege = selectedRegistrationType === "College" || selectedRegistrationType === "Both";
 
   const [categoriesList, setCategoriesList] = useState<string[]>([]);
   const [categoriesObjList, setCategoriesObjList] = useState<any[]>([]);
@@ -218,6 +227,10 @@ export default function CreateExecutiveModal({
     setSelectedYear("");
     setSelectedSection("");
     setSelectedCategory("");
+    setSelectedRegistrationType("");
+    setHostelBlock("");
+    setBuildingNumber("");
+    setHostelType("");
     setShowPassword(false);
     setShowConfirmPassword(false);
     setIsSuccess(false);
@@ -349,11 +362,21 @@ export default function CreateExecutiveModal({
       }
     }
 
-    if (!selectedEducation) return toast.error("Education Type is required.");
-    if (!selectedBranch) return toast.error("Branch is required.");
-    if (!selectedYear) return toast.error("Year is required.");
-    if (!selectedSection) return toast.error("Section is required.");
     if (!selectedCategory) return toast.error("Category is required.");
+    if (!selectedRegistrationType) return toast.error("Registration Type is required.");
+
+    if (isWellbeingCollege) {
+      if (!selectedEducation) return toast.error("Education Type is required.");
+      if (!selectedBranch) return toast.error("Branch is required.");
+      if (!selectedYear) return toast.error("Year is required.");
+      if (!selectedSection) return toast.error("Section is required.");
+    }
+
+    if (isWellbeingHostel) {
+      if (!hostelBlock.trim()) return toast.error("Block is required.");
+      if (!buildingNumber.trim()) return toast.error("Building Number is required.");
+      if (!hostelType) return toast.error("Hostel Type is required.");
+    }
 
     if (!basicData.dateOfJoining) {
       return toast.error("Date of Joining is required.");
@@ -401,11 +424,15 @@ export default function CreateExecutiveModal({
         collegeId: collegeId!,
         collegePublicId: collegePublicId || "",
         categoryId: selectedCategoryId!,
-        collegeEducationId: selectedEducationId!,
-        collegeBranchId: selectedBranchId!,
-        collegeAcademicYearId: selectedYearId!,
-        collegeSectionsId: selectedSectionId!,
         byManager: userId!,
+        registrationType: selectedRegistrationType,
+        collegeEducationId: isWellbeingCollege ? selectedEducationId! : null,
+        collegeBranchId: isWellbeingCollege ? selectedBranchId! : null,
+        collegeAcademicYearId: isWellbeingCollege ? selectedYearId! : null,
+        collegeSectionsId: isWellbeingCollege ? selectedSectionId! : null,
+        hostelBlock: isWellbeingHostel ? hostelBlock : undefined,
+        buildingNumber: isWellbeingHostel ? buildingNumber : undefined,
+        hostelType: isWellbeingHostel ? hostelType : undefined,
       };
 
       const res = await saveWellbeingExecutive(payload);
@@ -419,6 +446,7 @@ export default function CreateExecutiveModal({
       setTimeout(() => {
         resetForm();
         onClose();
+        onSaveSuccess?.();
         setLoading(false);
         setIsSuccess(false);
       }, 2000);
@@ -552,58 +580,128 @@ export default function CreateExecutiveModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <CustomSingleSelect
-                label="Education Type"
-                placeholder="Select Education Type"
-                options={degreeOptions}
-                selectedValue={selectedEducation}
+                label="Registration Type"
+                placeholder="Select Registration Type"
+                options={["Hostel", "College", "Both"]}
+                selectedValue={selectedRegistrationType}
                 onChange={(val) => {
-                  setSelectedEducation(val);
-                  setSelectedBranch("");
-                  setSelectedYear("");
-                  setSelectedSection("");
+                  setSelectedRegistrationType(val);
+                  if (val === "College") {
+                    setHostelBlock("");
+                    setBuildingNumber("");
+                    setHostelType("");
+                  }
+                  if (val === "Hostel") {
+                    setSelectedEducation("");
+                    setSelectedBranch("");
+                    setSelectedYear("");
+                    setSelectedSection("");
+                  }
                 }}
-                required
-              />
-
-              <CustomSingleSelect
-                label="Branch"
-                placeholder="Select Branch"
-                options={branchOptions}
-                selectedValue={selectedBranch}
-                onChange={(val) => {
-                  setSelectedBranch(val);
-                  setSelectedYear("");
-                  setSelectedSection("");
-                }}
-                disabled={!selectedEducation}
                 required
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-              <CustomSingleSelect
-                label="Year"
-                placeholder="Select Year"
-                options={yearOptions}
-                selectedValue={selectedYear}
-                onChange={(val) => {
-                  setSelectedYear(val);
-                  setSelectedSection("");
-                }}
-                disabled={!selectedBranch}
-                required
-              />
+            {isWellbeingHostel && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 animate-in fade-in duration-200">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D3748]">
+                    Block <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={hostelBlock}
+                    onChange={(e) => setHostelBlock(e.target.value.toUpperCase())}
+                    placeholder="Enter block"
+                    className="w-full border border-gray-200 rounded-md px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D3748]">
+                    Building Number <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={buildingNumber}
+                    onChange={(e) => setBuildingNumber(e.target.value.toUpperCase())}
+                    placeholder="Enter building number"
+                    className="w-full border border-gray-200 rounded-md px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                  />
+                </div>
+              </div>
+            )}
 
-              <CustomSingleSelect
-                label="Section"
-                placeholder="Select Section"
-                options={sectionOptions}
-                selectedValue={selectedSection}
-                onChange={setSelectedSection}
-                disabled={!selectedYear}
-                required
-              />
-            </div>
+            {isWellbeingHostel && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 animate-in fade-in duration-200">
+                <CustomSingleSelect
+                  label="Hostel Type"
+                  placeholder="Select Hostel Type"
+                  options={["boyshostel", "girlshostel", "both"]}
+                  selectedValue={hostelType}
+                  onChange={setHostelType}
+                  required
+                />
+              </div>
+            )}
+
+            {isWellbeingCollege && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 animate-in fade-in duration-200">
+                  <CustomSingleSelect
+                    label="Education Type"
+                    placeholder="Select Education Type"
+                    options={degreeOptions}
+                    selectedValue={selectedEducation}
+                    onChange={(val) => {
+                      setSelectedEducation(val);
+                      setSelectedBranch("");
+                      setSelectedYear("");
+                      setSelectedSection("");
+                    }}
+                    required
+                  />
+
+                  <CustomSingleSelect
+                    label="Branch"
+                    placeholder="Select Branch"
+                    options={branchOptions}
+                    selectedValue={selectedBranch}
+                    onChange={(val) => {
+                      setSelectedBranch(val);
+                      setSelectedYear("");
+                      setSelectedSection("");
+                    }}
+                    disabled={!selectedEducation}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 animate-in fade-in duration-200">
+                  <CustomSingleSelect
+                    label="Year"
+                    placeholder="Select Year"
+                    options={yearOptions}
+                    selectedValue={selectedYear}
+                    onChange={(val) => {
+                      setSelectedYear(val);
+                      setSelectedSection("");
+                    }}
+                    disabled={!selectedBranch}
+                    required
+                  />
+
+                  <CustomSingleSelect
+                    label="Section"
+                    placeholder="Select Section"
+                    options={sectionOptions}
+                    selectedValue={selectedSection}
+                    onChange={setSelectedSection}
+                    disabled={!selectedYear}
+                    required
+                  />
+                </div>
+              </>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div className="space-y-1">

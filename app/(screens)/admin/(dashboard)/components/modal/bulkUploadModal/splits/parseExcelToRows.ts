@@ -75,7 +75,6 @@ function normalizeRole(role: string): {
         placementofficer: "PlacementOfficer",
         tpo: "PlacementOfficer",
 
-        wellbeingexecutive: "WellbeingExecutive",
         wellbeingmanager: "WellbeingManager",
     };
 

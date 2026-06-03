@@ -29,11 +29,15 @@ export type WellbeingExecutivePayload = {
   collegeId: number;
   collegePublicId: string;
   categoryId: number;
-  collegeEducationId: number;
-  collegeBranchId: number;
-  collegeAcademicYearId: number;
-  collegeSectionsId: number;
+  collegeEducationId?: number | null;
+  collegeBranchId?: number | null;
+  collegeAcademicYearId?: number | null;
+  collegeSectionsId?: number | null;
   byManager: number;
+  registrationType: string;
+  hostelBlock?: string;
+  buildingNumber?: string;
+  hostelType?: string;
 };
 
 export async function saveWellbeingExecutive(payload: WellbeingExecutivePayload) {
@@ -99,13 +103,16 @@ export async function saveWellbeingExecutive(payload: WellbeingExecutivePayload)
 
     createdUserId = newUser.userId;
 
+    const hasCollege = payload.registrationType === "College" || payload.registrationType === "Both";
+    const hasHostel = payload.registrationType === "Hostel" || payload.registrationType === "Both";
+
     const { data: wellbeingData, error: wellbeingError } = await supabase
       .from("well_beings")
       .insert({
         userId: createdUserId,
         collegeId: payload.collegeId,
         roleType: "wellbeingExecutive",
-        registrationType: "college",
+        registrationType: payload.registrationType.toLowerCase(),
         createdBy: null,
         isActive: true,
         is_deleted: false,
@@ -123,21 +130,44 @@ export async function saveWellbeingExecutive(payload: WellbeingExecutivePayload)
 
     const wellBeingId = wellbeingData.wellBeingId;
 
-    const { error: detailError } = await supabase
-      .from("wellbeing_college_details")
-      .insert({
-        wellBeingId,
-        collegeEducationId: payload.collegeEducationId,
-        collegeBranchId: payload.collegeBranchId,
-        collegeAcademicYearId: payload.collegeAcademicYearId,
-        collegeSectionsId: payload.collegeSectionsId,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      });
+    if (hasCollege) {
+      const { error: detailError } = await supabase
+        .from("wellbeing_college_details")
+        .insert({
+          wellBeingId,
+          collegeEducationId: payload.collegeEducationId!,
+          collegeBranchId: payload.collegeBranchId!,
+          collegeAcademicYearId: payload.collegeAcademicYearId!,
+          collegeSectionsId: payload.collegeSectionsId!,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
 
-    if (detailError) {
-      throw new Error(detailError.message || "Wellbeing college details creation failed");
+      if (detailError) {
+        throw new Error(detailError.message || "Wellbeing college details creation failed");
+      }
     }
+
+    if (hasHostel) {
+      const { error: hostelError } = await supabase
+        .from("wellbeing_hostel_details")
+        .insert({
+          wellBeingId,
+          block: payload.hostelBlock!.trim(),
+          buildingNumber: payload.buildingNumber!.trim(),
+          hostelType: payload.hostelType!,
+          isActive: true,
+          is_deleted: false,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
+
+      if (hostelError) {
+        throw new Error(hostelError.message || "Wellbeing hostel details creation failed");
+      }
+    }
+
+
 
     await upsertIdentifier({
       userId: createdUserId,
@@ -223,3 +253,85 @@ export async function fetchWellbeingExecutives(collegeId: number) {
     };
   });
 }
+
+export async function fetchPaginatedWellbeingExecutives(
+  collegeId: number,
+  page: number,
+  limit: number,
+  categoryId?: number | null
+): Promise<{ executives: any[]; totalCount: number }> {
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  let query = supabase
+    .from("well_beings")
+    .select(
+      `
+      wellBeingId,
+      userId,
+      categoryId,
+      roleType,
+      isActive,
+      is_deleted,
+      users:userId (
+        fullName,
+        email,
+        user_profile (
+          profileUrl,
+          is_deleted
+        ),
+        employee_ids (
+          employeeId
+        )
+      )
+    `,
+      { count: "exact" }
+    )
+    .eq("collegeId", collegeId)
+    .eq("roleType", "wellbeingExecutive")
+    .eq("isActive", true)
+    .eq("is_deleted", false);
+
+  if (categoryId !== undefined && categoryId !== null) {
+    query = query.eq("categoryId", categoryId);
+  }
+
+  query = query.order("createdAt", { ascending: false });
+
+  const { data, error, count } = await query.range(from, to);
+
+  if (error) {
+    console.error("fetchPaginatedWellbeingExecutives error:", error);
+    throw error;
+  }
+
+  const executives = (data ?? []).map((row: any) => {
+    const user = row.users;
+    const profile = user?.user_profile;
+    const activeProfile = Array.isArray(profile)
+      ? profile.find((p: any) => !p.is_deleted)
+      : (profile?.is_deleted ? null : profile);
+    const profileUrl = activeProfile?.profileUrl ?? "";
+
+    const empIds = user?.employee_ids;
+    const employeeId = Array.isArray(empIds)
+      ? empIds[0]?.employeeId
+      : empIds?.employeeId;
+
+    return {
+      id: row.userId,
+      name: user?.fullName ?? "",
+      email: user?.email ?? "",
+      staffId: employeeId ?? "",
+      role: "Executive",
+      image: profileUrl ?? "",
+      categoryId: row.categoryId,
+    };
+  });
+
+  return {
+    executives,
+    totalCount: count ?? 0,
+  };
+}
+

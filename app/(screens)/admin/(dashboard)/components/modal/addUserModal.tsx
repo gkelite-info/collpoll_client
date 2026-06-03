@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { CaretDown, Eye, EyeSlash, Lock, X } from "@phosphor-icons/react";
 import React, { useEffect, useMemo, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { CustomMultiSelect } from "./userModalComponents";
+import { CustomMultiSelect, CustomSingleSelect } from "./userModalComponents";
 import {
   createStudent,
   createStudentFeeObligation,
@@ -116,7 +116,7 @@ const AddUserModal: React.FC<{
     professionalExperienceYears: undefined as number | undefined,
     identifierValue: "",
     batch: "",
-    wellbeingRegistrationTypes: [] as string[],
+    wellbeingRegistrationType: "",
     hostelBlock: "",
     buildingNumber: "",
     hostelType: "",
@@ -491,7 +491,7 @@ const AddUserModal: React.FC<{
       setSelectedFinanceEducationTypes([]);
       setBasicData((p: any) => ({
         ...p,
-        wellbeingRegistrationTypes: [],
+        wellbeingRegistrationType: "",
         hostelBlock: "",
         buildingNumber: "",
         hostelType: "",
@@ -502,28 +502,14 @@ const AddUserModal: React.FC<{
     setBasicData((p: any) => ({ ...p, [name]: formattedValue }));
   };
 
-  const toggleWellbeingRegistrationType = (type: "Hostel" | "College") => {
-    setBasicData((prev: any) => {
-      const current = prev.wellbeingRegistrationTypes || [];
-      const next = current.includes(type)
-        ? current.filter((item: string) => item !== type)
-        : [...current, type];
+  const handleWellbeingRegistrationTypeChange = (value: string) => {
+    setBasicData((prev: any) => ({
+      ...prev,
+      wellbeingRegistrationType: value,
+      ...(value === "College" ? { hostelBlock: "", buildingNumber: "", hostelType: "" } : {}),
+    }));
 
-      return {
-        ...prev,
-        wellbeingRegistrationTypes: next,
-        ...(type === "Hostel" && current.includes(type)
-          ? { hostelBlock: "", buildingNumber: "", hostelType: "" }
-          : {}),
-      };
-    });
-
-    const currentTypes = basicData.wellbeingRegistrationTypes || [];
-    const nextTypes = currentTypes.includes(type)
-      ? currentTypes.filter((item: string) => item !== type)
-      : [...currentTypes, type];
-
-    if (!nextTypes.includes("Hostel") && !nextTypes.includes("College")) {
+    if (value === "Hostel") {
       setSelectedWellbeingEducationTypes([]);
       setSelectedWellbeingBranches([]);
       setSelectedWellbeingYears([]);
@@ -657,15 +643,13 @@ const AddUserModal: React.FC<{
   const showFinanceFields = isFinance || isFinanceManager;
   const isHR = basicData.role === "CollegeHr";
   const isPlacement = basicData.role === "PlacementOfficer";
-  const isWellbeing =
-    basicData.role === "WellbeingExecutive" ||
-    basicData.role === "WellbeingManager";
-  const selectedWellbeingRegistrationTypes =
-    basicData.wellbeingRegistrationTypes || [];
+  const isWellbeing = basicData.role === "WellbeingManager";
+  const selectedWellbeingRegistrationType =
+    basicData.wellbeingRegistrationType || "";
   const isWellbeingHostel =
-    isWellbeing && selectedWellbeingRegistrationTypes.includes("Hostel");
+    isWellbeing && (selectedWellbeingRegistrationType === "Hostel" || selectedWellbeingRegistrationType === "Both");
   const isWellbeingCollege =
-    isWellbeing && selectedWellbeingRegistrationTypes.includes("College");
+    isWellbeing && (selectedWellbeingRegistrationType === "College" || selectedWellbeingRegistrationType === "Both");
 
   const resolveStudentIdFromPin = async (pinNumber: string) => {
     const normalizedPin = pinNumber.trim();
@@ -784,8 +768,8 @@ const AddUserModal: React.FC<{
       if (!basicData.dateOfJoining) {
         return toast.error("Date of Joining is required.");
       }
-      if (!selectedWellbeingRegistrationTypes.length) {
-        return toast.error("Select at least one Registration Type.");
+      if (!selectedWellbeingRegistrationType) {
+        return toast.error("Registration Type is required.");
       }
       if (isWellbeingHostel) {
         if (!basicData.hostelBlock) {
@@ -1091,10 +1075,7 @@ const AddUserModal: React.FC<{
         await createWellbeing({
           userId: targetUserId,
           collegeId: basicData.collegeIntId,
-          roleType:
-            basicData.role === "WellbeingManager"
-              ? "wellbeingManager"
-              : "wellbeingExecutive",
+          roleType: "wellbeingManager",
           gender: basicData.gender,
           employeeId: basicData.identifierValue,
           dateOfJoining: normalizedDateOfJoining,
@@ -1183,7 +1164,6 @@ const AddUserModal: React.FC<{
           isCurrent: true,
         });
 
-        // 🟢 Only attempt to create a fee obligation if a session exists
         if (selectedSessionId) {
           await createStudentFeeObligation(
             {
@@ -1412,9 +1392,6 @@ const AddUserModal: React.FC<{
                     <option value="CollegeHr">College HR</option>
                     {/* ✅ NEW: Placement Officer option */}
                     <option value="PlacementOfficer">Placement Officer</option>
-                    <option value="WellbeingExecutive">
-                      Wellbeing Executive
-                    </option>
                     <option value="WellbeingManager">Wellbeing Manager</option>
                   </select>
                   <CaretDown
@@ -1425,23 +1402,13 @@ const AddUserModal: React.FC<{
               </div>
 
               {isWellbeing && (
-                <CustomMultiSelect
+                <CustomSingleSelect
                   label="Registration Type"
                   placeholder="Select registration type"
-                  options={["Hostel", "College"]}
-                  selectedValues={selectedWellbeingRegistrationTypes}
-                  onChange={(value) =>
-                    toggleWellbeingRegistrationType(
-                      value === "Hostel" ? "Hostel" : "College",
-                    )
-                  }
-                  onRemove={(value) =>
-                    toggleWellbeingRegistrationType(
-                      value === "Hostel" ? "Hostel" : "College",
-                    )
-                  }
-                  paddingY="py-1"
-                  gap="gap-1"
+                  options={["Hostel", "College", "Both"]}
+                  selectedValue={selectedWellbeingRegistrationType}
+                  onChange={handleWellbeingRegistrationTypeChange}
+                  required
                 />
               )}
 
@@ -1664,6 +1631,7 @@ const AddUserModal: React.FC<{
                         </option>
                         <option value="boyshostel">Boys Hostel</option>
                         <option value="girlshostel">Girls Hostel</option>
+                        <option value="both">Both</option>
                       </select>
                       <CaretDown
                         size={14}

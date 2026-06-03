@@ -45,9 +45,7 @@ export default function validateRow(row: BulkRow, index: number): string | null 
         .replace(/[\s_\-]/g, "")
         .toLowerCase();
 
-    const isWellbeing =
-        normalizedRole === "wellbeingexecutive" ||
-        normalizedRole === "wellbeingmanager";
+    const isWellbeing = normalizedRole === "wellbeingmanager";
 
     if (!isWellbeing) {
         if (!row.mobileNumber?.trim())
