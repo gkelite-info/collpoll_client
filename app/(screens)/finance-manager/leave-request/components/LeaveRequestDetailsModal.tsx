@@ -444,8 +444,9 @@ export default function LeaveRequestDetailsModal({
 
   const formatRoleLabel = (role: string) =>
     role
-      .replace(/([A-Z])/g, " $1")
-      .replace(/^College Hr$/, "College HR")
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/\bHr\b/g, "HR")
+      .replace(/\bH R\b/g, "HR")
       .trim();
 
   if (!request) return null;

@@ -4,8 +4,10 @@ import TableComponent from "@/app/utils/table/table";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { useUser } from "@/app/utils/context/UserContext";
+import { Avatar } from "@/app/utils/Avatar";
 import {
   fetchPaginatedEmployeeLeaveRequests,
+  fetchPaginatedTaggedEmployeeLeaveRequests,
   type EmployeeLeaveRequestRecord,
 } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
 import { CalendarBlank, MagnifyingGlass, X } from "@phosphor-icons/react";
@@ -23,6 +25,20 @@ const leaveRequestColumns = [
   { title: "Leave Type", key: "leaveType" },
   { title: "Description", key: "description" },
   { title: "Action", key: "action" },
+  { title: "Details", key: "details" },
+];
+
+const staffLeaveRequestColumns = [
+  { title: "S.No", key: "serialNo" },
+  { title: "Employee ID", key: "employeeId" },
+  { title: "Photo", key: "photo" },
+  { title: "Name", key: "name" },
+  { title: "Role", key: "role" },
+  { title: "From - To", key: "dateRange" },
+  { title: "Days", key: "days" },
+  { title: "Leave Type", key: "leaveType" },
+  { title: "Description", key: "description" },
+  { title: "Status", key: "action" },
   { title: "Details", key: "details" },
 ];
 
@@ -121,7 +137,11 @@ function StatusAction({ status }: { status: string }) {
   );
 }
 
-export default function LeaveRequestsTable() {
+type LeaveRequestsTableProps = {
+  view: "my" | "tagged";
+};
+
+export default function LeaveRequestsTable({ view }: LeaveRequestsTableProps) {
   const { userId, fullName, loading: userLoading } = useUser();
   const { collegeId, loading: financeLoading } = useFinanceManager();
   const [query, setQuery] = useState("");
@@ -149,7 +169,7 @@ export default function LeaveRequestsTable() {
 
   useEffect(() => {
     setPage(1);
-  }, [activeStatus, selectedDateKey]);
+  }, [activeStatus, selectedDateKey, view]);
 
   const loadRequests = useCallback(async () => {
     if (userLoading || financeLoading) return;
@@ -163,19 +183,31 @@ export default function LeaveRequestsTable() {
 
     setIsLoading(true);
     try {
-      const { data, totalCount } = await fetchPaginatedEmployeeLeaveRequests({
-        userId,
-        collegeId,
-        role: "FinanceManager",
-        status:
-          activeStatus === "total"
-            ? undefined
-            : (activeStatus as "approved" | "pending" | "rejected"),
-        page,
-        pageSize: ITEMS_PER_PAGE,
-        search: debouncedQuery,
-        date: selectedDateKey,
-      });
+      const status =
+        activeStatus === "total"
+          ? undefined
+          : (activeStatus as "approved" | "pending" | "rejected");
+      const { data, totalCount } =
+        view === "tagged"
+          ? await fetchPaginatedTaggedEmployeeLeaveRequests({
+              taggedUserId: userId,
+              collegeId,
+              status,
+              page,
+              pageSize: ITEMS_PER_PAGE,
+              search: debouncedQuery,
+              date: selectedDateKey,
+            })
+          : await fetchPaginatedEmployeeLeaveRequests({
+              userId,
+              collegeId,
+              role: "FinanceManager",
+              status,
+              page,
+              pageSize: ITEMS_PER_PAGE,
+              search: debouncedQuery,
+              date: selectedDateKey,
+            });
 
       setRequests(
         data.map((request, index) => ({
@@ -183,7 +215,10 @@ export default function LeaveRequestsTable() {
             request,
             (page - 1) * ITEMS_PER_PAGE + index + 1,
           ),
-          name: request.user?.fullName ?? fullName ?? "Finance Manager",
+          name:
+            view === "tagged"
+              ? request.user?.fullName ?? "Employee"
+              : request.user?.fullName ?? fullName ?? "Finance Manager",
         })),
       );
       setTotalCount(totalCount);
@@ -204,6 +239,7 @@ export default function LeaveRequestsTable() {
     selectedDateKey,
     userId,
     userLoading,
+    view,
   ]);
 
   useEffect(() => {
@@ -217,21 +253,41 @@ export default function LeaveRequestsTable() {
       window.removeEventListener("employee-leave-request-created", handleCreated);
   }, [loadRequests]);
 
-  const tableColumns = isRejectedView
-    ? [
-        { title: "S.No", key: "serialNo" },
-        { title: "From - To", key: "dateRange" },
-        { title: "Days", key: "days" },
-        { title: "Leave Type", key: "leaveType" },
-        { title: "Description", key: "description" },
-        { title: "Attachments", key: "attachments" },
-        { title: "Action", key: "action" },
-        { title: "Details", key: "details" },
-      ]
-    : leaveRequestColumns;
+  const tableColumns =
+    view === "tagged"
+      ? staffLeaveRequestColumns
+      : isRejectedView
+        ? [
+            { title: "S.No", key: "serialNo" },
+            { title: "From - To", key: "dateRange" },
+            { title: "Days", key: "days" },
+            { title: "Leave Type", key: "leaveType" },
+            { title: "Description", key: "description" },
+            { title: "Attachments", key: "attachments" },
+            { title: "Action", key: "action" },
+            { title: "Details", key: "details" },
+          ]
+        : leaveRequestColumns;
 
   const tableData = requests.map((request) => ({
     serialNo: request.serialNo,
+    ...(view === "tagged"
+      ? {
+          employeeId: (
+            <>
+              <span className="font-bold text-[#43C17A]">ID</span> -{" "}
+              {request.employeeId}
+            </>
+          ),
+          photo: <Avatar src={request.photo} size={32} alt={request.name} />,
+          name: (
+            <span className="inline-block max-w-[150px] truncate font-medium">
+              {request.name}
+            </span>
+          ),
+          role: request.role,
+        }
+      : {}),
     dateRange: request.dateRange,
     days: request.days,
     leaveType: request.leaveType,
@@ -264,7 +320,7 @@ export default function LeaveRequestsTable() {
   return (
     <section className="mt-3 flex min-h-0 flex-1 flex-col">
       <style>{`
-        .leave-request-table table { min-width: 900px; }
+        .leave-request-table table { min-width: ${view === "tagged" ? "1100px" : "900px"}; }
       `}</style>
       <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
         <label className="flex w-full max-w-full items-center gap-3 rounded-full bg-gray-200 px-4 py-2.5 sm:max-w-[300px]">
@@ -272,7 +328,11 @@ export default function LeaveRequestsTable() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by leave type or description..."
+            placeholder={
+              view === "tagged"
+                ? "Search tagged requests..."
+                : "Search by leave type or description..."
+            }
             className="h-full w-full bg-transparent text-sm text-[#282828] outline-none placeholder:text-[#282828]"
           />
         </label>

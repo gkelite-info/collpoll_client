@@ -4,6 +4,7 @@ import TableComponent from "@/app/utils/table/table";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { useUser } from "@/app/utils/context/UserContext";
+import { Avatar } from "@/app/utils/Avatar";
 import {
   type EmployeeLeaveRequestRole,
   fetchPaginatedEmployeeLeaveRequests,
@@ -25,6 +26,20 @@ const leaveRequestColumns = [
   { title: "Leave Type", key: "leaveType" },
   { title: "Description", key: "description" },
   { title: "Action", key: "action" },
+  { title: "Details", key: "details" },
+];
+
+const staffLeaveRequestColumns = [
+  { title: "S.No", key: "serialNo" },
+  { title: "Employee ID", key: "employeeId" },
+  { title: "Photo", key: "photo" },
+  { title: "Name", key: "name" },
+  { title: "Role", key: "role" },
+  { title: "From - To", key: "dateRange" },
+  { title: "Days", key: "days" },
+  { title: "Leave Type", key: "leaveType" },
+  { title: "Description", key: "description" },
+  { title: "Status", key: "action" },
   { title: "Details", key: "details" },
 ];
 
@@ -128,6 +143,7 @@ type AdminLeaveRequestsTableProps = {
   requestRole?: EmployeeLeaveRequestRole;
   collegeIdOverride?: number | null;
   contextLoadingOverride?: boolean;
+  showRequesterColumns?: boolean;
 };
 
 export default function AdminLeaveRequestsTable({
@@ -135,6 +151,7 @@ export default function AdminLeaveRequestsTable({
   requestRole = "Admin",
   collegeIdOverride,
   contextLoadingOverride,
+  showRequesterColumns = false,
 }: AdminLeaveRequestsTableProps) {
   const { userId, fullName, loading: userLoading } = useUser();
   const { collegeId, loading: adminLoading } = useAdmin();
@@ -250,7 +267,9 @@ export default function AdminLeaveRequestsTable({
       window.removeEventListener("employee-leave-request-created", handleCreated);
   }, [loadRequests]);
 
-  const tableColumns = isRejectedView
+  const tableColumns = showRequesterColumns
+    ? staffLeaveRequestColumns
+    : isRejectedView
     ? [
         { title: "S.No", key: "serialNo" },
         { title: "From - To", key: "dateRange" },
@@ -265,6 +284,23 @@ export default function AdminLeaveRequestsTable({
 
   const tableData = requests.map((request) => ({
     serialNo: request.serialNo,
+    ...(showRequesterColumns
+      ? {
+          employeeId: (
+            <>
+              <span className="font-bold text-[#43C17A]">ID</span> -{" "}
+              {request.employeeId}
+            </>
+          ),
+          photo: <Avatar src={request.photo} size={32} alt={request.name} />,
+          name: (
+            <span className="inline-block max-w-[150px] truncate font-medium">
+              {request.name}
+            </span>
+          ),
+          role: request.role,
+        }
+      : {}),
     dateRange: request.dateRange,
     days: request.days,
     leaveType: request.leaveType,

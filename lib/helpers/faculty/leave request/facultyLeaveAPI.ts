@@ -3,6 +3,8 @@ import {
   createEmployeeLeaveRequest,
   fetchEmployeeLeaveRequestCounts,
   fetchPaginatedEmployeeLeaveRequests,
+  fetchPaginatedTaggedEmployeeLeaveRequests,
+  fetchTaggedEmployeeLeaveRequestCounts,
 } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
 
 function getOrdinalSuffix(i: number) {
@@ -192,6 +194,26 @@ export async function fetchFacultyLeaveCounts(facultyId: number) {
   }
 }
 
+export async function fetchFacultyTaggedLeaveCounts(facultyId: number) {
+  try {
+    const scope = await getFacultyEmployeeLeaveScope(facultyId);
+    const counts = await fetchTaggedEmployeeLeaveRequestCounts({
+      taggedUserId: scope.userId,
+      collegeId: scope.collegeId,
+    });
+
+    return {
+      all: counts.total,
+      approved: counts.approved,
+      pending: counts.pending,
+      rejected: counts.rejected,
+    };
+  } catch (error) {
+    console.error("Error fetching faculty tagged leave counts:", error);
+    return { all: 0, approved: 0, pending: 0, rejected: 0 };
+  }
+}
+
 export async function fetchFacultyLeaves(
   facultyId: number,
   page: number,
@@ -237,6 +259,54 @@ export async function fetchFacultyLeaves(
     return { data: mappedData, totalCount };
   } catch (error) {
     console.error("Error fetching faculty employee leaves:", error);
+    return { data: [], totalCount: 0 };
+  }
+}
+
+export async function fetchFacultyTaggedLeaves(
+  facultyId: number,
+  page: number,
+  limit: number,
+  statusFilter: string,
+  searchQuery: string,
+) {
+  try {
+    const scope = await getFacultyEmployeeLeaveScope(facultyId);
+    const { data, totalCount } = await fetchPaginatedTaggedEmployeeLeaveRequests({
+      taggedUserId: scope.userId,
+      collegeId: scope.collegeId,
+      status:
+        statusFilter === "all"
+          ? undefined
+          : (statusFilter as "approved" | "pending" | "rejected"),
+      page,
+      pageSize: limit,
+      search: searchQuery,
+    });
+
+    const mappedData = data.map((leave) => {
+      const days = calculateLeaveDays(leave.leaveFromDate, leave.leaveToDate);
+
+      return {
+        id: leave.employeeLeaveRequestId,
+        employeeLeaveRequestId: leave.employeeLeaveRequestId,
+        employeeId: leave.employee?.employeeId ?? String(leave.employeeId),
+        name: leave.user?.fullName ?? "Employee",
+        role: titleCase(leave.role),
+        photo: leave.user?.profileUrl ?? "",
+        requestedDate: formatLeaveDate(leave.createdAt.slice(0, 10)),
+        fromDate: formatLeaveDate(leave.leaveFromDate),
+        toDate: formatLeaveDate(leave.leaveToDate),
+        days: String(days).padStart(2, "0"),
+        leaveType: titleCase(leave.leaveType || "Personal"),
+        description: leave.description?.trim() || "",
+        status: leave.status ? leave.status.toLowerCase() : "pending",
+      };
+    });
+
+    return { data: mappedData, totalCount };
+  } catch (error) {
+    console.error("Error fetching faculty tagged employee leaves:", error);
     return { data: [], totalCount: 0 };
   }
 }

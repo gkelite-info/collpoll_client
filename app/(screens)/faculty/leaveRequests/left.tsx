@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useMemo } from "react";
+import { Suspense, useCallback, useEffect, useState, useMemo } from "react";
 import {
   Users,
   User,
@@ -24,6 +24,8 @@ import {
   updateStudentLeaveStatus,
   fetchStudentLeaveCounts,
   fetchFacultyLeaveCounts,
+  fetchFacultyTaggedLeaves,
+  fetchFacultyTaggedLeaveCounts,
 } from "@/lib/helpers/faculty/leave request/facultyLeaveAPI";
 import FacultyRequestLeaveModal from "./modal/RequestLeaveModal";
 import { Loader } from "../../(student)/calendar/right/timetable";
@@ -58,6 +60,35 @@ const MY_LEAVES_COLUMNS = [
   { title: "Details", key: "details" },
 ];
 
+const TAGGED_LEAVES_COLUMNS = [
+  { title: "S.No", key: "sNo" },
+  { title: "Employee ID", key: "employeeId" },
+  { title: "Photo", key: "photo" },
+  { title: "Name", key: "name" },
+  { title: "Role", key: "role" },
+  { title: "From - To", key: "dateRange" },
+  { title: "Days", key: "days" },
+  { title: "Leave Type", key: "leaveType" },
+  { title: "Description", key: "description" },
+  { title: "Status", key: "statusBadge" },
+  { title: "Details", key: "details" },
+];
+
+const LEAVE_VIEW_TABS = [
+  {
+    id: "students",
+    label: "Student Leave Requests",
+  },
+  {
+    id: "my_leaves",
+    label: "My Leave Request",
+  },
+  {
+    id: "tagged",
+    label: "Tagged Leave Requests",
+  },
+] as const;
+
 type LeaveStatusTab = "all" | "approved" | "pending" | "rejected";
 
 type FacultyLeaveFormData = {
@@ -90,7 +121,9 @@ function FacultyLeavesContent() {
   const { userId } = useUser();
   const [facultyId, setFacultyId] = useState<number | null>(null);
 
-  const [mainTab, setMainTab] = useState<"students" | "my_leaves">("students");
+  const [mainTab, setMainTab] = useState<
+    "students" | "my_leaves" | "tagged"
+  >("students");
   const [activeTab, setActiveTab] = useState<LeaveStatusTab>("all");
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -136,7 +169,7 @@ function FacultyLeavesContent() {
       .catch(() => toast.error("Faculty context not found"));
   }, [userId]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!facultyId) return;
     setIsLoading(true);
     try {
@@ -155,6 +188,23 @@ function FacultyLeavesContent() {
         setTotalItems(tableRes.totalCount);
         setCounts(countRes);
       } else {
+        if (mainTab === "tagged") {
+          const [tableRes, countRes] = await Promise.all([
+            fetchFacultyTaggedLeaves(
+              facultyId,
+              page,
+              itemsPerPage,
+              activeTab,
+              debouncedSearch,
+            ),
+            fetchFacultyTaggedLeaveCounts(facultyId),
+          ]);
+          setTableData(tableRes.data);
+          setTotalItems(tableRes.totalCount);
+          setCounts(countRes);
+          return;
+        }
+
         const [tableRes, countRes] = await Promise.all([
           fetchFacultyLeaves(
             facultyId,
@@ -174,12 +224,12 @@ function FacultyLeavesContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeTab, debouncedSearch, facultyId, mainTab, page]);
 
   useEffect(() => {
     loadData();
     setEditingRows(new Set());
-  }, [mainTab, facultyId, activeTab, debouncedSearch, page]);
+  }, [loadData]);
 
   const handleTabChange = (tabId: LeaveStatusTab) => {
     setActiveTab(tabId);
@@ -355,6 +405,62 @@ function FacultyLeavesContent() {
             </button>
           ),
         };
+      } else if (mainTab === "tagged") {
+        return {
+          ...baseObj,
+          employeeId: (
+            <>
+              <span className="text-[#43C17A] font-bold">ID</span> -{" "}
+              {item.employeeId}
+            </>
+          ),
+          photo: <Avatar src={item.photo} size={32} alt={item.name ?? "Employee"} />,
+          name: (
+            <span className="font-medium whitespace-nowrap">
+              {item.name ?? "Employee"}
+            </span>
+          ),
+          role: item.role,
+          statusBadge: (
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-bold ${item.status === "approved"
+                ? "bg-[#E7F8EE] text-[#43C17A]"
+                : item.status === "rejected"
+                  ? "bg-[#FFE5E5] text-[#FF4B4B]"
+                  : "bg-[#FFF4EB] text-[#FFB874]"
+                }`}
+            >
+              {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+            </span>
+          ),
+          details: (
+            <button
+              type="button"
+              onClick={() =>
+                setSelectedEmployeeLeave({
+                  employeeLeaveRequestId: item.employeeLeaveRequestId,
+                  serialNo: String(
+                    (page - 1) * itemsPerPage + index + 1,
+                  ).padStart(2, "0"),
+                  employeeId: item.employeeId ?? "",
+                  name: item.name ?? "Employee",
+                  role: item.role ?? "Employee",
+                  photo: item.photo ?? "",
+                  requestedDate: item.requestedDate ?? "",
+                  dateRange: `${item.fromDate} - ${item.toDate}`,
+                  days: item.days,
+                  leaveType: item.leaveType,
+                  description: item.description,
+                  status: item.status as FinanceLeaveRequest["status"],
+                  chat: [],
+                })
+              }
+              className="cursor-pointer text-xs font-bold text-blue-600 hover:underline"
+            >
+              View Details
+            </button>
+          ),
+        };
       } else {
         return {
           ...baseObj,
@@ -477,32 +583,43 @@ function FacultyLeavesContent() {
       <div className="flex min-h-screen w-full max-w-full flex-col p-2">
         <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row">
           <div className="flex flex-col gap-1">
-            <div className="flex flex-col items-start gap-2 text-lg font-bold md:flex-row md:items-center md:text-2xl">
-              <span
-                onClick={() => setMainTab("students")}
-                className={`cursor-pointer transition-colors ${mainTab === "students" ? "text-[#43C17A]" : "text-[#282828] hover:text-gray-500"}`}
-              >
-                Student Leave Requests
-              </span>
-              <span className="text-[#282828]">/</span>
-              <span
-                onClick={() => setMainTab("my_leaves")}
-                className={`cursor-pointer transition-colors ${mainTab === "my_leaves" ? "text-[#43C17A]" : "text-[#282828] hover:text-gray-500"}`}
-              >
-                My Leave Request
-              </span>
+            <div className="flex max-w-full items-center gap-1.5 overflow-hidden whitespace-nowrap text-[15px] font-bold leading-tight md:max-w-[calc(100vw-720px)] lg:text-[17px] xl:max-w-full">
+              {LEAVE_VIEW_TABS.map((tab, index) => (
+                <span key={tab.id} className="flex items-center gap-2">
+                  {index > 0 && (
+                    <span className="text-[#282828]">/</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMainTab(tab.id);
+                      setPage(1);
+                      setEditingRows(new Set());
+                    }}
+                    className={`cursor-pointer text-left transition-colors ${
+                      mainTab === tab.id
+                        ? "text-[#43C17A]"
+                        : "text-[#282828] hover:text-gray-500"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                </span>
+              ))}
             </div>
             <p className="text-[#525252] text-sm font-medium">
               {mainTab === "students"
                 ? "Review, Approve, and Manage Student Leave Applications Effortlessly"
-                : "Submit leave applications and view approval updates from HR."}
+                : mainTab === "tagged"
+                  ? "Review leave requests where you are tagged and join the group chat."
+                  : "Submit leave applications and view approval updates from HR."}
             </p>
           </div>
 
           {mainTab === "my_leaves" && (
             <button
               onClick={() => setIsModalOpen(true)}
-              className="bg-[#16284F] text-white font-bold text-sm px-6 py-3 rounded-lg shadow-sm hover:bg-[#102040] transition-colors cursor-pointer"
+              className="rounded-lg bg-[#16284F] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#102040] cursor-pointer"
             >
               Request Leave
             </button>
@@ -555,7 +672,11 @@ function FacultyLeavesContent() {
         <div className="-mt-2 w-full table-container-wrapper">
           <TableComponent
             columns={
-              mainTab === "students" ? STUDENT_COLUMNS : MY_LEAVES_COLUMNS
+              mainTab === "students"
+                ? STUDENT_COLUMNS
+                : mainTab === "tagged"
+                  ? TAGGED_LEAVES_COLUMNS
+                  : MY_LEAVES_COLUMNS
             }
             tableData={finalTableData}
             height="55vh"

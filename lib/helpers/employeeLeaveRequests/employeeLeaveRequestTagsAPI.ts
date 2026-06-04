@@ -4,6 +4,7 @@ export type EmployeeLeaveTaggedRole =
   | "Admin"
   | "Faculty"
   | "Finance"
+  | "FinanceManager"
   | "CollegeHr"
   | "CollegeAdmin"
   | "PlacementOfficer"
@@ -175,6 +176,31 @@ async function fetchAdminOptions(
   return mapUsersToOptions(data ?? [], "Admin");
 }
 
+async function fetchFinanceManagerOptions(
+  collegeId: number,
+  excludeUserId?: number | null,
+) {
+  const params = new URLSearchParams({ collegeId: String(collegeId) });
+
+  if (excludeUserId) {
+    params.set("excludeUserId", String(excludeUserId));
+  }
+
+  const response = await fetch(
+    `/api/employee-leave-tags/finance-managers?${params.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error("Unable to fetch finance managers.");
+  }
+
+  const payload = (await response.json()) as {
+    options?: EmployeeLeaveTagOption[];
+  };
+
+  return payload.options ?? [];
+}
+
 export async function fetchEmployeeLeaveTagOptions({
   collegeId,
   taggedRole,
@@ -205,6 +231,10 @@ export async function fetchEmployeeLeaveTagOptions({
       taggedRole,
       excludeUserId,
     );
+  }
+
+  if (taggedRole === "FinanceManager") {
+    return fetchFinanceManagerOptions(collegeId, excludeUserId);
   }
 
   let query = supabase

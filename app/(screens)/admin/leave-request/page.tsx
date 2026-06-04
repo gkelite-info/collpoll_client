@@ -44,7 +44,7 @@ function AdminLeaveRequestContent() {
       <section className="flex min-h-0 w-full flex-col p-2 md:w-[68%]">
         <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div className="flex flex-col gap-1">
-            <h1 className="flex flex-wrap items-center gap-2 text-lg font-bold md:text-2xl">
+            <h1 className="flex flex-wrap items-center gap-2 text-[15px] font-bold lg:text-[17px]">
               <button
                 type="button"
                 onClick={() => setActiveView("my")}

@@ -12,7 +12,7 @@ import {
 const requesterTagRole: Record<string, EmployeeLeaveTaggedRole> = {
   Admin: "Admin",
   Faculty: "Faculty",
-  Finance: "Finance",
+  Finance: "FinanceManager",
   CollegeHr: "CollegeHr",
   WellbeingExecutive: "WellbeingExecutive",
   PlacementOfficer: "PlacementOfficer",
@@ -48,6 +48,7 @@ const tagRoleLabels: Record<EmployeeLeaveTaggedRole, string> = {
   Admin: "Admin",
   Faculty: "Faculty",
   Finance: "Finance Executive",
+  FinanceManager: "Finance Manager",
   CollegeHr: "HR",
   CollegeAdmin: "College Admin",
   PlacementOfficer: "Placement Officer",
@@ -93,7 +94,9 @@ export default function EmployeeLeaveRoutingFields({
           collegeId={collegeId}
           excludeUserId={userId}
           collegeEducationType={
-            taggedRole === "Faculty" || taggedRole === "Admin"
+            taggedRole === "Faculty" ||
+            taggedRole === "Admin" ||
+            taggedRole === "FinanceManager"
               ? collegeEducationType
               : null
           }
@@ -141,6 +144,14 @@ function EmployeeLeaveTagSelect({
           collegeEducationType,
           excludeUserId,
         });
+        if (taggedRole === "FinanceManager") {
+          console.log("[LeaveTags][FinanceManager] loaded options", {
+            collegeId,
+            collegeEducationType,
+            excludeUserId,
+            options: nextOptions,
+          });
+        }
         if (isActive) setOptions(nextOptions);
       } catch (error) {
         console.error(`Failed to load ${taggedRole} leave tag options:`, error);
@@ -154,7 +165,12 @@ function EmployeeLeaveTagSelect({
     return () => {
       isActive = false;
     };
-  }, [collegeEducationType, collegeId, excludeUserId, taggedRole]);
+  }, [
+    collegeEducationType,
+    collegeId,
+    excludeUserId,
+    taggedRole,
+  ]);
 
   const fieldClassName =
     "h-11 w-full rounded border border-[#CFCFCF] bg-white px-4 text-sm outline-none focus:border-[#43C17A]";
