@@ -32,6 +32,7 @@ import { createCollegeHR } from "@/lib/helpers/admin/registrations/collegeHr/hrR
 import { upsertIdentifier } from "@/lib/helpers/identifiers/upsertIdentifier";
 import { upsertPlacementEmployee } from "@/lib/helpers/admin/registrations/placement/placementregistration";
 import { createWellbeing } from "@/lib/helpers/admin/registrations/wellbeing/wellbeingRegistration";
+import { registerUserToHikvision } from "@/lib/helpers/biometric/registerUser";
 // import { upsertPlacementOfficer } from "@/lib/helpers/admin/registrations/placement/placementRegistration";
 
 type SubjectBlock = {
@@ -384,11 +385,11 @@ const AddUserModal: React.FC<{
 
   const studentAvailableYears = useMemo(() => {
     if (!studentSelectedBranch) return [];
-    
+
     const years = dbData.years.filter(
       (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
     );
-    
+
     return years.sort((a, b) => {
       const numA = parseInt(a.collegeAcademicYear) || 0;
       const numB = parseInt(b.collegeAcademicYear) || 0;
@@ -1176,6 +1177,15 @@ const AddUserModal: React.FC<{
             },
             timestamp,
           );
+        }
+
+        try {
+          await registerUserToHikvision(targetUserId, basicData.fullName);
+          console.log("Yes its success");
+          toast.success("Yes its success");
+          
+        } catch (hivErr) {
+          console.warn("Hikvision registration failed (non-blocking):", hivErr);
         }
       }
 
@@ -2166,64 +2176,64 @@ const AddUserModal: React.FC<{
             )}
 
             {(showRollNoField || showEmployeeIdField || !isWellbeing) && (
-            <div className="grid grid-cols-2 gap-5">
-              {(showRollNoField || showEmployeeIdField) && (
+              <div className="grid grid-cols-2 gap-5">
+                {(showRollNoField || showEmployeeIdField) && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#2D3748]">
+                      {showRollNoField ? "Roll No" : "Employee Id"}{" "}
+                      <span className="text-red-600">*</span>
+                    </label>
+
+                    <input
+                      type="text"
+                      name="identifierValue"
+                      value={basicData.identifierValue}
+                      onChange={handleBasicChange}
+                      placeholder={
+                        showRollNoField ? "Enter Roll No" : "Enter Employee Id"
+                      }
+                      maxLength={15}
+                      className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                    />
+                  </div>
+                )}
+
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
-                    {showRollNoField ? "Roll No" : "Employee Id"}{" "}
-                    <span className="text-red-600">*</span>
+                    Gender <span className="text-red-600">*</span>
                   </label>
-
-                  <input
-                    type="text"
-                    name="identifierValue"
-                    value={basicData.identifierValue}
-                    onChange={handleBasicChange}
-                    placeholder={
-                      showRollNoField ? "Enter Roll No" : "Enter Employee Id"
-                    }
-                    maxLength={15}
-                    className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[#2D3748]">
-                  Gender <span className="text-red-600">*</span>
-                </label>
-                <div className="flex gap-6 mt-1">
-                  {["Male", "Female"].map((g) => (
-                    <label
-                      key={g}
-                      className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer"
-                    >
-                      <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${basicData.gender === g ? "border-[#48C78E]" : "border-gray-300"}`}
+                  <div className="flex gap-6 mt-1">
+                    {["Male", "Female"].map((g) => (
+                      <label
+                        key={g}
+                        className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer"
                       >
-                        {basicData.gender === g && (
-                          <div className="w-2 h-2 rounded-full bg-[#48C78E]" />
-                        )}
-                      </div>
-                      <input
-                        type="radio"
-                        name="gender"
-                        value={g}
-                        checked={basicData.gender === g}
-                        onChange={(e) =>
-                          setBasicData((p: any) => ({
-                            ...p,
-                            gender: e.target.value as any,
-                          }))
-                        }
-                        className="hidden"
-                      />
-                      {g}
-                    </label>
-                  ))}
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center ${basicData.gender === g ? "border-[#48C78E]" : "border-gray-300"}`}
+                        >
+                          {basicData.gender === g && (
+                            <div className="w-2 h-2 rounded-full bg-[#48C78E]" />
+                          )}
+                        </div>
+                        <input
+                          type="radio"
+                          name="gender"
+                          value={g}
+                          checked={basicData.gender === g}
+                          onChange={(e) =>
+                            setBasicData((p: any) => ({
+                              ...p,
+                              gender: e.target.value as any,
+                            }))
+                          }
+                          className="hidden"
+                        />
+                        {g}
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
             )}
 
             {!user && (

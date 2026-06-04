@@ -18,11 +18,12 @@ export default function UserInfoCard() {
 
   const bgBanner = "/dashboard-banner-bg.png";
 
-  const currentDate = new Intl.DateTimeFormat("en-US", {
-    month: "2-digit",
+  const currentDate = new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
+    month: "2-digit",
     year: "numeric",
   }).format(new Date());
+  
 
   return (
     <>
