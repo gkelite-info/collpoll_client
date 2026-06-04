@@ -583,7 +583,7 @@ export default function LeaveRequestsClient() {
       <main className="flex w-full items-start gap-5 p-2 pb-8 text-[#282828]">
         <section className="flex min-h-screen w-full flex-col pb-6 md:w-[68%]">
           <div className="mb-5 flex flex-col justify-start">
-            <h1 className="text-xl font-bold text-[#282828]">
+            <h1 className="text-[15px] font-bold text-[#282828] lg:text-[17px]">
               <button
                 type="button"
                 onClick={() => setActiveView("my")}

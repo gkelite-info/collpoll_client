@@ -376,8 +376,8 @@ function WellbeingLeavesContent({
       <div className="flex flex-col p-2 w-full max-w-[100%] mx-auto min-h-screen">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex flex-col gap-1">
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-2 text-2xl font-bold">
-              <span className="text-[#43C17A] text-lg md:text-2xl">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-2 text-[15px] font-bold lg:text-[17px]">
+              <span className="text-[#43C17A]">
                 My Leave Request
               </span>
             </div>

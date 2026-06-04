@@ -3,7 +3,10 @@
 import CardComponent from "@/app/utils/card";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { useUser } from "@/app/utils/context/UserContext";
-import { fetchEmployeeLeaveRequestCounts } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
+import {
+  fetchEmployeeLeaveRequestCounts,
+  fetchTaggedEmployeeLeaveRequestCounts,
+} from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
 import { UsersThree } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -35,7 +38,11 @@ const cardPalette: Record<
   },
 };
 
-export default function LeaveSummaryCards() {
+type LeaveSummaryCardsProps = {
+  view: "my" | "tagged";
+};
+
+export default function LeaveSummaryCards({ view }: LeaveSummaryCardsProps) {
   const { userId, loading: userLoading } = useUser();
   const { collegeId, loading: financeLoading } = useFinanceManager();
   const [isLoading, setIsLoading] = useState(true);
@@ -62,11 +69,16 @@ export default function LeaveSummaryCards() {
     setIsLoading(true);
     try {
       setCounts(
-        await fetchEmployeeLeaveRequestCounts({
-          userId,
-          collegeId,
-          role: "FinanceManager",
-        }),
+        view === "tagged"
+          ? await fetchTaggedEmployeeLeaveRequestCounts({
+              taggedUserId: userId,
+              collegeId,
+            })
+          : await fetchEmployeeLeaveRequestCounts({
+              userId,
+              collegeId,
+              role: "FinanceManager",
+            }),
       );
     } catch (error) {
       console.error("Error fetching leave summary counts:", error);
@@ -74,7 +86,7 @@ export default function LeaveSummaryCards() {
     } finally {
       setIsLoading(false);
     }
-  }, [collegeId, financeLoading, userId, userLoading]);
+  }, [collegeId, financeLoading, userId, userLoading, view]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
