@@ -67,6 +67,11 @@ type WellbeingCollegeDetailContext = {
   college_academic_year?: { collegeAcademicYear?: string | null } | null;
   college_sections?: { collegeSections?: string | null } | null;
 };
+type CollegeEducationRelation =
+  | { collegeEducationType?: string | null }
+  | { collegeEducationType?: string | null }[]
+  | null
+  | undefined;
 
 const uniqueJoinedValues = (values: Array<string | null | undefined>) =>
   Array.from(
@@ -76,6 +81,11 @@ const uniqueJoinedValues = (values: Array<string | null | undefined>) =>
         .filter((value): value is string => Boolean(value)),
     ),
   ).join(", ") || null;
+
+const getCollegeEducationType = (relation: CollegeEducationRelation) =>
+  Array.isArray(relation)
+    ? relation[0]?.collegeEducationType ?? null
+    : relation?.collegeEducationType ?? null;
 
 const UserContext = createContext<UserContextType>({
   userId: null,
@@ -466,7 +476,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       const [{ data }, empId] = await Promise.all([
         supabase
           .from("placement_employee")
-          .select("placementEmployeeId")
+          .select("placementEmployeeId, createdBy")
           .eq("userId", uid)
           .eq("is_deleted", false)
           .maybeSingle(),
@@ -474,6 +484,54 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       ]);
       s.setPlacementEmployeeId(data?.placementEmployeeId ?? null);
       s.setIdentifierId(empId ?? null);
+
+      if (!data?.createdBy) {
+        s.setCollegeEducationType(null);
+        return;
+      }
+
+      const { data: adminEducationTypes } = await supabase
+        .from("admin_education_types")
+        .select(
+          `
+          collegeEducationId,
+          college_education:collegeEducationId (
+            collegeEducationType
+          )
+        `,
+        )
+        .eq("adminId", data.createdBy)
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .is("deletedAt", null);
+
+      const educationTypeFromMapping = uniqueJoinedValues(
+        (adminEducationTypes ?? []).map(
+          (education) =>
+            getCollegeEducationType(education.college_education),
+        ),
+      );
+
+      if (educationTypeFromMapping) {
+        s.setCollegeEducationType(educationTypeFromMapping);
+        return;
+      }
+
+      const { data: admin } = await supabase
+        .from("admins")
+        .select(
+          `
+          college_education:collegeEducationId (
+            collegeEducationType
+          )
+        `,
+        )
+        .eq("adminId", data.createdBy)
+        .maybeSingle();
+
+      s.setCollegeEducationType(
+        getCollegeEducationType(admin?.college_education),
+      );
     },
 
     WellbeingExecutive: async (uid, cid) => {
