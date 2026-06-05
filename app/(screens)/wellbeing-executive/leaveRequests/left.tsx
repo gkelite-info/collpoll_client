@@ -18,9 +18,12 @@ import WellbeingRequestLeaveModal from "./modal/RequestLeaveModal";
 import LeaveRequestDetailsModal from "./modal/LeaveRequestDetailsModal";
 import { useUser } from "@/app/utils/context/UserContext";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Avatar } from "@/app/utils/Avatar";
 import {
   fetchPaginatedEmployeeLeaveRequests,
+  fetchPaginatedTaggedEmployeeLeaveRequests,
   fetchEmployeeLeaveRequestCounts,
+  fetchTaggedEmployeeLeaveRequestCounts,
   createEmployeeLeaveRequest,
   type EmployeeLeaveRequestRole,
   type EmployeeLeaveRequestRecord,
@@ -29,6 +32,20 @@ import { EmployeeLeaveTagSelection } from "@/lib/helpers/employeeLeaveRequests/e
 
 const MY_LEAVES_COLUMNS = [
   { title: "S.No", key: "sNo" },
+  { title: "From - To", key: "dateRange" },
+  { title: "Days", key: "days" },
+  { title: "Leave Type", key: "leaveType" },
+  { title: "Description", key: "description" },
+  { title: "Status", key: "statusBadge" },
+  { title: "Details", key: "details" },
+];
+
+const TAGGED_LEAVES_COLUMNS = [
+  { title: "S.No", key: "sNo" },
+  { title: "Employee ID", key: "employeeId" },
+  { title: "Photo", key: "photo" },
+  { title: "Name", key: "name" },
+  { title: "Role", key: "role" },
   { title: "From - To", key: "dateRange" },
   { title: "Days", key: "days" },
   { title: "Leave Type", key: "leaveType" },
@@ -84,15 +101,19 @@ type EmployeeLeaveRequestFormData = {
 
 type WellbeingLeavesContentProps = {
   employeeRole?: EmployeeLeaveRequestRole;
+  enableTaggedView?: boolean;
 };
 
 function WellbeingLeavesContent({
   employeeRole = "WellbeingExecutive",
+  enableTaggedView = false,
 }: WellbeingLeavesContentProps) {
   const { userId, collegeId, loading: userContextLoading } = useUser();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const activeView =
+    enableTaggedView && searchParams.get("view") === "tagged" ? "tagged" : "my";
 
   const activeTab = (searchParams.get("status") || "all") as
     | "all"
@@ -134,12 +155,19 @@ function WellbeingLeavesContent({
   const loadCounts = useCallback(async () => {
     if (userContextLoading || !userId || !collegeId) return;
     try {
-      const res = await fetchEmployeeLeaveRequestCounts({
-        userId,
-        collegeId,
-        role: employeeRole,
-        date: selectedDateKey || undefined,
-      });
+      const res =
+        activeView === "tagged"
+          ? await fetchTaggedEmployeeLeaveRequestCounts({
+              taggedUserId: userId,
+              collegeId,
+              date: selectedDateKey || undefined,
+            })
+          : await fetchEmployeeLeaveRequestCounts({
+              userId,
+              collegeId,
+              role: employeeRole,
+              date: selectedDateKey || undefined,
+            });
       setCounts({
         all: res.total,
         approved: res.approved,
@@ -149,7 +177,14 @@ function WellbeingLeavesContent({
     } catch (error) {
       console.error("Error fetching leave counts:", error);
     }
-  }, [userId, collegeId, employeeRole, userContextLoading, selectedDateKey]);
+  }, [
+    userId,
+    collegeId,
+    employeeRole,
+    userContextLoading,
+    selectedDateKey,
+    activeView,
+  ]);
 
   const loadRequests = useCallback(async () => {
     if (userContextLoading) return;
@@ -161,16 +196,28 @@ function WellbeingLeavesContent({
     }
     setIsLoading(true);
     try {
-      const { data, totalCount } = await fetchPaginatedEmployeeLeaveRequests({
-        userId,
-        collegeId,
-        role: employeeRole,
-        status: activeTab === "all" ? undefined : activeTab,
-        page,
-        pageSize: itemsPerPage,
-        search: debouncedSearch,
-        date: selectedDateKey || undefined,
-      });
+      const status = activeTab === "all" ? undefined : activeTab;
+      const { data, totalCount } =
+        activeView === "tagged"
+          ? await fetchPaginatedTaggedEmployeeLeaveRequests({
+              taggedUserId: userId,
+              collegeId,
+              status,
+              page,
+              pageSize: itemsPerPage,
+              search: debouncedSearch,
+              date: selectedDateKey || undefined,
+            })
+          : await fetchPaginatedEmployeeLeaveRequests({
+              userId,
+              collegeId,
+              role: employeeRole,
+              status,
+              page,
+              pageSize: itemsPerPage,
+              search: debouncedSearch,
+              date: selectedDateKey || undefined,
+            });
       setRequests(data.map(mapDbRequestToRow));
       setTotalCount(totalCount);
     } catch (error) {
@@ -186,6 +233,7 @@ function WellbeingLeavesContent({
     employeeRole,
     userContextLoading,
     activeTab,
+    activeView,
     page,
     debouncedSearch,
     selectedDateKey,
@@ -208,6 +256,23 @@ function WellbeingLeavesContent({
     return () =>
       window.removeEventListener("employee-leave-request-created", handleCreated);
   }, [loadCounts, loadRequests]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, activeView, selectedDateKey]);
+
+  const handleViewChange = (view: "my" | "tagged") => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (view === "tagged") {
+      params.set("view", "tagged");
+    } else {
+      params.delete("view");
+    }
+    params.delete("status");
+    setPage(1);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  };
 
   const handleTabChange = (tabId: "all" | "approved" | "pending" | "rejected") => {
     const params = new URLSearchParams(searchParams.toString());
@@ -250,6 +315,25 @@ function WellbeingLeavesContent({
     return requests.map((item, index) => {
       return {
         sNo: String((page - 1) * itemsPerPage + index + 1).padStart(2, "0"),
+        employeeId: (
+          <>
+            <span className="font-bold text-[#43C17A]">ID</span> -{" "}
+            {item.employee?.employeeId ?? item.employeeId}
+          </>
+        ),
+        photo: (
+          <Avatar
+            src={item.user?.profileUrl ?? ""}
+            size={32}
+            alt={item.user?.fullName ?? "Employee"}
+          />
+        ),
+        name: (
+          <span className="inline-block max-w-[150px] truncate font-medium">
+            {item.user?.fullName ?? "Employee"}
+          </span>
+        ),
+        role: titleCase(item.role),
         dateRange: `${item.fromDate} - ${item.toDate}`,
         days: item.days,
         leaveType: item.leaveType,
@@ -369,7 +453,7 @@ function WellbeingLeavesContent({
           background: #94a3b8;
         }
         .table-container-wrapper table {
-          min-width: 1100px !important;
+          min-width: ${activeView === "tagged" ? "1250px" : "1100px"} !important;
         }
       `}</style>
 
@@ -377,21 +461,49 @@ function WellbeingLeavesContent({
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex flex-col gap-1">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-2 text-[15px] font-bold lg:text-[17px]">
-              <span className="text-[#43C17A]">
-                My Leave Request
-              </span>
+              {enableTaggedView ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleViewChange("my")}
+                    className={`cursor-pointer ${
+                      activeView === "my" ? "text-[#43C17A]" : "text-[#282828]"
+                    }`}
+                  >
+                    My Leave Request
+                  </button>
+                  <span className="text-[#282828]">/</span>
+                  <button
+                    type="button"
+                    onClick={() => handleViewChange("tagged")}
+                    className={`cursor-pointer ${
+                      activeView === "tagged"
+                        ? "text-[#43C17A]"
+                        : "text-[#282828]"
+                    }`}
+                  >
+                    Tagged Leave Requests
+                  </button>
+                </>
+              ) : (
+                <span className="text-[#43C17A]">My Leave Request</span>
+              )}
             </div>
             <p className="text-[#525252] text-sm font-medium">
-              Submit leave applications and view approval updates from HR.
+              {activeView === "tagged"
+                ? "Review leave requests where you are tagged and join the group chat."
+                : "Submit leave applications and view approval updates from HR."}
             </p>
           </div>
 
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-[#16284F] text-white font-bold text-sm px-6 py-3 rounded-lg shadow-sm hover:bg-[#102040] transition-colors cursor-pointer whitespace-nowrap"
-          >
-            Request Leave
-          </button>
+          {activeView === "my" && (
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="bg-[#16284F] text-white font-bold text-sm px-6 py-3 rounded-lg shadow-sm hover:bg-[#102040] transition-colors cursor-pointer whitespace-nowrap"
+            >
+              Request Leave
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -422,7 +534,11 @@ function WellbeingLeavesContent({
             />
             <input
               type="text"
-              placeholder="Search by leave type or description..."
+              placeholder={
+                activeView === "tagged"
+                  ? "Search by employee name or employee ID..."
+                  : "Search by leave type or description..."
+              }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-gray-200 rounded-full pl-10 pr-4 py-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] placeholder-gray-500"
@@ -487,7 +603,9 @@ function WellbeingLeavesContent({
 
         <div className="-mt-2 w-full table-container-wrapper">
           <TableComponent
-            columns={MY_LEAVES_COLUMNS}
+            columns={
+              activeView === "tagged" ? TAGGED_LEAVES_COLUMNS : MY_LEAVES_COLUMNS
+            }
             tableData={isLoading ? [] : finalTableData}
             height="55vh"
             isLoading={isLoading}
@@ -523,6 +641,7 @@ function WellbeingLeavesContent({
 
 export default function WellbeingLeavesLeft({
   employeeRole = "WellbeingExecutive",
+  enableTaggedView = false,
 }: WellbeingLeavesContentProps) {
   return (
     <Suspense
@@ -532,7 +651,10 @@ export default function WellbeingLeavesLeft({
         </div>
       }
     >
-      <WellbeingLeavesContent employeeRole={employeeRole} />
+      <WellbeingLeavesContent
+        employeeRole={employeeRole}
+        enableTaggedView={enableTaggedView}
+      />
     </Suspense>
   );
 }

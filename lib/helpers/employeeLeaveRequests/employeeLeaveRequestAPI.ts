@@ -359,31 +359,55 @@ async function fetchSearchMatches(search: string, collegeId?: number) {
     .ilike("fullName", `%${sanitizedSearch}%`)
     .eq("is_deleted", false);
 
-  let employeesQuery = supabase
-    .from("employee_ids")
-    .select("employeeIdPk")
-    .ilike("employeeId", `%${sanitizedSearch}%`)
-    .eq("isActive", true)
-    .is("deletedAt", null);
+  const employeeSearchTerms = Array.from(
+    new Set(
+      [
+        sanitizedSearch,
+        sanitizedSearch.replace(/^id\s*[-:]?\s*/i, "").trim(),
+      ].filter(Boolean),
+    ),
+  );
+
+  const createEmployeesQuery = (employeeSearch: string) => {
+    let employeesQuery = supabase
+      .from("employee_ids")
+      .select("employeeIdPk")
+      .ilike("employeeId", `%${employeeSearch}%`)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    if (collegeId) {
+      employeesQuery = employeesQuery.eq("collegeId", collegeId);
+    }
+
+    return employeesQuery;
+  };
 
   if (collegeId) {
     usersQuery = usersQuery.eq("collegeId", collegeId);
-    employeesQuery = employeesQuery.eq("collegeId", collegeId);
   }
 
-  const [usersResult, employeesResult] = await Promise.all([
+  const [usersResult, ...employeesResults] = await Promise.all([
     usersQuery,
-    employeesQuery,
+    ...employeeSearchTerms.map(createEmployeesQuery),
   ]);
 
   if (usersResult.error) throw usersResult.error;
-  if (employeesResult.error) throw employeesResult.error;
+  employeesResults.forEach((result) => {
+    if (result.error) throw result.error;
+  });
 
   return {
     sanitizedSearch,
     userIds: (usersResult.data ?? []).map((user) => user.userId as number),
-    employeeIds: (employeesResult.data ?? []).map(
-      (employee) => employee.employeeIdPk as number,
+    employeeIds: Array.from(
+      new Set(
+        employeesResults.flatMap((result) =>
+          (result.data ?? []).map(
+            (employee) => employee.employeeIdPk as number,
+          ),
+        ),
+      ),
     ),
   };
 }
