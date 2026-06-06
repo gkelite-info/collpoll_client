@@ -13,19 +13,17 @@ import {
 } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestTagsAPI";
 
 const requesterTagRole: Record<string, EmployeeLeaveTagFetchRole> = {
-  Admin: "Admin",
-  Faculty: "Faculty",
-  Finance: "FinanceManager",
+  Admin: "AllStaff",
+  Faculty: "AllStaff",
+  Finance: "AllStaff",
+  FinanceManager: "AllStaff",
   CollegeHr: "CollegeHr",
   WellbeingExecutive: "AllStaff",
+  WellbeingManager: "AllStaff",
   PlacementOfficer: "AllStaff",
 };
 
-const hrAndCollegeAdminOnlyRoles = new Set([
-  "CollegeHr",
-  "FinanceManager",
-  "WellbeingManager",
-]);
+const hrAndCollegeAdminOnlyRoles = new Set(["CollegeHr"]);
 
 export const getRequiredEmployeeLeaveTagRoles = (
   role?: string | null,
