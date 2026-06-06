@@ -1,15 +1,11 @@
 "use client";
 
 import { Suspense } from "react";
-import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
-import AdminLeaveRequestRightPanel from "@/app/(screens)/admin/leave-request/components/AdminLeaveRequestRightPanel";
-import AdminLeaveRequestsTable from "@/app/(screens)/admin/leave-request/components/AdminLeaveRequestsTable";
-import AdminLeaveSummaryCards from "@/app/(screens)/admin/leave-request/components/AdminLeaveSummaryCards";
+import LeaveRequestRightPanel from "./components/LeaveRequestRightPanel";
+import LeaveRequestsTable from "./components/LeaveRequestsTable";
+import LeaveSummaryCards from "./components/LeaveSummaryCards";
 
 function CollegeAdminLeaveRequestContent() {
-  const { collegeId, loading } = useCollegeAdmin();
-  const activeView = "tagged";
-
   return (
     <main className="flex min-h-screen w-full items-stretch justify-between overflow-hidden bg-[#F4F4F4] pb-5">
       <section className="flex min-h-0 w-full flex-col p-2 md:w-[68%]">
@@ -24,22 +20,10 @@ function CollegeAdminLeaveRequestContent() {
           </div>
         </div>
 
-        <AdminLeaveSummaryCards
-          view={activeView}
-          requestRole="CollegeAdmin"
-          collegeIdOverride={collegeId}
-          contextLoadingOverride={loading}
-        />
-        <AdminLeaveRequestsTable
-          view={activeView}
-          requestRole="CollegeAdmin"
-          collegeIdOverride={collegeId}
-          contextLoadingOverride={loading}
-          showRequesterColumns
-        />
+        <LeaveSummaryCards />
+        <LeaveRequestsTable />
       </section>
-
-      <AdminLeaveRequestRightPanel />
+      <LeaveRequestRightPanel />
     </main>
   );
 }

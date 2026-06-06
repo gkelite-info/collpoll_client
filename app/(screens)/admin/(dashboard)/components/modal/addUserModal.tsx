@@ -146,15 +146,6 @@ const AddUserModal: React.FC<{
     useState<string[]>([]);
   const [selectedWellbeingEducationTypes, setSelectedWellbeingEducationTypes] =
     useState<string[]>([]);
-  const [selectedWellbeingBranches, setSelectedWellbeingBranches] = useState<
-    string[]
-  >([]);
-  const [selectedWellbeingYears, setSelectedWellbeingYears] = useState<
-    string[]
-  >([]);
-  const [selectedWellbeingSections, setSelectedWellbeingSections] = useState<
-    string[]
-  >([]);
   const [sessionOptions, setSessionOptions] = useState<
     { id: number; label: string; value: number }[]
   >([]);
@@ -203,9 +194,6 @@ const AddUserModal: React.FC<{
     setSelectedEntryType([]);
     setSelectedFinanceEducationTypes([]);
     setSelectedWellbeingEducationTypes([]);
-    setSelectedWellbeingBranches([]);
-    setSelectedWellbeingYears([]);
-    setSelectedWellbeingSections([]);
 
     setShowPassword(false);
     setIsSuccess(false);
@@ -512,9 +500,6 @@ const AddUserModal: React.FC<{
 
     if (value === "Hostel") {
       setSelectedWellbeingEducationTypes([]);
-      setSelectedWellbeingBranches([]);
-      setSelectedWellbeingYears([]);
-      setSelectedWellbeingSections([]);
     }
   };
 
@@ -544,88 +529,6 @@ const AddUserModal: React.FC<{
   const sectionOptions = useMemo(
     () => studentAvailableSections.map((s) => s.collegeSections),
     [studentAvailableSections],
-  );
-
-  const selectedWellbeingEducationIds = useMemo(
-    () =>
-      dbData.educations
-        .filter((education) =>
-          selectedWellbeingEducationTypes.includes(
-            education.collegeEducationType,
-          ),
-        )
-        .map((education) => education.collegeEducationId),
-    [dbData.educations, selectedWellbeingEducationTypes],
-  );
-
-  const wellbeingBranchRows = useMemo(
-    () =>
-      dbData.branches.filter((branch) =>
-        selectedWellbeingEducationIds.includes(branch.collegeEducationId),
-      ),
-    [dbData.branches, selectedWellbeingEducationIds],
-  );
-
-  const wellbeingBranchOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(wellbeingBranchRows.map((branch) => branch.collegeBranchCode)),
-      ),
-    [wellbeingBranchRows],
-  );
-
-  const selectedWellbeingBranchIds = useMemo(
-    () =>
-      wellbeingBranchRows
-        .filter((branch) =>
-          selectedWellbeingBranches.includes(branch.collegeBranchCode),
-        )
-        .map((branch) => branch.collegeBranchId),
-    [wellbeingBranchRows, selectedWellbeingBranches],
-  );
-
-  const wellbeingYearRows = useMemo(() => {
-    const years = dbData.years.filter((year) =>
-      selectedWellbeingBranchIds.includes(year.collegeBranchId),
-    );
-
-    return years.sort((a, b) => {
-      const numA = parseInt(a.collegeAcademicYear) || 0;
-      const numB = parseInt(b.collegeAcademicYear) || 0;
-      return numA - numB;
-    });
-  }, [dbData.years, selectedWellbeingBranchIds]);
-
-  const wellbeingYearOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(wellbeingYearRows.map((year) => year.collegeAcademicYear)),
-      ),
-    [wellbeingYearRows],
-  );
-
-  const selectedWellbeingYearIds = useMemo(
-    () =>
-      wellbeingYearRows
-        .filter((year) =>
-          selectedWellbeingYears.includes(year.collegeAcademicYear),
-        )
-        .map((year) => year.collegeAcademicYearId),
-    [wellbeingYearRows, selectedWellbeingYears],
-  );
-
-  const wellbeingSectionOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          dbData.sections
-            .filter((section) =>
-              selectedWellbeingYearIds.includes(section.collegeAcademicYearId),
-            )
-            .map((section) => section.collegeSections),
-        ),
-      ),
-    [dbData.sections, selectedWellbeingYearIds],
   );
 
   const selectedSessionId = useMemo(
@@ -784,13 +687,8 @@ const AddUserModal: React.FC<{
         }
       }
       if (isWellbeingCollege) {
-        if (
-          !selectedWellbeingEducationTypes.length ||
-          !selectedWellbeingBranches.length ||
-          !selectedWellbeingYears.length ||
-          !selectedWellbeingSections.length
-        ) {
-          return toast.error("Complete all college registration fields.");
+        if (!selectedWellbeingEducationTypes.length) {
+          return toast.error("Select Education Type for wellbeing college registration.");
         }
       }
     }
@@ -1038,35 +936,18 @@ const AddUserModal: React.FC<{
 
       if (isWellbeing && !user) {
         const wellbeingCollegeDetails = isWellbeingCollege
-          ? wellbeingBranchRows
-            .filter((branch) =>
-              selectedWellbeingBranches.includes(branch.collegeBranchCode),
+          ? dbData.educations
+            .filter((education) =>
+              selectedWellbeingEducationTypes.includes(
+                education.collegeEducationType,
+              ),
             )
-            .flatMap((branch) =>
-              wellbeingYearRows
-                .filter(
-                  (year) =>
-                    year.collegeBranchId === branch.collegeBranchId &&
-                    selectedWellbeingYears.includes(year.collegeAcademicYear),
-                )
-                .flatMap((year) =>
-                  dbData.sections
-                    .filter(
-                      (section) =>
-                        section.collegeAcademicYearId ===
-                        year.collegeAcademicYearId &&
-                        selectedWellbeingSections.includes(
-                          section.collegeSections,
-                        ),
-                    )
-                    .map((section) => ({
-                      collegeEducationId: branch.collegeEducationId,
-                      collegeBranchId: branch.collegeBranchId,
-                      collegeAcademicYearId: year.collegeAcademicYearId,
-                      collegeSectionsId: section.collegeSectionsId,
-                    })),
-                ),
-            )
+            .map((education) => ({
+              collegeEducationId: education.collegeEducationId,
+              collegeBranchId: null,
+              collegeAcademicYearId: null,
+              collegeSectionsId: null,
+            }))
           : [];
 
         if (isWellbeingCollege && !wellbeingCollegeDetails.length) {
@@ -1514,80 +1395,12 @@ const AddUserModal: React.FC<{
                     selectedValues={selectedWellbeingEducationTypes}
                     onChange={(v) => {
                       toggleMultiSelectValue(v, setSelectedWellbeingEducationTypes);
-                      setSelectedWellbeingBranches([]);
-                      setSelectedWellbeingYears([]);
-                      setSelectedWellbeingSections([]);
                     }}
                     onRemove={(v) => {
                       setSelectedWellbeingEducationTypes((prev) =>
                         prev.filter((education) => education !== v),
                       );
-                      setSelectedWellbeingBranches([]);
-                      setSelectedWellbeingYears([]);
-                      setSelectedWellbeingSections([]);
                     }}
-                  />
-                  <CustomMultiSelect
-                    label={
-                      selectedWellbeingEducationTypes.includes("Inter")
-                        ? "Group Type"
-                        : "Branch Type"
-                    }
-                    placeholder={
-                      selectedWellbeingEducationTypes.includes("Inter")
-                        ? "Select Group"
-                        : "Select Branch"
-                    }
-                    options={wellbeingBranchOptions}
-                    selectedValues={selectedWellbeingBranches}
-                    disabled={selectedWellbeingEducationTypes.length === 0}
-                    onChange={(v) => {
-                      toggleMultiSelectValue(v, setSelectedWellbeingBranches);
-                      setSelectedWellbeingYears([]);
-                      setSelectedWellbeingSections([]);
-                    }}
-                    onRemove={(v) => {
-                      setSelectedWellbeingBranches((prev) =>
-                        prev.filter((branch) => branch !== v),
-                      );
-                      setSelectedWellbeingYears([]);
-                      setSelectedWellbeingSections([]);
-                    }}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-5">
-                  <CustomMultiSelect
-                    label="Year"
-                    placeholder="Select Year"
-                    options={wellbeingYearOptions}
-                    selectedValues={selectedWellbeingYears}
-                    disabled={selectedWellbeingBranches.length === 0}
-                    onChange={(v) => {
-                      toggleMultiSelectValue(v, setSelectedWellbeingYears);
-                      setSelectedWellbeingSections([]);
-                    }}
-                    onRemove={(v) => {
-                      setSelectedWellbeingYears((prev) =>
-                        prev.filter((year) => year !== v),
-                      );
-                      setSelectedWellbeingSections([]);
-                    }}
-                  />
-                  <CustomMultiSelect
-                    label="Sections"
-                    placeholder="Select Sections"
-                    options={wellbeingSectionOptions}
-                    selectedValues={selectedWellbeingSections}
-                    disabled={selectedWellbeingYears.length === 0}
-                    onChange={(v) =>
-                      toggleMultiSelectValue(v, setSelectedWellbeingSections)
-                    }
-                    onRemove={(v) =>
-                      setSelectedWellbeingSections((prev) =>
-                        prev.filter((section) => section !== v),
-                      )
-                    }
                   />
                 </div>
               </>

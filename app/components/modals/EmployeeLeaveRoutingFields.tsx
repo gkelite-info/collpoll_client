@@ -17,7 +17,7 @@ const requesterTagRole: Record<string, EmployeeLeaveTagFetchRole> = {
   Faculty: "Faculty",
   Finance: "FinanceManager",
   CollegeHr: "CollegeHr",
-  WellbeingExecutive: "WellbeingExecutive",
+  WellbeingExecutive: "AllStaff",
   PlacementOfficer: "AllStaff",
 };
 
@@ -127,7 +127,9 @@ export default function EmployeeLeaveRoutingFields({
         <EmployeeLeaveTagSelect
           key={taggedRole}
           collegeId={collegeId}
-          excludeUserId={userId}
+          excludeUserId={
+            role === "CollegeHr" && taggedRole === "CollegeHr" ? null : userId
+          }
           collegeEducationType={
             taggedRole === "Faculty" ||
             taggedRole === "Admin" ||
@@ -167,6 +169,7 @@ function EmployeeLeaveTagSelect({
   const [options, setOptions] = useState<EmployeeLeaveTagOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLLabelElement | null>(null);
 
   useEffect(() => {
@@ -207,6 +210,7 @@ function EmployeeLeaveTagSelect({
     const handlePointerDown = (event: PointerEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) {
         setIsOpen(false);
+        setSearchQuery("");
       }
     };
 
@@ -228,18 +232,37 @@ function EmployeeLeaveTagSelect({
     [options, value],
   );
 
+  const filteredOptions = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return options;
+
+    return options.filter((option) => {
+      const searchableText = [
+        option.label,
+        option.roleLabel,
+        tagRoleLabels[option.taggedRole],
+        String(option.taggedUserId),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(query);
+    });
+  }, [options, searchQuery]);
+
   const groupedOptions = useMemo(() => {
     if (taggedRole !== "AllStaff") {
-      return [{ role: taggedRole, options }];
+      return [{ role: taggedRole, options: filteredOptions }];
     }
 
     return staffRoleOrder
       .map((role) => ({
         role,
-        options: options.filter((option) => option.taggedRole === role),
+        options: filteredOptions.filter((option) => option.taggedRole === role),
       }))
       .filter((group) => group.options.length > 0);
-  }, [options, taggedRole]);
+  }, [filteredOptions, taggedRole]);
 
   return (
     <label
@@ -271,56 +294,70 @@ function EmployeeLeaveTagSelect({
       </button>
 
       {isOpen && !isLoading && (
-        <div className="custom-scrollbar absolute left-0 right-0 top-[72px] z-50 max-h-72 overflow-y-auto rounded border border-[#CFCFCF] bg-white shadow-lg">
+        <div className="absolute left-0 right-0 top-[72px] z-50 overflow-hidden rounded border border-[#CFCFCF] bg-white shadow-lg">
           <button
             type="button"
             onClick={() => {
               onChange(null);
               setIsOpen(false);
+              setSearchQuery("");
             }}
             className="flex h-10 w-full cursor-pointer items-center bg-[#1F6FD6] px-4 text-left text-sm font-semibold text-white"
           >
             {tagRoleLabels[taggedRole]}
           </button>
-          {groupedOptions.map((group) => (
-            <div key={group.role}>
-              {taggedRole === "AllStaff" && (
-                <div className="sticky top-0 z-10 bg-[#F3F4F6] px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-[#525252]">
-                  {tagRoleLabels[group.role]}
-                </div>
-              )}
-              {group.options.map((option) => (
-                <button
-                  key={`${option.taggedRole}-${option.taggedUserId}`}
-                  type="button"
-                  onClick={() => {
-                    onChange(option);
-                    setIsOpen(false);
-                  }}
-                  className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-left text-sm text-[#282828] hover:bg-gray-50"
-                >
-                  <Avatar
-                    src={option.profileUrl}
-                    alt={option.label}
-                    size={30}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold">
-                      {option.label}
+          <div className="border-b border-[#E5E7EB] bg-white p-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search name..."
+              className="h-9 w-full rounded border border-[#D1D5DB] px-3 text-sm font-medium text-[#282828] outline-none focus:border-[#43C17A]"
+              autoFocus
+            />
+          </div>
+          <div className="custom-scrollbar max-h-60 overflow-y-auto">
+            {groupedOptions.map((group) => (
+              <div key={group.role}>
+                {taggedRole === "AllStaff" && (
+                  <div className="sticky top-0 z-10 bg-[#F3F4F6] px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-[#525252]">
+                    {tagRoleLabels[group.role]}
+                  </div>
+                )}
+                {group.options.map((option) => (
+                  <button
+                    key={`${option.taggedRole}-${option.taggedUserId}`}
+                    type="button"
+                    onClick={() => {
+                      onChange(option);
+                      setIsOpen(false);
+                      setSearchQuery("");
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-left text-sm text-[#282828] hover:bg-gray-50"
+                  >
+                    <Avatar
+                      src={option.profileUrl}
+                      alt={option.label}
+                      size={30}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold">
+                        {option.label}
+                      </span>
+                      <span className="block truncate text-xs font-medium text-[#6B7280]">
+                        {option.roleLabel ?? tagRoleLabels[option.taggedRole]}
+                      </span>
                     </span>
-                    <span className="block truncate text-xs font-medium text-[#6B7280]">
-                      {option.roleLabel ?? tagRoleLabels[option.taggedRole]}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          ))}
-          {!options.length && (
-            <div className="px-4 py-3 text-sm font-medium text-[#9CA3AF]">
-              No users found
-            </div>
-          )}
+                  </button>
+                ))}
+              </div>
+            ))}
+            {!filteredOptions.length && (
+              <div className="px-4 py-3 text-sm font-medium text-[#9CA3AF]">
+                No users found
+              </div>
+            )}
+          </div>
         </div>
       )}
     </label>

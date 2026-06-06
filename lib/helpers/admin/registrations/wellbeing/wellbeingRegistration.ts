@@ -23,9 +23,9 @@ export type WellbeingHostelType =
 
 export type CreateWellbeingCollegeDetail = {
   collegeEducationId: number;
-  collegeBranchId: number;
-  collegeAcademicYearId: number;
-  collegeSectionsId: number;
+  collegeBranchId?: number | null;
+  collegeAcademicYearId?: number | null;
+  collegeSectionsId?: number | null;
 };
 
 export type CreateWellbeingPayload = {
@@ -161,9 +161,9 @@ export const createWellbeing = async (
         payload.collegeDetails!.map((detail) => [
           [
             detail.collegeEducationId,
-            detail.collegeBranchId,
-            detail.collegeAcademicYearId,
-            detail.collegeSectionsId,
+            detail.collegeBranchId ?? "all-branches",
+            detail.collegeAcademicYearId ?? "all-years",
+            detail.collegeSectionsId ?? "all-sections",
           ].join("-"),
           detail,
         ]),
@@ -176,9 +176,9 @@ export const createWellbeing = async (
         uniqueRows.map((detail) => ({
           wellBeingId,
           collegeEducationId: detail.collegeEducationId,
-          collegeBranchId: detail.collegeBranchId,
-          collegeAcademicYearId: detail.collegeAcademicYearId,
-          collegeSectionsId: detail.collegeSectionsId,
+          collegeBranchId: detail.collegeBranchId ?? null,
+          collegeAcademicYearId: detail.collegeAcademicYearId ?? null,
+          collegeSectionsId: detail.collegeSectionsId ?? null,
           createdAt: payload.createdAt,
           updatedAt: payload.updatedAt,
         })),
