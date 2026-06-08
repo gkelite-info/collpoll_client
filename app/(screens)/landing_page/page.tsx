@@ -152,6 +152,10 @@ const Navbar = () => {
     setMobileMenuOpen(false);
   };
 
+  const handlePrivacyClick = () => {
+    router.push("privacy-policy");
+  }
+
   const handleLogin = () => {
     router.push('/login');
   };
@@ -825,7 +829,7 @@ const Footer = () => {
               <li><a href="#features" className="text-muted-foreground hover:text-primary transition-colors">Modules</a></li>
               <li><a href="#portals" className="text-muted-foreground hover:text-primary transition-colors">Portals</a></li>
               <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Security</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Integration</a></li>
+              <li><a href="/privacy-policy" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</a></li>
             </ul>
           </div>
 
