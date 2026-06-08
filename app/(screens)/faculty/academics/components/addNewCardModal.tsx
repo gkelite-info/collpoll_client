@@ -168,7 +168,6 @@ export default function AddNewCardModal({
   const [facultyCtx, setFacultyCtx] = useState<any>(null);
   const { faculty_edu_type } = useFaculty();
 
-  // ✅ ADDED: loading and error states for AI topic suggestions
   const [isLoadingTopics, setIsLoadingTopics] = useState(false);
   const [topicsError, setTopicsError] = useState<string | null>(null);
 
