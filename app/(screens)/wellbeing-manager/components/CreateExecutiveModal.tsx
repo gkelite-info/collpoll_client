@@ -6,6 +6,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { fetchModalInitialData } from "@/lib/helpers/admin/upsertFaculty";
 import { fetchWellbeingCategories } from "@/lib/helpers/wellbeingCategories/wellbeingCategoryAPI";
 import { saveWellbeingExecutive } from "@/lib/helpers/wellbeing/wellbeingExecutiveAPI";
+import { supabase } from "@/lib/supabaseClient";
 
 const toPascalCase = (str: string) => {
   return str.replace(
@@ -26,6 +27,35 @@ const validatePassword = (password: string) => {
 };
 
 const IDENTIFIER_REGEX = /^(?=.*\d)[A-Za-z0-9]+(?:-[A-Za-z0-9]+){0,2}$/;
+
+const toDisplayRegistrationType = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "hostel") return "Hostel";
+  if (normalized === "both") return "Both";
+  return "College";
+};
+
+const expandRegistrationTypes = (values: string[]) => {
+  const normalizedValues = values.map(toDisplayRegistrationType);
+  if (normalizedValues.includes("Both")) {
+    return ["Hostel", "College"];
+  }
+  return Array.from(new Set(normalizedValues));
+};
+
+const toPayloadRegistrationType = (values: string[]) => {
+  if (values.includes("Both")) return "Both";
+  if (values.includes("College") && values.includes("Hostel")) return "Both";
+  return values[0] ?? "";
+};
+
+const toUniqueValues = (values: Array<string | null | undefined>) =>
+  Array.from(new Set(values.map((value) => value?.trim()).filter(Boolean))) as string[];
+
+const splitContextValues = (value: string | null) =>
+  value
+    ? toUniqueValues(value.split(",").map((item) => item.trim()))
+    : [];
 
 const validateIdentifier = (value: string) => {
   if (!value?.trim()) {
@@ -126,6 +156,97 @@ const CustomSingleSelect: React.FC<CustomSingleSelectProps> = ({
   );
 };
 
+interface CustomMultiSelectProps {
+  label: string;
+  placeholder: string;
+  options: string[];
+  selectedValues: string[];
+  onChange: (val: string) => void;
+  required?: boolean;
+  disabled?: boolean;
+}
+
+const CustomMultiSelect: React.FC<CustomMultiSelectProps> = ({
+  label,
+  placeholder,
+  options,
+  selectedValues,
+  onChange,
+  required = false,
+  disabled = false,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-1 w-full relative" ref={wrapperRef}>
+      <label className="text-xs font-bold text-[#2D3748]">
+        {label} {required && <span className="text-red-600">*</span>}
+      </label>
+      <div
+        onClick={() => !disabled && setIsOpen((prev) => !prev)}
+        className={`
+          w-full border rounded-md px-3 py-1.5 text-sm flex justify-between items-center bg-white transition-all select-none
+          ${isOpen ? "border-[#48C78E] ring-1 ring-[#48C78E]" : "border-gray-200"}
+          ${disabled ? "bg-gray-50 cursor-not-allowed opacity-70" : "cursor-pointer"}
+        `}
+      >
+        <span
+          className={`truncate ${
+            selectedValues.length ? "text-gray-700 font-medium" : "text-gray-400"
+          }`}
+        >
+          {selectedValues.length ? selectedValues.join(", ") : placeholder}
+        </span>
+        <CaretLeft
+          size={14}
+          weight="bold"
+          className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${
+            isOpen ? "rotate-90" : "-rotate-90"
+          }`}
+        />
+      </div>
+
+      {isOpen && !disabled && (
+        <div className="absolute z-[9999] top-[calc(100%+4px)] left-0 right-0 bg-white border border-gray-100 rounded-md shadow-xl max-h-48 overflow-y-auto custom-scrollbar">
+          {options.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-gray-400">No options available</div>
+          ) : (
+            options.map((opt, idx) => {
+              const isSelected = selectedValues.includes(opt);
+              return (
+                <div
+                  key={`${label}-${opt}-${idx}`}
+                  onClick={() => onChange(opt)}
+                  className="flex items-center justify-between px-3 py-2 cursor-pointer text-sm text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                  <span>{opt}</span>
+                  {isSelected && (
+                    <Check size={14} weight="bold" className="text-[#48C78E]" />
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function CreateExecutiveModal({
   isOpen,
   onClose,
@@ -135,7 +256,14 @@ export default function CreateExecutiveModal({
   onClose: () => void;
   onSaveSuccess?: () => void;
 }) {
-  const { collegeId, collegePublicId, userId } = useUser();
+  const {
+    collegeId,
+    collegePublicId,
+    userId,
+    collegeEducationType,
+    wellBeingIds,
+    wellBeingRegistrationTypes,
+  } = useUser();
   const [dbData, setDbData] = useState<{
     educations: any[];
     branches: any[];
@@ -176,17 +304,27 @@ export default function CreateExecutiveModal({
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [selectedRegistrationType, setSelectedRegistrationType] = useState("");
+  const [selectedRegistrationTypes, setSelectedRegistrationTypes] = useState<string[]>([]);
+  const [managerEducationOptions, setManagerEducationOptions] = useState<string[]>([]);
   const [hostelBlock, setHostelBlock] = useState("");
   const [buildingNumber, setBuildingNumber] = useState("");
   const [hostelType, setHostelType] = useState("");
 
-  const isWellbeingHostel = selectedRegistrationType === "Hostel" || selectedRegistrationType === "Both";
-  const isWellbeingCollege = selectedRegistrationType === "College" || selectedRegistrationType === "Both";
+  const isWellbeingHostel = selectedRegistrationTypes.some(
+    (type) => type === "Hostel" || type === "Both",
+  );
+  const isWellbeingCollege = selectedRegistrationTypes.some(
+    (type) => type === "College" || type === "Both",
+  );
 
   const [categoriesList, setCategoriesList] = useState<string[]>([]);
   const [categoriesObjList, setCategoriesObjList] = useState<any[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
+
+  const managerRegistrationTypeOptions = useMemo(
+    () => expandRegistrationTypes(wellBeingRegistrationTypes),
+    [wellBeingRegistrationTypes],
+  );
 
   useEffect(() => {
     if (isOpen && collegeId) {
@@ -216,18 +354,89 @@ export default function CreateExecutiveModal({
     }
   }, [isOpen, collegeId]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setSelectedRegistrationTypes(managerRegistrationTypeOptions);
+  }, [isOpen, managerRegistrationTypeOptions]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const loadManagerEducationTypes = async () => {
+      const fallbackEducationTypes = splitContextValues(collegeEducationType);
+
+      if (!wellBeingIds.length) {
+        setManagerEducationOptions(fallbackEducationTypes);
+        setSelectedEducation((prev) =>
+          fallbackEducationTypes.includes(prev)
+            ? prev
+            : fallbackEducationTypes.length === 1
+              ? fallbackEducationTypes[0]
+              : "",
+        );
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("wellbeing_college_details")
+          .select(`
+            collegeEducationId,
+            college_education:collegeEducationId ( collegeEducationType )
+          `)
+          .in("wellBeingId", wellBeingIds);
+
+        if (error) throw error;
+
+        const fetchedEducationTypes = toUniqueValues(
+          (data ?? []).map((detail: any) => {
+            const relation = detail.college_education;
+            return Array.isArray(relation)
+              ? relation[0]?.collegeEducationType
+              : relation?.collegeEducationType;
+          }),
+        );
+        const nextOptions = fetchedEducationTypes.length
+          ? fetchedEducationTypes
+          : fallbackEducationTypes;
+
+        setManagerEducationOptions(nextOptions);
+        setSelectedEducation((prev) =>
+          nextOptions.includes(prev)
+            ? prev
+            : nextOptions.length === 1
+              ? nextOptions[0]
+              : "",
+        );
+      } catch (error) {
+        console.error("Failed to fetch wellbeing manager education types:", error);
+        setManagerEducationOptions(fallbackEducationTypes);
+        setSelectedEducation((prev) =>
+          fallbackEducationTypes.includes(prev)
+            ? prev
+            : fallbackEducationTypes.length === 1
+              ? fallbackEducationTypes[0]
+              : "",
+        );
+      }
+    };
+
+    loadManagerEducationTypes();
+  }, [collegeEducationType, isOpen, wellBeingIds]);
+
   const selectedCategoryId = useMemo(() => {
     return categoriesObjList.find((cat) => cat.categoryName === selectedCategory)?.categoryId || null;
   }, [categoriesObjList, selectedCategory]);
 
   const resetForm = () => {
     setBasicData(initialBasicData);
-    setSelectedEducation("");
+    setSelectedEducation(managerEducationOptions.length === 1 ? managerEducationOptions[0] : "");
     setSelectedBranch("");
     setSelectedYear("");
     setSelectedSection("");
     setSelectedCategory("");
-    setSelectedRegistrationType("");
+    setSelectedRegistrationTypes(managerRegistrationTypeOptions);
     setHostelBlock("");
     setBuildingNumber("");
     setHostelType("");
@@ -270,11 +479,6 @@ export default function CreateExecutiveModal({
 
     setBasicData((p: any) => ({ ...p, [name]: formattedValue }));
   };
-
-  const degreeOptions = useMemo(
-    () => dbData.educations.map((e: any) => e.collegeEducationType),
-    [dbData.educations],
-  );
 
   const selectedEducationId = useMemo(() => {
     return dbData.educations.find((e: any) => e.collegeEducationType === selectedEducation)?.collegeEducationId || null;
@@ -363,7 +567,7 @@ export default function CreateExecutiveModal({
     }
 
     if (!selectedCategory) return toast.error("Category is required.");
-    if (!selectedRegistrationType) return toast.error("Registration Type is required.");
+    if (!selectedRegistrationTypes.length) return toast.error("Registration Type is required.");
 
     if (isWellbeingCollege) {
       if (!selectedEducation) return toast.error("Education Type is required.");
@@ -425,7 +629,7 @@ export default function CreateExecutiveModal({
         collegePublicId: collegePublicId || "",
         categoryId: selectedCategoryId!,
         byManager: userId!,
-        registrationType: selectedRegistrationType,
+        registrationType: toPayloadRegistrationType(selectedRegistrationTypes),
         collegeEducationId: isWellbeingCollege ? selectedEducationId! : null,
         collegeBranchId: isWellbeingCollege ? selectedBranchId! : null,
         collegeAcademicYearId: isWellbeingCollege ? selectedYearId! : null,
@@ -579,24 +783,33 @@ export default function CreateExecutiveModal({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-              <CustomSingleSelect
+              <CustomMultiSelect
                 label="Registration Type"
                 placeholder="Select Registration Type"
-                options={["Hostel", "College", "Both"]}
-                selectedValue={selectedRegistrationType}
+                options={managerRegistrationTypeOptions}
+                selectedValues={selectedRegistrationTypes}
                 onChange={(val) => {
-                  setSelectedRegistrationType(val);
-                  if (val === "College") {
-                    setHostelBlock("");
-                    setBuildingNumber("");
-                    setHostelType("");
-                  }
-                  if (val === "Hostel") {
-                    setSelectedEducation("");
-                    setSelectedBranch("");
-                    setSelectedYear("");
-                    setSelectedSection("");
-                  }
+                  setSelectedRegistrationTypes((prev) => {
+                    const next = prev.includes(val)
+                      ? prev.filter((type) => type !== val)
+                      : [...prev, val];
+                    const hasCollege = next.some((type) => type === "College" || type === "Both");
+                    const hasHostel = next.some((type) => type === "Hostel" || type === "Both");
+
+                    if (!hasCollege) {
+                      setSelectedEducation("");
+                      setSelectedBranch("");
+                      setSelectedYear("");
+                      setSelectedSection("");
+                    }
+                    if (!hasHostel) {
+                      setHostelBlock("");
+                      setBuildingNumber("");
+                      setHostelType("");
+                    }
+
+                    return next;
+                  });
                 }}
                 required
               />
@@ -649,8 +862,12 @@ export default function CreateExecutiveModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 animate-in fade-in duration-200">
                   <CustomSingleSelect
                     label="Education Type"
-                    placeholder="Select Education Type"
-                    options={degreeOptions}
+                    placeholder={
+                      managerEducationOptions.length
+                        ? "Select Education Type"
+                        : "No Education Type Assigned"
+                    }
+                    options={managerEducationOptions}
                     selectedValue={selectedEducation}
                     onChange={(val) => {
                       setSelectedEducation(val);
@@ -658,6 +875,7 @@ export default function CreateExecutiveModal({
                       setSelectedYear("");
                       setSelectedSection("");
                     }}
+                    disabled={!managerEducationOptions.length}
                     required
                   />
 

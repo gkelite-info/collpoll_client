@@ -59,12 +59,32 @@ const userRoleToTaggedRole: Partial<Record<string, EmployeeLeaveTaggedRole>> = {
   Admin: "Admin",
   Faculty: "Faculty",
   Finance: "Finance",
+  FinanceExecutive: "Finance",
   FinanceManager: "FinanceManager",
+  FinanceExecutiveRole: "Finance",
   CollegeHr: "CollegeHr",
+  HR: "CollegeHr",
+  Hr: "CollegeHr",
   CollegeAdmin: "CollegeAdmin",
   PlacementOfficer: "PlacementOfficer",
   WellbeingExecutive: "WellbeingExecutive",
   WellbeingManager: "WellbeingManager",
+};
+
+const normalizedUserRoleToTaggedRole: Partial<
+  Record<string, EmployeeLeaveTaggedRole>
+> = {
+  admin: "Admin",
+  faculty: "Faculty",
+  finance: "Finance",
+  financeexecutive: "Finance",
+  financemanager: "FinanceManager",
+  collegehr: "CollegeHr",
+  hr: "CollegeHr",
+  collegeadmin: "CollegeAdmin",
+  placementofficer: "PlacementOfficer",
+  wellbeingexecutive: "WellbeingExecutive",
+  wellbeingmanager: "WellbeingManager",
 };
 
 const staffRoleOrder: EmployeeLeaveTaggedRole[] = [
@@ -81,6 +101,26 @@ const allStaffExcludedTaggedRoles = new Set<EmployeeLeaveTaggedRole>([
   "CollegeHr",
   "CollegeAdmin",
 ]);
+
+const allStaffExcludedRoleKeys = new Set([
+  "student",
+  "parent",
+  "collegehr",
+  "hr",
+  "collegeadmin",
+]);
+
+const normalizeUserRoleKey = (role?: string | null) =>
+  role ? role.replace(/[\s_-]+/g, "").toLowerCase() : "";
+
+const getTaggedRoleFromUserRole = (role?: string | null) => {
+  if (!role) return null;
+  return (
+    userRoleToTaggedRole[role] ??
+    normalizedUserRoleToTaggedRole[normalizeUserRoleKey(role)] ??
+    null
+  );
+};
 
 const attachProfileUrls = async <
   T extends { userId: number; fullName: string | null },
@@ -297,7 +337,11 @@ async function fetchAllStaffOptions(
     .eq("isActive", true)
     .eq("is_deleted", false)
     .is("deletedAt", null)
-    .not("role", "in", "(Student,Parent,CollegeHr,CollegeAdmin)");
+    .not(
+      "role",
+      "in",
+      "(Student,Parent,CollegeHr,CollegeAdmin,HR,Hr)",
+    );
 
   if (excludeUserId) {
     query = query.neq("userId", excludeUserId);
@@ -318,7 +362,10 @@ async function fetchAllStaffOptions(
 
   const options = usersWithProfiles
     .map<EmployeeLeaveTagOption | null>((user) => {
-      const taggedRole = user.role ? userRoleToTaggedRole[user.role] : null;
+      const roleKey = normalizeUserRoleKey(user.role);
+      if (allStaffExcludedRoleKeys.has(roleKey)) return null;
+
+      const taggedRole = getTaggedRoleFromUserRole(user.role);
       if (!taggedRole) return null;
       if (allStaffExcludedTaggedRoles.has(taggedRole)) return null;
 
