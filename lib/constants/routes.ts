@@ -24,6 +24,7 @@ const matchesRouteSegment = (pathname: string, route: string): boolean => {
 export const PUBLIC_ROUTES = [
   "/",
   "/landing_page",
+  "/privacy-policy",
   "/login",
   "/forgot-password",
   "/reset-password",

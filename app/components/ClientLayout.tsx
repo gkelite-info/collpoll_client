@@ -97,6 +97,7 @@ export default function ClientLayout({
 
   const hideLayoutRoutes = [
     "/landing_page",
+    "/privacy-policy",
     "/login",
     "/signup",
     "/verify-email",
