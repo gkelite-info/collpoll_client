@@ -15,13 +15,17 @@ import {
   deleteSubjectImageByUrl,
   uploadSubjectImage,
 } from "@/lib/helpers/admin/academicSetup/subjectImageStorageAPI";
+import BiometricStructure from "./components/BiometricStructure";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { Suspense } from "react";
 
 type Tab =
   | "view"
   | "add"
   | "view-subject"
   | "add-subject"
-  | "attendance-eligibility";
+  | "attendance-eligibility"
+  | "biometric-structure";
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "Something went wrong";
@@ -43,8 +47,20 @@ const extractSingleValue = (value: unknown): string => {
   return "";
 };
 
-export default function AcademicSetup() {
-  const [activeTab, setActiveTab] = useState<Tab>("view");
+function AcademicSetupContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const queryTab = searchParams.get("tab") as Tab | null;
+  const activeTab = queryTab || "view";
+
+  const setActiveTab = (tab: Tab) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("tab", tab);
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
   const [editData, setEditData] = useState<AcademicData | null>(null);
 
   const [editSubject, setEditSubject] = useState<SubjectFormData | null>(null);
@@ -68,6 +84,11 @@ export default function AcademicSetup() {
           title: "Attendance Eligibility Criteria",
           description:
             "Configure minimum overall attendance criteria for students.",
+        }
+      : activeTab === "biometric-structure"
+      ? {
+          title: "Biometric Structure",
+          description: "Manage rooms and biometric devices in your institution.",
         }
       : {
           title: "Academic Structure",
@@ -207,7 +228,7 @@ export default function AcademicSetup() {
 
   return (
     <section className="min-h-[85vh] p-2 relative">
-      <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-sm p-8 min-h-[84vh]">
+      <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-sm p-4 sm:p-6 md:p-8 min-h-[84vh]">
         {isFetchingSubject && (
           <div className="absolute inset-0 bg-white/70 z-50 flex items-center justify-center rounded-xl backdrop-blur-[1px]">
             <div className="flex flex-col items-center gap-3">
@@ -219,48 +240,90 @@ export default function AcademicSetup() {
           </div>
         )}
 
-        <h1 className="text-xl font-bold text-[#282828] mb-1">
-          {pageHeader.title}
-        </h1>
-        <p className="text-[#5C5C5C] mb-8 text-sm">
-          {pageHeader.description}
-        </p>
-
-        <div className="flex mx-auto mb-5">
-          <div className="relative flex mx-auto items-center bg-gray-100 p-1.5 rounded-full">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id as Tab);
-                  if (tab.id !== "add-subject") {
-                    setEditSubject(null);
-                  }
-                  if (tab.id === "add") {
-                    setEditData(null);
-                  }
-                }}
-                className={`relative cursor-pointer px-6 py-2 text-sm font-semibold z-10 ${activeTab === tab.id
-                  ? "text-white"
-                  : "text-gray-500 hover:text-gray-700"
-                  }`}
-              >
-                {tab.label}
-                {activeTab === tab.id && (
-                  <motion.div
-                    layoutId="academic-pill"
-                    className="absolute shadow-[0_2px_8px_rgba(16,185,129,0.4)] inset-0 rounded-full -z-10"
-                    style={{
-                      background:
-                        "linear-gradient(180deg, #34D399 0%, #10B981 100%)",
-                    }}
-                    transition={{ type: "spring", stiffness: 350, damping: 28 }}
-                  />
-                )}
-              </button>
-            ))}
-          </div>
+        {/* Structure Selection Header */}
+        <div className="flex flex-col items-start gap-1 md:flex-row md:items-center md:gap-3 text-xl font-bold mb-6 border-b border-gray-100 pb-4">
+          <button
+            onClick={() => {
+              setActiveTab("view");
+              setEditSubject(null);
+              setEditData(null);
+            }}
+            className={`transition-all duration-200 cursor-pointer ${
+              activeTab !== "biometric-structure"
+                ? "text-[#43C17A]"
+                : "text-[#282828] hover:text-[#16284F]"
+            }`}
+          >
+            Academic Structure
+          </button>
+          <span className="text-gray-300 font-light text-2xl hidden md:inline">/</span>
+          <button
+            onClick={() => {
+              setActiveTab("biometric-structure");
+            }}
+            className={`transition-all duration-200 cursor-pointer ${
+              activeTab === "biometric-structure"
+                ? "text-[#43C17A]"
+                : "text-[#282828] hover:text-[#16284F]"
+            }`}
+          >
+            Biometric Structure
+          </button>
         </div>
+
+        {activeTab !== "biometric-structure" ? (
+          <>
+            {pageHeader.title !== "Academic Structure" && (
+              <h1 className="text-xl font-bold text-[#282828] mb-1">
+                {pageHeader.title}
+              </h1>
+            )}
+            <p className="text-[#5C5C5C] mb-8 text-sm">
+              {pageHeader.description}
+            </p>
+
+            <div className="flex mx-auto mb-5">
+              <div className="relative flex mx-auto items-center bg-gray-100 p-1.5 rounded-full">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id as Tab);
+                      if (tab.id !== "add-subject") {
+                        setEditSubject(null);
+                      }
+                      if (tab.id === "add") {
+                        setEditData(null);
+                      }
+                    }}
+                    className={`relative cursor-pointer px-6 py-2 text-sm font-semibold z-10 ${
+                      activeTab === tab.id
+                        ? "text-white"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    {tab.label}
+                    {activeTab === tab.id && (
+                      <motion.div
+                        layoutId="academic-pill"
+                        className="absolute shadow-[0_2px_8px_rgba(16,185,129,0.4)] inset-0 rounded-full -z-10"
+                        style={{
+                          background:
+                            "linear-gradient(180deg, #34D399 0%, #10B981 100%)",
+                        }}
+                        transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="text-[#5C5C5C] mb-8 text-sm">
+            {pageHeader.description}
+          </p>
+        )}
 
         {activeTab === "view" && <ViewAcademicStructure onEdit={handleEdit} />}
         {activeTab === "add" && (
@@ -277,7 +340,26 @@ export default function AcademicSetup() {
           />
         )}
         {activeTab === "attendance-eligibility" && <AttendanceEligibility />}
+        
+        {activeTab === "biometric-structure" && (
+          <BiometricStructure />
+        )}
       </div>
     </section>
+  );
+}
+
+export default function AcademicSetup() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[85vh] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-[#43C17A] border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-[#16284F] font-medium text-sm">Loading setup...</span>
+        </div>
+      </div>
+    }>
+      <AcademicSetupContent />
+    </Suspense>
   );
 }
