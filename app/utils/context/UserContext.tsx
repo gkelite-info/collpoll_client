@@ -40,6 +40,8 @@ type UserContextType = {
   wellBeingId: number | null;
   wellBeingIds: number[];
   wellBeingRegistrationTypes: string[];
+  wellBeingCategoryId: number | null;
+  wellBeingCategoryName: string | null;
   collegeEducationType: string | null;
   collegeBranchCode: string | null;
   collegeAcademicYear: string | null;
@@ -66,6 +68,15 @@ type WellbeingCollegeDetailContext = {
   college_branch?: { collegeBranchCode?: string | null } | null;
   college_academic_year?: { collegeAcademicYear?: string | null } | null;
   college_sections?: { collegeSections?: string | null } | null;
+};
+type WellbeingContextRow = {
+  wellBeingId: number;
+  registrationType?: string | null;
+  categoryId?: number | null;
+  wellbeing_categories?:
+    | { categoryName?: string | null }
+    | { categoryName?: string | null }[]
+    | null;
 };
 type CollegeEducationRelation =
   | { collegeEducationType?: string | null }
@@ -109,6 +120,8 @@ const UserContext = createContext<UserContextType>({
   wellBeingId: null,
   wellBeingIds: [],
   wellBeingRegistrationTypes: [],
+  wellBeingCategoryId: null,
+  wellBeingCategoryName: null,
   collegeEducationType: null,
   collegeBranchCode: null,
   collegeAcademicYear: null,
@@ -142,6 +155,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [wellBeingId, setWellBeingId] = useState<number | null>(null);
   const [wellBeingIds, setWellBeingIds] = useState<number[]>([]);
   const [wellBeingRegistrationTypes, setWellBeingRegistrationTypes] = useState<string[]>([]);
+  const [wellBeingCategoryId, setWellBeingCategoryId] = useState<number | null>(null);
+  const [wellBeingCategoryName, setWellBeingCategoryName] = useState<string | null>(null);
   const [collegeEducationType, setCollegeEducationType] = useState<string | null>(null);
   const [collegeBranchCode, setCollegeBranchCode] = useState<string | null>(null);
   const [collegeAcademicYear, setCollegeAcademicYear] = useState<string | null>(null);
@@ -176,6 +191,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     setWellBeingId,
     setWellBeingIds,
     setWellBeingRegistrationTypes,
+    setWellBeingCategoryId,
+    setWellBeingCategoryName,
     setCollegeEducationType,
     setCollegeBranchCode,
     setCollegeAcademicYear,
@@ -208,6 +225,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     s.setWellBeingId(null);
     s.setWellBeingIds([]);
     s.setWellBeingRegistrationTypes([]);
+    s.setWellBeingCategoryId(null);
+    s.setWellBeingCategoryName(null);
     s.setCollegeEducationType(null);
     s.setCollegeBranchCode(null);
     s.setCollegeAcademicYear(null);
@@ -227,7 +246,14 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     const [{ data }, empId, userRes] = await Promise.all([
       supabase
         .from("well_beings")
-        .select("wellBeingId, registrationType")
+        .select(`
+          wellBeingId,
+          registrationType,
+          categoryId,
+          wellbeing_categories:categoryId (
+            categoryName
+          )
+        `)
         .eq("userId", uid)
         .eq("collegeId", cid)
         .eq("roleType", roleType)
@@ -243,7 +269,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         .maybeSingle(),
     ]);
 
-    const rows = data ?? [];
+    const rows = (data ?? []) as WellbeingContextRow[];
     const wellBeingIdsForRole = rows.map((row) => row.wellBeingId);
     s.setWellBeingId(rows[0]?.wellBeingId ?? null);
     s.setWellBeingIds(wellBeingIdsForRole);
@@ -252,6 +278,13 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         .map((row) => row.registrationType)
         .filter((type): type is string => Boolean(type)),
     );
+    const firstCategory = rows.find((row) => row.wellbeing_categories);
+    const categoryRelation = firstCategory?.wellbeing_categories;
+    const categoryName = Array.isArray(categoryRelation)
+      ? categoryRelation[0]?.categoryName
+      : categoryRelation?.categoryName;
+    s.setWellBeingCategoryId(firstCategory?.categoryId ?? null);
+    s.setWellBeingCategoryName(categoryName ?? null);
     s.setGender(userRes.data?.gender ?? null);
     s.setIdentifierId(empId ?? (rows[0]?.wellBeingId ? String(rows[0].wellBeingId) : null));
 
@@ -679,6 +712,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       wellBeingId,
       wellBeingIds,
       wellBeingRegistrationTypes,
+      wellBeingCategoryId,
+      wellBeingCategoryName,
       collegeEducationType,
       collegeBranchCode,
       collegeAcademicYear,
@@ -711,6 +746,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       wellBeingId,
       wellBeingIds,
       wellBeingRegistrationTypes,
+      wellBeingCategoryId,
+      wellBeingCategoryName,
       collegeEducationType,
       collegeBranchCode,
       collegeAcademicYear,

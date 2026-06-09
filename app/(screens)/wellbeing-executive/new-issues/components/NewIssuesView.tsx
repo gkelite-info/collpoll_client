@@ -6,6 +6,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CaretDown, FilePdf, ListDashes } from "@phosphor-icons/react";
 import TableComponent from "@/app/utils/table/table";
 import WellbeingExecutiveRight from "../../components/WellbeingExecutiveRight";
+import { useUser } from "@/app/utils/context/UserContext";
+import { supabase } from "@/lib/supabaseClient";
+import { fetchWellbeingExecutiveNewIssueCounts } from "@/lib/helpers/wellbeingSupportIssues/wellbeingSupportIssueAPI";
+import type { WellbeingExecutiveNewIssueCounts } from "@/lib/helpers/wellbeingSupportIssues/types";
 
 type IssueView = "all" | "my" | "urgent";
 type IssueStatus = "Pending" | "Resolved";
@@ -19,7 +23,7 @@ type ExecutiveIssue = {
   title: string;
   description: string;
   category: string;
-  priority: "Urgent" | "High" | "Medium";
+  priority: "Urgent" | "High" | "Medium" | "Low";
   status: IssueStatus;
   time: string;
   dateReported: string;
@@ -30,131 +34,98 @@ type ExecutiveIssue = {
   attachments: { name: string; size: string }[];
 };
 
-const tabs: { key: IssueView; label: string; count: number }[] = [
-  { key: "all", label: "All Issues", count: 120 },
-  { key: "my", label: "My Issues", count: 12 },
-  { key: "urgent", label: "Urgent", count: 18 },
+const tabs: { key: IssueView; label: string }[] = [
+  { key: "all", label: "All Issues" },
+  { key: "my", label: "My Issues" },
+  { key: "urgent", label: "Urgent" },
 ];
 
-const issues: ExecutiveIssue[] = [
-  {
-    id: "WE-28939",
-    student: "Shreya Patel",
-    meta: "B.Tech CSE  |  ID-28939",
-    image: "/female-student.png",
-    title: "Projector not working in CR-2",
-    description: "The project has not been working since morning.",
-    category: "Infrastructure",
-    priority: "Urgent",
-    status: "Resolved",
-    time: "10:45 AM",
-    dateReported: "25/03/2025",
-    block: "A",
-    room: "A-206",
-    evidence: "projector-evidence.pdf",
-    assignedToMe: true,
-    attachments: [
-      { name: "Project_error.jpg", size: "60 KB" },
-      { name: "Project_error.jpg2", size: "60 KB" },
-    ],
-  },
-  {
-    id: "WE-28940",
-    student: "Shreya Patel",
-    meta: "B.Tech CSE  |  ID-28939",
-    image: "/student-m.png",
-    title: "WiFi not working",
-    description: "Internet connectivity is very poor or unavailable.",
-    category: "Infrastructure",
-    priority: "Urgent",
-    status: "Pending",
-    time: "10:45 AM",
-    dateReported: "25/03/2025",
-    block: "B",
-    room: "A-205",
-    evidence: "wifi-evidence.pdf",
-    assignedToMe: true,
-    attachments: [
-      { name: "Project_error.jpg", size: "60 KB" },
-      { name: "Project_error.jpg2", size: "60 KB" },
-    ],
-  },
-  {
-    id: "WE-28941",
-    student: "Rahul Sharma",
-    meta: "B.Tech CSE  |  ID-28939",
-    image: "/rahul.png",
-    title: "Noise disturbance at night",
-    description: "Students in nearby classes are making noise.",
-    category: "Infrastructure",
-    priority: "High",
-    status: "Pending",
-    time: "10:45 AM",
-    dateReported: "25/03/2025",
-    block: "A",
-    room: "A-203",
-    evidence: "noise-evidence.pdf",
-    assignedToMe: true,
-    attachments: [
-      { name: "Project_error.jpg", size: "60 KB" },
-      { name: "Project_error.jpg2", size: "60 KB" },
-    ],
-  },
-  {
-    id: "WE-28942",
-    student: "Sameer Rathod",
-    meta: "B.Tech CSE  |  ID-28939",
+const defaultIssueCounts: WellbeingExecutiveNewIssueCounts = {
+  all: 0,
+  my: 0,
+  urgent: 0,
+};
+
+type ExecutiveIssueRow = {
+  wellbeingSupportIssueId: number;
+  fullName: string;
+  email: string;
+  issueTitle: string;
+  categoryId: number;
+  appliesTo: IssueScope | "both";
+  priority: "high" | "medium" | "low";
+  description: string;
+  IssueStatus: "pending" | "resolved" | "rejected";
+  createdAt: string | null;
+  wellbeing_categories:
+    | { categoryName?: string | null }
+    | { categoryName?: string | null }[]
+    | null;
+  wellbeing_support_issue_attachments:
+    | {
+        wellbeingSupportIssueAttachmentId: number;
+        attachment: string;
+        is_deleted: boolean | null;
+        deletedAt: string | null;
+      }[]
+    | null;
+};
+
+function formatIssueDate(date: string | null) {
+  if (!date) return "";
+  return new Date(date).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+function getAttachmentName(path: string) {
+  const fileName = path.split("/").pop() || path;
+  return fileName.replace(/^\d+_\d+_/, "");
+}
+
+function toExecutiveIssue(row: ExecutiveIssueRow): ExecutiveIssue {
+  const categoryRelation = row.wellbeing_categories;
+  const categoryName = Array.isArray(categoryRelation)
+    ? categoryRelation[0]?.categoryName
+    : categoryRelation?.categoryName;
+  const attachments = (row.wellbeing_support_issue_attachments ?? [])
+    .filter((attachment) => !attachment.is_deleted && !attachment.deletedAt)
+    .map((attachment) => ({
+      name: getAttachmentName(attachment.attachment),
+      size: "File",
+    }));
+
+  return {
+    id: `WE-${row.wellbeingSupportIssueId}`,
+    student: row.fullName,
+    meta: row.email,
     image: "/male-student.png",
-    title: "Ground maintenance required",
-    description: "Football field has uneven surface.",
-    category: "Sports",
-    priority: "Medium",
-    status: "Pending",
-    time: "10:45 AM",
-    dateReported: "25/03/2025",
-    block: "C",
-    room: "B-118",
-    evidence: "ground-evidence.pdf",
-    assignedToMe: false,
-    attachments: [],
-  },
-  {
-    id: "WE-28943",
-    student: "Shreya Patel",
-    meta: "B.Tech CSE  |  ID-28939",
-    image: "/female-fe.png",
-    title: "Ground maintenance required",
-    description: "Football field has uneven surface.",
-    category: "Sports",
-    priority: "Medium",
-    status: "Pending",
-    time: "10:45 AM",
-    dateReported: "25/03/2025",
-    block: "A",
-    room: "C-310",
-    evidence: "ground-evidence.pdf",
-    assignedToMe: false,
-    attachments: [],
-  },
-  {
-    id: "WE-28944",
-    student: "Shreya Patel",
-    meta: "B.Tech CSE  |  ID-28939",
-    image: "/student-m.png",
-    title: "Ground maintenance required",
-    description: "Football field has uneven surface.",
-    category: "Sports",
-    priority: "Urgent",
-    status: "Pending",
-    time: "10:45 AM",
-    dateReported: "25/03/2025",
-    block: "B",
-    room: "A-210",
-    evidence: "ground-evidence.pdf",
-    assignedToMe: false,
-    attachments: [],
-  },
-];
+    title: row.issueTitle,
+    description: row.description,
+    category: categoryName || "Not specified",
+    priority:
+      row.priority === "high"
+        ? "Urgent"
+        : row.priority === "low"
+          ? "Low"
+          : "Medium",
+    status: row.IssueStatus === "resolved" ? "Resolved" : "Pending",
+    time: row.createdAt
+      ? new Date(row.createdAt).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "",
+    dateReported: formatIssueDate(row.createdAt),
+    block: "-",
+    room: "-",
+    evidence: attachments[0]?.name ?? "No attachment",
+    assignedToMe: true,
+    attachments,
+  };
+}
 
 function getView(value: string | null): IssueView {
   return value === "my" || value === "urgent" ? value : "all";
@@ -212,17 +183,25 @@ function IssuesHeader({
   onChange,
   selectedScope,
   onScopeChange,
+  counts,
+  categoryName,
 }: {
   activeView: IssueView;
   onChange: (view: IssueView) => void;
   selectedScope: IssueScope;
   onScopeChange: (scope: IssueScope) => void;
+  counts: WellbeingExecutiveNewIssueCounts;
+  categoryName?: string | null;
 }) {
   return (
     <div className="flex shrink-0 flex-col gap-3">
       <div>
         <h1 className="text-[18px] font-bold text-[#282828]">
-          {activeView === "all" ? "Infrastructure Issues" : "Issues"}
+          {activeView === "my" && categoryName?.trim()
+            ? `${categoryName.trim()} Issues`
+            : activeView === "urgent"
+              ? "Urgent Issues"
+              : "All Issues"}
         </h1>
         <p className="mt-1 text-[13px] font-medium text-[#282828]">
           Manage and resolve student issues efficiently
@@ -239,7 +218,7 @@ function IssuesHeader({
                   }`}
               >
                 {tab.label}
-                <CountBadge count={tab.count} />
+                <CountBadge count={counts[tab.key]} />
               </button>
             </div>
           ))}
@@ -591,18 +570,20 @@ function IssuesContent({
   activeView,
   loading,
   selectedScope,
+  rows,
 }: {
   activeView: IssueView;
   loading: boolean;
   selectedScope: IssueScope;
+  rows: ExecutiveIssue[];
 }) {
   const urgentIssues = useMemo(
-    () => issues.filter((issue) => issue.priority === "Urgent"),
-    [],
+    () => rows.filter((issue) => issue.priority === "Urgent"),
+    [rows],
   );
   const myIssues = useMemo(
-    () => issues.filter((issue) => issue.assignedToMe),
-    [],
+    () => rows.filter((issue) => issue.assignedToMe),
+    [rows],
   );
 
   if (loading) {
@@ -646,7 +627,7 @@ function IssuesContent({
       description={`Latest reported complaints across ${
         selectedScope === "college" ? "College" : "Hostel"
       }`}
-      rows={issues}
+      rows={rows}
       scope={selectedScope}
     />
   );
@@ -655,15 +636,131 @@ function IssuesContent({
 function NewIssuesBody() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { collegeId, wellBeingCategoryId, wellBeingCategoryName } = useUser();
   const [activeView, setActiveView] = useState<IssueView>(() =>
     getView(searchParams.get("issueView")),
   );
   const [selectedScope, setSelectedScope] = useState<IssueScope>("college");
   const [loadingView, setLoadingView] = useState(true);
+  const [issueRows, setIssueRows] = useState<ExecutiveIssue[]>([]);
+  const [counts, setCounts] =
+    useState<WellbeingExecutiveNewIssueCounts>(defaultIssueCounts);
+
+  const loadCounts = useMemo(
+    () => async () => {
+      if (!collegeId) return;
+
+      try {
+        const nextCounts = await fetchWellbeingExecutiveNewIssueCounts(
+          collegeId,
+          wellBeingCategoryId,
+        );
+        setCounts(nextCounts);
+      } catch {
+        setCounts(defaultIssueCounts);
+      }
+    },
+    [collegeId, wellBeingCategoryId],
+  );
+
+  const loadIssues = useMemo(
+    () => async () => {
+      if (!collegeId) return;
+
+      try {
+        let query = supabase
+          .from("wellbeing_support_issues")
+          .select(
+            `
+            wellbeingSupportIssueId,
+            fullName,
+            email,
+            issueTitle,
+            categoryId,
+            appliesTo,
+            priority,
+            description,
+            IssueStatus,
+            createdAt,
+            wellbeing_categories (
+              categoryName
+            ),
+            wellbeing_support_issue_attachments (
+              wellbeingSupportIssueAttachmentId,
+              attachment,
+              is_deleted,
+              deletedAt
+            )
+          `,
+          )
+          .eq("collegeId", collegeId)
+          .eq("IssueStatus", "pending")
+          .eq("isActive", true)
+          .eq("is_deleted", false)
+          .in("issueVisibilityRole", ["wellbeingexecutive", "both"])
+          .in("appliesTo", [selectedScope, "both"])
+          .order("createdAt", { ascending: false });
+
+        if (
+          activeView === "my" &&
+          wellBeingCategoryId !== undefined &&
+          wellBeingCategoryId !== null
+        ) {
+          query = query.eq("categoryId", wellBeingCategoryId);
+        }
+
+        if (activeView === "urgent") {
+          query = query.eq("priority", "high");
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        setIssueRows(((data ?? []) as ExecutiveIssueRow[]).map(toExecutiveIssue));
+      } catch (error) {
+        console.error("load wellbeing executive issues error:", error);
+        setIssueRows([]);
+      }
+    },
+    [activeView, collegeId, selectedScope, wellBeingCategoryId],
+  );
 
   useEffect(() => {
     setActiveView(getView(searchParams.get("issueView")));
   }, [searchParams]);
+
+  useEffect(() => {
+    loadCounts();
+  }, [loadCounts]);
+
+  useEffect(() => {
+    loadIssues();
+  }, [loadIssues]);
+
+  useEffect(() => {
+    if (!collegeId) return;
+
+    const channel = supabase
+      .channel(`wellbeing_executive_new_issues_page_${collegeId}_${wellBeingCategoryId ?? "all"}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "wellbeing_support_issues",
+          filter: `collegeId=eq.${collegeId}`,
+        },
+        () => {
+          loadCounts();
+          loadIssues();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [collegeId, loadCounts, loadIssues, wellBeingCategoryId]);
 
   const handleViewChange = (view: IssueView) => {
     if (view === activeView) return;
@@ -686,6 +783,8 @@ function NewIssuesBody() {
           activeView={activeView}
           onChange={handleViewChange}
           selectedScope={selectedScope}
+          counts={counts}
+          categoryName={wellBeingCategoryName}
           onScopeChange={(scope) => {
             setSelectedScope(scope);
             setLoadingView(true);
@@ -695,6 +794,7 @@ function NewIssuesBody() {
           activeView={activeView}
           loading={loadingView}
           selectedScope={selectedScope}
+          rows={issueRows}
         />
       </section>
       <WellbeingExecutiveRight bounded />
