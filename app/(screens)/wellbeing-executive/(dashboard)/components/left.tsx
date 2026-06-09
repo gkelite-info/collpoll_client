@@ -73,10 +73,11 @@ function DatePill({ label }: { label: string }) {
 }
 
 function WelcomePanel() {
-  const { fullName, gender, loading } = useUser();
+  const { fullName, gender, loading, wellBeingCategoryName } = useUser();
   const displayName = fullName || "Navegam";
   const avatarImage = gender === "Female" ? "/w-e-f.png" : "/w-e-m.png";
   const bgBanner = "/dashboard-banner-bg.png";
+  const categoryLabel = wellBeingCategoryName?.trim();
 
   return (
     <div
@@ -94,6 +95,11 @@ function WelcomePanel() {
             <span className="text-lg font-bold leading-tight text-[#19A65F]">
               {loading ? "Executive" : displayName}
             </span>
+            {!loading && categoryLabel ? (
+              <span className="ml-2 align-baseline text-[15px] font-bold leading-tight text-[#16284F]">
+                ({categoryLabel})
+              </span>
+            ) : null}
           </h1>
           <p className="mt-3 max-w-lg text-[12px] font-semibold leading-5 text-[#111827]">
             Track and manage issues effectively. Your primary responsibility is

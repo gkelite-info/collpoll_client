@@ -1,12 +1,22 @@
-import { FilePdf, ListDashes } from "@phosphor-icons/react";
-import { WellbeingIssue } from "../data";
+import { ListDashes, PencilSimple, Trash } from "@phosphor-icons/react";
 import Image from "next/image";
+import type { StudentWellbeingIssueListItem } from "@/lib/helpers/wellbeingSupportIssues/types";
 
 interface IssueCardProps {
-  issue: WellbeingIssue;
+  issue: StudentWellbeingIssueListItem;
+  showActions?: boolean;
+  onEdit?: (issue: StudentWellbeingIssueListItem) => void;
+  onDelete?: (issue: StudentWellbeingIssueListItem) => void;
 }
 
-export default function IssueCard({ issue }: IssueCardProps) {
+export default function IssueCard({
+  issue,
+  showActions = false,
+  onEdit,
+  onDelete,
+}: IssueCardProps) {
+  const canShowActions = showActions && issue.canModify;
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Resolved":
@@ -48,6 +58,26 @@ export default function IssueCard({ issue }: IssueCardProps) {
           <span className="text-sm font-semibold text-gray-600">
             Date Reported : {issue.dateReported}
           </span>
+          {canShowActions && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => onEdit?.(issue)}
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white text-[#16284F] shadow-sm transition-colors hover:bg-[#16284F] hover:text-white"
+                title="Edit issue"
+              >
+                <PencilSimple size={16} weight="bold" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onDelete?.(issue)}
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white text-[#EF4444] shadow-sm transition-colors hover:bg-[#EF4444] hover:text-white"
+                title="Delete issue"
+              >
+                <Trash size={16} weight="bold" />
+              </button>
+            </div>
+          )}
           <span
             className={`px-3 py-1 rounded-sm text-xs font-bold ${getStatusColor(
               issue.status

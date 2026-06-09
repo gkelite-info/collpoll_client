@@ -1,14 +1,9 @@
 import { Suspense } from "react";
-import WellbeingContent from "./components/WellbeingContent";
-import { Loader } from "../calendar/right/timetable";
+import WellbeingContent, { WellbeingPageShimmer } from "./components/WellbeingContent";
 
 export default function WellbeingPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center py-10">
-        <Loader />
-      </div>
-    }>
+    <Suspense fallback={<WellbeingPageShimmer />}>
       <WellbeingContent />
     </Suspense>
   );

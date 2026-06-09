@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useCallback, useMemo, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarCheck,
   CalendarDots,
@@ -22,6 +22,9 @@ import Link from "next/link";
 import ConfirmLogoutModal from "../modals/logoutModal";
 import { logoutUser } from "@/lib/helpers/logoutUser";
 import toast from "react-hot-toast";
+import { useUser } from "@/app/utils/context/UserContext";
+import { supabase } from "@/lib/supabaseClient";
+import { fetchWellbeingExecutiveNewIssueCounts } from "@/lib/helpers/wellbeingSupportIssues/wellbeingSupportIssueAPI";
 
 type NavItem = {
   icon: (isActive: boolean) => ReactNode;
@@ -50,6 +53,50 @@ export default function WellbeingExecutiveNavbar({
   const iconSize = 18;
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { collegeId, wellBeingCategoryId } = useUser();
+  const [newIssuesCount, setNewIssuesCount] = useState(0);
+
+  const loadNewIssueCount = useCallback(async () => {
+    if (!collegeId) return;
+
+    try {
+      const counts = await fetchWellbeingExecutiveNewIssueCounts(
+        collegeId,
+        wellBeingCategoryId,
+      );
+      setNewIssuesCount(counts.my);
+    } catch {
+      setNewIssuesCount(0);
+    }
+  }, [collegeId, wellBeingCategoryId]);
+
+  useEffect(() => {
+    loadNewIssueCount();
+  }, [loadNewIssueCount]);
+
+  useEffect(() => {
+    if (!collegeId) return;
+
+    const channel = supabase
+      .channel(`wellbeing_executive_new_issues_nav_${collegeId}_${wellBeingCategoryId ?? "all"}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "wellbeing_support_issues",
+          filter: `collegeId=eq.${collegeId}`,
+        },
+        () => {
+          loadNewIssueCount();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [collegeId, loadNewIssueCount, wellBeingCategoryId]);
 
   const items: NavItem[] = useMemo(() => {
     const navItems: NavItem[] = [
@@ -66,7 +113,7 @@ export default function WellbeingExecutiveNavbar({
         ),
         label: "New Issues",
         path: `${base}/new-issues`,
-        badge: "12",
+        badge: String(newIssuesCount),
       },
       {
         icon: (isActive) => (
@@ -148,7 +195,7 @@ export default function WellbeingExecutiveNavbar({
     ];
 
     return navItems.filter((item) => !item.hidden);
-  }, [base, showLeaveRequest]);
+  }, [base, newIssuesCount, showLeaveRequest]);
 
   const prefetchRoute = useCallback(
     (path: string) => {
