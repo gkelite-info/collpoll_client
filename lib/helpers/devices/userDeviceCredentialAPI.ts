@@ -66,9 +66,22 @@ export const getUserDeviceCredentials = async (
 
     if (filters?.search?.trim()) {
       const s = filters.search.trim();
-      query = query.or(
-        `credentialIdentifier.ilike.%${s}%,user.fullName.ilike.%${s}%,user.email.ilike.%${s}%`,
-      );
+      
+      // Workaround for cross-table OR search in Supabase
+      const { data: matchedUsers } = await supabase
+        .from("users")
+        .select("userId")
+        .eq("collegeId", collegeId)
+        .or(`fullName.ilike.%${s}%,email.ilike.%${s}%`)
+        .limit(200);
+
+      const userIds = matchedUsers?.map((u) => u.userId) || [];
+
+      if (userIds.length > 0) {
+        query = query.or(`credentialIdentifier.ilike.%${s}%,userId.in.(${userIds.join(",")})`);
+      } else {
+        query = query.or(`credentialIdentifier.ilike.%${s}%`);
+      }
     }
 
     const { data, error, count } = await query

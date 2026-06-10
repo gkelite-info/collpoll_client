@@ -159,7 +159,7 @@ export default function CredentialsTab() {
     try {
       setIsDeleting(true);
 
-      // Also delete from device if possible (non-fatal)
+      // Ensure device deletion succeeds before removing from database
       try {
         const deviceRes = await getBiometricDevices(collegeId!, 1, 1);
         if (deviceRes.data.length > 0) {
@@ -176,8 +176,13 @@ export default function CredentialsTab() {
             );
           }
         }
-      } catch {
-        /* device deletion failure is non-fatal */
+      } catch (deviceError: any) {
+        let errorMsg = deviceError.message || "Unknown error";
+        if (errorMsg.split(" ").length <= 2) {
+          errorMsg = `Device rejected request (${errorMsg})`;
+        }
+        toast.error(`Scanner Sync Error: Unable to remove credential from device. ${errorMsg}`);
+        return;
       }
 
       const res = await deleteUserCredential(deleteCredentialId);

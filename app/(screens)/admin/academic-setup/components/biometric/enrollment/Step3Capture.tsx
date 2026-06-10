@@ -19,6 +19,7 @@ import {
   registerFaceBase64OnDevice,
   captureFingerprint,
   registerFingerprintOnDevice,
+  captureCard,
 } from "@/lib/helpers/devices/hikvisionAPI";
 import { UserSearchResult, EnrollCredType } from "./types";
 
@@ -82,11 +83,45 @@ export default function Step3Capture({
   const [cardNumber, setCardNumber] = useState("");
   const [fingerIndex, setFingerIndex] = useState(1);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isCapturingCard, setIsCapturingCard] = useState(false);
   const [capturedData, setCapturedData] = useState<string>("");
+
+  const handleCaptureCard = async () => {
+    if (!captureDevice) {
+      toast.error("Please select a capture device first.");
+      return;
+    }
+    setIsCapturingCard(true);
+    setCardNumber(""); // Clear previous input
+    
+    try {
+      const res = await captureCard(captureDevice.deviceId);
+      // Hikvision response logic
+      const cardNo = res?.CardInfo?.cardNo || res?.CardInfoSearch?.CardInfo?.[0]?.cardNo || res?.cardNo;
+      
+      if (cardNo) {
+        setCardNumber(String(cardNo));
+        toast.success("Card read successfully!");
+      } else {
+        toast.error("No card detected. Please try tapping the card again.");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to read card. Please check the device connection.");
+    } finally {
+      setIsCapturingCard(false);
+    }
+  };
 
   const handleFaceImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!["image/jpeg", "image/png"].includes(file.type)) {
+      toast.error("Please upload only JPG or PNG images.");
+      e.target.value = "";
+      return;
+    }
+
     setFaceImage(file);
     const reader = new FileReader();
     reader.onload = () => setFacePreview(reader.result as string);
@@ -159,7 +194,7 @@ export default function Step3Capture({
           userId: selectedUser.userId,
           collegeId,
           credentialType: "FaceTemplate",
-          credentialIdentifier: `FACE-${selectedUser.userId}`,
+          credentialIdentifier: `FACE-${selectedUser.userId}-${Date.now()}`,
           enrolledBy: adminId,
         });
 
@@ -194,8 +229,8 @@ export default function Step3Capture({
     const cardVal = cardNumber.trim();
     if (!selectedUser || selectedDevices.length === 0 || !cardVal) return;
 
-    if (!/^[a-zA-Z0-9]{10,20}$/.test(cardVal)) {
-      toast.error("Invalid card format. Please enter between 10 and 20 alphanumeric characters.");
+    if (!/^[A-Za-z0-9]+$/.test(cardVal)) {
+      toast.error("Invalid card format. Please use only alphanumeric characters.");
       return;
     }
 
@@ -520,19 +555,96 @@ export default function Step3Capture({
 
       {enrollCredType === "Card" && (
         <div className="space-y-4">
+          <div className="space-y-1 bg-gray-50 border border-gray-100 p-3 rounded-lg" ref={captureDropdownRef}>
+            <label className="text-xs font-semibold text-gray-500 block mb-1">
+              Capture Device (Select device to read card from):
+            </label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsCaptureDropdownOpen(!isCaptureDropdownOpen)}
+                className={`w-full border ${
+                  isCaptureDropdownOpen ? "border-[#43C17A] ring-1 ring-[#43C17A]" : "border-gray-300"
+                } rounded-lg px-2.5 py-2 pr-8 outline-none text-xs font-semibold text-[#2D3748] bg-white cursor-pointer flex justify-between items-center text-left transition-all min-h-[36px] relative`}
+              >
+                <span className="truncate">
+                  {captureDevice 
+                    ? `${captureDevice.deviceName} (${captureDevice.isOnline ? "Online" : "Offline"})`
+                    : "Select a device"}
+                </span>
+                <CaretDown
+                  size={14}
+                  className="absolute right-2.5 top-1/2 text-gray-400 pointer-events-none transition-transform duration-200"
+                  style={{
+                    transform: `translateY(-50%) ${isCaptureDropdownOpen ? "rotate(180deg)" : "rotate(0deg)"}`,
+                  }}
+                />
+              </button>
+
+              {isCaptureDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 max-h-48 overflow-y-auto">
+                  {selectedDevices.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-gray-500 text-center">
+                      No devices selected for enrollment
+                    </div>
+                  ) : (
+                    selectedDevices.map((d) => (
+                      <button
+                        key={d.deviceId}
+                        type="button"
+                        onClick={() => {
+                          setCaptureDevice(d);
+                          setIsCaptureDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-xs transition-colors border-none outline-none cursor-pointer ${
+                          captureDevice?.deviceId === d.deviceId
+                            ? "bg-[#43C17A]/10 text-[#43C17A] font-bold"
+                            : "text-[#2D3748] hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="truncate">{d.deviceName}</span>
+                          <span className="text-[10px] text-gray-400">{d.deviceIp}</span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <button
+              onClick={handleCaptureCard}
+              disabled={!captureDevice || isCapturingCard}
+              className="mt-3 w-full py-2 bg-white border-2 border-dashed border-gray-300 rounded-lg text-xs font-semibold text-gray-600 hover:border-[#43C17A] hover:text-[#43C17A] transition-colors cursor-pointer flex flex-col items-center justify-center gap-1.5 min-h-[80px]"
+            >
+              {isCapturingCard ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-[#43C17A] border-t-transparent rounded-full animate-spin" />
+                  <span className="text-[#43C17A]">Waiting for card tap on device...</span>
+                </>
+              ) : (
+                <>
+                  <IdentificationCard size={24} weight="duotone" />
+                  <span>Click here and tap card on device</span>
+                </>
+              )}
+            </button>
+          </div>
+
           <div className="space-y-1">
             <label className="text-sm font-medium text-[#16284F]">
               Card Number <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
-              placeholder="e.g. 1234567890"
+              placeholder="e.g. 1234567890 (Auto-filled by scan)"
               value={cardNumber}
               onChange={(e) => setCardNumber(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-[#43C17A] focus:ring-1 focus:ring-[#43C17A] transition-all text-[#2D3748] font-mono text-lg text-center tracking-wider font-semibold"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-[#43C17A] focus:ring-1 focus:ring-[#43C17A] transition-all text-[#2D3748] font-mono text-lg text-center tracking-wider font-semibold bg-gray-50"
             />
             <p className="text-[10px] text-gray-400">
-              Enter the number printed or encoded on the access card.
+              Card number should be scanned from the device. You can edit if needed.
             </p>
           </div>
           <button
