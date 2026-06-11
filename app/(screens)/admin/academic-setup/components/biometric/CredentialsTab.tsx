@@ -161,27 +161,34 @@ export default function CredentialsTab() {
 
       // Ensure device deletion succeeds before removing from database
       try {
-        const deviceRes = await getBiometricDevices(collegeId!, 1, 1);
-        if (deviceRes.data.length > 0) {
-          const devId = deviceRes.data[0].deviceId;
-          if (deleteCredential.credentialType === "FaceTemplate") {
-            await deleteFaceFromDevice(devId, deleteCredential.userId);
-          } else if (deleteCredential.credentialType === "Card") {
-            await deleteCardFromDevice(devId, deleteCredential.credentialIdentifier);
-          } else if (deleteCredential.credentialType === "Fingerprint") {
-            await deleteFingerprintFromDevice(
-              devId,
-              deleteCredential.userId,
-              [deleteCredential.fingerIndex ?? 1],
-            );
-          }
+        const deviceRes = await getBiometricDevices(collegeId!, 1, 50);
+        const activeDevices = deviceRes.data.filter(d => d.isActive);
+        
+        if (activeDevices.length > 0) {
+          await Promise.all(
+            activeDevices.map(async (device) => {
+              try {
+                if (deleteCredential.credentialType === "FaceTemplate") {
+                  await deleteFaceFromDevice(device.deviceId, deleteCredential.userId);
+                } else if (deleteCredential.credentialType === "Card") {
+                  await deleteCardFromDevice(device.deviceId, deleteCredential.credentialIdentifier);
+                } else if (deleteCredential.credentialType === "Fingerprint") {
+                  await deleteFingerprintFromDevice(
+                    device.deviceId,
+                    deleteCredential.userId,
+                    [deleteCredential.fingerIndex ?? 1],
+                  );
+                }
+              } catch (e: any) {
+                console.warn(`Failed to delete from device ${device.deviceId}`, e);
+                // We let it throw to prevent DB deletion if the physical deletion failed on any active device
+                throw new Error(e.message || "Device rejected deletion");
+              }
+            })
+          );
         }
       } catch (deviceError: any) {
-        let errorMsg = deviceError.message || "Unknown error";
-        if (errorMsg.split(" ").length <= 2) {
-          errorMsg = `Device rejected request (${errorMsg})`;
-        }
-        toast.error(`Scanner Sync Error: Unable to remove credential from device. ${errorMsg}`);
+        toast.error(deviceError?.message || "Failed to remove credential from the scanner. Please make sure the device is online before deleting.");
         return;
       }
 
@@ -311,24 +318,19 @@ export default function CredentialsTab() {
     ),
     enrolledAt: (
       <span className="text-xs text-gray-500">
-        {c.enrolledAt
-          ? new Date(c.enrolledAt).toLocaleDateString("en-IN", {
+        {c.updatedAt || c.createdAt
+          ? new Date(c.updatedAt || c.createdAt).toLocaleDateString("en-IN", {
               day: "2-digit",
               month: "short",
               year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
             })
           : "—"}
       </span>
     ),
     actions: (
-      <div className="flex items-center justify-center gap-2 w-full">
-        <button
-          onClick={() => handleEditClick(c)}
-          className="text-blue-500 flex items-center justify-center bg-blue-50 w-8 h-8 rounded-full cursor-pointer hover:bg-blue-100 transition-colors"
-          title="Edit"
-        >
-          <PencilSimple size={15} weight="fill" />
-        </button>
+      <div className="flex items-center justify-center w-full">
         <button
           onClick={() => handleDeleteClick(c)}
           className="text-red-500 flex items-center justify-center bg-red-50 w-8 h-8 rounded-full cursor-pointer hover:bg-red-100 transition-colors"

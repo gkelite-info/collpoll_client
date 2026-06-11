@@ -17,6 +17,7 @@ export interface UserCredentialPayload {
   fingerIndex?: number | null;
   isActive?: boolean;
   enrolledBy: number;
+  imageUrl?: string | null;
 }
 
 export interface UserCredentialRow {
@@ -30,6 +31,8 @@ export interface UserCredentialRow {
   enrolledBy: number;
   enrolledAt: string;
   createdAt: string;
+  updatedAt?: string;
+  imageUrl: string | null;
   // Joined
   user?: { fullName: string; email: string; role: string } | null;
 }
@@ -48,7 +51,7 @@ export const getUserDeviceCredentials = async (
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    let selectStr = "userDeviceCredentialId, userId, collegeId, credentialType, credentialIdentifier, fingerIndex, isActive, enrolledBy, enrolledAt, createdAt";
+    let selectStr = "userDeviceCredentialId, userId, collegeId, credentialType, credentialIdentifier, fingerIndex, isActive, enrolledBy, enrolledAt, createdAt, updatedAt, imageUrl";
     if (filters?.search?.trim()) {
       selectStr += ",user:users!inner(fullName, email, role)";
     } else {
@@ -116,7 +119,7 @@ export const getCredentialsForUser = async (userId: number, collegeId: number) =
   try {
     const { data, error } = await supabase
       .from("user_device_credentials")
-      .select("*")
+      .select("*, updatedAt")
       .eq("userId", userId)
       .eq("collegeId", collegeId)
       .is("deletedAt", null)
@@ -157,21 +160,41 @@ export const upsertUserCredential = async (payload: UserCredentialPayload) => {
       credentialIdentifier: rest.credentialIdentifier.trim(),
       fingerIndex: rest.credentialType === "Fingerprint" ? rest.fingerIndex ?? null : null,
       isActive: rest.isActive ?? true,
+      imageUrl: rest.imageUrl ?? null,
       updatedAt: now,
     };
 
-    // Uniqueness: userId + credentialType + credentialIdentifier
+    // Uniqueness: userId + credentialType + credentialIdentifier (include soft-deleted)
     let uq = supabase
       .from("user_device_credentials")
-      .select("userDeviceCredentialId")
+      .select("userDeviceCredentialId, deletedAt")
       .eq("userId", base.userId)
       .eq("credentialType", base.credentialType)
-      .eq("credentialIdentifier", base.credentialIdentifier)
-      .is("deletedAt", null);
-    if (userDeviceCredentialId) uq = uq.neq("userDeviceCredentialId", userDeviceCredentialId);
-    const { data: dup } = await uq;
-    if (dup && dup.length > 0)
-      return { success: false as const, error: "This credential already exists for the user." };
+      .eq("credentialIdentifier", base.credentialIdentifier);
+      
+    if (userDeviceCredentialId) {
+      uq = uq.neq("userDeviceCredentialId", userDeviceCredentialId);
+    }
+    
+    const { data: existingRecords } = await uq;
+    const existing = existingRecords?.[0];
+
+    if (existing) {
+      if (!existing.deletedAt) {
+        // It's actively in use
+        return { success: false as const, error: "This credential already exists for the user." };
+      } else {
+        // It was soft-deleted. Restore it!
+        const { data, error } = await supabase
+          .from("user_device_credentials")
+          .update({ ...base, deletedAt: null })
+          .eq("userDeviceCredentialId", existing.userDeviceCredentialId)
+          .select()
+          .single();
+        if (error) throw error;
+        return { success: true as const, data };
+      }
+    }
 
     if (userDeviceCredentialId) {
       const { data, error } = await supabase
@@ -235,5 +258,39 @@ export const searchUsersForEnrollment = async (collegeId: number, search: string
     return { success: true as const, data: data ?? [] };
   } catch (e) {
     return { success: false as const, data: [], error: err(e) };
+  }
+};
+
+/* ------------------------------------------------------------------ */
+/*  UPLOAD IMAGE                                                        */
+/* ------------------------------------------------------------------ */
+
+export const uploadFaceCredentialImage = async (userId: number, file: File): Promise<{ success: boolean; imageUrl?: string; error?: string }> => {
+  try {
+    const fileExtension = file.name.split(".").pop()?.toLowerCase() || (file.type === "image/png" ? "png" : "jpg");
+    const fileName = `FACE_${userId}_${Date.now()}.${fileExtension}`;
+    const { data, error } = await supabase.storage
+      .from("user_biometric_face_credentials")
+      .upload(fileName, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+    if (error) {
+      console.error("Storage upload error:", error);
+      return { success: false, error: "Failed to save image to cloud storage." };
+    }
+
+    if (data) {
+      const { data: publicUrlData } = supabase.storage
+        .from("user_biometric_face_credentials")
+        .getPublicUrl(data.path);
+      return { success: true, imageUrl: publicUrlData.publicUrl };
+    }
+    
+    return { success: false, error: "Unknown error during upload" };
+  } catch (e) {
+    console.error("Storage error:", e);
+    return { success: false, error: err(e) };
   }
 };
