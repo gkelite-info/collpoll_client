@@ -172,6 +172,11 @@ export const deleteUserFromDevice = async (deviceId: number, userId: number) => 
 /*  Face                                                               */
 /* ------------------------------------------------------------------ */
 
+/** Get a valid UUID for the FaceDataRecord devIndex request parameter */
+export const getDeviceFaceLibIndex = async (): Promise<string> => {
+  return crypto.randomUUID().toUpperCase();
+};
+
 /** Register a face template on a device (image upload) */
 export const registerFaceOnDevice = async (
   deviceId: number,
@@ -179,20 +184,43 @@ export const registerFaceOnDevice = async (
   imageFile: File,
 ) => {
   const fd = new FormData();
-  // Hikvision ISAPI expects JSON metadata + image in multipart
   fd.append(
-    "FaceDataRecord",
-    JSON.stringify({ faceLibType: "blackFD", FDID: "1", FPID: String(userId) }),
+    "data",
+    JSON.stringify({
+      faceLibType: "blackFD",
+      FDID: "1",
+      FPID: String(userId),
+      FaceInfo: {
+        employeeNo: String(userId),
+      },
+    })
   );
-  fd.append("img", imageFile);
+  fd.append("FaceDataRecord", imageFile);
 
-  // Alternative simpler endpoint many Hikvision models support:
-  return callDeviceProxy({
-    deviceId,
-    endpoint: `AccessControl/FaceInfo/Record?format=json`,
-    formData: fd,
-    body: { FaceInfo: { employeeNo: String(userId) } },
-  });
+  try {
+    return await callDeviceProxy({
+      deviceId,
+      endpoint: "Intelligent/FDLib/FaceDataRecord?format=json",
+      formData: fd,
+    });
+  } catch (e: any) {
+    if (e?.subStatusCode === "faceLibraryIDError" || e?.subStatusCode === "employeeNoAlreadyExist" || e?.subStatusCode === "deviceUserAlreadyExistFace") {
+      throw new Error("Face data is already registered for this user on the device, or the face limit is reached.");
+    } else if (e?.subStatusCode === "faceNoFace") {
+      throw new Error("No face was detected in the provided image. Please use a clearer photo.");
+    } else if (e?.subStatusCode === "facePoorQuality") {
+      throw new Error("The face image quality is too low or blurry. Please upload a high-quality photo.");
+    } else if (e?.subStatusCode === "badJsonContent") {
+      throw new Error("The device rejected the payload format. Firmware might be incompatible.");
+    }
+    
+    // Provide a generic user-friendly fallback if the error message is too technical
+    if (e?.message && (e.message.includes("proxy error") || e.message.includes("face"))) {
+      throw e;
+    } else {
+      throw new Error(e?.message || "Failed to register face on the device.");
+    }
+  }
 };
 
 /** Register face using base64 data (for programmatic use) */
@@ -201,80 +229,186 @@ export const registerFaceBase64OnDevice = async (
   userId: number,
   faceDataBase64: string,
 ) => {
-  let lastError: any;
+  const fd = new FormData();
+  fd.append(
+    "data",
+    JSON.stringify({
+      faceLibType: "blackFD",
+      FDID: "1",
+      FPID: String(userId),
+      FaceInfo: {
+        employeeNo: String(userId),
+      },
+    })
+  );
 
-  // Strategy 1: Intelligent FDLib Endpoint
+  // Convert base64 to File
+  const byteString = atob(faceDataBase64.includes(",") ? faceDataBase64.split(',')[1] : faceDataBase64);
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  const blob = new Blob([ab], { type: 'image/jpeg' });
+  const file = new File([blob], 'face.jpg', { type: 'image/jpeg' });
+  fd.append("FaceDataRecord", file);
+
   try {
     return await callDeviceProxy({
       deviceId,
-      endpoint: "Intelligent/FDLib/FaceDataRecord",
-      body: {
-        FaceInfo: {
-          employeeNo: String(userId),
-          faceData: faceDataBase64,
-        },
-      },
+      endpoint: "Intelligent/FDLib/FaceDataRecord?format=json",
+      formData: fd,
     });
   } catch (e: any) {
-    lastError = e;
+    if (e?.subStatusCode === "faceLibraryIDError" || e?.subStatusCode === "employeeNoAlreadyExist" || e?.subStatusCode === "deviceUserAlreadyExistFace") {
+      throw new Error("Face data is already registered for this user on the device, or the face limit is reached.");
+    } else if (e?.subStatusCode === "faceNoFace") {
+      throw new Error("No face was detected in the provided image. Please use a clearer photo.");
+    } else if (e?.subStatusCode === "facePoorQuality") {
+      throw new Error("The face image quality is too low or blurry. Please upload a high-quality photo.");
+    } else if (e?.subStatusCode === "badJsonContent") {
+      throw new Error("The device rejected the payload format. Firmware might be incompatible.");
+    }
+    
+    if (e?.message && (e.message.includes("proxy error") || e.message.includes("face"))) {
+      throw e;
+    } else {
+      throw new Error(e?.message || "Failed to register face on the device.");
+    }
   }
+};
 
-  // Strategy 2: Standard AccessControl Endpoint
+/** Fetch the dynamic true FPID of a user's face record */
+const getFacePictureId = async (deviceId: number, userId: number): Promise<string | null> => {
   try {
-    return await callDeviceProxy({
+    const res = await callDeviceProxy({
       deviceId,
-      endpoint: "AccessControl/FaceInfo/Record",
+      endpoint: "Intelligent/FDLib/FDSearch?format=json",
+      method: "POST",
       body: {
-        FaceInfo: {
-          employeeNo: String(userId),
-          faceData: faceDataBase64,
+        searchResultPosition: 0,
+        maxResults: 1,
+        faceLibType: "blackFD",
+        FDID: "1",
+        FaceInfoSearchCond: {
+          searchID: "1",
+          searchResultPosition: 0,
+          maxResults: 1,
+          EmployeeNoList: [{ employeeNo: String(userId) }],
         },
       },
     });
+    const match = res?.MatchList?.[0] || res?.FaceMatchList?.[0];
+    return match?.FPID || null;
   } catch (e: any) {
-    lastError = e;
+    // Critical: Do not swallow network errors. If device is offline, we must halt!
+    if (e?.message?.toLowerCase().includes("fetch failed") || e?.message?.toLowerCase().includes("device proxy error")) {
+      throw new Error(`Device offline or unreachable: ${e.message}`);
+    }
+    return null; // Ignore API structural errors (notSupport)
   }
-
-  throw lastError;
 };
 
 /** Delete face data from a device */
 export const deleteFaceFromDevice = async (deviceId: number, userId: number) => {
+  // Step 1: Check if face even exists
+  let fpid = await getFacePictureId(deviceId, userId);
+  if (!fpid) {
+    return { success: true };
+  }
+
   let lastError: any;
+  const devIndex = await getDeviceFaceLibIndex();
 
-  // Strategy 1: Intelligent FDLib Search Delete
-  try {
-    return await callDeviceProxy({
-      deviceId,
-      endpoint: "Intelligent/FDLib/FDSearch/Delete",
+  const strategies = [
+    // 0. Specific for DS-K1T320EFWX and newer Access Control terminals
+    {
+      endpoint: "AccessControl/DelFaceParamCfg?format=json",
+      method: "PUT",
+      body: {
+        DelFaceParamCfg: {
+          faceLibType: "blackFD",
+          employeeNo: String(userId),
+        },
+      },
+    },
+    // 1. Exact match from Hikvision API tester (devIndex in URL, EmployeeNoList in JSON)
+    {
+      endpoint: `Intelligent/FDLib/FDSearch/Delete?format=json&devIndex=${devIndex}`,
+      method: "PUT",
+      body: {
+        FaceInfoDelCond: {
+          faceLibType: "blackFD",
+          FDID: "1",
+          EmployeeNoList: [{ employeeNo: String(userId) }],
+        },
+      },
+    },
+    // 2. Fallback with FDID and faceLibType in URL
+    {
+      endpoint: "Intelligent/FDLib/FDSearch/Delete?format=json&FDID=1&faceLibType=blackFD",
       method: "PUT",
       body: {
         FaceInfoDelCond: {
           EmployeeNoList: [{ employeeNo: String(userId) }],
         },
       },
-    });
-  } catch (e: any) {
-    lastError = e;
-  }
-
-  // Strategy 2: Standard AccessControl FaceInfo Delete
-  try {
-    return await callDeviceProxy({
-      deviceId,
-      endpoint: "AccessControl/FaceInfo/Delete",
+    },
+    // 3. Fallback: FPID direct
+    {
+      endpoint: `Intelligent/FDLib/FDSearch/Delete?format=json&devIndex=${devIndex}`,
       method: "PUT",
       body: {
         FaceInfoDelCond: {
-          EmployeeNoList: [{ employeeNo: String(userId) }],
+          FPID: String(fpid),
         },
       },
-    });
-  } catch (e: any) {
-    lastError = e;
+    },
+    // 4. Direct DELETE resource method
+    {
+      endpoint: `Intelligent/FDLib/1/picture/${fpid}?format=json`,
+      method: "DELETE",
+      body: undefined,
+    }
+  ];
+
+  for (const strategy of strategies) {
+    try {
+      await callDeviceProxy({
+        deviceId,
+        endpoint: strategy.endpoint,
+        method: strategy.method as "POST" | "PUT" | "DELETE" | "GET",
+        ...(strategy.body ? { body: strategy.body } : {}),
+      });
+      // If it returned 200/OK, we are successful
+      return { success: true };
+    } catch (e: any) {
+      if (e?.message?.toLowerCase().includes("fetch failed") || e?.message?.toLowerCase().includes("device proxy error") || e?.message?.toLowerCase().includes("offline")) {
+        throw new Error(`Device offline or unreachable: ${e.message}`);
+      }
+      lastError = e;
+
+      // CRITICAL SAAS FIX: Many Hikvision firmwares successfully delete the face
+      // but STILL return a parsing error (faceLibraryIDError or badJsonContent)
+      // because of strict trailing validation bugs.
+      // We MUST verify if the face was actually deleted despite the error!
+      const verifyFpid = await getFacePictureId(deviceId, userId);
+      if (!verifyFpid) {
+        // The face is gone! The device deleted it but lied about the status code.
+        return { success: true };
+      }
+    }
   }
 
-  throw lastError;
+  const errorMsg = lastError?.subStatusCode === "faceLibraryIDError"
+    ? "Device face library ID mismatch. Please check device configuration."
+    : lastError?.subStatusCode === "notSupport" || lastError?.subStatusCode === "badJsonContent"
+      ? "Device firmware rejected face deletion format. Please check device compatibility."
+      : (lastError?.message || "Failed to remove face from device scanner.");
+
+  const err = new Error(errorMsg) as any;
+  err.subStatusCode = lastError?.subStatusCode;
+  throw err;
 };
 
 /* ------------------------------------------------------------------ */
@@ -337,7 +471,7 @@ export const captureCard = async (deviceId: number) => {
     }
 
     const endTimeStr = formatHikTime(new Date(Date.now() + 86400000)); // 1 day in future
-    
+
     for (let i = 0; i < 10; i++) {
       const res = await attemptCapture(
         "AccessControl/AcsEvent?format=json",
@@ -358,7 +492,7 @@ export const captureCard = async (deviceId: number) => {
       const events = res?.AcsEvent?.InfoList || res?.AcsEventSearch?.InfoList || [];
       // Find latest valid card swipe
       const cardEvent = events.find((ev: any) => ev.cardNo && ev.cardNo.trim() !== "" && ev.cardNo !== "0000000000");
-      
+
       if (cardEvent) {
         return { cardNo: cardEvent.cardNo };
       }
@@ -366,7 +500,7 @@ export const captureCard = async (deviceId: number) => {
       // Wait 1.5 seconds before next poll
       await new Promise((resolve) => setTimeout(resolve, 1500));
     }
-    
+
     throw new Error("No card detected. If you tapped it and the device did not beep, this card frequency is incompatible.");
   } catch (e: any) {
     lastError = e;
@@ -383,7 +517,7 @@ export const registerCardOnDevice = async (
 ) => {
   return callDeviceProxy({
     deviceId,
-    endpoint: "AccessControl/CardInfo/Record",
+    endpoint: "AccessControl/CardInfo/Record?format=json",
     body: {
       CardInfo: {
         employeeNo: String(userId),
@@ -398,7 +532,7 @@ export const registerCardOnDevice = async (
 export const deleteCardFromDevice = async (deviceId: number, cardNo: string) => {
   return callDeviceProxy({
     deviceId,
-    endpoint: "AccessControl/CardInfo/Delete",
+    endpoint: "AccessControl/CardInfo/Delete?format=json",
     method: "PUT",
     body: {
       CardInfoDelCond: {
@@ -414,10 +548,10 @@ export const deleteCardFromDevice = async (deviceId: number, cardNo: string) => 
 
 /** Capture fingerprint from device (device enters capture mode) */
 export const captureFingerprint = async (deviceId: number, fingerNo: number) => {
-  const attemptCapture = async (payload: any) => {
+  const attemptCapture = async (payload: any, isXml: boolean = false) => {
     return callDeviceProxy({
       deviceId,
-      endpoint: "AccessControl/CaptureFingerPrint",
+      endpoint: `AccessControl/CaptureFingerPrint${isXml ? '' : '?format=json'}`,
       method: "POST",
       body: payload,
     });
@@ -436,7 +570,7 @@ export const captureFingerprint = async (deviceId: number, fingerNo: number) => 
 <CaptureFingerPrintCond version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">
   <fingerNo>${fingerNo}</fingerNo>
 </CaptureFingerPrintCond>
-    `.trim());
+    `.trim(), true);
   } catch (e: any) {
     lastError = e;
     if (!isRetryable(e)) throw e;

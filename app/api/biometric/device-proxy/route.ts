@@ -36,8 +36,8 @@ async function digestFetch(
   method: string,
   username: string,
   password: string,
-  body?: string,
-  contentType = "application/json",
+  body?: BodyInit,
+  contentType?: string,
 ) {
   const { createHash } = await import("crypto");
 
@@ -65,9 +65,14 @@ async function digestFetch(
     : `Digest username="${username}", realm="${realm}", nonce="${nonce}", uri="${uri}", response="${response}"`;
 
   const headers: Record<string, string> = { Authorization: authHeader };
-  if (body) headers["Content-Type"] = contentType;
+  if (body && contentType) headers["Content-Type"] = contentType;
 
-  const finalRes = await fetch(url, { method, headers, body: body || undefined });
+  const fetchOptions: RequestInit = { method, headers };
+  if (body !== undefined) {
+    fetchOptions.body = body;
+  }
+
+  const finalRes = await fetch(url, fetchOptions);
   return finalRes;
 }
 
@@ -75,8 +80,34 @@ async function digestFetch(
 
 export async function POST(req: NextRequest) {
   try {
-    const json = await req.json();
-    const { deviceId, endpoint, method = "POST", payload } = json;
+    const reqContentType = req.headers.get("content-type") || "";
+    let deviceId: number;
+    let endpoint: string;
+    let method: string = "POST";
+    let payload: unknown = undefined;
+    let contentTypeOverride: string | undefined;
+    let isMultipart = false;
+    let formDataToForward: FormData | undefined;
+
+    if (reqContentType.includes("multipart/form-data")) {
+      isMultipart = true;
+      const formData = await req.formData();
+      deviceId = Number(formData.get("_deviceId"));
+      endpoint = formData.get("_endpoint") as string;
+      method = (formData.get("_method") as string) || "POST";
+
+      formData.delete("_deviceId");
+      formData.delete("_endpoint");
+      formData.delete("_method");
+      formDataToForward = formData;
+    } else {
+      const json = await req.json();
+      deviceId = json.deviceId;
+      endpoint = json.endpoint;
+      method = json.method || "POST";
+      payload = json.payload;
+      contentTypeOverride = json.contentType;
+    }
 
     if (!deviceId || !endpoint) {
       return NextResponse.json({ error: "deviceId and endpoint are required" }, { status: 400 });
@@ -97,13 +128,62 @@ export async function POST(req: NextRequest) {
     const password = await decryptPassword(device.devicePasswordEncrypted);
     const baseUrl = `http://${device.deviceIp}:${device.devicePort}`;
     
-    const isXml = typeof payload === "string" && payload.trim().startsWith("<");
-    const fullUrl = isXml
-      ? `${baseUrl}/ISAPI/${endpoint}`
-      : `${baseUrl}/ISAPI/${endpoint}${endpoint.includes("?") ? "&" : "?"}format=json`;
+    let bodyStringOrFormData: BodyInit | undefined;
+    let finalContentType: string | undefined;
+    
+    let fullUrl = `${baseUrl}/ISAPI/${endpoint}`;
 
-    const bodyString = isXml ? payload : (payload ? JSON.stringify(payload) : undefined);
-    const contentType = isXml ? "application/xml" : "application/json";
+    if (isMultipart && formDataToForward) {
+      const boundary = "----HikvisionMultipartBoundary" + Date.now();
+      finalContentType = `multipart/form-data; boundary=${boundary}`;
+
+      const parts: Buffer[] = [];
+      for (const [key, value] of formDataToForward.entries()) {
+        parts.push(Buffer.from(`--${boundary}\r\n`));
+        if (value instanceof Blob) {
+          const filename = (value as File).name || "image.jpg";
+          parts.push(Buffer.from(`Content-Disposition: form-data; name="${key}"; filename="${filename}"\r\n`));
+          parts.push(Buffer.from(`Content-Type: ${value.type || "image/jpeg"}\r\n\r\n`));
+          const arrayBuffer = await value.arrayBuffer();
+          parts.push(Buffer.from(arrayBuffer));
+          parts.push(Buffer.from("\r\n"));
+        } else {
+          parts.push(Buffer.from(`Content-Disposition: form-data; name="${key}"\r\n\r\n`));
+          parts.push(Buffer.from(String(value) + "\r\n"));
+        }
+      }
+      parts.push(Buffer.from(`--${boundary}--\r\n`));
+
+      const multipartBuffer = Buffer.concat(parts);
+      bodyStringOrFormData = multipartBuffer.buffer.slice(
+        multipartBuffer.byteOffset,
+        multipartBuffer.byteOffset + multipartBuffer.byteLength,
+      );
+    } else {
+      const isGetOrHead = method === "GET" || method === "HEAD";
+      const isXmlPayload = typeof payload === "string" && payload.trim().startsWith("<");
+      const isRawStringPayload = typeof payload === "string";
+
+      const hasJsonPayload =
+        payload !== null &&
+        payload !== undefined &&
+        (typeof payload !== "object" || Object.keys(payload).length > 0);
+
+      bodyStringOrFormData = isGetOrHead || !hasJsonPayload
+        ? undefined
+        : isRawStringPayload
+        ? payload as string
+        : JSON.stringify(payload);
+
+      if (!isGetOrHead) {
+        finalContentType = contentTypeOverride || (isXmlPayload ? "application/xml" : "application/json");
+      }
+      
+      // Hikvision auto-format fallback if explicitly JSON
+      if (!isXmlPayload && payload && !endpoint.includes("format=json") && !contentTypeOverride?.includes("urlencoded")) {
+        fullUrl = `${baseUrl}/ISAPI/${endpoint}${endpoint.includes("?") ? "&" : "?"}format=json`;
+      }
+    }
 
     let res: Response;
     try {
@@ -112,8 +192,8 @@ export async function POST(req: NextRequest) {
         method,
         device.deviceUsername,
         password,
-        bodyString,
-        contentType
+        bodyStringOrFormData,
+        finalContentType
       );
     } catch (fetchError) {
       // Network error, device unreachable

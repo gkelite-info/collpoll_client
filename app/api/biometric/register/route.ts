@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
 
   const username = "admin";
   const password = "7093256562@Shiva";
-  const url = "http://192.168.1.10:80/ISAPI/AccessControl/UserInfo/Record?format=json&devIndex=081D810D-D2F0-463E-8792-350ADD9A0FB6";
+  const url = "http://192.168.1.5:80/ISAPI/AccessControl/UserInfo/Record?format=json&devIndex=BA2FA273-2ABA-4D0F-9994-A995B4ED9A0B";
 
   const firstRes = await fetch(url, { method: "POST" });
   const wwwAuth = firstRes.headers.get("www-authenticate") || "";
