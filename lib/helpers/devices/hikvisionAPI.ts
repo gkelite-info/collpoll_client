@@ -311,98 +311,128 @@ const getFacePictureId = async (deviceId: number, userId: number): Promise<strin
 
 /** Delete face data from a device */
 export const deleteFaceFromDevice = async (deviceId: number, userId: number) => {
-  // Step 1: Check if face even exists
-  let fpid = await getFacePictureId(deviceId, userId);
-  if (!fpid) {
-    return { success: true };
-  }
+  const attemptDelete = async (endpoint: string, method: string, payload?: any) => {
+    return callDeviceProxy({
+      deviceId,
+      endpoint,
+      method: method as any,
+      ...(payload ? { body: payload } : {}),
+    });
+  };
 
   let lastError: any;
-  const devIndex = await getDeviceFaceLibIndex();
+  const throwOnNetworkError = (e: any) => {
+    if (e?.message?.toLowerCase().includes("fetch failed") || e?.message?.toLowerCase().includes("device proxy error") || e?.message?.toLowerCase().includes("offline")) {
+      throw new Error(`Device offline or unreachable: ${e.message}`);
+    }
+  };
 
-  const strategies = [
-    // 0. Specific for DS-K1T320EFWX and newer Access Control terminals
-    {
-      endpoint: "AccessControl/DelFaceParamCfg?format=json",
-      method: "PUT",
-      body: {
-        DelFaceParamCfg: {
-          faceLibType: "blackFD",
-          employeeNo: String(userId),
+  // Strategy 1: DS-K1T320EFWX specifically requires XML for this endpoint
+  // Logs showed JSON returned `badXmlFormat`, so we supply a raw XML payload here.
+  try {
+    const xmlPayload = `
+<DelFaceParamCfg version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">
+  <faceLibType>blackFD</faceLibType>
+  <employeeNo>${userId}</employeeNo>
+</DelFaceParamCfg>
+    `.trim();
+    return await attemptDelete(
+      "AccessControl/DelFaceParamCfg",
+      "PUT",
+      xmlPayload
+    );
+  } catch (e: any) {
+    throwOnNetworkError(e);
+    lastError = e;
+  }
+
+  // Strategy 2: Standard AccessControl FaceInfo Delete (Matches Card/Fingerprint)
+  try {
+    return await attemptDelete(
+      "AccessControl/FaceInfo/Delete?format=json",
+      "PUT",
+      {
+        FaceInfoDelCond: {
+          EmployeeNoList: [{ employeeNo: String(userId) }],
         },
-      },
-    },
-    // 1. Exact match from Hikvision API tester (devIndex in URL, EmployeeNoList in JSON)
-    {
-      endpoint: `Intelligent/FDLib/FDSearch/Delete?format=json&devIndex=${devIndex}`,
-      method: "PUT",
-      body: {
+      }
+    );
+  } catch (e: any) {
+    throwOnNetworkError(e);
+    lastError = e;
+  }
+
+  // Strategy 3: Standard AccessControl FaceData Delete
+  try {
+    return await attemptDelete(
+      "AccessControl/FaceData/Delete?format=json",
+      "PUT",
+      {
+        FaceDataDelCond: {
+          EmployeeNoList: [{ employeeNo: String(userId) }],
+        },
+      }
+    );
+  } catch (e: any) {
+    throwOnNetworkError(e);
+    lastError = e;
+  }
+
+  // Strategy 4: User's exact payload format for FDLib
+  try {
+    return await attemptDelete(
+      "Intelligent/FDLib/FDSearch/Delete?format=json",
+      "PUT",
+      {
+        FaceInfoDelCond: {
+          EmployeeNoList: [{ employeeNo: String(userId) }],
+        },
+      }
+    );
+  } catch (e: any) {
+    throwOnNetworkError(e);
+    lastError = e;
+  }
+
+  // Strategy 5: Include faceLibType and FDID (Fixes 'faceLibraryIDError')
+  try {
+    return await attemptDelete(
+      "Intelligent/FDLib/FDSearch/Delete?format=json",
+      "PUT",
+      {
         FaceInfoDelCond: {
           faceLibType: "blackFD",
           FDID: "1",
           EmployeeNoList: [{ employeeNo: String(userId) }],
         },
-      },
-    },
-    // 2. Fallback with FDID and faceLibType in URL
-    {
-      endpoint: "Intelligent/FDLib/FDSearch/Delete?format=json&FDID=1&faceLibType=blackFD",
-      method: "PUT",
-      body: {
-        FaceInfoDelCond: {
-          EmployeeNoList: [{ employeeNo: String(userId) }],
-        },
-      },
-    },
-    // 3. Fallback: FPID direct
-    {
-      endpoint: `Intelligent/FDLib/FDSearch/Delete?format=json&devIndex=${devIndex}`,
-      method: "PUT",
-      body: {
-        FaceInfoDelCond: {
-          FPID: String(fpid),
-        },
-      },
-    },
-    // 4. Direct DELETE resource method
-    {
-      endpoint: `Intelligent/FDLib/1/picture/${fpid}?format=json`,
-      method: "DELETE",
-      body: undefined,
-    }
-  ];
-
-  for (const strategy of strategies) {
-    try {
-      await callDeviceProxy({
-        deviceId,
-        endpoint: strategy.endpoint,
-        method: strategy.method as "POST" | "PUT" | "DELETE" | "GET",
-        ...(strategy.body ? { body: strategy.body } : {}),
-      });
-      // If it returned 200/OK, we are successful
-      return { success: true };
-    } catch (e: any) {
-      if (e?.message?.toLowerCase().includes("fetch failed") || e?.message?.toLowerCase().includes("device proxy error") || e?.message?.toLowerCase().includes("offline")) {
-        throw new Error(`Device offline or unreachable: ${e.message}`);
       }
-      lastError = e;
+    );
+  } catch (e: any) {
+    throwOnNetworkError(e);
+    lastError = e;
+  }
 
-      // CRITICAL SAAS FIX: Many Hikvision firmwares successfully delete the face
-      // but STILL return a parsing error (faceLibraryIDError or badJsonContent)
-      // because of strict trailing validation bugs.
-      // We MUST verify if the face was actually deleted despite the error!
-      const verifyFpid = await getFacePictureId(deviceId, userId);
-      if (!verifyFpid) {
-        // The face is gone! The device deleted it but lied about the status code.
-        return { success: true };
+  // Strategy 6: Target by FPID explicitly (Fixes 'FPID' badJsonContent error)
+  try {
+    return await attemptDelete(
+      "Intelligent/FDLib/FDSearch/Delete?format=json",
+      "PUT",
+      {
+        FaceInfoDelCond: {
+          faceLibType: "blackFD",
+          FDID: "1",
+          FPID: String(userId),
+        },
       }
-    }
+    );
+  } catch (e: any) {
+    throwOnNetworkError(e);
+    lastError = e;
   }
 
   const errorMsg = lastError?.subStatusCode === "faceLibraryIDError"
     ? "Device face library ID mismatch. Please check device configuration."
-    : lastError?.subStatusCode === "notSupport" || lastError?.subStatusCode === "badJsonContent"
+    : lastError?.subStatusCode === "notSupport" || lastError?.subStatusCode === "badJsonContent" || lastError?.errorMsg === "FPID" || lastError?.subStatusCode === "badXmlFormat"
       ? "Device firmware rejected face deletion format. Please check device compatibility."
       : (lastError?.message || "Failed to remove face from device scanner.");
 
