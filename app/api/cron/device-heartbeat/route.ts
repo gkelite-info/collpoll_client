@@ -1,0 +1,114 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+export const dynamic = "force-dynamic";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+export async function GET(request: Request) {
+  try {
+    const authHeader = request.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
+
+    // Secure the endpoint: Ensure only authorized schedulers can trigger the DB operations
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const now = new Date().toISOString();
+
+    // 1. Fetch all active devices
+    const { data: devices, error } = await supabase
+      .from("biometric_devices")
+      .select("deviceId, deviceIp, devicePort, isOnline")
+      .eq("isActive", true)
+      .eq("is_deleted", false);
+
+    if (error) throw error;
+
+    if (!devices || devices.length === 0) {
+      return NextResponse.json({ message: "No active devices to monitor" }, { status: 200 });
+    }
+
+    let onlineCount = 0;
+    let offlineCount = 0;
+    const updates = [];
+
+    // 2. Ping each device concurrently
+    // We use a lightweight fetch (no digest auth) to optimize for scale.
+    // If the device's web server responds at all (even with 401/403), it is physically online.
+    const pingDevice = async (device: any) => {
+      let isActuallyOnline = false;
+      try {
+        // Use a standard ISAPI endpoint. Some firmware drops root '/' connections abruptly
+        const url = `http://${device.deviceIp}:${device.devicePort}/ISAPI/System/status`;
+        // Fast timeout: if it doesn't respond in 4 seconds on a local network, it's offline/power cut.
+        await fetch(url, { 
+          signal: AbortSignal.timeout(4000), 
+          method: "GET" 
+        });
+        // Any HTTP response (even 401 Unauthorized) means the web server is alive
+        isActuallyOnline = true;
+      } catch (err: any) {
+        // Network Error or AbortError (Timeout) -> Offline
+        isActuallyOnline = false;
+      }
+
+      return {
+        deviceId: device.deviceId,
+        wasOnline: device.isOnline,
+        isNowOnline: isActuallyOnline
+      };
+    };
+
+    const results = await Promise.all(devices.map(pingDevice));
+
+    // 3. Prepare database updates
+    for (const res of results) {
+      if (res.isNowOnline) {
+        onlineCount++;
+      } else {
+        offlineCount++;
+      }
+
+      // To minimize DB load, we only update if the online status CHANGED
+      // OR if it IS currently online (so we can bump the lastHeartbeat timestamp).
+      // We don't need to constantly update offline devices if their status hasn't changed.
+      if (res.wasOnline !== res.isNowOnline || res.isNowOnline) {
+        updates.push(
+          supabase
+            .from("biometric_devices")
+            .update({
+              isOnline: res.isNowOnline,
+              ...(res.isNowOnline ? { lastHeartbeat: now } : {}),
+              updatedAt: now,
+            })
+            .eq("deviceId", res.deviceId)
+        );
+      }
+    }
+
+    // 4. Execute updates concurrently
+    if (updates.length > 0) {
+      await Promise.all(updates);
+    }
+
+    return NextResponse.json({
+      success: true,
+      totalDevices: devices.length,
+      onlineCount,
+      offlineCount,
+      updatedCount: updates.length,
+      timestamp: now,
+    });
+  } catch (error: any) {
+    console.error("Device heartbeat cron error:", error);
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}

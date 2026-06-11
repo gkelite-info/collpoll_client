@@ -75,7 +75,7 @@ const columns = [
 ];
 
 export default function CredentialsTab() {
-  const { collegeId, adminId } = useUser();
+  const { collegeId, adminId, loading } = useUser();
 
   // List view
   const [credentials, setCredentials] = useState<UserCredentialRow[]>([]);
@@ -410,11 +410,11 @@ export default function CredentialsTab() {
       <TableComponent
         columns={columns}
         tableData={tableData}
-        isLoading={isLoading}
+        isLoading={isLoading || loading}
         height="auto"
       />
 
-      {!isLoading && (
+      {!isLoading && !loading && (
         <div className="mt-4">
           <Pagination
             currentPage={currentPage}
