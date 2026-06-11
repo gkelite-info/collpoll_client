@@ -69,7 +69,7 @@ type UnassignedDevice = {
 };
 
 export default function RoomsTab() {
-  const { collegeId, adminId } = useUser();
+  const { collegeId, adminId, loading } = useUser();
 
   const [rooms, setRooms] = useState<RoomViewData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -463,11 +463,11 @@ export default function RoomsTab() {
           <TableComponent
             columns={columns}
             tableData={tableData}
-            isLoading={isLoading}
+            isLoading={isLoading || loading}
             height="auto"
           />
 
-          {!isLoading && (
+          {!isLoading && !loading && (
             <div className="mt-4">
               <Pagination
                 currentPage={currentPage}

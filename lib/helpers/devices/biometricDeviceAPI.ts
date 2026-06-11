@@ -309,3 +309,32 @@ export const updateDeviceHeartbeat = async (deviceId: number, isOnline: boolean)
     return { success: false as const, error: err(e) };
   }
 };
+
+/* ------------------------------------------------------------------ */
+/*  Realtime Subscription                                             */
+/* ------------------------------------------------------------------ */
+
+export const subscribeToDeviceStatusUpdates = (
+  collegeId: number,
+  onUpdate: (payload: { newRow: any; oldRow: any }) => void
+) => {
+  const channel = supabase
+    .channel("realtime-biometric-devices")
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "biometric_devices",
+        filter: `collegeId=eq.${collegeId}`,
+      },
+      (payload) => {
+        onUpdate({ newRow: payload.new, oldRow: payload.old });
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+};

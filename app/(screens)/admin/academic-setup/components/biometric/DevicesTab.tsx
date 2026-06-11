@@ -22,6 +22,7 @@ import {
   DeviceType,
   GateDirection,
   DeviceFilters,
+  subscribeToDeviceStatusUpdates,
 } from "@/lib/helpers/devices/biometricDeviceAPI";
 import { decryptPassword } from "@/lib/helpers/devices/encryptionUtils";
 import { Pagination } from "../pagination";
@@ -81,7 +82,7 @@ const emptyForm: DeviceFormState = {
 };
 
 export default function DevicesTab() {
-  const { collegeId, adminId } = useUser();
+  const { collegeId, adminId, loading } = useUser();
 
   const [devices, setDevices] = useState<BiometricDeviceRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -145,6 +146,30 @@ export default function DevicesTab() {
     if (!collegeId) return;
     loadDevices(currentPage);
   }, [collegeId, currentPage, loadDevices]);
+
+  // --- Realtime Subscription ---
+  useEffect(() => {
+    if (!collegeId) return;
+
+    const unsubscribe = subscribeToDeviceStatusUpdates(collegeId, ({ newRow }) => {
+      setDevices((prev) => {
+        const index = prev.findIndex((d) => d.deviceId === newRow.deviceId);
+        if (index === -1) return prev;
+
+        const oldDevice = prev[index];
+
+        const updatedList = [...prev];
+        updatedList[index] = { 
+          ...oldDevice,
+          isOnline: newRow.isOnline,
+          lastHeartbeat: newRow.lastHeartbeat,
+        };
+        return updatedList;
+      });
+    });
+
+    return unsubscribe;
+  }, [collegeId]);
 
   /* ---------- Filter ---------- */
 
@@ -422,11 +447,11 @@ export default function DevicesTab() {
           <TableComponent
             columns={columns}
             tableData={tableData}
-            isLoading={isLoading}
+            isLoading={isLoading || loading}
             height="auto"
           />
 
-          {!isLoading && (
+          {!isLoading && !loading && (
             <div className="mt-4">
               <Pagination
                 currentPage={currentPage}
