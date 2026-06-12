@@ -4,7 +4,8 @@ import { fetchFacultyContext } from "@/app/utils/context/faculty/facultyContextA
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
 import { supabase } from "@/lib/supabaseClient";
-import { X } from "@phosphor-icons/react";
+import { X, CaretDown } from "@phosphor-icons/react";
+import RoomSelectDropdown from "@/app/components/calendar/RoomSelectDropdown";
 import type { CalendarEventPayload } from "../page";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -97,6 +98,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [subject, setSubject] = useState("");
   const [topicId, setTopicId] = useState<number | null>(null);
   const [isDateInputFocused, setIsDateInputFocused] = useState(false);
+  const [isSubjectFocused, setIsSubjectFocused] = useState(false);
+  const [isTopicFocused, setIsTopicFocused] = useState(false);
+  const [isSemesterFocused, setIsSemesterFocused] = useState(false);
   const deptDropdownRef = useRef<HTMLDivElement>(null);
   const sectionDropdownRef = useRef<HTMLDivElement>(null);
   const { userId, collegeId, loading } = useUser();
@@ -438,10 +442,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       }
     }
 
-    // if (!roomNo.trim()) {
-    //   toast.error("Please enter Room No.");
-    //   return;
-    // }
+    if (!roomNo.trim()) {
+      toast.error("Please select a Room No.");
+      return;
+    }
     if (!sectionIds.length) {
       toast.error("Please select at least one section.");
       return;
@@ -644,7 +648,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div
         ref={modalContentRef}
-        className="bg-white rounded-xl shadow-2xl w-[95%] md:max-w-[450px] lg:max-w-[450px] max-h-[70vh] md:max-h-[80vh] lg:max-h-[90vh] flex flex-col relative"
+        className="bg-white rounded-xl shadow-2xl w-[95%] md:max-w-[450px] lg:max-w-[450px] max-h-[90vh] flex flex-col relative"
       >
         <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky z-10">
           <h2 className="text-xl font-bold text-gray-800">
@@ -722,31 +726,45 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         rounded-lg px-3 bg-gray-50 text-gray-900 cursor-not-allowed outline-none`}
               />
             ) : (
-              <select
-                value={subjectId ?? ""}
-                onChange={(e) => {
-                  const selected = subjects.find(
-                    (s) => s.collegeSubjectId === Number(e.target.value)
-                  );
-                  if (selected) {
-                    setSubjectId(selected.collegeSubjectId);
-                    setSubject(selected.subjectName);
-                    setTopicId(null);
-                  }
-                }}
-                className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9]
-        rounded-lg px-3 text-sm bg-white cursor-pointer
-        focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
-        outline-none transition-all
-        ${!subjectId ? "text-gray-400" : "text-gray-900"}`}
-              >
-                <option value="" disabled>Select Subject</option>
-                {subjects.map((s) => (
-                  <option key={s.collegeSubjectId} value={s.collegeSubjectId} className="text-[#282828] cursor-pointer">
-                    {s.subjectName}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={subjectId ?? ""}
+                  onChange={(e) => {
+                    const selected = subjects.find(
+                      (s) => s.collegeSubjectId === Number(e.target.value)
+                    );
+                    if (selected) {
+                      setSubjectId(selected.collegeSubjectId);
+                      setSubject(selected.subjectName);
+                      setTopicId(null);
+                    }
+                    e.currentTarget.blur();
+                  }}
+                  onMouseDown={() => setIsSubjectFocused((prev) => !prev)}
+                  onBlur={() => setIsSubjectFocused(false)}
+                  className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9]
+          rounded-lg pl-3 pr-10 text-sm bg-white cursor-pointer appearance-none
+          focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
+          outline-none transition-all
+          ${!subjectId ? "text-gray-400" : "text-gray-900"}`}
+                >
+                  <option value="" disabled>Select Subject</option>
+                  {subjects.map((s) => (
+                    <option key={s.collegeSubjectId} value={s.collegeSubjectId} className="text-[#282828] cursor-pointer">
+                      {s.subjectName}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                  <CaretDown
+                    size={16}
+                    weight="bold"
+                    className={`transition-transform duration-200 ${
+                      isSubjectFocused ? "rotate-180" : "rotate-0"
+                    }`}
+                  />
+                </div>
+              </div>
             )}
           </div>
 
@@ -759,9 +777,14 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             <div className="relative">
               <select
                 value={topicId ?? ""}
-                onChange={(e) => setTopicId(Number(e.target.value))}
-                className={`w-full h-[44px] border border-[#C9C9C9] rounded-lg px-3 pr-10
-      bg-white text-gray-900 outline-none cursor-pointer
+                onChange={(e) => {
+                  setTopicId(Number(e.target.value));
+                  e.currentTarget.blur();
+                }}
+                onMouseDown={() => setIsTopicFocused((prev) => !prev)}
+                onBlur={() => setIsTopicFocused(false)}
+                className={`w-full h-[44px] border border-[#C9C9C9] rounded-lg pl-3 pr-10
+      bg-white text-gray-900 outline-none cursor-pointer appearance-none
       focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
       transition-all ${!topicId ? "text-gray-400" : "text-gray-900"}`}
               >
@@ -778,6 +801,15 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   </option>
                 ))}
               </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                <CaretDown
+                  size={16}
+                  weight="bold"
+                  className={`transition-transform duration-200 ${
+                    isTopicFocused ? "rotate-180" : "rotate-0"
+                  }`}
+                />
+              </div>
             </div>
           </div>
 
@@ -832,24 +864,24 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                     <label className="block text-gray-700 font-medium text-sm">
                       Zoom ID <span className="text-red-500">*</span>
                     </label>
-                    <input
+                     <input
                       type="text"
                       value={meetingId}
                       onChange={(e) => setMeetingId(e.target.value)}
                       placeholder="Enter Zoom ID"
-                      className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 placeholder-gray-500"
                     />
                   </div>
                   <div className="flex-1 space-y-1">
                     <label className="block text-gray-700 font-medium text-sm">
                       Password <span className="text-red-500">*</span>
                     </label>
-                    <input
+                     <input
                       type="text"
                       value={meetingPassword}
                       onChange={(e) => setMeetingPassword(e.target.value)}
                       placeholder="Enter Password"
-                      className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 placeholder-gray-500"
                     />
                   </div>
                 </div>
@@ -861,7 +893,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                       : "Meeting Link"}{" "}
                     <span className="text-red-500">*</span>
                   </label>
-                  <input
+                   <input
                     type="text"
                     value={meetingLink}
                     onChange={(e) => setMeetingLink(e.target.value)}
@@ -870,7 +902,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                         ? "https://meet.google.com/..."
                         : "https://..."
                     }
-                    className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 placeholder-gray-500"
                   />
                 </div>
               )}
@@ -878,34 +910,32 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
           )}
 
           <div>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700">
-                  Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={date}
-                  min={TODAY}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full cursor-pointer border border-[#C9C9C9] rounded-lg px-3 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-                />
-              </div>
-
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700">
-                  Room No.
-                </label>
-                <input
-                  value={roomNo}
-                  onChange={(e) =>
-                    setRoomNo(e.target.value.toLocaleUpperCase())
-                  }
-                  className="w-full border border-[#C9C9C9] rounded-lg px-3 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-                  placeholder="Enter Room no."
-                />
-              </div>
+          <div className="flex flex-col md:flex-row gap-4 items-start">
+            <div className="flex-1 w-full min-w-0">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={date}
+                min={TODAY}
+                onChange={(e) => setDate(e.target.value)}
+                className={`w-full cursor-pointer border border-[#C9C9C9] rounded-lg px-3 ${INPUT_HEIGHT} outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white`}
+              />
             </div>
+
+            <div className="flex-1 w-full min-w-0">
+               <label className="block text-sm font-medium text-gray-700 mb-1">
+                Room No. <span className="text-red-500">*</span>
+              </label>
+              <RoomSelectDropdown
+                value={roomNo}
+                onChange={setRoomNo}
+                collegeId={collegeId || 0}
+                placeholder="Select Room No. / Room Name"
+              />
+            </div>
+          </div>
 
             <div className="bg-red-00 flex flex-col space-y-1 mt-3">
               <label className="block text-gray-700 font-medium text-sm">
@@ -999,8 +1029,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               </div>
             </div>
           </div>
-          <div className="flex gap-4 items-start">
-            <div className="flex-1">
+          <div className="flex flex-col md:flex-row gap-4 items-start">
+            <div className="flex-1 w-full min-w-0">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Education Type <span className="text-red-500">*</span>
               </label>
@@ -1038,7 +1068,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               )}
             </div>
 
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 w-full min-w-0">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Branch <span className="text-red-500">*</span>
               </label>
@@ -1061,8 +1091,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               />
             </div>
           </div>
-          <div className="flex gap-4 items-start">
-            <div className="flex-1">
+          <div className="flex flex-col md:flex-row gap-4 items-start">
+            <div className="flex-1 w-full min-w-0">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Year <span className="text-red-500">*</span>
               </label>
@@ -1084,39 +1114,53 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               />
             </div>
             {!["Inter"].includes(faculty_edu_type!) && (
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 w-full min-w-0">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Semester <span className="text-red-500">*</span>
                 </label>
 
-                <select
-                  value={semester ?? ""}
-                  onChange={(e) => {
-                    const selected = Number(e.target.value);
-                    setSemester(selected);
-                  }}
-                  className={`
-      w-full ${INPUT_HEIGHT}
-      border border-[#C9C9C9]
-      rounded-lg px-3 text-sm
-      focus:ring-2 focus:ring-[#43C17A]
-      focus:outline-none
-      bg-white cursor-pointer text-gray-900
-    `}
-                >
-                  <option value="" disabled hidden>
-                    Select Semester
-                  </option>
-
-                  {semesters.map((s) => (
-                    <option
-                      key={s.collegeSemesterId}
-                      value={s.collegeSemesterId}
-                    >
-                      Semester {s.collegeSemester}
+                <div className="relative">
+                  <select
+                    value={semester ?? ""}
+                    onChange={(e) => {
+                      const selected = Number(e.target.value);
+                      setSemester(selected);
+                      e.currentTarget.blur();
+                    }}
+                    onMouseDown={() => setIsSemesterFocused((prev) => !prev)}
+                    onBlur={() => setIsSemesterFocused(false)}
+                    className={`
+                      w-full ${INPUT_HEIGHT}
+                      border border-[#C9C9C9]
+                      rounded-lg pl-3 pr-10 text-sm
+                      focus:ring-2 focus:ring-[#43C17A]
+                      focus:outline-none appearance-none
+                      bg-white cursor-pointer text-gray-900
+                    `}
+                  >
+                    <option value="" disabled hidden>
+                      Select Semester
                     </option>
-                  ))}
-                </select>
+
+                    {semesters.map((s) => (
+                      <option
+                        key={s.collegeSemesterId}
+                        value={s.collegeSemesterId}
+                      >
+                        Semester {s.collegeSemester}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                    <CaretDown
+                      size={16}
+                      weight="bold"
+                      className={`transition-transform duration-200 ${
+                        isSemesterFocused ? "rotate-180" : "rotate-0"
+                      }`}
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1151,7 +1195,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                     .join(", ")}
               </span>
 
-              <span className="text-gray-400">▾</span>
+              <CaretDown
+                size={16}
+                weight="bold"
+                className={`text-gray-400 transition-transform duration-200 ${
+                  isSectionOpen ? "rotate-180" : "rotate-0"
+                }`}
+              />
             </div>
 
             {isSectionOpen && (
