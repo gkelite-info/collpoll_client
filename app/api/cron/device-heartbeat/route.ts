@@ -1,6 +1,49 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+/**
+ * =================================================================================
+ * SUPABASE CRON JOB SETUP & MANUAL TRIGGER INSTRUCTIONS (SaaS Grade)
+ * =================================================================================
+ * If the automated cron job fails or needs to be redeployed, run the following 
+ * SQL in the Supabase SQL Editor. This uses pg_cron and pg_net to reliably 
+ * trigger this endpoint every minute.
+ * 
+ * ```sql
+ * -- 1. Enable required extensions for HTTP requests and scheduling
+ * CREATE EXTENSION IF NOT EXISTS pg_net;
+ * CREATE EXTENSION IF NOT EXISTS pg_cron;
+ * 
+ * -- 2. Safely remove any existing job to prevent duplicate polling
+ * -- (Using a conditional subquery to avoid "could not find valid entry" errors on fresh setups)
+ * SELECT cron.unschedule(jobid) FROM cron.job WHERE jobname = 'device-heartbeat-cron';
+ * 
+ * -- 3. Schedule the robust 1-minute heartbeat job
+ * SELECT cron.schedule(
+ *   'device-heartbeat-cron',  -- Unique job identifier
+ *   '* * * * *',              -- Execute every 1 minute
+ *   $$
+ *     SELECT net.http_get(
+ *       url:='https://tektoncampus.com/api/cron/device-heartbeat',
+ *       -- REPLACE 'YOUR_CRON_SECRET' WITH THE ACTUAL SECRET FROM YOUR ENV VARIABLES
+ *       headers:='{"Authorization": "Bearer YOUR_CRON_SECRET"}'::jsonb,
+ *       timeout_milliseconds:=10000 -- Generous 10s timeout for the API to process all devices
+ *     );
+ *   $$
+ * );
+ * 
+ * -- ==========================================
+ * -- TROUBLESHOOTING & DEBUGGING COMMANDS:
+ * -- ==========================================
+ * -- Verify the job is scheduled:
+ * -- SELECT * FROM cron.job WHERE jobname = 'device-heartbeat-cron';
+ * 
+ * -- Check recent execution logs (success/failures):
+ * -- SELECT * FROM cron.job_run_details WHERE jobid = (SELECT jobid FROM cron.job WHERE jobname = 'device-heartbeat-cron') ORDER BY start_time DESC LIMIT 10;
+ * ```
+ * =================================================================================
+ */
+
 export const dynamic = "force-dynamic";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
