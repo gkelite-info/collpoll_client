@@ -6,6 +6,10 @@ export type WellbeingIssueVisibilityRole =
   | "both";
 export type WellbeingIssuePriority = "high" | "medium" | "low";
 export type WellbeingIssueStatus = "pending" | "resolved" | "rejected";
+export type WellbeingIssueJobStatus =
+  | "inprogress"
+  | "completed"
+  | "cancelled";
 export type WellbeingIssueRaisedRole =
   | "Student"
   | "SuperAdmin"

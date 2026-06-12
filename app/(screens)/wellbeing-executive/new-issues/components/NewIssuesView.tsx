@@ -4,21 +4,36 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CaretDown, FilePdf, ListDashes } from "@phosphor-icons/react";
+import toast, { Toaster } from "react-hot-toast";
 import TableComponent from "@/app/utils/table/table";
 import WellbeingExecutiveRight from "../../components/WellbeingExecutiveRight";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 import { fetchWellbeingExecutiveNewIssueCounts } from "@/lib/helpers/wellbeingSupportIssues/wellbeingSupportIssueAPI";
-import type { WellbeingExecutiveNewIssueCounts } from "@/lib/helpers/wellbeingSupportIssues/types";
+import type {
+  WellbeingExecutiveNewIssueCounts,
+  WellbeingIssueJobStatus,
+  WellbeingIssueRaisedRole,
+} from "@/lib/helpers/wellbeingSupportIssues/types";
 
 type IssueView = "all" | "my" | "urgent";
 type IssueStatus = "Pending" | "Resolved";
-type IssueScope = "college" | "hostel";
+type IssueScope = "all" | "college" | "hostel";
+type IssueAppliesTo = Exclude<IssueScope, "all"> | "both";
+type IssueRoleFilter = "all" | WellbeingIssueRaisedRole;
+type IssueRoleOption = {
+  label: string;
+  value: IssueRoleFilter;
+};
 
 type ExecutiveIssue = {
   id: string;
+  supportIssueId: number;
   student: string;
   meta: string;
+  role: string;
+  categoryId: number;
   image: string;
   title: string;
   description: string;
@@ -31,6 +46,9 @@ type ExecutiveIssue = {
   room: string;
   evidence: string;
   assignedToMe: boolean;
+  canTakeAction: boolean;
+  jobId: number | null;
+  jobStatus: WellbeingIssueJobStatus | null;
   attachments: { name: string; size: string }[];
 };
 
@@ -46,16 +64,37 @@ const defaultIssueCounts: WellbeingExecutiveNewIssueCounts = {
   urgent: 0,
 };
 
+const issueRoleOptions: IssueRoleOption[] = [
+  { label: "All", value: "all" },
+  { label: "Student", value: "Student" },
+  { label: "College Admin", value: "CollegeAdmin" },
+  { label: "Admin", value: "Admin" },
+  { label: "Faculty", value: "Faculty" },
+  { label: "Finance", value: "Finance" },
+  { label: "College HR", value: "CollegeHr" },
+  { label: "Placement Officer", value: "PlacementOfficer" },
+  { label: "Wellbeing Executive", value: "WellbeingExecutive" },
+  { label: "Wellbeing Manager", value: "WellbeingManager" },
+  { label: "Finance Manager", value: "FinanceManager" },
+];
+
+const getIssueRoleFilterLabel = (value: IssueRoleFilter) =>
+  issueRoleOptions.find((option) => option.value === value)?.label ?? value;
+
+const getIssueSubjectHeader = (value: IssueRoleFilter) =>
+  value === "all" ? "Raised By" : getIssueRoleFilterLabel(value);
+
 type ExecutiveIssueRow = {
   wellbeingSupportIssueId: number;
   fullName: string;
   email: string;
   issueTitle: string;
   categoryId: number;
-  appliesTo: IssueScope | "both";
+  appliesTo: IssueAppliesTo;
   priority: "high" | "medium" | "low";
   description: string;
   IssueStatus: "pending" | "resolved" | "rejected";
+  issueRaisedRole: WellbeingIssueRaisedRole;
   createdAt: string | null;
   wellbeing_categories:
     | { categoryName?: string | null }
@@ -71,6 +110,44 @@ type ExecutiveIssueRow = {
     | null;
 };
 
+type IssueJobRow = {
+  wellbeingIssueJobId: number;
+  wellbeingSupportIssueId: number;
+  wellBeingId: number;
+  status: WellbeingIssueJobStatus;
+  isActive: boolean;
+  is_deleted: boolean | null;
+  deletedAt: string | null;
+};
+
+type SupabaseErrorLike = {
+  code?: string;
+  message?: string;
+  details?: string | null;
+  hint?: string | null;
+};
+
+function getSupabaseErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object") {
+    const supabaseError = error as SupabaseErrorLike;
+    return [
+      supabaseError.code,
+      supabaseError.message,
+      supabaseError.details,
+      supabaseError.hint,
+    ]
+      .filter(Boolean)
+      .join(" - ");
+  }
+  return "";
+}
+
+function throwSupabaseError(error: unknown) {
+  const message = getSupabaseErrorMessage(error) || "Supabase request failed.";
+  throw new Error(message);
+}
+
 function formatIssueDate(date: string | null) {
   if (!date) return "";
   return new Date(date).toLocaleDateString("en-GB", {
@@ -85,7 +162,15 @@ function getAttachmentName(path: string) {
   return fileName.replace(/^\d+_\d+_/, "");
 }
 
-function toExecutiveIssue(row: ExecutiveIssueRow): ExecutiveIssue {
+function toExecutiveIssue({
+  row,
+  job,
+  registeredCategoryId,
+}: {
+  row: ExecutiveIssueRow;
+  job?: IssueJobRow;
+  registeredCategoryId?: number | null;
+}): ExecutiveIssue {
   const categoryRelation = row.wellbeing_categories;
   const categoryName = Array.isArray(categoryRelation)
     ? categoryRelation[0]?.categoryName
@@ -99,8 +184,11 @@ function toExecutiveIssue(row: ExecutiveIssueRow): ExecutiveIssue {
 
   return {
     id: `WE-${row.wellbeingSupportIssueId}`,
+    supportIssueId: row.wellbeingSupportIssueId,
     student: row.fullName,
     meta: row.email,
+    role: getIssueRoleFilterLabel(row.issueRaisedRole),
+    categoryId: row.categoryId,
     image: "/male-student.png",
     title: row.issueTitle,
     description: row.description,
@@ -122,7 +210,10 @@ function toExecutiveIssue(row: ExecutiveIssueRow): ExecutiveIssue {
     block: "-",
     room: "-",
     evidence: attachments[0]?.name ?? "No attachment",
-    assignedToMe: true,
+    assignedToMe: job?.status === "inprogress" || job?.status === "completed",
+    canTakeAction: registeredCategoryId === row.categoryId,
+    jobId: job?.wellbeingIssueJobId ?? null,
+    jobStatus: job?.status ?? null,
     attachments,
   };
 }
@@ -139,6 +230,69 @@ function CountBadge({ count }: { count: number }) {
   );
 }
 
+type DropdownOption<T extends string> = {
+  label: string;
+  value: T;
+};
+
+function DropdownPill<T extends string>({
+  value,
+  options,
+  onChange,
+  minWidth,
+}: {
+  value: T;
+  options: DropdownOption<T>[];
+  onChange: (value: T) => void;
+  minWidth: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedLabel =
+    options.find((option) => option.value === value)?.label ?? value;
+
+  return (
+    <div className="relative z-50" onMouseLeave={() => setOpen(false)}>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className={`flex h-9 ${minWidth} cursor-pointer items-center justify-between gap-3 rounded-md bg-[#16284F] px-4 text-[14px] font-bold text-white shadow-sm transition-colors hover:bg-[#102044]`}
+      >
+        <span className="truncate">{selectedLabel}</span>
+        <CaretDown
+          size={15}
+          weight="bold"
+          className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open ? (
+        <div className="custom-scrollbar absolute left-0 top-full z-[80] mt-1 max-h-56 w-full min-w-full overflow-y-auto rounded-xl bg-white py-2 shadow-xl ring-1 ring-black/5">
+          {options.map((option) => {
+            const selected = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                className={`block w-full cursor-pointer px-6 py-3 text-left text-[14px] font-medium transition-colors ${
+                  selected
+                    ? "bg-[#2166D1] text-white"
+                    : "bg-white text-[#16284F] hover:bg-[#E8E8E8]"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+} 
+
 function ScopeSelectPill({
   value,
   onChange,
@@ -146,35 +300,36 @@ function ScopeSelectPill({
   value: IssueScope;
   onChange: (scope: IssueScope) => void;
 }) {
+  const scopeOptions: DropdownOption<IssueScope>[] = [
+    { label: "All", value: "all" },
+    { label: "College", value: "college" },
+    { label: "Hostel", value: "hostel" },
+  ];
+
   return (
-    <label className="relative flex h-9 min-w-[118px] items-center rounded-md bg-[#16284F] px-3.5 text-[14px] font-bold text-white">
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value as IssueScope)}
-        className="h-full w-full cursor-pointer appearance-none bg-transparent pr-7 font-bold text-white outline-none"
-      >
-        <option className="text-[#16284F]" value="college">
-          College
-        </option>
-        <option className="text-[#16284F]" value="hostel">
-          Hostel
-        </option>
-      </select>
-      <CaretDown
-        size={15}
-        weight="bold"
-        className="pointer-events-none absolute right-3"
-      />
-    </label>
+    <DropdownPill
+      value={value}
+      options={scopeOptions}
+      onChange={onChange}
+      minWidth="min-w-[118px]"
+    />
   );
 }
 
-function StaticSelectPill({ label }: { label: string }) {
+function RoleSelectPill({
+  value,
+  onChange,
+}: {
+  value: IssueRoleFilter;
+  onChange: (role: IssueRoleFilter) => void;
+}) {
   return (
-    <button className="flex h-9 min-w-[118px] items-center justify-between gap-3 rounded-md bg-[#16284F] px-3.5 text-[14px] font-bold text-white">
-      <span>{label}</span>
-      <CaretDown size={15} weight="bold" />
-    </button>
+    <DropdownPill
+      value={value}
+      options={issueRoleOptions}
+      onChange={onChange}
+      minWidth="min-w-[190px]"
+    />
   );
 }
 
@@ -185,6 +340,8 @@ function IssuesHeader({
   onScopeChange,
   counts,
   categoryName,
+  selectedRole,
+  onRoleChange,
 }: {
   activeView: IssueView;
   onChange: (view: IssueView) => void;
@@ -192,7 +349,11 @@ function IssuesHeader({
   onScopeChange: (scope: IssueScope) => void;
   counts: WellbeingExecutiveNewIssueCounts;
   categoryName?: string | null;
+  selectedRole: IssueRoleFilter;
+  onRoleChange: (role: IssueRoleFilter) => void;
 }) {
+  const roleLabel = getIssueRoleFilterLabel(selectedRole).toLowerCase();
+
   return (
     <div className="flex shrink-0 flex-col gap-3">
       <div>
@@ -204,10 +365,10 @@ function IssuesHeader({
               : "All Issues"}
         </h1>
         <p className="mt-1 text-[13px] font-medium text-[#282828]">
-          Manage and resolve student issues efficiently
+          Manage and resolve {roleLabel} issues efficiently
         </p>
       </div>
-      <div className="flex items-center justify-between gap-4 overflow-x-auto pb-1">
+      <div className="relative z-40 flex items-center justify-between gap-4 overflow-visible pb-2">
         <div className="flex shrink-0 items-center whitespace-nowrap text-[18px] font-bold leading-none">
           {tabs.map((tab, index) => (
             <div key={tab.key} className="flex items-center">
@@ -225,7 +386,7 @@ function IssuesHeader({
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-3">
           <ScopeSelectPill value={selectedScope} onChange={onScopeChange} />
-          <StaticSelectPill label="Student" />
+          <RoleSelectPill value={selectedRole} onChange={onRoleChange} />
         </div>
       </div>
     </div>
@@ -296,6 +457,61 @@ function EvidencePill({ label }: { label: string }) {
   );
 }
 
+function AssignmentActionCell({
+  issue,
+  onRequestStatus,
+  loading,
+}: {
+  issue: ExecutiveIssue;
+  onRequestStatus: (issue: ExecutiveIssue, status: WellbeingIssueJobStatus) => void;
+  loading: boolean;
+}) {
+  if (!issue.canTakeAction) {
+    return (
+      <span className="block min-w-[150px] text-[13px] font-semibold text-[#9CA3AF]">
+        Not your category
+      </span>
+    );
+  }
+
+  if (issue.jobStatus === "inprogress") {
+    return (
+      <span className="inline-flex h-10 w-[150px] items-center justify-center rounded-full bg-[#E8F8EF] px-3 text-[13px] font-bold text-[#009B55]">
+        In Progress
+      </span>
+    );
+  }
+
+  if (issue.jobStatus === "completed") {
+    return (
+      <span className="inline-flex h-10 w-[150px] items-center justify-center rounded-full bg-[#E8F8EF] px-3 text-[13px] font-bold text-[#009B55]">
+        Completed
+      </span>
+    );
+  }
+
+  if (issue.jobStatus === "cancelled") {
+    return (
+      <span className="inline-flex h-10 w-[150px] items-center justify-center rounded-full bg-[#FFF2F2] px-3 text-[13px] font-bold text-[#FF2A2A]">
+        Cancelled
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex min-w-[180px] items-center justify-center">
+      <button
+        type="button"
+        disabled={loading}
+        onClick={() => onRequestStatus(issue, "inprogress")}
+        className="inline-flex h-10 w-[150px] cursor-pointer items-center justify-center rounded-full border border-[#43C17A] bg-white px-3 text-[13px] font-bold text-[#43C17A] transition-colors hover:bg-[#E8F8EF] disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        In Progress
+      </button>
+    </div>
+  );
+}
+
 function TextCell({ value, className = "" }: { value: string; className?: string }) {
   return (
     <span
@@ -311,35 +527,55 @@ function IssuesTable({
   description,
   rows,
   scope,
+  roleLabel,
+  onRequestJobStatus,
+  actionLoadingIssueId,
 }: {
   title: string;
   description: string;
   rows: ExecutiveIssue[];
   scope: IssueScope;
+  roleLabel: string;
+  onRequestJobStatus: (issue: ExecutiveIssue, status: WellbeingIssueJobStatus) => void;
+  actionLoadingIssueId: number | null;
 }) {
   const columns =
-    scope === "college"
+    scope === "hostel"
       ? [
-          { title: "Student", key: "subject" },
-          { title: "Issue", key: "issue" },
-          { title: "Category", key: "category" },
-          { title: "Evidence", key: "evidence" },
-        ]
-      : [
-          { title: "Student", key: "subject" },
+          { title: roleLabel, key: "subject" },
+          { title: "Role", key: "role" },
           { title: "Issue", key: "issue" },
           { title: "Block", key: "block" },
           { title: "Building / Room", key: "room" },
           { title: "Category", key: "category" },
           { title: "Evidence", key: "evidence" },
+          { title: "Action", key: "action" },
+        ]
+      : [
+          { title: roleLabel, key: "subject" },
+          { title: "Role", key: "role" },
+          { title: "Issue", key: "issue" },
+          { title: "Category", key: "category" },
+          { title: "Evidence", key: "evidence" },
+          { title: "Action", key: "action" },
         ];
   const tableData = rows.map((issue) => ({
     subject: <StudentCell issue={issue} />,
+    role: <TextCell value={issue.role} className="min-w-[120px]" />,
     issue: <IssueCell issue={issue} />,
     block: <TextCell value={issue.block} className="min-w-[70px]" />,
     room: <TextCell value={issue.room} className="min-w-[130px]" />,
     category: <CategoryBadge label={issue.category} />,
     evidence: <EvidencePill label={issue.evidence} />,
+    action: (
+      <div className="flex min-w-[180px] justify-center">
+        <AssignmentActionCell
+          issue={issue}
+          onRequestStatus={onRequestJobStatus}
+          loading={actionLoadingIssueId === issue.supportIssueId}
+        />
+      </div>
+    ),
   }));
 
   return (
@@ -362,24 +598,52 @@ function IssuesTable({
           height="100%"
           stickyHeader={false}
           fillHeight
-          tableClassName={scope === "college" ? "min-w-[980px]" : "min-w-[1180px]"}
+          tableClassName={scope === "hostel" ? "min-w-[1480px]" : "min-w-[1280px]"}
         />
       </div>
     </section>
   );
 }
 
-function StatusPill({ status }: { status: IssueStatus }) {
-  const resolved = status === "Resolved";
+function JobStatusDropdown({
+  issue,
+  onRequestStatus,
+  loading,
+}: {
+  issue: ExecutiveIssue;
+  onRequestStatus: (issue: ExecutiveIssue, status: WellbeingIssueJobStatus) => void;
+  loading: boolean;
+}) {
+  if (issue.jobStatus === "completed") {
+    return (
+      <span className="inline-flex min-w-[135px] justify-center rounded-md bg-[#E8F8EF] px-4 py-2 text-[14px] font-bold text-[#009B55] shadow-sm">
+        Completed
+      </span>
+    );
+  }
+
+  const options: DropdownOption<"pending" | "completed" | "cancelled">[] = [
+    { label: "Pending", value: "pending" },
+    { label: "Completed", value: "completed" },
+    { label: "Cancelled", value: "cancelled" },
+  ];
+  const value =
+    issue.jobStatus === "cancelled"
+      ? issue.jobStatus
+      : "pending";
 
   return (
-    <button
-      className={`flex h-7 min-w-[94px] items-center justify-center gap-1 rounded px-2.5 text-[12px] font-bold text-white ${resolved ? "bg-[#43C17A]" : "bg-[#FFB466]"
-        }`}
-    >
-      {status}
-      <CaretDown size={12} weight="bold" />
-    </button>
+    <div className={loading ? "pointer-events-none opacity-60" : ""}>
+      <DropdownPill
+        value={value}
+        options={options}
+        onChange={(nextStatus) => {
+          if (nextStatus === "pending") return;
+          onRequestStatus(issue, nextStatus);
+        }}
+        minWidth="min-w-[135px]"
+      />
+    </div>
   );
 }
 
@@ -417,9 +681,13 @@ function AttachmentPill({
 function IssueDetailsCard({
   issue,
   scope,
+  onRequestStatus,
+  loading,
 }: {
   issue: ExecutiveIssue;
   scope: IssueScope;
+  onRequestStatus: (issue: ExecutiveIssue, status: WellbeingIssueJobStatus) => void;
+  loading: boolean;
 }) {
   return (
     <article className="rounded-lg bg-white p-4 shadow-sm">
@@ -432,7 +700,11 @@ function IssueDetailsCard({
             Issue Details
           </span>
         </div>
-        <StatusPill status={issue.status} />
+        <JobStatusDropdown
+          issue={issue}
+          onRequestStatus={onRequestStatus}
+          loading={loading}
+        />
       </div>
       <h2 className="text-[18px] font-bold text-[#282828]">{issue.title}</h2>
       <div className="mt-3 flex flex-wrap gap-8">
@@ -451,11 +723,7 @@ function IssueDetailsCard({
           Description :
         </span>
         <p className="max-w-190 text-[14px] font-normal leading-none">
-          The projector in Classroom CR-2 is not working and is unable to
-          display content during lectures. Faculty tried reconnecting the cables
-          and restarting the system, but the issue still persists. This is
-          affecting ongoing classes, so maintenance support is required as soon
-          as possible.
+          {issue.description}
         </p>
       </div>
       <div className="mt-4 grid gap-3 text-[14px] font-medium text-[#282828] sm:grid-cols-[130px_minmax(0,1fr)]">
@@ -571,11 +839,17 @@ function IssuesContent({
   loading,
   selectedScope,
   rows,
+  selectedRole,
+  onRequestJobStatus,
+  actionLoadingIssueId,
 }: {
   activeView: IssueView;
   loading: boolean;
   selectedScope: IssueScope;
   rows: ExecutiveIssue[];
+  selectedRole: IssueRoleFilter;
+  onRequestJobStatus: (issue: ExecutiveIssue, status: WellbeingIssueJobStatus) => void;
+  actionLoadingIssueId: number | null;
 }) {
   const urgentIssues = useMemo(
     () => rows.filter((issue) => issue.priority === "Urgent"),
@@ -601,6 +875,8 @@ function IssuesContent({
               key={issue.id}
               issue={issue}
               scope={selectedScope}
+              onRequestStatus={onRequestJobStatus}
+              loading={actionLoadingIssueId === issue.supportIssueId}
             />
           ))}
         </div>
@@ -613,22 +889,42 @@ function IssuesContent({
       <IssuesTable
         title="Urgent Issues"
         description={`Latest reported complaints across ${
-          selectedScope === "college" ? "College" : "Hostel"
+          selectedScope === "all"
+            ? "All"
+            : selectedScope === "college"
+              ? "College"
+              : "Hostel"
         }`}
         rows={urgentIssues}
         scope={selectedScope}
+        roleLabel={getIssueSubjectHeader(selectedRole)}
+        onRequestJobStatus={onRequestJobStatus}
+        actionLoadingIssueId={actionLoadingIssueId}
       />
     );
   }
 
   return (
     <IssuesTable
-      title={selectedScope === "college" ? "College Issues" : "Hostel Issues"}
+      title={
+        selectedScope === "all"
+          ? "All Issues"
+          : selectedScope === "college"
+            ? "College Issues"
+            : "Hostel Issues"
+      }
       description={`Latest reported complaints across ${
-        selectedScope === "college" ? "College" : "Hostel"
+        selectedScope === "all"
+          ? "All"
+          : selectedScope === "college"
+            ? "College"
+            : "Hostel"
       }`}
       rows={rows}
       scope={selectedScope}
+      roleLabel={getIssueSubjectHeader(selectedRole)}
+      onRequestJobStatus={onRequestJobStatus}
+      actionLoadingIssueId={actionLoadingIssueId}
     />
   );
 }
@@ -636,13 +932,20 @@ function IssuesContent({
 function NewIssuesBody() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { collegeId, wellBeingCategoryId, wellBeingCategoryName } = useUser();
+  const { collegeId, wellBeingId, wellBeingCategoryId, wellBeingCategoryName } = useUser();
   const [activeView, setActiveView] = useState<IssueView>(() =>
     getView(searchParams.get("issueView")),
   );
-  const [selectedScope, setSelectedScope] = useState<IssueScope>("college");
+  const [selectedScope, setSelectedScope] = useState<IssueScope>("all");
+  const [selectedRole, setSelectedRole] =
+    useState<IssueRoleFilter>("all");
   const [loadingView, setLoadingView] = useState(true);
   const [issueRows, setIssueRows] = useState<ExecutiveIssue[]>([]);
+  const [actionLoadingIssueId, setActionLoadingIssueId] = useState<number | null>(null);
+  const [pendingJobAction, setPendingJobAction] = useState<{
+    issue: ExecutiveIssue;
+    status: WellbeingIssueJobStatus;
+  } | null>(null);
   const [counts, setCounts] =
     useState<WellbeingExecutiveNewIssueCounts>(defaultIssueCounts);
 
@@ -654,13 +957,15 @@ function NewIssuesBody() {
         const nextCounts = await fetchWellbeingExecutiveNewIssueCounts(
           collegeId,
           wellBeingCategoryId,
+          selectedRole === "all" ? null : selectedRole,
+          wellBeingId,
         );
         setCounts(nextCounts);
       } catch {
         setCounts(defaultIssueCounts);
       }
     },
-    [collegeId, wellBeingCategoryId],
+    [collegeId, selectedRole, wellBeingCategoryId, wellBeingId],
   );
 
   const loadIssues = useMemo(
@@ -668,6 +973,42 @@ function NewIssuesBody() {
       if (!collegeId) return;
 
       try {
+        let assignedIssueIds: number[] | null = null;
+
+        if (activeView === "my") {
+          if (!wellBeingId) {
+            setIssueRows([]);
+            return;
+          }
+
+          const { data: assignedJobs, error: assignedJobsError } = await supabase
+            .from("wellbeing_issue_jobs")
+            .select("wellbeingSupportIssueId")
+            .eq("wellBeingId", wellBeingId)
+            .in("status", [
+              "inprogress" satisfies WellbeingIssueJobStatus,
+              "completed" satisfies WellbeingIssueJobStatus,
+            ])
+            .eq("isActive", true)
+            .eq("is_deleted", false)
+            .is("deletedAt", null);
+
+          if (assignedJobsError) throw assignedJobsError;
+
+          assignedIssueIds = Array.from(
+            new Set(
+              (assignedJobs ?? [])
+                .map((job) => job.wellbeingSupportIssueId)
+                .filter((issueId): issueId is number => Boolean(issueId)),
+            ),
+          );
+
+          if (!assignedIssueIds.length) {
+            setIssueRows([]);
+            return;
+          }
+        }
+
         let query = supabase
           .from("wellbeing_support_issues")
           .select(
@@ -681,6 +1022,7 @@ function NewIssuesBody() {
             priority,
             description,
             IssueStatus,
+            issueRaisedRole,
             createdAt,
             wellbeing_categories (
               categoryName
@@ -698,15 +1040,14 @@ function NewIssuesBody() {
           .eq("isActive", true)
           .eq("is_deleted", false)
           .in("issueVisibilityRole", ["wellbeingexecutive", "both"])
-          .in("appliesTo", [selectedScope, "both"])
           .order("createdAt", { ascending: false });
 
-        if (
-          activeView === "my" &&
-          wellBeingCategoryId !== undefined &&
-          wellBeingCategoryId !== null
-        ) {
-          query = query.eq("categoryId", wellBeingCategoryId);
+        if (selectedRole !== "all") {
+          query = query.eq("issueRaisedRole", selectedRole);
+        }
+
+        if (selectedScope !== "all") {
+          query = query.in("appliesTo", [selectedScope, "both"]);
         }
 
         if (activeView === "urgent") {
@@ -714,15 +1055,55 @@ function NewIssuesBody() {
         }
 
         const { data, error } = await query;
-        if (error) throw error;
+        if (error) throwSupabaseError(error);
 
-        setIssueRows(((data ?? []) as ExecutiveIssueRow[]).map(toExecutiveIssue));
+        const fetchedRows = (data ?? []) as ExecutiveIssueRow[];
+        const assignedIssueIdSet = assignedIssueIds ? new Set(assignedIssueIds) : null;
+        const rows = assignedIssueIdSet
+          ? fetchedRows.filter((issue) =>
+              assignedIssueIdSet.has(issue.wellbeingSupportIssueId),
+            )
+          : fetchedRows;
+        const issueIds = rows.map((issue) => issue.wellbeingSupportIssueId);
+        const { data: jobs, error: jobsError } =
+          wellBeingId && issueIds.length
+            ? await supabase
+                .from("wellbeing_issue_jobs")
+                .select("wellbeingIssueJobId, wellbeingSupportIssueId, wellBeingId, status, isActive, is_deleted, deletedAt")
+                .eq("wellBeingId", wellBeingId)
+                .eq("isActive", true)
+                .eq("is_deleted", false)
+                .is("deletedAt", null)
+            : { data: [], error: null };
+
+        if (jobsError) throwSupabaseError(jobsError);
+
+        const issueIdSet = new Set(issueIds);
+        const jobByIssueId = new Map(
+          ((jobs ?? []) as IssueJobRow[])
+            .filter((job) => issueIdSet.has(job.wellbeingSupportIssueId))
+            .map((job) => [
+            job.wellbeingSupportIssueId,
+            job,
+          ]),
+        );
+
+        setIssueRows(
+          rows.map((row) =>
+            toExecutiveIssue({
+              row,
+              job: jobByIssueId.get(row.wellbeingSupportIssueId),
+              registeredCategoryId: wellBeingCategoryId,
+            }),
+          ),
+        );
       } catch (error) {
-        console.error("load wellbeing executive issues error:", error);
+        const message = getSupabaseErrorMessage(error);
+        console.warn("load wellbeing executive issues warning:", message || error);
         setIssueRows([]);
       }
     },
-    [activeView, collegeId, selectedScope, wellBeingCategoryId],
+    [activeView, collegeId, selectedRole, selectedScope, wellBeingCategoryId, wellBeingId],
   );
 
   useEffect(() => {
@@ -776,6 +1157,115 @@ function NewIssuesBody() {
     return () => window.clearTimeout(timer);
   }, [loadingView, activeView]);
 
+  const handleChangeJobStatus = async (
+    issue: ExecutiveIssue,
+    status: WellbeingIssueJobStatus,
+  ) => {
+    if (!wellBeingId) {
+      toast.error("Wellbeing executive details are still loading.");
+      return;
+    }
+
+    if (!issue.canTakeAction) {
+      toast.error("You can only take issues from your assigned category.");
+      return;
+    }
+
+    setActionLoadingIssueId(issue.supportIssueId);
+    try {
+      const now = new Date().toISOString();
+      const existingJobId = issue.jobId;
+
+      if (existingJobId) {
+        const { error } = await supabase
+          .from("wellbeing_issue_jobs")
+          .update({
+            status,
+            isActive: true,
+            is_deleted: false,
+            deletedAt: null,
+            updatedAt: now,
+          })
+          .eq("wellbeingIssueJobId", existingJobId)
+          .eq("wellBeingId", wellBeingId);
+
+        if (error) throwSupabaseError(error);
+      } else {
+        const { data: existingJobs, error: existingJobError } = await supabase
+          .from("wellbeing_issue_jobs")
+          .select("wellbeingIssueJobId")
+          .eq("wellbeingSupportIssueId", issue.supportIssueId)
+          .eq("wellBeingId", wellBeingId)
+          .order("wellbeingIssueJobId", { ascending: false })
+          .limit(1);
+
+        if (existingJobError) throwSupabaseError(existingJobError);
+
+        const existingJob = existingJobs?.[0];
+
+        if (existingJob?.wellbeingIssueJobId) {
+          const { error } = await supabase
+            .from("wellbeing_issue_jobs")
+            .update({
+              status,
+              isActive: true,
+              is_deleted: false,
+              deletedAt: null,
+              updatedAt: now,
+            })
+            .eq("wellbeingIssueJobId", existingJob.wellbeingIssueJobId);
+
+          if (error) throwSupabaseError(error);
+        } else {
+          const { error } = await supabase
+            .from("wellbeing_issue_jobs")
+            .insert({
+              wellbeingSupportIssueId: issue.supportIssueId,
+              wellBeingId,
+              status,
+              isActive: true,
+              is_deleted: false,
+              createdAt: now,
+              updatedAt: now,
+            });
+
+          if (error) throwSupabaseError(error);
+        }
+      }
+
+      toast.success(
+        status === "inprogress"
+          ? "Issue moved to in progress."
+          : status === "completed"
+            ? "Issue completed."
+          : status === "cancelled"
+            ? "Issue cancelled."
+            : "Issue updated.",
+      );
+      setPendingJobAction(null);
+      await Promise.all([loadCounts(), loadIssues()]);
+    } catch (error) {
+      const message = getSupabaseErrorMessage(error);
+      console.error("update wellbeing issue job error:", message || error);
+      toast.error(message || "Failed to update issue assignment.");
+    } finally {
+      setActionLoadingIssueId(null);
+    }
+  };
+
+  const confirmPendingJobAction = () => {
+    if (!pendingJobAction) return;
+    handleChangeJobStatus(pendingJobAction.issue, pendingJobAction.status);
+  };
+
+  const pendingActionIsProgress = pendingJobAction?.status === "inprogress";
+  const pendingActionIsCompleted = pendingJobAction?.status === "completed";
+  const pendingActionLabel = pendingActionIsProgress
+    ? "In Progress"
+    : pendingActionIsCompleted
+      ? "Completed"
+      : "Cancelled";
+
   return (
     <main className="flex w-full flex-col gap-2 lg:min-h-screen lg:flex-row">
       <section className="flex min-h-0 w-full flex-col gap-4 p-2 lg:h-full lg:w-[68%]">
@@ -785,6 +1275,11 @@ function NewIssuesBody() {
           selectedScope={selectedScope}
           counts={counts}
           categoryName={wellBeingCategoryName}
+          selectedRole={selectedRole}
+          onRoleChange={(role) => {
+            setSelectedRole(role);
+            setLoadingView(true);
+          }}
           onScopeChange={(scope) => {
             setSelectedScope(scope);
             setLoadingView(true);
@@ -795,9 +1290,53 @@ function NewIssuesBody() {
           loading={loadingView}
           selectedScope={selectedScope}
           rows={issueRows}
+          selectedRole={selectedRole}
+          onRequestJobStatus={(issue, status) => setPendingJobAction({ issue, status })}
+          actionLoadingIssueId={actionLoadingIssueId}
         />
       </section>
       <WellbeingExecutiveRight bounded />
+      <ConfirmDeleteModal
+        open={pendingJobAction !== null}
+        onConfirm={confirmPendingJobAction}
+        onCancel={() => {
+          if (!actionLoadingIssueId) setPendingJobAction(null);
+        }}
+        isDeleting={actionLoadingIssueId !== null}
+        title="Move to"
+        name={pendingActionLabel}
+        confirmText={
+          pendingActionIsProgress
+            ? "Yes, Start"
+            : pendingActionIsCompleted
+              ? "Yes, Complete"
+              : "Yes, Cancel"
+        }
+        loadingText={
+          pendingActionIsProgress
+            ? "Starting..."
+            : pendingActionIsCompleted
+              ? "Completing..."
+              : "Cancelling..."
+        }
+        actionType={pendingActionIsCompleted || pendingActionIsProgress ? "accept" : "reject"}
+        customDescription={
+          pendingJobAction ? (
+            <>
+              Are you sure you want to{" "}
+              <span className="font-semibold text-gray-700">
+                move this issue to {pendingActionLabel.toLowerCase()}
+              </span>
+              ?
+              <br />
+              <span className="font-semibold text-gray-700">
+                {pendingJobAction.issue.title}
+              </span>
+            </>
+          ) : null
+        }
+      />
+      <Toaster position="top-right" containerStyle={{ zIndex: 99999 }} />
     </main>
   );
 }
