@@ -6,6 +6,7 @@ import type {
   StudentWellbeingIssueTab,
   UpdateWellbeingSupportIssuePayload,
   WellbeingExecutiveNewIssueCounts,
+  WellbeingIssueJobStatus,
   WellbeingIssuePriority,
   WellbeingIssueRaisedRole,
   WellbeingIssueStatus,
@@ -318,15 +319,23 @@ export async function fetchStudentWellbeingIssueCounts(
 export async function fetchWellbeingExecutiveNewIssueCounts(
   collegeId: number,
   categoryId?: number | null,
+  issueRaisedRole?: WellbeingIssueRaisedRole | null,
+  wellBeingId?: number | null,
 ): Promise<WellbeingExecutiveNewIssueCounts> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("wellbeing_support_issues")
-    .select("categoryId, priority")
+    .select("wellbeingSupportIssueId, categoryId, priority")
     .eq("collegeId", collegeId)
     .eq("IssueStatus", "pending")
     .eq("isActive", true)
     .eq("is_deleted", false)
     .in("issueVisibilityRole", ["wellbeingexecutive", "both"]);
+
+  if (issueRaisedRole) {
+    query = query.eq("issueRaisedRole", issueRaisedRole);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("fetchWellbeingExecutiveNewIssueCounts error:", error);
@@ -334,14 +343,46 @@ export async function fetchWellbeingExecutiveNewIssueCounts(
   }
 
   const rows = data ?? [];
-  const myRows =
-    categoryId !== undefined && categoryId !== null
-      ? rows.filter((issue) => issue.categoryId === categoryId)
-      : [];
+  let myCount = 0;
+
+  if (wellBeingId) {
+    const issueIds = rows.map((issue) => issue.wellbeingSupportIssueId).filter(Boolean);
+    if (issueIds.length) {
+      const { data: assignedJobs, error: jobError } = await supabase
+        .from("wellbeing_issue_jobs")
+        .select("wellbeingIssueJobId, wellbeingSupportIssueId")
+        .eq("wellBeingId", wellBeingId)
+        .in("status", [
+          "inprogress" satisfies WellbeingIssueJobStatus,
+          "completed" satisfies WellbeingIssueJobStatus,
+        ])
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .is("deletedAt", null);
+
+      if (jobError) {
+        console.warn("fetchWellbeingExecutiveNewIssueCounts jobs warning:", {
+          code: jobError.code,
+          message: jobError.message,
+          details: jobError.details,
+          hint: jobError.hint,
+        });
+        myCount = 0;
+      } else {
+        const issueIdSet = new Set(issueIds);
+        myCount =
+          assignedJobs?.filter((job) =>
+            issueIdSet.has(job.wellbeingSupportIssueId),
+          ).length ?? 0;
+      }
+    }
+  } else if (categoryId !== undefined && categoryId !== null) {
+    myCount = rows.filter((issue) => issue.categoryId === categoryId).length;
+  }
 
   return {
     all: rows.length,
-    my: myRows.length,
+    my: myCount,
     urgent: rows.filter((issue) => issue.priority === "high").length,
   };
 }
