@@ -25,7 +25,6 @@ import { createClient } from "@supabase/supabase-js";
  *   $$
  *     SELECT net.http_get(
  *       url:='https://tektoncampus.com/api/cron/device-heartbeat',
- *       -- REPLACE 'YOUR_CRON_SECRET' WITH THE ACTUAL SECRET FROM YOUR ENV VARIABLES
  *       headers:='{"Authorization": "Bearer YOUR_CRON_SECRET"}'::jsonb,
  *       timeout_milliseconds:=10000 -- Generous 10s timeout for the API to process all devices
  *     );
@@ -153,5 +152,55 @@ export async function GET(request: Request) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * =================================================================================
+ * SAAS WEBHOOK (PUSH ARCHITECTURE)
+ * =================================================================================
+ * For multiple colleges with devices behind local network firewalls (like 192.168.x.x), 
+ * the cloud cannot ping them directly. 
+ * Instead, colleges can configure their Device Gateway (or a local agent) to POST 
+ * their status to this endpoint dynamically.
+ */
+export async function POST(request: Request) {
+  try {
+    const authHeader = request.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
+
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { deviceSerialNumber, isOnline } = body;
+
+    if (!deviceSerialNumber || typeof isOnline !== "boolean") {
+      return NextResponse.json({ error: "Invalid payload. Required: { deviceSerialNumber, isOnline }" }, { status: 400 });
+    }
+
+    const now = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from("biometric_devices")
+      .update({
+        isOnline: isOnline,
+        ...(isOnline ? { lastHeartbeat: now } : {}),
+        updatedAt: now,
+      })
+      .eq("deviceSerialNumber", deviceSerialNumber)
+      .select("deviceId");
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return NextResponse.json({ error: "Device not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, updatedDevice: data[0].deviceId, status: isOnline ? "Online" : "Offline" });
+  } catch (error: any) {
+    console.error("Device heartbeat webhook error:", error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
