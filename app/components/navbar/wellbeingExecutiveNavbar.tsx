@@ -24,7 +24,10 @@ import { logoutUser } from "@/lib/helpers/logoutUser";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
-import { fetchWellbeingExecutiveNewIssueCounts } from "@/lib/helpers/wellbeingSupportIssues/wellbeingSupportIssueAPI";
+import {
+  fetchWellbeingExecutiveNewIssueCounts,
+  fetchWellbeingManagerNewIssueCount,
+} from "@/lib/helpers/wellbeingSupportIssues/wellbeingSupportIssueAPI";
 
 type NavItem = {
   icon: (isActive: boolean) => ReactNode;
@@ -39,6 +42,7 @@ type WellbeingExecutiveNavbarProps = {
   basePath?: string;
   showExecutives?: boolean;
   showLeaveRequest?: boolean;
+  newIssueCountMode?: "executive" | "manager";
 };
 
 export default function WellbeingExecutiveNavbar({
@@ -46,6 +50,7 @@ export default function WellbeingExecutiveNavbar({
   basePath = "/wellbeing-executive",
   showExecutives = false,
   showLeaveRequest = true,
+  newIssueCountMode = "executive",
 }: WellbeingExecutiveNavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -60,6 +65,12 @@ export default function WellbeingExecutiveNavbar({
     if (!collegeId) return;
 
     try {
+      if (newIssueCountMode === "manager") {
+        const count = await fetchWellbeingManagerNewIssueCount(collegeId);
+        setNewIssuesCount(count);
+        return;
+      }
+
       const counts = await fetchWellbeingExecutiveNewIssueCounts(
         collegeId,
         wellBeingCategoryId,
@@ -68,7 +79,7 @@ export default function WellbeingExecutiveNavbar({
     } catch {
       setNewIssuesCount(0);
     }
-  }, [collegeId, wellBeingCategoryId]);
+  }, [collegeId, newIssueCountMode, wellBeingCategoryId]);
 
   useEffect(() => {
     loadNewIssueCount();
@@ -78,7 +89,9 @@ export default function WellbeingExecutiveNavbar({
     if (!collegeId) return;
 
     const channel = supabase
-      .channel(`wellbeing_executive_new_issues_nav_${collegeId}_${wellBeingCategoryId ?? "all"}`)
+      .channel(
+        `wellbeing_${newIssueCountMode}_new_issues_nav_${collegeId}_${wellBeingCategoryId ?? "all"}`,
+      )
       .on(
         "postgres_changes",
         {
@@ -91,12 +104,23 @@ export default function WellbeingExecutiveNavbar({
           loadNewIssueCount();
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "wellbeing_issue_jobs",
+        },
+        () => {
+          loadNewIssueCount();
+        },
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [collegeId, loadNewIssueCount, wellBeingCategoryId]);
+  }, [collegeId, loadNewIssueCount, newIssueCountMode, wellBeingCategoryId]);
 
   const items: NavItem[] = useMemo(() => {
     const navItems: NavItem[] = [

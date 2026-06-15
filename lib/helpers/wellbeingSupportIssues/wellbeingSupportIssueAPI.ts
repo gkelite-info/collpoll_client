@@ -355,6 +355,7 @@ export async function fetchWellbeingExecutiveNewIssueCounts(
         .in("status", [
           "inprogress" satisfies WellbeingIssueJobStatus,
           "completed" satisfies WellbeingIssueJobStatus,
+          "cancelled" satisfies WellbeingIssueJobStatus,
         ])
         .eq("isActive", true)
         .eq("is_deleted", false)
@@ -385,6 +386,59 @@ export async function fetchWellbeingExecutiveNewIssueCounts(
     my: myCount,
     urgent: rows.filter((issue) => issue.priority === "high").length,
   };
+}
+
+export async function fetchWellbeingManagerNewIssueCount(
+  collegeId: number,
+): Promise<number> {
+  const { data, error } = await supabase
+    .from("wellbeing_support_issues")
+    .select("wellbeingSupportIssueId")
+    .eq("collegeId", collegeId)
+    .eq("IssueStatus", "pending")
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .in("issueVisibilityRole", ["wellbeingmanager", "both"]);
+
+  if (error) {
+    console.error("fetchWellbeingManagerNewIssueCount error:", error);
+    throw error;
+  }
+
+  const issueIds = (data ?? [])
+    .map((issue) => issue.wellbeingSupportIssueId)
+    .filter((issueId): issueId is number => Boolean(issueId));
+
+  if (!issueIds.length) return 0;
+
+  const { data: jobs, error: jobsError } = await supabase
+    .from("wellbeing_issue_jobs")
+    .select("wellbeingSupportIssueId, status, updatedAt")
+    .in("wellbeingSupportIssueId", issueIds)
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null)
+    .order("updatedAt", { ascending: false });
+
+  if (jobsError) {
+    console.error("fetchWellbeingManagerNewIssueCount jobs error:", jobsError);
+    throw jobsError;
+  }
+
+  const latestJobByIssueId = new Map<number, { status: WellbeingIssueJobStatus }>();
+  ((jobs ?? []) as {
+    wellbeingSupportIssueId: number;
+    status: WellbeingIssueJobStatus;
+  }[]).forEach((job) => {
+    if (!latestJobByIssueId.has(job.wellbeingSupportIssueId)) {
+      latestJobByIssueId.set(job.wellbeingSupportIssueId, job);
+    }
+  });
+
+  return issueIds.filter((issueId) => {
+    const job = latestJobByIssueId.get(issueId);
+    return !job || job.status === "cancelled";
+  }).length;
 }
 
 export async function fetchStudentWellbeingIssues({

@@ -9,24 +9,621 @@ import {
     ListDashes,
     Plus,
     CaretDown,
+    CalendarIcon,
+    X,
 } from "@phosphor-icons/react";
 import Image from "next/image";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import WellbeingRight from "../../components/WellbeingRight";
 import AddExecutiveModal from "../../components/AddExecutiveModal";
 import { useRouter } from "next/navigation";
 import AlertExecutiveModal from "../../components/AlertExecutiveModal";
+import { useUser } from "@/app/utils/context/UserContext";
+import { supabase } from "@/lib/supabaseClient";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+
+type CategoryRelation =
+    | { categoryName?: string | null }
+    | { categoryName?: string | null }[]
+    | null;
+
+type ManagerIssueSummaryRow = {
+    wellbeingSupportIssueId: number;
+    categoryId: number;
+    appliesTo: IssueScope | "both";
+    priority: "high" | "medium" | "low";
+    issueRaisedRole: IssueRoleFilter;
+    wellbeing_categories: CategoryRelation;
+};
+
+type ManagerIssueTableRow = ManagerIssueSummaryRow & {
+    fullName: string;
+    email: string;
+    issueTitle: string;
+    description: string;
+};
+
+type ManagerIssueTableItem = {
+    id: number;
+    student: string;
+    email: string;
+    title: string;
+    description: string;
+    category: string;
+    priority: string;
+    executiveName: string;
+    jobStatus: string;
+};
+
+type IssueJobRow = {
+    wellbeingIssueJobId: number;
+    wellbeingSupportIssueId: number;
+    wellBeingId: number;
+    status: "inprogress" | "completed" | "cancelled";
+    updatedAt: string | null;
+};
+
+type IssueScope = "all" | "college" | "hostel";
+type IssueRoleFilter =
+    | "all"
+    | "Student"
+    | "CollegeAdmin"
+    | "Admin"
+    | "Faculty"
+    | "Finance"
+    | "CollegeHr"
+    | "PlacementOfficer"
+    | "WellbeingExecutive"
+    | "WellbeingManager"
+    | "FinanceManager";
+
+type CategoryFilter = "all" | `${number}`;
+
+type CategoryOption = {
+    label: string;
+    value: CategoryFilter;
+};
+
+type DropdownOption<T extends string> = {
+    label: string;
+    value: T;
+};
+
+type IssueSummaryCards = {
+    totalIssues: number;
+    highPriorityIssues: number;
+    totalCategories: number;
+    highestCategoryName: string;
+    highestCategoryCount: number;
+};
+
+const defaultSummaryCards: IssueSummaryCards = {
+    totalIssues: 0,
+    highPriorityIssues: 0,
+    totalCategories: 0,
+    highestCategoryName: "No Issues",
+    highestCategoryCount: 0,
+};
+
+const ITEMS_PER_PAGE = 10;
+
+const getTodayDateKey = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+};
+
+const formatDateKey = (dateKey: string) =>
+    new Date(`${dateKey}T00:00:00`).toLocaleDateString("en-GB");
+
+const getDateBounds = (dateKey: string) => {
+    const startDate = new Date(`${dateKey}T00:00:00`);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 1);
+
+    return {
+        start: startDate.toISOString(),
+        end: endDate.toISOString(),
+    };
+};
+
+const getCategoryName = (relation: CategoryRelation) => {
+    const category = Array.isArray(relation) ? relation[0] : relation;
+    return category?.categoryName?.trim() || "Not specified";
+};
+
+const formatCount = (count: number) => String(count).padStart(2, "0");
+
+const formatPriority = (priority: ManagerIssueSummaryRow["priority"]) =>
+    priority === "high" ? "High" : priority === "medium" ? "Medium" : "Low";
+
+const formatJobStatus = (status: IssueJobRow["status"]) =>
+    status === "inprogress"
+        ? "In Progress"
+        : status === "completed"
+            ? "Completed"
+            : "Cancelled";
+
+const getLatestJobByIssueId = (jobs: IssueJobRow[]) => {
+    const jobByIssueId = new Map<number, IssueJobRow>();
+    jobs.forEach((job) => {
+        if (!jobByIssueId.has(job.wellbeingSupportIssueId)) {
+            jobByIssueId.set(job.wellbeingSupportIssueId, job);
+        }
+    });
+
+    return jobByIssueId;
+};
+
+const isManagerNewIssue = (job?: IssueJobRow) => !job || job.status === "cancelled";
+
+const getExecutiveBadgeClass = (name: string) =>
+    name === "-"
+        ? "bg-gray-100 text-[#6B7280]"
+        : "bg-[#E8F8EF] text-[#009B55]";
+
+const getStatusBadgeClass = (status: string) => {
+    if (status === "Cancelled") return "bg-[#FFF2F2] text-[#FF2A2A]";
+    if (status === "Completed") return "bg-[#E8F8EF] text-[#009B55]";
+    if (status === "In Progress") return "bg-[#FFF4EB] text-[#D97706]";
+    return "bg-gray-100 text-[#6B7280]";
+};
+
+const scopeOptions: DropdownOption<IssueScope>[] = [
+    { label: "All", value: "all" },
+    { label: "College", value: "college" },
+    { label: "Hostel", value: "hostel" },
+];
+
+const issueRoleOptions: DropdownOption<IssueRoleFilter>[] = [
+    { label: "All", value: "all" },
+    { label: "Student", value: "Student" },
+    { label: "College Admin", value: "CollegeAdmin" },
+    { label: "Admin", value: "Admin" },
+    { label: "Faculty", value: "Faculty" },
+    { label: "Finance", value: "Finance" },
+    { label: "College HR", value: "CollegeHr" },
+    { label: "Placement Officer", value: "PlacementOfficer" },
+    { label: "Wellbeing Executive", value: "WellbeingExecutive" },
+    { label: "Wellbeing Manager", value: "WellbeingManager" },
+    { label: "Finance Manager", value: "FinanceManager" },
+];
+
+function DropdownPill<T extends string>({
+    value,
+    options,
+    onChange,
+    minWidth,
+    variant = "dark",
+}: {
+    value: T;
+    options: DropdownOption<T>[];
+    onChange: (value: T) => void;
+    minWidth: string;
+    variant?: "dark" | "light";
+}) {
+    const [open, setOpen] = useState(false);
+    const selectedLabel =
+        options.find((option) => option.value === value)?.label ?? value;
+    const buttonClass =
+        variant === "dark"
+            ? "bg-[#16284F] text-white hover:bg-[#102044]"
+            : "border border-[#D7D7D7] bg-white text-[#282828] hover:border-gray-400";
+
+    return (
+        <div className="relative z-50" onMouseLeave={() => setOpen(false)}>
+            <button
+                type="button"
+                onClick={() => setOpen((current) => !current)}
+                className={`flex h-8 ${minWidth} cursor-pointer items-center justify-between gap-3 rounded-md px-3 text-[13px] font-bold shadow-sm transition-colors ${buttonClass}`}
+            >
+                <span className="truncate">{selectedLabel}</span>
+                <CaretDown
+                    size={15}
+                    weight="bold"
+                    className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+                />
+            </button>
+
+            {open ? (
+                <div className="custom-scrollbar absolute left-0 top-full z-[80] mt-1 max-h-80 w-full min-w-full overflow-y-auto rounded-xl bg-white py-2 shadow-xl ring-1 ring-black/5">
+                    {options.map((option) => {
+                        const selected = option.value === value;
+                        return (
+                            <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => {
+                                    onChange(option.value);
+                                    setOpen(false);
+                                }}
+                                className={`block w-full cursor-pointer px-6 py-3 text-left text-[14px] font-medium transition-colors ${selected
+                                        ? "bg-[#2166D1] text-white"
+                                        : "bg-white text-[#16284F] hover:bg-[#E8E8E8]"
+                                    }`}
+                            >
+                                {option.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            ) : null}
+        </div>
+    );
+}
 
 export default function NewIssuesPageContent() {
     const router = useRouter()
+    const { collegeId } = useUser();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+    const [selectedDateKey, setSelectedDateKey] = useState(getTodayDateKey);
+    const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+    const [selectedScope, setSelectedScope] = useState<IssueScope>("all");
+    const [selectedRole, setSelectedRole] = useState<IssueRoleFilter>("all");
+    const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>("all");
+    const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([
+        { label: "All", value: "all" },
+    ]);
+    const [summaryCards, setSummaryCards] =
+        useState<IssueSummaryCards>(defaultSummaryCards);
+    const [issueRows, setIssueRows] = useState<ManagerIssueTableItem[]>([]);
+    const [issuesLoading, setIssuesLoading] = useState(true);
+    const [page, setPage] = useState(1);
+
+    useEffect(() => {
+        setPage(1);
+    }, [selectedDateKey, selectedScope, selectedRole, selectedCategory]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(issueRows.length / ITEMS_PER_PAGE));
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [issueRows.length, page]);
+
+    const loadCategories = useCallback(async () => {
+        if (!collegeId) {
+            setCategoryOptions([{ label: "All", value: "all" }]);
+            return;
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from("wellbeing_categories")
+                .select("categoryId, categoryName")
+                .eq("collegeId", collegeId)
+                .eq("isActive", true)
+                .eq("is_deleted", false)
+                .is("deletedAt", null)
+                .order("categoryName", { ascending: true });
+
+            if (error) throw error;
+
+            setCategoryOptions([
+                { label: "All", value: "all" },
+                ...((data ?? []) as { categoryId: number; categoryName: string }[]).map(
+                    (category) => ({
+                        label: category.categoryName,
+                        value: String(category.categoryId) as CategoryFilter,
+                    }),
+                ),
+            ]);
+        } catch (error) {
+            console.error("load wellbeing manager categories error:", error);
+            setCategoryOptions([{ label: "All", value: "all" }]);
+        }
+    }, [collegeId]);
+
+    const loadIssueSummaryCards = useCallback(async () => {
+        if (!collegeId) {
+            setSummaryCards(defaultSummaryCards);
+            return;
+        }
+
+        const { start, end } = getDateBounds(selectedDateKey);
+
+        try {
+            const { data, error } = await supabase
+                .from("wellbeing_support_issues")
+                .select(
+                    `
+                    wellbeingSupportIssueId,
+                    categoryId,
+                    appliesTo,
+                    priority,
+                    issueRaisedRole,
+                    wellbeing_categories (
+                        categoryName
+                    )
+                `,
+                )
+                .eq("collegeId", collegeId)
+                .eq("IssueStatus", "pending")
+                .eq("isActive", true)
+                .eq("is_deleted", false)
+                .in("issueVisibilityRole", ["wellbeingmanager", "both"])
+                .gte("createdAt", start)
+                .lt("createdAt", end);
+
+            if (error) throw error;
+
+            const rows = ((data ?? []) as ManagerIssueSummaryRow[]).filter((issue) => {
+                const matchesScope =
+                    selectedScope === "all" ||
+                    issue.appliesTo === selectedScope ||
+                    issue.appliesTo === "both";
+                const matchesRole =
+                    selectedRole === "all" || issue.issueRaisedRole === selectedRole;
+                const matchesCategory =
+                    selectedCategory === "all" ||
+                    issue.categoryId === Number(selectedCategory);
+
+                return matchesScope && matchesRole && matchesCategory;
+            });
+            const issueIds = rows.map((issue) => issue.wellbeingSupportIssueId);
+            const { data: jobsData, error: jobsError } = issueIds.length
+                ? await supabase
+                    .from("wellbeing_issue_jobs")
+                    .select(
+                        "wellbeingIssueJobId, wellbeingSupportIssueId, wellBeingId, status, updatedAt",
+                    )
+                    .in("wellbeingSupportIssueId", issueIds)
+                    .eq("isActive", true)
+                    .eq("is_deleted", false)
+                    .is("deletedAt", null)
+                    .order("updatedAt", { ascending: false })
+                : { data: [], error: null };
+
+            if (jobsError) throw jobsError;
+
+            const jobByIssueId = getLatestJobByIssueId((jobsData ?? []) as IssueJobRow[]);
+            const newIssueRows = rows.filter((issue) =>
+                isManagerNewIssue(jobByIssueId.get(issue.wellbeingSupportIssueId)),
+            );
+            const categoryCounts = new Map<
+                number,
+                { name: string; count: number }
+            >();
+
+            newIssueRows.forEach((issue) => {
+                const current = categoryCounts.get(issue.categoryId) ?? {
+                    name: getCategoryName(issue.wellbeing_categories),
+                    count: 0,
+                };
+                categoryCounts.set(issue.categoryId, {
+                    ...current,
+                    count: current.count + 1,
+                });
+            });
+
+            const highestCategory = Array.from(categoryCounts.values()).sort(
+                (a, b) => b.count - a.count,
+            )[0];
+
+            setSummaryCards({
+                totalIssues: newIssueRows.length,
+                highPriorityIssues: newIssueRows.filter((issue) => issue.priority === "high")
+                    .length,
+                totalCategories: categoryCounts.size,
+                highestCategoryName: highestCategory?.name ?? "No Issues",
+                highestCategoryCount: highestCategory?.count ?? 0,
+            });
+        } catch (error) {
+            console.error("load wellbeing manager issue summary error:", error);
+            setSummaryCards(defaultSummaryCards);
+        }
+    }, [collegeId, selectedCategory, selectedDateKey, selectedRole, selectedScope]);
+
+    const loadIssueTableRows = useCallback(async () => {
+        if (!collegeId) {
+            setIssueRows([]);
+            setIssuesLoading(false);
+            return;
+        }
+
+        setIssuesLoading(true);
+        const { start, end } = getDateBounds(selectedDateKey);
+
+        try {
+            const { data, error } = await supabase
+                .from("wellbeing_support_issues")
+                .select(
+                    `
+                    wellbeingSupportIssueId,
+                    fullName,
+                    email,
+                    issueTitle,
+                    description,
+                    categoryId,
+                    appliesTo,
+                    priority,
+                    issueRaisedRole,
+                    wellbeing_categories (
+                        categoryName
+                    )
+                `,
+                )
+                .eq("collegeId", collegeId)
+                .eq("IssueStatus", "pending")
+                .eq("isActive", true)
+                .eq("is_deleted", false)
+                .in("issueVisibilityRole", ["wellbeingmanager", "both"])
+                .gte("createdAt", start)
+                .lt("createdAt", end)
+                .order("createdAt", { ascending: false });
+
+            if (error) throw error;
+
+            const filteredIssues = ((data ?? []) as ManagerIssueTableRow[]).filter(
+                (issue) => {
+                    const matchesScope =
+                        selectedScope === "all" ||
+                        issue.appliesTo === selectedScope ||
+                        issue.appliesTo === "both";
+                    const matchesRole =
+                        selectedRole === "all" || issue.issueRaisedRole === selectedRole;
+                    const matchesCategory =
+                        selectedCategory === "all" ||
+                        issue.categoryId === Number(selectedCategory);
+
+                    return matchesScope && matchesRole && matchesCategory;
+                },
+            );
+            const issueIds = filteredIssues.map((issue) => issue.wellbeingSupportIssueId);
+
+            const { data: jobsData, error: jobsError } = issueIds.length
+                ? await supabase
+                    .from("wellbeing_issue_jobs")
+                    .select(
+                        "wellbeingIssueJobId, wellbeingSupportIssueId, wellBeingId, status, updatedAt",
+                    )
+                    .in("wellbeingSupportIssueId", issueIds)
+                    .eq("isActive", true)
+                    .eq("is_deleted", false)
+                    .is("deletedAt", null)
+                    .order("updatedAt", { ascending: false })
+                : { data: [], error: null };
+
+            if (jobsError) throw jobsError;
+
+            const jobByIssueId = getLatestJobByIssueId((jobsData ?? []) as IssueJobRow[]);
+            const newIssueRows = filteredIssues.filter((issue) =>
+                isManagerNewIssue(jobByIssueId.get(issue.wellbeingSupportIssueId)),
+            );
+
+            const wellBeingIds = Array.from(
+                new Set(
+                    newIssueRows
+                        .map((issue) => jobByIssueId.get(issue.wellbeingSupportIssueId))
+                        .filter((job): job is IssueJobRow => Boolean(job))
+                        .map((job) => job.wellBeingId),
+                ),
+            );
+            const { data: wellBeingsData, error: wellBeingsError } = wellBeingIds.length
+                ? await supabase
+                    .from("well_beings")
+                    .select("wellBeingId, userId")
+                    .in("wellBeingId", wellBeingIds)
+                : { data: [], error: null };
+
+            if (wellBeingsError) throw wellBeingsError;
+
+            const userIdByWellBeingId = new Map(
+                ((wellBeingsData ?? []) as { wellBeingId: number; userId: number }[]).map(
+                    (wellBeing) => [wellBeing.wellBeingId, wellBeing.userId],
+                ),
+            );
+            const userIds = Array.from(new Set(userIdByWellBeingId.values()));
+            const { data: usersData, error: usersError } = userIds.length
+                ? await supabase
+                    .from("users")
+                    .select("userId, fullName")
+                    .in("userId", userIds)
+                : { data: [], error: null };
+
+            if (usersError) throw usersError;
+
+            const fullNameByUserId = new Map(
+                ((usersData ?? []) as { userId: number; fullName: string }[]).map((user) => [
+                    user.userId,
+                    user.fullName,
+                ]),
+            );
+
+            setIssueRows(
+                newIssueRows.map((issue) => {
+                    const job = jobByIssueId.get(issue.wellbeingSupportIssueId);
+                    const executiveUserId = job
+                        ? userIdByWellBeingId.get(job.wellBeingId)
+                        : undefined;
+                    const executiveName = executiveUserId
+                        ? fullNameByUserId.get(executiveUserId) || "-"
+                        : "-";
+
+                    return {
+                        id: issue.wellbeingSupportIssueId,
+                        student: issue.fullName,
+                        email: issue.email,
+                        title: issue.issueTitle,
+                        description: issue.description,
+                        category: getCategoryName(issue.wellbeing_categories),
+                        priority: formatPriority(issue.priority),
+                        executiveName,
+                        jobStatus: job ? formatJobStatus(job.status) : "-",
+                    };
+                }),
+            );
+        } catch (error) {
+            console.error("load wellbeing manager issue table error:", error);
+            setIssueRows([]);
+        } finally {
+            setIssuesLoading(false);
+        }
+    }, [collegeId, selectedCategory, selectedDateKey, selectedRole, selectedScope]);
+
+    useEffect(() => {
+        loadIssueSummaryCards();
+    }, [loadIssueSummaryCards]);
+
+    useEffect(() => {
+        loadIssueTableRows();
+    }, [loadIssueTableRows]);
+
+    useEffect(() => {
+        loadCategories();
+    }, [loadCategories]);
+
+    useEffect(() => {
+        if (!collegeId) return;
+
+        const channel = supabase
+            .channel(`wellbeing_manager_new_issues_cards_${collegeId}`)
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "wellbeing_support_issues",
+                    filter: `collegeId=eq.${collegeId}`,
+                },
+                () => {
+                    loadIssueSummaryCards();
+                    loadIssueTableRows();
+                },
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: "wellbeing_issue_jobs",
+                },
+                () => {
+                    loadIssueTableRows();
+                },
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [collegeId, loadIssueSummaryCards, loadIssueTableRows]);
+
+    const displayDate = useMemo(
+        () => formatDateKey(selectedDateKey),
+        [selectedDateKey],
+    );
+
     const cardData = [
         {
             id: "TOTAL_ISSUES",
             style: "bg-[#E6E0FF] border border-black/5 hover:shadow-md transition-all h-[130px]",
             icon: <ListChecks size={22} weight="fill" color="#6C20CA" />,
-            value: "24",
+            value: formatCount(summaryCards.totalIssues),
             label: "Total Issues Today",
         },
         {
@@ -35,8 +632,15 @@ export default function NewIssuesPageContent() {
             icon: <Warning size={22} weight="fill" color="#F59E0B" />,
             value: (
                 <span className="flex flex-col md:flex-row gap-1">
-                    <span className="truncate text-[9px] sm:text-xs md:text-sm" title="Infrastructure">Infrastructure</span>
-                    <span className="text-[18px]">(10)</span>
+                    <span
+                        className="truncate text-[9px] sm:text-xs md:text-sm"
+                        title={summaryCards.highestCategoryName}
+                    >
+                        {summaryCards.highestCategoryName}
+                    </span>
+                    <span className="text-[18px]">
+                        ({summaryCards.highestCategoryCount})
+                    </span>
                 </span>
             ),
             label: "Highest Category",
@@ -45,26 +649,19 @@ export default function NewIssuesPageContent() {
             id: "HIGH_PRIORITY",
             style: "bg-[#FFE4E4] border border-black/5 hover:shadow-md transition-all h-[130px]",
             icon: <ClockCountdown size={22} weight="fill" color="#EF4444" />,
-            value: "06",
+            value: formatCount(summaryCards.highPriorityIssues),
             label: "High Priority Issues",
         },
         {
             id: "TOTAL_CATEGORIES",
             style: "bg-[#E5F9EA] border border-black/5 hover:shadow-md transition-all h-[130px]",
             icon: <WarningCircle size={22} weight="fill" color="#10B981" />,
-            value: "05",
+            value: formatCount(summaryCards.totalCategories),
             label: "Total Categories",
         },
     ];
 
-    const dropdowns = [
-        { label: "Role", options: ["Student", "Faculty", "Staff"] },
-        { label: "Category", options: ["All", "Medical", "Infrastructure", "Event", "Sports", "Safety"] },
-        { label: "Branch", options: ["All", "CSE", "ECE", "MECH"] },
-        { label: "Year", options: ["All", "1st Year", "2nd Year", "3rd Year", "4th Year"] },
-    ];
-
-    const issues = [
+    /* const issues = [
         {
             id: 1,
             student: "Shreya Patel",
@@ -125,57 +722,77 @@ export default function NewIssuesPageContent() {
             category: "Hostel",
             priority: "Medium",
         },
-    ];
+    ]; */
 
     const columns = [
-        { title: "Student", key: "student" },
+        { title: selectedRole === "Student" ? "Student" : "Name", key: "student" },
         { title: "Issue", key: "issue" },
         { title: "Category", key: "category" },
         { title: "Priority", key: "priority" },
+        { title: "Executive", key: "executive" },
+        { title: "Status", key: "status" },
     ];
 
-    const tableData = issues.map((issue) => ({
+    const tableData = issueRows.map((issue) => ({
         student: (
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-[260px] max-w-[280px] items-center gap-3 text-left">
                 <div className="w-[42px] h-[42px] rounded-full overflow-hidden flex-shrink-0 bg-gray-200 border border-gray-100 shadow-sm relative">
                     <Image
-                        src={issue.image}
+                        src="/male-student.png"
                         alt={issue.student}
                         fill
                         sizes="42px"
                         className="object-cover"
                     />
                 </div>
-                <div className="flex flex-col min-w-0">
+                <div className="flex min-w-0 flex-col">
                     <p className="text-[14px] font-bold text-[#16284F] truncate">{issue.student}</p>
-                    <p className="text-[12px] text-gray-500 font-medium truncate mt-0.5">{issue.details}</p>
+                    <p className="text-[12px] text-gray-500 font-medium truncate mt-0.5">{issue.email}</p>
                 </div>
             </div>
         ),
         issue: (
-            <div className="flex flex-col min-w-0 pl-2">
-                <p className="text-[14px] font-bold text-[#16284F] truncate">{issue.issueTitle}</p>
-                <p className="text-[13px] text-gray-500 truncate mt-0.5">{issue.issueDesc}</p>
+            <div className="mx-auto flex w-[360px] flex-col text-center">
+                <p className="w-full truncate text-[14px] font-bold text-[#16284F]">{issue.title}</p>
+                <p className="mt-0.5 w-full truncate text-[13px] text-gray-500">{issue.description}</p>
             </div>
         ),
         category: (
-            <span className="px-3.5 py-1.5 rounded-full text-[11px] font-bold tracking-wide bg-[#EDF3FF] text-[#4E88FF]">
+            <span className="inline-flex min-w-[150px] justify-center rounded-full bg-[#EDF3FF] px-3.5 py-1.5 text-[11px] font-bold tracking-wide text-[#4E88FF]">
                 {issue.category}
             </span>
         ),
         priority: (
-            <span className="px-3.5 py-1.5 rounded-full text-[11px] font-bold tracking-wide bg-[#FFF4ED] text-[#FF9E4E]">
+            <span className="inline-flex min-w-[105px] justify-center rounded-full bg-[#FFF4ED] px-3.5 py-1.5 text-[11px] font-bold tracking-wide text-[#FF9E4E]">
                 {issue.priority}
             </span>
         ),
+        executive: (
+            <span
+                className={`inline-flex min-w-[130px] justify-center rounded-full px-3.5 py-1.5 text-[12px] font-bold ${getExecutiveBadgeClass(issue.executiveName)}`}
+            >
+                {issue.executiveName}
+            </span>
+        ),
+        status: (
+            <span
+                className={`inline-flex min-w-[110px] justify-center rounded-full px-3.5 py-1.5 text-[12px] font-bold ${getStatusBadgeClass(issue.jobStatus)}`}
+            >
+                {issue.jobStatus}
+            </span>
+        ),
     }));
+    const paginatedTableData = tableData.slice(
+        (page - 1) * ITEMS_PER_PAGE,
+        page * ITEMS_PER_PAGE,
+    );
 
     return (
         <main className="flex flex-col lg:flex-row w-full min-h-screen pb-5">
             <div className="w-full lg:w-[68%] p-2 md:p-2 lg:p-2 flex flex-col gap-6 lg:gap-8 lg:h-screen">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
                     <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2 text-lg md:text-[26px] font-bold leading-tight select-none">
+                        <div className="flex items-center gap-2 text-base font-bold leading-tight select-none md:text-[22px]">
                             <h1 className="text-[#43C17A] cursor-pointer">New Issues</h1>
                             <span className="font-bold text-[#43C17A]">/</span>
                             <h1
@@ -185,30 +802,24 @@ export default function NewIssuesPageContent() {
                                 Reassigned Issues
                             </h1>
                         </div>
-                        <p className="text-[#16284F] text-[13px] md:text-sm font-medium">
+                        <p className="text-[#16284F] text-[12px] md:text-[13px] font-medium">
                             View all new issues received across categories
                         </p>
                     </div>
 
-                    <div className="flex gap-2">
-                        <div className="relative flex items-center">
-                            <select className="cursor-pointer appearance-none bg-[#16284F] text-[#ffffff] py-1.5 pl-3 pr-8 rounded-md outline-none text-[13px] md:text-sm font-medium h-[34px]">
-                                <option value="">College</option>
-                                <option value="engineering">Engineering</option>
-                                <option value="medical">Medical</option>
-                                <option value="arts">Arts</option>
-                            </select>
-                            <CaretDown size={14} weight="bold" color="#ffffff" className="absolute right-2.5 pointer-events-none" />
-                        </div>
-                        <div className="relative flex items-center">
-                            <select className="cursor-pointer appearance-none bg-[#16284F] text-[#ffffff] py-1.5 pl-3 pr-8 rounded-md outline-none text-[13px] md:text-sm font-medium h-[34px]">
-                                <option value="">Student</option>
-                                <option value="ug">Undergraduate</option>
-                                <option value="pg">Postgraduate</option>
-                                <option value="phd">PhD</option>
-                            </select>
-                            <CaretDown size={14} weight="bold" color="#ffffff" className="absolute right-2.5 pointer-events-none" />
-                        </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <DropdownPill
+                            value={selectedScope}
+                            options={scopeOptions}
+                            onChange={setSelectedScope}
+                            minWidth="min-w-[132px]"
+                        />
+                        <DropdownPill
+                            value={selectedRole}
+                            options={issueRoleOptions}
+                            onChange={setSelectedRole}
+                            minWidth="min-w-[148px]"
+                        />
                     </div>
                     <button
                         onClick={() => setIsModalOpen(true)}
@@ -235,35 +846,60 @@ export default function NewIssuesPageContent() {
                         ))}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 mt-4">
-                        {dropdowns.map((dropdown, idx) => (
-                            <div key={idx} className="flex items-center gap-2">
-                                <span className="text-[#16284F] text-[13px] md:text-sm font-bold whitespace-nowrap">
-                                    {dropdown.label} :
-                                </span>
-                                <div className="relative flex items-center">
-                                    <select className="appearance-none border border-[#D7D7D7] text-[#282828] text-[13px] md:text-sm font-bold outline-none cursor-pointer hover:border-gray-400 py-1.5 pl-3 pr-8 rounded-md transition-all focus:ring-2 focus:ring-[#43C17A]/20 min-w-[100px] h-[34px]">
-                                        {dropdown.options.map((opt) => (
-                                            <option key={opt} value={opt}>
-                                                {opt}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <CaretDown size={14} weight="bold" color="#282828" className="absolute right-2.5 pointer-events-none" />
-                                </div>
-                            </div>
-                        ))}
+                    <div className="flex flex-wrap items-center gap-3 mt-4">
+                        <span className="text-[#16284F] text-[12px] md:text-[13px] font-bold whitespace-nowrap">
+                            Category :
+                        </span>
+                        <DropdownPill
+                            value={selectedCategory}
+                            options={categoryOptions}
+                            onChange={setSelectedCategory}
+                            minWidth="min-w-[180px]"
+                            variant="light"
+                        />
                     </div>
 
                     <div className="flex flex-col gap-4 mt-3">
-                        <div className="flex justify-between">
-                            <h2 className="text-[#16284F] text-lg font-bold">Issues Received Today</h2>
-                            <button
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <h2 className="text-[#16284F] text-base font-bold">Issues Received Today</h2>
+                            {!isDatePickerOpen ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDatePickerOpen(true)}
+                                    className="inline-flex h-[38px] min-w-[190px] cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[#DFF1E8] px-4 text-[15px] font-extrabold text-[#43C17A]"
+                                    title="Select date"
+                                >
+                                    <CalendarIcon size={17} weight="fill" />
+                                    {displayDate}
+                                </button>
+                            ) : (
+                                <div className="flex h-[38px] min-w-[275px] items-center gap-2 rounded-2xl border border-[#43C17A] bg-white px-3 text-[#43C17A] shadow-sm">
+                                    <CalendarIcon size={17} weight="fill" />
+                                    <input
+                                        type="date"
+                                        value={selectedDateKey}
+                                        onChange={(event) => {
+                                            setSelectedDateKey(event.target.value || getTodayDateKey());
+                                            setIsDatePickerOpen(false);
+                                        }}
+                                        className="h-7 rounded-xl border border-[#D7D7D7] px-3 text-center text-[13px] font-medium text-[#282828] outline-none"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsDatePickerOpen(false)}
+                                        className="cursor-pointer rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                                        title="Close"
+                                    >
+                                        <X size={15} weight="bold" />
+                                    </button>
+                                </div>
+                            )}
+                            {/* <button
                                 onClick={() => setIsAlertModalOpen(true)}
                                 className="bg-[#FF0000] text-[#FFFFFF] px-4 py-1.5 rounded-sm cursor-pointer"
                             >
                                 Send Alert
-                            </button>
+                            </button> */}
                         </div>
                         <div className="bg-white -mt-2 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-gray-100 flex flex-col overflow-hidden">
                             <div className="flex items-center gap-3 p-5 -mb-6 border-b border-gray-50">
@@ -278,10 +914,18 @@ export default function NewIssuesPageContent() {
                             <div className="p-2 sm:p-4">
                                 <TableComponent
                                     columns={columns}
-                                    tableData={tableData}
-                                    isLoading={false}
+                                    tableData={paginatedTableData}
+                                    isLoading={issuesLoading}
+                                    tableClassName="min-w-[1280px]"
                                 />
                             </div>
+                            <Pagination
+                                currentPage={page}
+                                totalItems={issueRows.length}
+                                itemsPerPage={ITEMS_PER_PAGE}
+                                onPageChange={setPage}
+                                roundedBottom="rounded-b-2xl"
+                            />
                         </div>
                     </div>
                 </div>
