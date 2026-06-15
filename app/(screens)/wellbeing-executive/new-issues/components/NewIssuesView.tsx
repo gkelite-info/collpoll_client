@@ -8,6 +8,7 @@ import toast, { Toaster } from "react-hot-toast";
 import TableComponent from "@/app/utils/table/table";
 import WellbeingExecutiveRight from "../../components/WellbeingExecutiveRight";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 import { fetchWellbeingExecutiveNewIssueCounts } from "@/lib/helpers/wellbeingSupportIssues/wellbeingSupportIssueAPI";
@@ -33,6 +34,7 @@ type ExecutiveIssue = {
   student: string;
   meta: string;
   role: string;
+  scopeLabel: string;
   categoryId: number;
   image: string;
   title: string;
@@ -64,6 +66,8 @@ const defaultIssueCounts: WellbeingExecutiveNewIssueCounts = {
   urgent: 0,
 };
 
+const NEW_ISSUES_ITEMS_PER_PAGE = 10;
+
 const issueRoleOptions: IssueRoleOption[] = [
   { label: "All", value: "all" },
   { label: "Student", value: "Student" },
@@ -83,6 +87,9 @@ const getIssueRoleFilterLabel = (value: IssueRoleFilter) =>
 
 const getIssueSubjectHeader = (value: IssueRoleFilter) =>
   value === "all" ? "Raised By" : getIssueRoleFilterLabel(value);
+
+const getIssueScopeLabel = (value: IssueAppliesTo) =>
+  value === "both" ? "Both" : value === "college" ? "College" : "Hostel";
 
 type ExecutiveIssueRow = {
   wellbeingSupportIssueId: number;
@@ -188,6 +195,7 @@ function toExecutiveIssue({
     student: row.fullName,
     meta: row.email,
     role: getIssueRoleFilterLabel(row.issueRaisedRole),
+    scopeLabel: getIssueScopeLabel(row.appliesTo),
     categoryId: row.categoryId,
     image: "/male-student.png",
     title: row.issueTitle,
@@ -210,7 +218,10 @@ function toExecutiveIssue({
     block: "-",
     room: "-",
     evidence: attachments[0]?.name ?? "No attachment",
-    assignedToMe: job?.status === "inprogress" || job?.status === "completed",
+    assignedToMe:
+      job?.status === "inprogress" ||
+      job?.status === "completed" ||
+      job?.status === "cancelled",
     canTakeAction: registeredCategoryId === row.categoryId,
     jobId: job?.wellbeingIssueJobId ?? null,
     jobStatus: job?.status ?? null,
@@ -425,11 +436,11 @@ function StudentCell({ issue }: { issue: ExecutiveIssue }) {
 
 function IssueCell({ issue }: { issue: ExecutiveIssue }) {
   return (
-    <div className="min-w-[320px] max-w-[380px] text-left">
-      <p className="truncate text-[14px] font-bold text-[#282828]">
+    <div className="mx-auto w-[360px] text-center">
+      <p className="w-full truncate text-[14px] font-bold text-[#282828]">
         {issue.title}
       </p>
-      <p className="mt-2 truncate text-[13px] font-medium text-[#282828]">
+      <p className="mt-2 w-full truncate text-[13px] font-medium text-[#282828]">
         {issue.description}
       </p>
     </div>
@@ -530,6 +541,10 @@ function IssuesTable({
   roleLabel,
   onRequestJobStatus,
   actionLoadingIssueId,
+  currentPage,
+  totalItems,
+  itemsPerPage,
+  onPageChange,
 }: {
   title: string;
   description: string;
@@ -538,12 +553,17 @@ function IssuesTable({
   roleLabel: string;
   onRequestJobStatus: (issue: ExecutiveIssue, status: WellbeingIssueJobStatus) => void;
   actionLoadingIssueId: number | null;
+  currentPage: number;
+  totalItems: number;
+  itemsPerPage: number;
+  onPageChange: (page: number) => void;
 }) {
   const columns =
     scope === "hostel"
       ? [
           { title: roleLabel, key: "subject" },
           { title: "Role", key: "role" },
+          { title: "College/Hostel", key: "scope" },
           { title: "Issue", key: "issue" },
           { title: "Block", key: "block" },
           { title: "Building / Room", key: "room" },
@@ -554,6 +574,7 @@ function IssuesTable({
       : [
           { title: roleLabel, key: "subject" },
           { title: "Role", key: "role" },
+          { title: "College/Hostel", key: "scope" },
           { title: "Issue", key: "issue" },
           { title: "Category", key: "category" },
           { title: "Evidence", key: "evidence" },
@@ -562,6 +583,7 @@ function IssuesTable({
   const tableData = rows.map((issue) => ({
     subject: <StudentCell issue={issue} />,
     role: <TextCell value={issue.role} className="min-w-[120px]" />,
+    scope: <TextCell value={issue.scopeLabel} className="min-w-[120px]" />,
     issue: <IssueCell issue={issue} />,
     block: <TextCell value={issue.block} className="min-w-[70px]" />,
     room: <TextCell value={issue.room} className="min-w-[130px]" />,
@@ -598,9 +620,16 @@ function IssuesTable({
           height="100%"
           stickyHeader={false}
           fillHeight
-          tableClassName={scope === "hostel" ? "min-w-[1480px]" : "min-w-[1280px]"}
+          tableClassName={scope === "hostel" ? "min-w-[1600px]" : "min-w-[1400px]"}
         />
       </div>
+      <Pagination
+        currentPage={currentPage}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        onPageChange={onPageChange}
+        roundedBottom="rounded-b-xl"
+      />
     </section>
   );
 }
@@ -622,20 +651,24 @@ function JobStatusDropdown({
     );
   }
 
+  if (issue.jobStatus === "cancelled") {
+    return (
+      <span className="inline-flex min-w-[135px] justify-center rounded-md bg-[#FFF2F2] px-4 py-2 text-[14px] font-bold text-[#FF2A2A] shadow-sm">
+        Cancelled
+      </span>
+    );
+  }
+
   const options: DropdownOption<"pending" | "completed" | "cancelled">[] = [
     { label: "Pending", value: "pending" },
     { label: "Completed", value: "completed" },
     { label: "Cancelled", value: "cancelled" },
   ];
-  const value =
-    issue.jobStatus === "cancelled"
-      ? issue.jobStatus
-      : "pending";
 
   return (
     <div className={loading ? "pointer-events-none opacity-60" : ""}>
       <DropdownPill
-        value={value}
+        value="pending"
         options={options}
         onChange={(nextStatus) => {
           if (nextStatus === "pending") return;
@@ -715,6 +748,7 @@ function IssueDetailsCard({
           </>
         ) : null}
         <DetailMeta label="Category" value={issue.category} />
+        <DetailMeta label="College/Hostel" value={issue.scopeLabel} />
         <DetailMeta label="Priority" value={issue.priority} />
         <DetailMeta label="Date Reported" value={issue.dateReported} />
       </div>
@@ -842,6 +876,9 @@ function IssuesContent({
   selectedRole,
   onRequestJobStatus,
   actionLoadingIssueId,
+  currentPage,
+  itemsPerPage,
+  onPageChange,
 }: {
   activeView: IssueView;
   loading: boolean;
@@ -850,6 +887,9 @@ function IssuesContent({
   selectedRole: IssueRoleFilter;
   onRequestJobStatus: (issue: ExecutiveIssue, status: WellbeingIssueJobStatus) => void;
   actionLoadingIssueId: number | null;
+  currentPage: number;
+  itemsPerPage: number;
+  onPageChange: (page: number) => void;
 }) {
   const urgentIssues = useMemo(
     () => rows.filter((issue) => issue.priority === "Urgent"),
@@ -859,6 +899,26 @@ function IssuesContent({
     () => rows.filter((issue) => issue.assignedToMe),
     [rows],
   );
+  const paginateIssues = (issues: ExecutiveIssue[]) => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return issues.slice(startIndex, startIndex + itemsPerPage);
+  };
+  const totalItemsForView =
+    activeView === "my"
+      ? myIssues.length
+      : activeView === "urgent"
+        ? urgentIssues.length
+        : rows.length;
+  const paginatedMyIssues = paginateIssues(myIssues);
+  const paginatedUrgentIssues = paginateIssues(urgentIssues);
+  const paginatedRows = paginateIssues(rows);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(totalItemsForView / itemsPerPage));
+    if (currentPage > totalPages) {
+      onPageChange(totalPages);
+    }
+  }, [currentPage, itemsPerPage, onPageChange, totalItemsForView]);
 
   if (loading) {
     if (activeView === "my") return <MyIssuesShimmer />;
@@ -868,18 +928,27 @@ function IssuesContent({
 
   if (activeView === "my") {
     return (
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-        <div className="flex flex-col gap-3">
-          {myIssues.map((issue) => (
-            <IssueDetailsCard
-              key={issue.id}
-              issue={issue}
-              scope={selectedScope}
-              onRequestStatus={onRequestJobStatus}
-              loading={actionLoadingIssueId === issue.supportIssueId}
-            />
-          ))}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="flex flex-col gap-3">
+            {paginatedMyIssues.map((issue) => (
+              <IssueDetailsCard
+                key={issue.id}
+                issue={issue}
+                scope={selectedScope}
+                onRequestStatus={onRequestJobStatus}
+                loading={actionLoadingIssueId === issue.supportIssueId}
+              />
+            ))}
+          </div>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalItems={myIssues.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={onPageChange}
+          roundedBottom="rounded-b-xl"
+        />
       </div>
     );
   }
@@ -895,11 +964,15 @@ function IssuesContent({
               ? "College"
               : "Hostel"
         }`}
-        rows={urgentIssues}
+        rows={paginatedUrgentIssues}
         scope={selectedScope}
         roleLabel={getIssueSubjectHeader(selectedRole)}
         onRequestJobStatus={onRequestJobStatus}
         actionLoadingIssueId={actionLoadingIssueId}
+        currentPage={currentPage}
+        totalItems={urgentIssues.length}
+        itemsPerPage={itemsPerPage}
+        onPageChange={onPageChange}
       />
     );
   }
@@ -920,11 +993,15 @@ function IssuesContent({
             ? "College"
             : "Hostel"
       }`}
-      rows={rows}
+      rows={paginatedRows}
       scope={selectedScope}
       roleLabel={getIssueSubjectHeader(selectedRole)}
       onRequestJobStatus={onRequestJobStatus}
       actionLoadingIssueId={actionLoadingIssueId}
+      currentPage={currentPage}
+      totalItems={rows.length}
+      itemsPerPage={itemsPerPage}
+      onPageChange={onPageChange}
     />
   );
 }
@@ -939,6 +1016,7 @@ function NewIssuesBody() {
   const [selectedScope, setSelectedScope] = useState<IssueScope>("all");
   const [selectedRole, setSelectedRole] =
     useState<IssueRoleFilter>("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loadingView, setLoadingView] = useState(true);
   const [issueRows, setIssueRows] = useState<ExecutiveIssue[]>([]);
   const [actionLoadingIssueId, setActionLoadingIssueId] = useState<number | null>(null);
@@ -988,6 +1066,7 @@ function NewIssuesBody() {
             .in("status", [
               "inprogress" satisfies WellbeingIssueJobStatus,
               "completed" satisfies WellbeingIssueJobStatus,
+              "cancelled" satisfies WellbeingIssueJobStatus,
             ])
             .eq("isActive", true)
             .eq("is_deleted", false)
@@ -1119,6 +1198,10 @@ function NewIssuesBody() {
   }, [loadIssues]);
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [activeView, selectedRole, selectedScope]);
+
+  useEffect(() => {
     if (!collegeId) return;
 
     const channel = supabase
@@ -1146,6 +1229,7 @@ function NewIssuesBody() {
   const handleViewChange = (view: IssueView) => {
     if (view === activeView) return;
     setActiveView(view);
+    setCurrentPage(1);
     setLoadingView(true);
     router.push(`?issueView=${view}`);
   };
@@ -1278,10 +1362,12 @@ function NewIssuesBody() {
           selectedRole={selectedRole}
           onRoleChange={(role) => {
             setSelectedRole(role);
+            setCurrentPage(1);
             setLoadingView(true);
           }}
           onScopeChange={(scope) => {
             setSelectedScope(scope);
+            setCurrentPage(1);
             setLoadingView(true);
           }}
         />
@@ -1293,9 +1379,12 @@ function NewIssuesBody() {
           selectedRole={selectedRole}
           onRequestJobStatus={(issue, status) => setPendingJobAction({ issue, status })}
           actionLoadingIssueId={actionLoadingIssueId}
+          currentPage={currentPage}
+          itemsPerPage={NEW_ISSUES_ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
         />
       </section>
-      <WellbeingExecutiveRight bounded />
+      <WellbeingExecutiveRight />
       <ConfirmDeleteModal
         open={pendingJobAction !== null}
         onConfirm={confirmPendingJobAction}
