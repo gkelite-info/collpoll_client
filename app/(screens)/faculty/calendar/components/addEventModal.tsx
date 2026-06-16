@@ -87,6 +87,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("AM");
   const closedByUserRef = useRef(false);
   const [roomNo, setRoomNo] = useState("");
+  const [collegeRoomId, setCollegeRoomId] = useState<number | null>(null);
   const [year, setYear] = useState<string>("");
   const [semester, setSemester] = useState<number | undefined>();
   const [isSemesterAuto, setIsSemesterAuto] = useState(false);
@@ -515,6 +516,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       fromTime: startTime,
       toTime: endTime,
       roomNo,
+      collegeRoomId: collegeRoomId ?? null,
 
       meetingLink:
         selectedType === "meeting" && meetingPlatform !== "zoom"
@@ -588,6 +590,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
     setSelectedType(value.type);
     setRoomNo(value.roomNo ?? "");
+    setCollegeRoomId(value.collegeRoomId ?? null);
     setDate(value.date ?? getTodayDateString());
 
     setStartHour(value.startHour ?? "09");
@@ -930,7 +933,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               </label>
               <RoomSelectDropdown
                 value={roomNo}
-                onChange={setRoomNo}
+                onChange={(rNo, rId) => { setRoomNo(rNo); setCollegeRoomId(rId); }}
                 collegeId={collegeId || 0}
                 placeholder="Select Room No. / Room Name"
               />

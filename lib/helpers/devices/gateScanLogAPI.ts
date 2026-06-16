@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { adminSupabase } from "@/lib/helpers/devices/scanIngestionHelper";
 
 const err = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
 
@@ -111,7 +112,7 @@ export const processGateScan = async (payload: GateScanPayload) => {
     const now = new Date().toISOString();
 
     // 1. Determine if user is staff (non-Student role)
-    const { data: userData, error: userErr } = await supabase
+    const { data: userData, error: userErr } = await adminSupabase
       .from("users")
       .select("userId, role")
       .eq("userId", payload.userId)
@@ -121,7 +122,7 @@ export const processGateScan = async (payload: GateScanPayload) => {
     const isStaff = userData.role !== "Student";
 
     // 2. Create gate_scan_logs entry
-    const { data: scanLog, error: scanErr } = await supabase
+    const { data: scanLog, error: scanErr } = await adminSupabase
       .from("gate_scan_logs")
       .insert({
         userId: payload.userId,
@@ -141,7 +142,7 @@ export const processGateScan = async (payload: GateScanPayload) => {
 
     // 3. Create device_attendance_logs entry
     const logType = payload.scanType === "Entry" ? "GateEntry" : "GateExit";
-    const { data: attLog, error: attErr } = await supabase
+    const { data: attLog, error: attErr } = await adminSupabase
       .from("device_attendance_logs")
       .insert({
         deviceId: payload.deviceId,
@@ -166,7 +167,7 @@ export const processGateScan = async (payload: GateScanPayload) => {
     }
 
     // 5. Update scan log with processed status
-    await supabase
+    await adminSupabase
       .from("gate_scan_logs")
       .update({
         isProcessed: true,
@@ -177,7 +178,7 @@ export const processGateScan = async (payload: GateScanPayload) => {
       .eq("gateScanLogId", scanLog.gateScanLogId);
 
     // 6. Update device attendance log
-    await supabase
+    await adminSupabase
       .from("device_attendance_logs")
       .update({
         processedStatus: "Accepted",
@@ -204,7 +205,7 @@ async function processStaffAttendance(
   const scanTimeStr = new Date(payload.scanTime).toTimeString().slice(0, 5); // HH:MM
 
   // Check if attendance_daily record exists for this user + date
-  const { data: existing } = await supabase
+  const { data: existing } = await adminSupabase
     .from("attendance_daily")
     .select("attendanceDailyId, checkIn, checkOut")
     .eq("userId", payload.userId)
@@ -237,7 +238,7 @@ async function processStaffAttendance(
     }
 
     if (Object.keys(updates).length > 1) {
-      await supabase
+      await adminSupabase
         .from("attendance_daily")
         .update(updates)
         .eq("attendanceDailyId", existing.attendanceDailyId);
@@ -252,7 +253,7 @@ async function processStaffAttendance(
     ? Math.max(0, timeToMinutes(scanTimeStr) - timeToMinutes(SHIFT_START) - LATE_THRESHOLD_MIN)
     : 0;
 
-  const { data: newRecord, error: insErr } = await supabase
+  const { data: newRecord, error: insErr } = await adminSupabase
     .from("attendance_daily")
     .insert({
       userId: payload.userId,

@@ -32,6 +32,7 @@ import {
 import AttendanceSkeleton from "./shimmer/attendanceSkeleton";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { Loader } from "../../(student)/calendar/right/timetable";
+import { useAttendanceRealtime } from "@/lib/helpers/faculty/attendance/liveAttendanceAPI";
 
 function AttendanceContent() {
   const searchParams = useSearchParams();
@@ -57,6 +58,45 @@ function AttendanceContent() {
 
   const activeClassId = urlClassId || selectedClassId;
   const isTopicMode = !!urlClassId;
+
+  useAttendanceRealtime(
+    activeClassId ? parseInt(activeClassId.split("-")[0]) : null,
+    (payload) => {
+      const newRecord = payload.new;
+      if (newRecord && newRecord.studentId) {
+        let matchedStudentName = "";
+        let status = "Not Marked";
+
+        setStudentsList((prev) => {
+          return prev.map((s) => {
+            if (s.id === String(newRecord.studentId)) {
+              if (newRecord.status === "PRESENT") status = "Present";
+              else if (newRecord.status === "LATE") status = "Late";
+              else if (newRecord.status === "ABSENT") status = "Absent";
+              
+              if (s.attendance !== status) {
+                matchedStudentName = s.name;
+              }
+              
+              return {
+                ...s,
+                attendance: status as any,
+                reason: newRecord.reason || "",
+              };
+            }
+            return s;
+          });
+        });
+
+        // Trigger toast asynchronously to prevent React render-phase side-effect warning
+        if (matchedStudentName) {
+          setTimeout(() => {
+            toast.success(`${matchedStudentName} was marked ${status}!`, { id: `bio-${newRecord.studentId}` });
+          }, 0);
+        }
+      }
+    }
+  );
 
   const confirmClassCancel = () => {
     if (!cancelReason.trim()) {

@@ -46,6 +46,7 @@ export type CalendarEventPayload = {
   fromTime: string;
   toTime: string;
   roomNo: string;
+  collegeRoomId?: number | null;
   meetingLink?: string | null;
   meetingId?: string | null;
   meetingPassword?: string | null;
@@ -280,7 +281,8 @@ export default function Page() {
             rawFormData: {
               topicId: row.eventTopic,
               topicTitle: safelyExtractedTopic, // 🟢 Passed perfectly down to Details Modal
-              roomNo: row.roomNo,
+              roomNo: row.college_rooms?.roomNo ?? "",
+              collegeRoomId: row.collegeRoomId,
               meetingLink: row.meetingLink,
               meetingId: row.meetingId,
               meetingPassword: row.meetingPassword,
@@ -375,7 +377,7 @@ export default function Page() {
         eventTitle: payload.eventTitle,
         type: payload.type,
         date: payload.date,
-        roomNo: payload.roomNo,
+        collegeRoomId: payload.collegeRoomId ?? 0,
         fromTime: payload.fromTime,
         toTime: payload.toTime,
         meetingLink: payload.meetingLink ?? null,
@@ -449,7 +451,7 @@ export default function Page() {
         eventTitle: pendingEvent.eventTitle,
         type: pendingEvent.type,
         date: pendingEvent.date,
-        roomNo: pendingEvent.roomNo,
+        collegeRoomId: pendingEvent.collegeRoomId ?? 0,
         fromTime: pendingEvent.fromTime,
         toTime: pendingEvent.toTime,
         meetingLink: pendingEvent.meetingLink ?? null,
@@ -571,6 +573,7 @@ export default function Page() {
       title: event.title ?? "",
       topicId: event.rawFormData?.topicId ?? null,
       roomNo: event.rawFormData?.roomNo ?? "",
+      collegeRoomId: event.rawFormData?.collegeRoomId ?? null,
       meetingLink: event.rawFormData?.meetingLink ?? "",
       meetingId: event.rawFormData?.meetingId ?? "",
       meetingPassword: event.rawFormData?.meetingPassword ?? "",

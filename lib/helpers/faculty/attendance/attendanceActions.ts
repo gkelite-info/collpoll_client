@@ -3,6 +3,11 @@
 import { createClient } from "@/app/utils/supabase/server";
 import { calculateAttendancePercentage } from "@/lib/helpers/attendance/attendancePolicyMessage";
 import { saveFacultyClassSession } from "../facultyClassSessionsAPI";
+import {
+  activateDeviceSessionForClass,
+  deactivateSessionsForEvent,
+} from "@/lib/helpers/devices/classSessionActivation";
+
 
 export interface ClassOption {
   id: string;
@@ -86,19 +91,33 @@ export async function getFacultyClasses(
       fromTime,
       toTime,
       subject:college_subjects (subjectName),
-      topic:college_subject_unit_topics (topicTitle),
-      faculty_class_sessions!inner(status) 
+      topic:college_subject_unit_topics (topicTitle)
     `,
     )
     .eq("facultyId", facultyId)
     .eq("is_deleted", false)
     .eq("date", today)
-    .eq("faculty_class_sessions.status", "Accepted") // <-- STRICT FILTER ADDED
     .order("fromTime", { ascending: true });
 
-  if (error) return [];
+  if (error || !events || events.length === 0) return [];
 
-  return events.map((e: any) => {
+  const eventIds = events.map((e: any) => e.calendarEventId);
+  
+  const { data: acceptedSessions } = await supabase
+    .from("faculty_class_sessions")
+    .select("calendarEventId")
+    .in("calendarEventId", eventIds)
+    .eq("status", "Accepted");
+
+  const acceptedEventIds = new Set(
+    acceptedSessions?.map((s) => s.calendarEventId) || []
+  );
+
+  const acceptedEvents = events.filter((e: any) =>
+    acceptedEventIds.has(e.calendarEventId)
+  );
+
+  return acceptedEvents.map((e: any) => {
     const subj = Array.isArray(e.subject)
       ? e.subject[0]?.subjectName
       : e.subject?.subjectName || "No Subject";
@@ -311,10 +330,13 @@ export async function handleMissionClassStatus(
   facultyId: number,
   status: "Accepted" | "Cancel" | "Scheduled",
   reason?: string,
+  collegeId?: number,
 ) {
   const supabase = await createClient();
   const eventId = parseInt(classIdStr.split("-")[0]);
   const timeNow = new Date().toTimeString().split(" ")[0];
+
+  let facultyClassSessionsId: number | undefined;
 
   const { data: existingSessions } = await supabase
     .from("faculty_class_sessions")
@@ -325,6 +347,8 @@ export async function handleMissionClassStatus(
 
   if (existingSessions && existingSessions.length > 0) {
     const [primary, ...duplicates] = existingSessions;
+    facultyClassSessionsId = primary.facultyClassSessionsId;
+
     if (duplicates.length > 0) {
       await supabase
         .from("faculty_class_sessions")
@@ -343,17 +367,39 @@ export async function handleMissionClassStatus(
       })
       .eq("facultyClassSessionsId", primary.facultyClassSessionsId);
   } else {
-    await supabase.from("faculty_class_sessions").insert({
+    const { data: inserted } = await supabase
+      .from("faculty_class_sessions")
+      .insert({
+        calendarEventId: eventId,
+        facultyId: facultyId,
+        status: status,
+        acceptedAt: status === "Accepted" ? timeNow : "00:00:00",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      .select("facultyClassSessionsId")
+      .single();
+    facultyClassSessionsId = inserted?.facultyClassSessionsId;
+  }
+
+  // ── Phase 1 Hook: Activate device session when faculty accepts ──
+  if (status === "Accepted" && facultyClassSessionsId && collegeId) {
+    // Non-blocking — device session failure must NOT break accept flow
+    activateDeviceSessionForClass({
       calendarEventId: eventId,
-      facultyId: facultyId,
-      status: status,
-      acceptedAt: status === "Accepted" ? timeNow : "00:00:00",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      facultyClassSessionsId,
+      collegeId,
+    }).catch((err) => {
+      console.error("[handleMissionClassStatus] Device session activation failed:", err);
     });
   }
 
   if (status === "Cancel") {
+    // ── Phase 1 Hook: Deactivate device session on cancel ──
+    deactivateSessionsForEvent(eventId, reason ?? "ClassCancelledByFaculty").catch((err) => {
+      console.error("[handleMissionClassStatus] Device session deactivation failed:", err);
+    });
+
     const { data: eventData } = await supabase
       .from("calendar_event")
       .select("date")
@@ -396,3 +442,4 @@ export async function handleMissionClassStatus(
 
   return { success: true };
 }
+

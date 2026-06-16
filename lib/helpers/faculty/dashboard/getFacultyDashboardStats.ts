@@ -146,7 +146,6 @@ export async function getFacultyDashboardStats(facultyId: number) {
     .select(
       `
       calendarEventId, fromTime, toTime,
-      faculty_class_sessions ( status ),
       calendar_event_section ( collegeSectionId )
     `,
     )
@@ -159,7 +158,21 @@ export async function getFacultyDashboardStats(facultyId: number) {
   const eventIds: number[] = [];
   const sectionIds = new Set<number>();
 
-  if (events) {
+  if (events && events.length > 0) {
+    const allEventIds = events.map((e: any) => e.calendarEventId);
+    
+    const { data: sessionRecords } = await supabase
+      .from("faculty_class_sessions")
+      .select("calendarEventId, status")
+      .in("calendarEventId", allEventIds);
+      
+    const sessionMap = new Map<number, string>();
+    if (sessionRecords) {
+      sessionRecords.forEach((rec) => {
+        sessionMap.set(rec.calendarEventId, rec.status);
+      });
+    }
+
     for (const ev of events) {
       totalClasses++;
       eventIds.push(ev.calendarEventId);
@@ -173,10 +186,7 @@ export async function getFacultyDashboardStats(facultyId: number) {
 
       totalHours += duration;
 
-      const sessions = Array.isArray(ev.faculty_class_sessions)
-        ? ev.faculty_class_sessions
-        : [ev.faculty_class_sessions];
-      const isAccepted = sessions[0]?.status === "Accepted";
+      const isAccepted = sessionMap.get(ev.calendarEventId) === "Accepted";
 
       if (isAccepted) {
         acceptedClasses++;

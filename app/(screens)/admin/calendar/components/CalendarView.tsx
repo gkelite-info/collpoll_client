@@ -236,7 +236,8 @@ export default function CalendarView({ faculty, onBack }: Props) {
               subjectId: row.college_subjects?.collegeSubjectId ?? null,
               topicId: row.eventTopic,
               topicTitle: safelyExtractedTopic,
-              roomNo: row.roomNo,
+              roomNo: row.college_rooms?.roomNo ?? "",
+              collegeRoomId: row.collegeRoomId,
               meetingLink: row.meetingLink,
               meetingId: row.meetingId,
               meetingPassword: row.meetingPassword,
@@ -313,7 +314,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
         type: data.type,
 
         date: data.date,
-        roomNo: data.roomNo,
+        collegeRoomId: data.collegeRoomId,
         fromTime: data.fromTime,
         toTime: data.toTime,
 
@@ -395,6 +396,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
 
       type: event.type,
       roomNo: event.rawFormData?.roomNo ?? "",
+      collegeRoomId: event.rawFormData?.collegeRoomId ?? null,
 
       subjectId: event.rawFormData?.subjectId ?? null,
       topicId: event.rawFormData?.topicId ?? null,
@@ -443,7 +445,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
 
         type: pendingEvent.type,
         date: pendingEvent.date,
-        roomNo: pendingEvent.roomNo,
+        collegeRoomId: pendingEvent.collegeRoomId,
         fromTime: pendingEvent.fromTime,
         toTime: pendingEvent.toTime,
         meetingLink: pendingEvent.meetingLink ?? null,

@@ -22,8 +22,11 @@ interface ProxyRequest {
 
 async function callDeviceProxy(req: ProxyRequest) {
   const isFormData = !!req.formData;
+  
+  // Use absolute URL if running on the server
+  const baseUrl = typeof window !== "undefined" ? "" : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
 
-  const res = await fetch("/api/biometric/device-proxy", {
+  const res = await fetch(`${baseUrl}/api/biometric/device-proxy`, {
     method: "POST",
     ...(isFormData
       ? {
@@ -748,4 +751,74 @@ export const deleteFingerprintFromDevice = async (
   }
 
   throw lastError;
+};
+
+/* ------------------------------------------------------------------ */
+/*  Webhook Configuration                                              */
+/* ------------------------------------------------------------------ */
+
+/** Get physical device info (to test connection and retrieve hardware name) */
+export const getDeviceInfo = async (deviceId: number) => {
+  const result = await callDeviceProxy({
+    deviceId,
+    endpoint: "System/deviceInfo?format=json",
+    method: "GET",
+  });
+
+  let deviceName = "Unknown Device";
+  if (typeof result === "string") {
+    // If device ignored format=json and returned XML
+    const match = result.match(/<deviceName>(.*?)<\/deviceName>/);
+    if (match && match[1]) deviceName = match[1];
+  } else if (result?.DeviceInfo?.deviceName) {
+    deviceName = result.DeviceInfo.deviceName;
+  }
+
+  return { deviceName, raw: result };
+};
+
+/**
+ * Configure the device to push HTTP events (scans) to our Next.js backend webhook.
+ * Automatically parses the SaaS domain/IP from the provided URL, falling back to window location.
+ */
+export const configureDeviceWebhook = async (
+  deviceId: number,
+  customAppUrl?: string
+) => {
+  let defaultUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  if (typeof window !== "undefined" && window.location.origin) {
+    defaultUrl = window.location.origin;
+  }
+  const appUrl = customAppUrl || defaultUrl;
+  const urlObj = new URL(appUrl);
+  
+  const isHttps = urlObj.protocol === "https:";
+  const portNo = urlObj.port ? parseInt(urlObj.port) : (isHttps ? 443 : 80);
+  const host = urlObj.hostname;
+  
+  // Check if host is an IPv4 address
+  const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+  const addressingType = isIp ? "ipaddress" : "hostname";
+  const hostNode = isIp ? `<ipAddress>${host}</ipAddress>` : `<hostName>${host}</hostName>`;
+
+  const xmlPayload = `
+<HttpHostNotification version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">
+  <id>1</id>
+  <url>/api/biometric/scan?deviceId=${deviceId}</url>
+  <protocolType>${isHttps ? "HTTPS" : "HTTP"}</protocolType>
+  <parameterFormatType>JSON</parameterFormatType>
+  <addressingFormatType>${addressingType}</addressingFormatType>
+  ${hostNode}
+  <portNo>${portNo}</portNo>
+  <userName>admin</userName>
+  <httpAuthenticationMethod>none</httpAuthenticationMethod>
+</HttpHostNotification>
+  `.trim();
+
+  return callDeviceProxy({
+    deviceId,
+    endpoint: "Event/notification/httpHosts/1",
+    method: "PUT",
+    body: xmlPayload,
+  });
 };

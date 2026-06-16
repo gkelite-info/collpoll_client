@@ -276,8 +276,25 @@ export default function DevicesTab() {
       };
 
       const res = await upsertBiometricDevice(payload);
-      if (res.success) {
-        toast.success(editDeviceId ? "Device updated!" : "Device registered!");
+      if (res.success && res.data) {
+        // Automatically sync and configure device webhook via SaaS endpoint
+        toast.promise(
+          fetch("/api/biometric/device/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ deviceId: res.data.deviceId }),
+          }).then(async (syncRes) => {
+            const result = await syncRes.json();
+            if (!result.success) throw new Error(result.error);
+            return result.physicalName;
+          }),
+          {
+            loading: "Testing connection and syncing device...",
+            success: (name) => `Device connected! Hardware Name: ${name}`,
+            error: (err) => err.message || "Device unreachable. Please verify network/IP.",
+          }
+        );
+
         setShowForm(false);
         loadDevices(currentPage);
       } else {
