@@ -24,7 +24,6 @@ import { ValueShimmer } from "@/app/components/shimmers/valueShimmer";
 import { fetchStudentFeePlan } from "@/lib/helpers/student/payments/fetchStudentFeePlan";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import toast from "react-hot-toast";
-import { Loader } from "../calendar/right/timetable";
 import { useTranslations } from "next-intl";
 
 const formatTimeToAMPM = (time24: string) => {
@@ -102,7 +101,9 @@ export default function StuDashLeft() {
         studentContext.collegeSemesterId !== null &&
         studentContext.collegeSemesterId !== undefined
       ) {
-        query = query.eq("collegeSemesterId", studentContext.collegeSemesterId);
+        query = query.or(`collegeSemesterId.eq.${studentContext.collegeSemesterId},collegeSemesterId.is.null`);
+      } else {
+        query = query.is("collegeSemesterId", null);
       }
 
       const { data: subjectData } = await query;

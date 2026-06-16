@@ -26,152 +26,172 @@ function isCancelledStatus(status: string) {
 }
 
 export async function getStudentAcademicPerformance(studentId: number | null) {
-    const supabase = await createClient();
-    const today = formatDate(new Date());
+    try {
+        const supabase = await createClient();
+        const today = formatDate(new Date());
 
-    if (!studentId) return [];
+        if (!studentId) {
+            return [{ subject: "NO_STUDENT_ID", value: 0, full: 100 }];
+        }
 
-    const { data: student } = await supabase
-        .from("students")
-        .select("collegeBranchId")
-        .eq("studentId", studentId)
-        .single();
+        const { data: student, error: studentError } = await supabase
+            .from("students")
+            .select("collegeBranchId")
+            .eq("studentId", studentId)
+            .single();
 
-    const { data: history } = await supabase
-        .from("student_academic_history")
-        .select("collegeSemesterId, collegeAcademicYearId")
-        .eq("studentId", studentId)
-        .eq("isCurrent", true)
-        .single();
+        if (studentError) {
+            return [{ subject: `STUDENT_ERR: ${studentError.message}`, value: 0, full: 100 }];
+        }
 
-    if (!student || !history)
-        return [{ subject: "BASE_DATA_MISSING", value: 0, full: 100 }];
+        const { data: history, error: historyError } = await supabase
+            .from("student_academic_history")
+            .select("collegeSemesterId, collegeAcademicYearId")
+            .eq("studentId", studentId)
+            .eq("isCurrent", true)
+            .single();
 
-    const { data: subjects } = await supabase
-        .from("college_subjects")
-        .select("collegeSubjectId, subjectName, subjectKey")
-        .eq("collegeSemesterId", history.collegeSemesterId)
-        .eq("collegeBranchId", student.collegeBranchId)
-        .is("deletedAt", null);
+        if (historyError) {
+            return [{ subject: `HISTORY_ERR: ${historyError.message}`, value: 0, full: 100 }];
+        }
 
-    if (!subjects) return [];
+        let subjectsQuery = supabase
+            .from("college_subjects")
+            .select("collegeSubjectId, subjectName, subjectKey")
+            .eq("collegeBranchId", student.collegeBranchId)
+            .is("deletedAt", null);
 
-    const performanceData = await Promise.all(
-        subjects.map(async (subject) => {
-            const { data: config } = await supabase
-                .from("faculty_weightage_configs")
-                .select("facultyWeightageConfigId")
-                .eq("collegeSubjectId", subject.collegeSubjectId)
-                .maybeSingle();
+        if (history.collegeSemesterId !== null) {
+            subjectsQuery = subjectsQuery.or(`collegeSemesterId.eq.${history.collegeSemesterId},collegeSemesterId.is.null`);
+        } else {
+            subjectsQuery = subjectsQuery.is("collegeSemesterId", null);
+        }
 
-            if (!config) {
-                const { data: rawQuizzes } = await supabase
-                    .from("quiz_submissions")
-                    .select("totalMarksObtained, quizzes!inner(totalMarks)")
-                    .eq("studentId", studentId)
-                    .eq("quizzes.collegeSubjectId", subject.collegeSubjectId);
+        const { data: subjects, error: subjectsError } = await subjectsQuery;
 
-                const rawEarned = rawQuizzes?.reduce((acc, curr) => acc + (curr.totalMarksObtained || 0), 0) || 0;
-                const rawTotal = rawQuizzes?.reduce((acc, curr: any) => acc + (curr.quizzes?.totalMarks || 0), 0) || 0;
+        if (subjectsError) {
+            return [{ subject: `SUBJECTS_ERR: ${subjectsError.message}`, value: 0, full: 100 }];
+        }
 
-                return {
-                    subject: subject.subjectKey || subject.subjectName,
-                    value: rawTotal > 0 ? Math.round((rawEarned / rawTotal) * 100) : 0,
-                    full: 100,
-                };
-            }
+        if (!subjects || subjects.length === 0) {
+            return [{ subject: "NO_SUBJECTS_FOUND", value: 0, full: 100 }];
+        }
 
-            const { data: weights, error: weightsError } = await supabase
-                .from("faculty_weightage_items")
-                .select("percentage, label")
-                .eq("facultyWeightageConfigId", config.facultyWeightageConfigId);
+        const performanceData = await Promise.all(
+            subjects.map(async (subject) => {
+                const { data: config } = await supabase
+                    .from("faculty_weightage_configs")
+                    .select("facultyWeightageConfigId")
+                    .eq("collegeSubjectId", subject.collegeSubjectId)
+                    .maybeSingle();
 
-            if (!weights || weights.length === 0) {
-                // return { subject: subject.subjectName, value: 0, full: 100 };
-                return { subject: subject.subjectKey || subject.subjectName, value: 0, full: 100 };
-            }
-
-            let totalWeightedScore = 0;
-
-            for (const item of weights!) {
-                const label = item.label.toLowerCase();
-                let earned = 0;
-                let possible = 0;
-
-                if (label.includes("quiz")) {
-                    const { data: quizData } = await supabase
+                if (!config) {
+                    const { data: rawQuizzes } = await supabase
                         .from("quiz_submissions")
-                        .select("totalMarksObtained, quizId, quizzes!inner(totalMarks)")
+                        .select("totalMarksObtained, quizzes!inner(totalMarks)")
                         .eq("studentId", studentId)
                         .eq("quizzes.collegeSubjectId", subject.collegeSubjectId);
 
-                    if (quizData && quizData.length > 0) {
-                        const bestAttempts = quizData.reduce((acc: any, curr: any) => {
-                            const id = curr.quizId;
-                            if (!acc[id] || curr.totalMarksObtained > acc[id].earned) {
-                                acc[id] = { earned: curr.totalMarksObtained || 0, possible: curr.quizzes?.totalMarks || 0 };
-                            }
-                            return acc;
-                        }, {});
-                        const res = Object.values(bestAttempts) as any[];
-                        earned = res.reduce((s, r) => s + r.earned, 0);
-                        possible = res.reduce((s, r) => s + r.possible, 0);
-                    }
+                    const rawEarned = rawQuizzes?.reduce((acc, curr) => acc + (curr.totalMarksObtained || 0), 0) || 0;
+                    const rawTotal = rawQuizzes?.reduce((acc, curr: any) => acc + (curr.quizzes?.totalMarks || 0), 0) || 0;
+
+                    return {
+                        subject: subject.subjectKey || subject.subjectName,
+                        value: rawTotal > 0 ? Math.round((rawEarned / rawTotal) * 100) : 0,
+                        full: 100,
+                    };
                 }
 
-                else if (label.includes("discussion")) {
-                    const { data: forumData } = await supabase
-                        .from("student_discussion_uploads")
-                        .select(`
+                const { data: weights, error: weightsError } = await supabase
+                    .from("faculty_weightage_items")
+                    .select("percentage, label")
+                    .eq("facultyWeightageConfigId", config.facultyWeightageConfigId);
+
+                if (!weights || weights.length === 0) {
+                    return { subject: subject.subjectKey || subject.subjectName, value: 0, full: 100 };
+                }
+
+                let totalWeightedScore = 0;
+
+                for (const item of weights!) {
+                    const label = item.label.toLowerCase();
+                    let earned = 0;
+                    let possible = 0;
+
+                    if (label.includes("quiz")) {
+                        const { data: quizData } = await supabase
+                            .from("quiz_submissions")
+                            .select("totalMarksObtained, quizId, quizzes!inner(totalMarks)")
+                            .eq("studentId", studentId)
+                            .eq("quizzes.collegeSubjectId", subject.collegeSubjectId);
+
+                        if (quizData && quizData.length > 0) {
+                            const bestAttempts = quizData.reduce((acc: any, curr: any) => {
+                                const id = curr.quizId;
+                                if (!acc[id] || curr.totalMarksObtained > acc[id].earned) {
+                                    acc[id] = { earned: curr.totalMarksObtained || 0, possible: curr.quizzes?.totalMarks || 0 };
+                                }
+                                return acc;
+                            }, {});
+                            const res = Object.values(bestAttempts) as any[];
+                            earned = res.reduce((s, r) => s + r.earned, 0);
+                            possible = res.reduce((s, r) => s + r.possible, 0);
+                        }
+                    }
+
+                    else if (label.includes("discussion")) {
+                        const { data: forumData } = await supabase
+                            .from("student_discussion_uploads")
+                            .select(`
                             marksObtained, discussionId,
                             discussion_forum_sections!inner(marks, discussion_forum!inner(title))
                         `)
-                        .eq("studentId", studentId)
-                        .is("is_deleted", false);
+                            .eq("studentId", studentId)
+                            .is("is_deleted", false);
 
-                    if (forumData && forumData.length > 0) {
-                        const bestForum = forumData.reduce((acc: any, curr: any) => {
-                            const id = curr.discussionId;
-                            const s = Number(curr.marksObtained) || 0;
-                            const m = Number(curr.discussion_forum_sections?.marks) || 0;
-                            if (!acc[id] || s > acc[id].earned) {
-                                acc[id] = { earned: Math.min(s, m), possible: m, title: curr.discussion_forum_sections?.discussion_forum?.title };
-                            }
-                            return acc;
-                        }, {});
-                        const res = Object.values(bestForum) as any[];
-                        earned = res.reduce((s, r) => s + r.earned, 0);
-                        possible = res.reduce((s, r) => s + r.possible, 0);
+                        if (forumData && forumData.length > 0) {
+                            const bestForum = forumData.reduce((acc: any, curr: any) => {
+                                const id = curr.discussionId;
+                                const s = Number(curr.marksObtained) || 0;
+                                const m = Number(curr.discussion_forum_sections?.marks) || 0;
+                                if (!acc[id] || s > acc[id].earned) {
+                                    acc[id] = { earned: Math.min(s, m), possible: m, title: curr.discussion_forum_sections?.discussion_forum?.title };
+                                }
+                                return acc;
+                            }, {});
+                            const res = Object.values(bestForum) as any[];
+                            earned = res.reduce((s, r) => s + r.earned, 0);
+                            possible = res.reduce((s, r) => s + r.possible, 0);
+                        }
                     }
-                }
 
-                else if (label.includes("assignment")) {
-                    const { data: assignData } = await supabase
-                        .from("student_assignments_submission")
-                        .select(`marksScored, assignments!inner(assignmentId, marks, subjectId)`)
-                        .eq("studentId", studentId)
-                        .eq("assignments.subjectId", subject.collegeSubjectId);
+                    else if (label.includes("assignment")) {
+                        const { data: assignData } = await supabase
+                            .from("student_assignments_submission")
+                            .select(`marksScored, assignments!inner(assignmentId, marks, subjectId)`)
+                            .eq("studentId", studentId)
+                            .eq("assignments.subjectId", subject.collegeSubjectId);
 
-                    if (assignData && assignData.length > 0) {
-                        const uniqueAssign = assignData.reduce((acc: any, curr: any) => {
-                            const id = curr.assignments.assignmentId;
-                            const s = Number(curr.marksScored) || 0;
-                            const m = Number(curr.assignments.marks) || 0;
-                            if (!acc[id] || s > acc[id].earned) {
-                                acc[id] = { earned: Math.min(s, m), possible: m };
-                            }
-                            return acc;
-                        }, {});
-                        const res = Object.values(uniqueAssign) as any[];
-                        earned = res.reduce((s, r) => s + r.earned, 0);
-                        possible = res.reduce((s, r) => s + r.possible, 0);
+                        if (assignData && assignData.length > 0) {
+                            const uniqueAssign = assignData.reduce((acc: any, curr: any) => {
+                                const id = curr.assignments.assignmentId;
+                                const s = Number(curr.marksScored) || 0;
+                                const m = Number(curr.assignments.marks) || 0;
+                                if (!acc[id] || s > acc[id].earned) {
+                                    acc[id] = { earned: Math.min(s, m), possible: m };
+                                }
+                                return acc;
+                            }, {});
+                            const res = Object.values(uniqueAssign) as any[];
+                            earned = res.reduce((s, r) => s + r.earned, 0);
+                            possible = res.reduce((s, r) => s + r.possible, 0);
+                        }
                     }
-                }
 
-                else if (label.includes("attendance")) {
-                    const { data: attendanceRecords } = await supabase
-                        .from("attendance_record")
-                        .select(`
+                    else if (label.includes("attendance")) {
+                        const { data: attendanceRecords } = await supabase
+                            .from("attendance_record")
+                            .select(`
                             status,
                             calendar_event:calendarEventId (
                                 subject,
@@ -180,50 +200,52 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
                                 is_deleted
                             )
                         `)
-                        .eq("studentId", studentId)
-                        .is("deletedAt", null)
-                        .lte("markedAt", today)
-                        .returns<Array<{
-                            status: string;
-                            calendar_event: {
-                                subject: number | null;
-                                type: string;
-                                date: string;
-                                is_deleted: boolean | null;
-                            } | null;
-                        }>>();
+                            .eq("studentId", studentId)
+                            .is("deletedAt", null)
+                            .lte("markedAt", today)
+                            .returns<Array<{
+                                status: string;
+                                calendar_event: {
+                                    subject: number | null;
+                                    type: string;
+                                    date: string;
+                                    is_deleted: boolean | null;
+                                } | null;
+                            }>>();
 
-                    const validAttendance = (attendanceRecords ?? []).filter((record) => {
-                        const event = record.calendar_event;
+                        const validAttendance = (attendanceRecords ?? []).filter((record) => {
+                            const event = record.calendar_event;
 
-                        return (
-                            !!event &&
-                            event.subject === subject.collegeSubjectId &&
-                            event.type === "class" &&
-                            event.is_deleted === false &&
-                            event.date <= today &&
-                            !isCancelledStatus(record.status)
-                        );
-                    });
+                            return (
+                                !!event &&
+                                event.subject === subject.collegeSubjectId &&
+                                event.type === "class" &&
+                                event.is_deleted === false &&
+                                event.date <= today &&
+                                !isCancelledStatus(record.status)
+                            );
+                        });
 
-                    if (validAttendance.length > 0) {
-                        earned = validAttendance.filter((record) =>
-                            isAttendedStatus(record.status),
-                        ).length;
-                        possible = validAttendance.filter((record) =>
-                            isConductedStatus(record.status),
-                        ).length;
+                        if (validAttendance.length > 0) {
+                            earned = validAttendance.filter((record) =>
+                                isAttendedStatus(record.status),
+                            ).length;
+                            possible = validAttendance.filter((record) =>
+                                isConductedStatus(record.status),
+                            ).length;
+                        }
+                    }
+
+                    if (possible > 0) {
+                        const contribution = (earned / possible) * item.percentage;
+                        totalWeightedScore += contribution;
                     }
                 }
-
-                if (possible > 0) {
-                    const contribution = (earned / possible) * item.percentage;
-                    totalWeightedScore += contribution;
-                }
-            }
-            // return { subject: subject.subjectName, value: Math.round(totalWeightedScore), full: 100 };
-            return { subject: subject.subjectKey || subject.subjectName, value: Math.round(totalWeightedScore), full: 100 };
-        })
-    );
-    return performanceData;
+                return { subject: subject.subjectKey || subject.subjectName, value: Math.round(totalWeightedScore), full: 100 };
+            })
+        );
+        return performanceData;
+    } catch (err) {
+        throw err;
+    }
 }

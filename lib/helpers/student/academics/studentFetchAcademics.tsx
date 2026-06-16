@@ -124,7 +124,9 @@ const fetchStudentAcademicData = async (userId: number): Promise<FetchResult> =>
       .is("deletedAt", null);
 
     if (currentSemesterId !== null && currentSemesterId !== undefined) {
-      query = query.eq("collegeSemesterId", Number(currentSemesterId));
+      query = query.or(`collegeSemesterId.eq.${currentSemesterId},collegeSemesterId.is.null`);
+    } else {
+      query = query.is("collegeSemesterId", null);
     }
 
     const { data: subjectData, error: subjectError } = await query;

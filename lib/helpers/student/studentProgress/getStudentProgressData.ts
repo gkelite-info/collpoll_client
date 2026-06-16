@@ -212,17 +212,11 @@ export async function getStudentProgressData(userId: number) {
   let subjectsQuery = supabase
     .from("college_subjects")
     .select("collegeSubjectId, subjectName, subjectKey")
-    .eq("collegeId", studentContext.collegeId)
     .eq("collegeBranchId", studentContext.collegeBranchId)
-    .eq("collegeAcademicYearId", studentContext.collegeAcademicYearId)
-    .eq("isActive", true)
     .is("deletedAt", null);
 
   if (studentContext.collegeSemesterId !== null) {
-    subjectsQuery = subjectsQuery.eq(
-      "collegeSemesterId",
-      studentContext.collegeSemesterId,
-    );
+    subjectsQuery = subjectsQuery.or(`collegeSemesterId.eq.${studentContext.collegeSemesterId},collegeSemesterId.is.null`);
   } else {
     subjectsQuery = subjectsQuery.is("collegeSemesterId", null);
   }
@@ -308,8 +302,6 @@ export async function getStudentProgressData(userId: number) {
       event.type === "class" &&
       event.is_deleted === false &&
       event.date <= today &&
-      !!event.facultyId &&
-      facultyIds.includes(event.facultyId) &&
       !!event.subject &&
       semesterSubjectIds.includes(event.subject) &&
       !isCancelledStatus(record.status)
@@ -349,6 +341,10 @@ export async function getStudentProgressData(userId: number) {
     number,
     { attended: number; total: number }
   >();
+
+  for (const subject of semesterSubjects ?? []) {
+    subjectAttendanceMap.set(subject.collegeSubjectId, { attended: 0, total: 0 });
+  }
 
   for (const record of validRecords) {
     if (!isConductedStatus(record.status)) continue;

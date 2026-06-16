@@ -17,13 +17,18 @@ export function AttendanceList({ data }: AttendanceListProps) {
 
   return (
     <div className="w-full h-[400px] flex flex-col font-sans overflow-hidden ">
-      <h2 className="p-5 pb-2 text-lg font-bold text-gray-800">
-        {t("Attendance by Subject")}
-      </h2>
+      <div className="p-5 pb-2 flex justify-between items-center">
+        <h2 className="text-lg font-bold text-gray-800">
+          {t("Attendance by Subject")}
+        </h2>
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+          Attended / Conducted
+        </span>
+      </div>
 
       <div className="flex-1 overflow-y-auto px-5 pb-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {data?.map((item, i) => {
-          const pct = Math.round((item.attended / item.total) * 100);
+          const pct = item.total === 0 ? 0 : Math.round((item.attended / item.total) * 100);
           return (
             <div
               key={i}

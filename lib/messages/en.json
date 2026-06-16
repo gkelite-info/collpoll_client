@@ -97,7 +97,7 @@
       "Confirm": "Confirm",
       "Cancel": "Cancel",
       "Mid Term Exam Enrollment": "Mid Term Exam Enrollment",
-      "Enroll for your upcoming exams starting March 11, 2025": "Enroll for your upcoming exams starting March 11, 2025.",
+      "Enroll for your upcoming exams starting March 11, 2026": "Enroll for your upcoming exams starting March 11, 2026.",
       "Exam start date": "Exam start date",
       "Exam type": "Exam type",
       "Subject": "Subject",
@@ -1013,7 +1013,6 @@
       "Excellent": "Excellent"
     }
   },
-
   "CampusBuzz": {
     "All": "All",
     "Achievements": "Achievements",
@@ -1065,7 +1064,6 @@
     "Reply": "Reply",
     "Deleting": "Deleting..."
   },
-
   "Email": {
     "Email": "Email",
     "Compose": "Compose"
