@@ -297,6 +297,12 @@ export async function POST(req: NextRequest) {
 
       const scanDate = scanTimestamp.split("T")[0];
 
+      let gateAuthMethod: "Card" | "Fingerprint" | "FaceRecognition" | "QRCode" = "FaceRecognition";
+      if (dbAuthMethod === "card") gateAuthMethod = "Card";
+      else if (dbAuthMethod === "fingerprint") gateAuthMethod = "Fingerprint";
+      else if (dbAuthMethod === "facerecognition") gateAuthMethod = "FaceRecognition";
+      else if (dbAuthMethod === "manual") gateAuthMethod = "FaceRecognition";
+
       const gateResult = await processGateScan({
         userId,
         collegeId: device.collegeId,
@@ -304,7 +310,7 @@ export async function POST(req: NextRequest) {
         scanType,
         scanTime: scanTimestamp,
         scanDate,
-        authMethod: dbAuthMethod,
+        authMethod: gateAuthMethod,
       });
 
       if (deviceAttendanceLogId) {
