@@ -126,7 +126,13 @@ export async function POST(req: NextRequest) {
     }
 
     const password = await decryptPassword(device.devicePasswordEncrypted);
-    const baseUrl = `http://${device.deviceIp}:${device.devicePort}`;
+    
+    // Clean IP in case user entered 'http://' or 'https://'
+    let cleanIp = device.deviceIp.replace(/^https?:\/\//i, '').replace(/\/$/, '');
+    cleanIp = cleanIp.split(':')[0]; // Remove any port if appended
+    
+    const protocol = (device.devicePort === 443 || device.deviceIp.toLowerCase().startsWith('https')) ? 'https' : 'http';
+    const baseUrl = `${protocol}://${cleanIp}:${device.devicePort}`;
     
     let bodyStringOrFormData: BodyInit | undefined;
     let finalContentType: string | undefined;

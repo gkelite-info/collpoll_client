@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 
 interface RoomSelectDropdownProps {
   value: string;
-  onChange: (val: string) => void;
+  onChange: (roomNo: string, collegeRoomId: number) => void;
   collegeId: number;
   placeholder?: string;
 }
@@ -119,8 +119,8 @@ export default function RoomSelectDropdown({
     }
   };
 
-  const selectRoom = (roomNo: string) => {
-    onChange(roomNo);
+  const selectRoom = (room: CollegeRoom) => {
+    onChange(room.roomNo, room.collegeRoomId);
     setIsOpen(false);
   };
 
@@ -186,7 +186,7 @@ export default function RoomSelectDropdown({
                   return (
                     <div
                       key={room.collegeRoomId}
-                      onClick={() => selectRoom(room.roomNo)}
+                      onClick={() => selectRoom(room)}
                       className={`px-3 py-2 text-sm cursor-pointer transition-colors flex flex-col ${
                         isSelected
                           ? "bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100"

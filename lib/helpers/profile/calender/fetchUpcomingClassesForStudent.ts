@@ -18,7 +18,8 @@ export async function fetchUpcomingClassesForStudent(filters: {
       date,
       fromTime,
       toTime,
-      roomNo,
+      collegeRoomId,
+      college_rooms(roomNo),
       meetingLink,
       faculty:facultyId ( fullName ),
       subject:subject ( subjectName ),
@@ -73,12 +74,12 @@ export async function fetchUpcomingClassesForStudent(filters: {
     if (isMeeting) {
       topicDescription = item.meetingLink
         ? "Online Meeting"
-        : item.roomNo
-          ? `Room: ${item.roomNo}`
+        : item.college_rooms?.roomNo
+          ? `Room: ${item.college_rooms?.roomNo}`
           : "General Meeting";
     } else if (isExam) {
-      topicDescription = item.roomNo
-        ? `Room: ${item.roomNo}`
+      topicDescription = item.college_rooms?.roomNo
+        ? `Room: ${item.college_rooms?.roomNo}`
         : "Exam Location TBA";
     } else {
       topicDescription = item.topic?.topicTitle ?? "";

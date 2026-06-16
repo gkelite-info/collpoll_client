@@ -296,6 +296,7 @@ import toast from "react-hot-toast";
 import { UpcomingLesson } from "@/lib/helpers/faculty/attendance/getClasses";
 import { handleMissionClassStatus } from "@/lib/helpers/faculty/attendance/attendanceActions";
 import { ClassActionModal } from "../(dashboard)/components/ClassActionModal";
+import { useUser } from "@/app/utils/context/UserContext";
 import {
   LessonShimmer,
   UpcomingClassesSkeleton,
@@ -501,6 +502,7 @@ export default function UpcomingClasses({
   const [selectedLesson, setSelectedLesson] = useState<UpcomingLesson | null>(
     null,
   );
+  const { collegeId } = useUser();
 
   const [localLessons, setLocalLessons] = useState<UpcomingLesson[]>(lessons);
 
@@ -520,11 +522,16 @@ export default function UpcomingClasses({
   };
 
   const handleAcceptClass = async (id: string) => {
-    if (!facultyId) return;
+    if (!facultyId || !collegeId) {
+      toast.error("Session missing data");
+      return;
+    }
     const res = await handleMissionClassStatus(
       id,
       Number(facultyId),
       "Accepted",
+      undefined,
+      collegeId
     );
     if (res.success) {
       toast.success("Class Accepted! Redirecting...");
@@ -535,8 +542,8 @@ export default function UpcomingClasses({
   };
 
   const handleCancelClass = async (id: string, reason: string) => {
-    if (!facultyId) return toast.error("Faculty ID missing");
-    const res = await handleMissionClassStatus(id, facultyId, "Cancel", reason);
+    if (!facultyId || !collegeId) return toast.error("Faculty ID or College ID missing");
+    const res = await handleMissionClassStatus(id, facultyId, "Cancel", reason, collegeId);
     if (res.success) {
       toast.success("Class Cancelled");
       setLocalLessons((prev) =>

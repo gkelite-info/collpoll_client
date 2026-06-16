@@ -63,7 +63,6 @@ type AcademicCalendarConflictQueryRow = {
   date?: string | null;
   fromTime?: string | null;
   toTime?: string | null;
-  roomNo?: string | null;
   meetingTitle?: string | null;
   facultyData: MaybeArray<{
     fullName?: string | null;
@@ -193,7 +192,6 @@ async function checkAcademicCalendarConflicts(payload: {
       date,
       fromTime,
       toTime,
-      roomNo,
       meetingTitle,
       facultyData:faculty!inner (
         fullName,

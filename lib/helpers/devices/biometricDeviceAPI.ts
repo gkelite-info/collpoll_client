@@ -199,7 +199,7 @@ export const upsertBiometricDevice = async (payload: BiometricDevicePayload) => 
       collegeId: payload.collegeId,
       deviceName: payload.deviceName.trim(),
       deviceSerialNumber: payload.deviceSerialNumber.trim(),
-      deviceIp: payload.deviceIp.trim(),
+      deviceIp: payload.deviceIp.replace(/^https?:\/\//i, '').replace(/\/$/, '').split(':')[0].trim(),
       devicePort: payload.devicePort,
       deviceUsername: payload.deviceUsername.trim(),
       deviceType: payload.deviceType,

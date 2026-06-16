@@ -99,7 +99,8 @@ export async function getUpcomingClasses(
       date,
       fromTime,
       toTime,
-      roomNo,
+      collegeRoomId,
+      college_rooms (roomNo),
       type,
 
       topicData:college_subject_unit_topics (topicTitle),
@@ -114,28 +115,43 @@ calendar_event_section (
   yearData:college_academic_year (collegeAcademicYear),
   semester:college_semester (collegeSemester),
   education:college_education (collegeEducationType)
-),
-      
-      faculty_class_sessions (status) 
+)
     `,
     )
     .eq("facultyId", faculty.facultyId)
     .eq("type", "class")
     .eq("date", today)
-    .eq("is_deleted", false)
     .is("deletedAt", null)
     .order("date", { ascending: true })
     .order("fromTime", { ascending: true });
 
-  if (eventsError) return [];
+  if (eventsError) {
+    console.error("GET_UPCOMING_CLASSES_ERROR", eventsError);
+    return [];
+  }
   if (!events || events.length === 0) return [];
+
+  const eventIds = events.map((e: any) => e.calendarEventId);
+  const { data: allSessionRecords } = await supabase
+    .from("faculty_class_sessions")
+    .select("calendarEventId, status, createdAt")
+    .in("calendarEventId", eventIds);
+
+  const sessionMap = new Map<number, any[]>();
+  if (allSessionRecords) {
+    allSessionRecords.forEach((record: any) => {
+      const arr = sessionMap.get(record.calendarEventId) || [];
+      arr.push(record);
+      sessionMap.set(record.calendarEventId, arr);
+    });
+  }
 
   return events.flatMap((event: any) => {
     const sectionsData = (event.calendar_event_section || []).filter(
       (s: any) => s.isActive === true && s.deletedAt === null,
     );
 
-    const sessionRecords = event.faculty_class_sessions || [];
+    const sessionRecords = sessionMap.get(event.calendarEventId) || [];
     sessionRecords.sort(
       (a: any, b: any) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
@@ -176,7 +192,7 @@ calendar_event_section (
         fromTime: convertTo12HourFormat(event.fromTime),
         toTime: convertTo12HourFormat(event.toTime),
         date: formatDate(event.date),
-        roomNo: event.roomNo,
+        roomNo: safeGet(event.college_rooms, "roomNo"),
         section: sectionRow.section?.collegeSections,
         semester: [semester],
         department: [{ name: department }],
@@ -203,7 +219,8 @@ export async function getClassDetails(
       date,
       fromTime,
       toTime,
-      roomNo,
+      collegeRoomId,
+      college_rooms (roomNo),
       
       topicData:college_subject_unit_topics (topicTitle),
       subjectData:college_subjects (subjectName),
@@ -270,7 +287,7 @@ export async function getClassDetails(
     fromTime: convertTo12HourFormat(event.fromTime),
     toTime: convertTo12HourFormat(event.toTime),
     date: formatDate(event.date),
-    roomNo: event.roomNo,
+    roomNo: safeGet(event.college_rooms, "roomNo"),
     section: sectionNames,
     semester: semesters as string[],
     department: departments,

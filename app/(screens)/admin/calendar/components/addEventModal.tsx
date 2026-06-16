@@ -58,6 +58,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("AM");
   const closedByUserRef = useRef(false);
   const [roomNo, setRoomNo] = useState("");
+  const [collegeRoomId, setCollegeRoomId] = useState<number | null>(null);
   const [year, setYear] = useState<string>("");
   const [selectedSections, setSelectedSections] = useState<FacultySection[]>(
     [],
@@ -237,6 +238,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   useEffect(() => {
     if (!isOpen || !value) return;
     setRoomNo(value.roomNo || "");
+    setCollegeRoomId(value.collegeRoomId ?? null);
     setDegree(value.degree || "");
     setSelectedSections(value.sections || []);
     setYear(normalizeYear(value.year));
@@ -470,6 +472,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       type: selectedType.toLowerCase(),
       date,
       roomNo: roomNo.trim(),
+      collegeRoomId: collegeRoomId ?? null,
       fromTime: startTime,
       toTime: endTime,
 
@@ -762,7 +765,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 </label>
                 <RoomSelectDropdown
                   value={roomNo}
-                  onChange={setRoomNo}
+                  onChange={(rNo, rId) => { setRoomNo(rNo); setCollegeRoomId(rId); }}
                   collegeId={collegeId || 0}
                   placeholder="Select Room No. / Room Name"
                 />

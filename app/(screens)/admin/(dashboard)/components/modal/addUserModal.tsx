@@ -1062,9 +1062,6 @@ const AddUserModal: React.FC<{
 
         try {
           await registerUserToHikvision(targetUserId, basicData.fullName);
-          console.log("Yes its success");
-          toast.success("Yes its success");
-          
         } catch (hivErr) {
           console.warn("Hikvision registration failed (non-blocking):", hivErr);
         }

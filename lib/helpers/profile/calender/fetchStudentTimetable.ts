@@ -28,7 +28,10 @@ export async function fetchStudentTimetableByDate(params: {
       date,
       fromTime,
       toTime,
-      roomNo,
+      collegeRoomId,
+      college_rooms (
+        roomNo
+      ),
       eventTopic,
       faculty:facultyId (
         fullName
@@ -83,7 +86,7 @@ export async function fetchStudentTimetableByDate(params: {
       eventTopic: item.topic?.topicTitle ?? "",
       topicId: item.eventTopic,
       facultyName: item.faculty?.fullName ?? "Faculty",
-      roomNo: item.roomNo ?? "",
+      roomNo: item.college_rooms?.roomNo ?? "",
       isCancelled,
     };
   });

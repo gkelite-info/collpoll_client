@@ -1,0 +1,269 @@
+import { createClient } from "@supabase/supabase-js";
+
+/* ------------------------------------------------------------------ */
+/*  Supabase service-role client (server-side only)                    */
+/*  All writes in this helper MUST use service_role to bypass RLS.    */
+/* ------------------------------------------------------------------ */
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+export const adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                               */
+/* ------------------------------------------------------------------ */
+
+export interface DeviceRow {
+  deviceId: number;
+  collegeId: number;
+  deviceCategory: "classroom" | "gate";
+  deviceSerialNumber: string;
+  isActive: boolean;
+  is_deleted: boolean;
+}
+
+export interface CredentialLookupResult {
+  userId: number;
+  collegeId: number;
+  isActive: boolean;
+}
+
+export interface PendingLogPayload {
+  deviceId: number;
+  userId: number | null;
+  collegeId: number;
+  logType: "classattendance" | "gateentry" | "gateexit";
+  authMethod: "fingerprint" | "facerecognition" | "card" | "manual";
+  scanTimestamp: string;
+  rawDeviceData?: Record<string, unknown>;
+}
+
+export interface LogUpdatePayload {
+  deviceAttendanceLogId: number;
+  processedStatus: "accepted" | "rejected" | "error";
+  rejectionReason?: string;
+  calendarEventId?: number | null;
+  deviceClassSessionId?: number | null;
+  attendanceRecordId?: number | null;
+  gateScanLogId?: number | null;
+  attendanceDailyId?: number | null;
+}
+
+/* ------------------------------------------------------------------ */
+/*  validateAndLookupDevice                                             */
+/*  Validates device serial number and returns device info.            */
+/* ------------------------------------------------------------------ */
+
+export async function validateAndLookupDevice(
+  deviceSerialNumber: string,
+): Promise<DeviceRow | null> {
+  const { data, error } = await adminSupabase
+    .from("biometric_devices")
+    .select(
+      "deviceId, collegeId, deviceCategory, deviceSerialNumber, isActive, is_deleted",
+    )
+    .eq("deviceSerialNumber", deviceSerialNumber)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[validateAndLookupDevice]", error.message);
+    return null;
+  }
+  if (!data || data.is_deleted || !data.isActive) return null;
+  return data as DeviceRow;
+}
+
+/* ------------------------------------------------------------------ */
+/*  validateAndLookupDeviceById                                         */
+/*  Validates device by ID and returns device info.                     */
+/* ------------------------------------------------------------------ */
+
+export async function validateAndLookupDeviceById(
+  deviceId: number,
+): Promise<DeviceRow | null> {
+  const { data, error } = await adminSupabase
+    .from("biometric_devices")
+    .select(
+      "deviceId, collegeId, deviceCategory, deviceSerialNumber, isActive, is_deleted",
+    )
+    .eq("deviceId", deviceId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[validateAndLookupDeviceById]", error.message);
+    return null;
+  }
+  if (!data || data.is_deleted || !data.isActive) return null;
+  return data as DeviceRow;
+}
+
+/* ------------------------------------------------------------------ */
+/*  validateAndLookupDeviceByIp                                         */
+/*  Validates device by IP address and returns device info.             */
+/* ------------------------------------------------------------------ */
+
+export async function validateAndLookupDeviceByIp(
+  deviceIp: string,
+): Promise<DeviceRow | null> {
+  const { data, error } = await adminSupabase
+    .from("biometric_devices")
+    .select(
+      "deviceId, collegeId, deviceCategory, deviceSerialNumber, isActive, is_deleted",
+    )
+    .or(`deviceIp.eq.${deviceIp},deviceIp.eq.http://${deviceIp},deviceIp.eq.https://${deviceIp}`)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[validateAndLookupDeviceByIp]", error.message);
+    return null;
+  }
+  if (!data || data.is_deleted || !data.isActive) return null;
+  return data as DeviceRow;
+}
+
+/* ------------------------------------------------------------------ */
+/*  lookupUserByEmployeeNo                                              */
+/*  Finds userId from employeeNo (which IS the userId).                */
+/* ------------------------------------------------------------------ */
+
+export async function lookupUserByEmployeeNo(
+  employeeNo: string,
+  collegeId: number,
+): Promise<CredentialLookupResult | null> {
+  const userId = parseInt(employeeNo, 10);
+  if (isNaN(userId)) return null;
+
+  const { data, error } = await adminSupabase
+    .from("users")
+    .select("userId, collegeId, isActive, is_deleted")
+    .eq("userId", userId)
+    .eq("collegeId", collegeId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[lookupUserByEmployeeNo]", error.message);
+    return null;
+  }
+  if (!data || data.is_deleted || !data.isActive) return null;
+  
+  return {
+    userId: data.userId,
+    collegeId: data.collegeId,
+    isActive: data.isActive,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  lookupUserByCredential                                              */
+/*  Finds userId from a credential identifier (face hash / card UID). */
+/*  Tries multiple credential types since identifier format differs.   */
+/* ------------------------------------------------------------------ */
+
+export async function lookupUserByCredential(
+  credentialIdentifier: string,
+  collegeId: number,
+): Promise<CredentialLookupResult | null> {
+  const { data, error } = await adminSupabase
+    .from("user_device_credentials")
+    .select("userId, collegeId, isActive")
+    .eq("credentialIdentifier", credentialIdentifier)
+    .eq("collegeId", collegeId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[lookupUserByCredential]", error.message);
+    return null;
+  }
+  if (!data) return null;
+  return data as CredentialLookupResult;
+}
+
+/* ------------------------------------------------------------------ */
+/*  insertPendingLog                                                    */
+/*  Creates an initial device_attendance_logs row with Pending status. */
+/*  Returns the generated ID so it can be updated after processing.   */
+/* ------------------------------------------------------------------ */
+
+export async function insertPendingLog(
+  payload: PendingLogPayload,
+): Promise<number | null> {
+  const now = new Date().toISOString();
+
+  const { data, error } = await adminSupabase
+    .from("device_attendance_logs")
+    .insert({
+      deviceId: payload.deviceId,
+      userId: payload.userId,
+      collegeId: payload.collegeId,
+      logType: payload.logType,
+      authMethod: payload.authMethod,
+      scanTimestamp: payload.scanTimestamp,
+      processedStatus: "pending",
+      rawDeviceData: payload.rawDeviceData ?? null,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .select("deviceAttendanceLogId")
+    .single();
+
+  if (error) {
+    console.error("[insertPendingLog]", error.message);
+    return null;
+  }
+  return data.deviceAttendanceLogId;
+}
+
+/* ------------------------------------------------------------------ */
+/*  updateLogStatus                                                     */
+/*  Finalises the device_attendance_logs row with processing result.   */
+/* ------------------------------------------------------------------ */
+
+export async function updateLogStatus(
+  update: LogUpdatePayload,
+): Promise<void> {
+  const { deviceAttendanceLogId, processedStatus, ...rest } = update;
+  const now = new Date().toISOString();
+
+  const patch: Record<string, unknown> = {
+    processedStatus,
+    updatedAt: now,
+  };
+
+  if (rest.rejectionReason !== undefined) patch.rejectionReason = rest.rejectionReason;
+  if (rest.calendarEventId !== undefined) patch.calendarEventId = rest.calendarEventId;
+  if (rest.deviceClassSessionId !== undefined)
+    patch.deviceClassSessionId = rest.deviceClassSessionId;
+  if (rest.attendanceRecordId !== undefined)
+    patch.attendanceRecordId = rest.attendanceRecordId;
+  if (rest.gateScanLogId !== undefined) patch.gateScanLogId = rest.gateScanLogId;
+  if (rest.attendanceDailyId !== undefined)
+    patch.attendanceDailyId = rest.attendanceDailyId;
+
+  await adminSupabase
+    .from("device_attendance_logs")
+    .update(patch)
+    .eq("deviceAttendanceLogId", deviceAttendanceLogId);
+}
+
+/* ------------------------------------------------------------------ */
+/*  getUserRole                                                         */
+/*  Returns the role of the user — used to route classroom vs gate.    */
+/* ------------------------------------------------------------------ */
+
+export async function getUserRole(
+  userId: number,
+): Promise<string | null> {
+  const { data, error } = await adminSupabase
+    .from("users")
+    .select("role")
+    .eq("userId", userId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.role;
+}
