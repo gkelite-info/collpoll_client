@@ -437,7 +437,7 @@ export async function fetchWellbeingManagerNewIssueCount(
 
   return issueIds.filter((issueId) => {
     const job = latestJobByIssueId.get(issueId);
-    return !job || job.status === "cancelled";
+    return !job || job.status !== "completed";
   }).length;
 }
 
