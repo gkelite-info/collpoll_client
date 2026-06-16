@@ -20,10 +20,22 @@ type SubjectProgressCardProps = {
 };
 
 const getSubjectInitials = (title: string) => {
-  const parts = title.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "SU";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+  const rawParts = title.trim().split(/\s+/).filter(Boolean);
+  const cleanedParts = rawParts
+    .map(p => p.replace(/[^a-zA-Z0-9]/g, ""))
+    .filter(p => p.length > 0);
+
+  const significantParts = cleanedParts.filter(p => {
+    const isRoman = /^(I|II|III|IV|V|VI|VII|VIII|IX|X)$/i.test(p);
+    const isSingleChar = p.length === 1;
+    return !isRoman && !isSingleChar;
+  });
+
+  const partsToUse = significantParts.length > 0 ? significantParts : cleanedParts;
+
+  if (partsToUse.length === 0) return "SU";
+  if (partsToUse.length === 1) return partsToUse[0][0].toUpperCase();
+  return `${partsToUse[0][0]}${partsToUse[1][0]}`.toUpperCase();
 };
 
 export default function SubjectProgressCards({

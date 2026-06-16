@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { getStudentProgressData } from "./lib/helpers/student/studentProgress/getStudentProgressData";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -7,22 +8,24 @@ const adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
 
 (async () => {
   try {
-    const { data: logs, error } = await adminSupabase
-      .from("device_attendance_logs")
-      .select("*")
-      .order("deviceAttendanceLogId", { ascending: false })
-      .limit(5);
-      
-    console.log("LOGS:", JSON.stringify({ logs, error }, null, 2));
-
-    const { data: att, error: err2 } = await adminSupabase
-      .from("attendance_record")
-      .select("*")
-      .order("attendanceRecordId", { ascending: false })
+    const { data: students, error: studentError } = await adminSupabase
+      .from("students")
+      .select("studentId, userId, rollNo")
+      .eq("isActive", true)
       .limit(5);
 
-    console.log("ATTENDANCE:", JSON.stringify({ att, error: err2 }, null, 2));
+    if (studentError) {
+      return;
+    }
+
+    for (const student of students ?? []) {
+      if (!student.userId) continue;
+      try {
+        await getStudentProgressData(student.userId);
+      } catch (err) {
+      }
+    }
   } catch (e) {
-    console.error(e);
+    console.error("Failed");
   }
 })();
