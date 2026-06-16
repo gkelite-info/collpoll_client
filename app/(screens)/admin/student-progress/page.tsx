@@ -8,11 +8,23 @@ import { StudentDataTable } from "./components/studentDataTable";
 import TopFivePerformers from "./components/topFivePerformers";
 import CardComponent from "@/app/utils/card";
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ValueShimmer } from "@/app/components/shimmers/valueShimmer";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { getAdminStudentProgressSummary } from "@/lib/helpers/admin/studentProgress/getAdminStudentProgressSummary";
 import { useStudentProgressFilters } from "@/lib/helpers/admin/studentProgress/useStudentProgressFilters";
 import { FilterDropdown } from "../academics/components/filterDropdown";
+import ResultDetailsView from "./results/ResultDetailsView";
+import ResultPreviewView from "./results/ResultPreviewView";
+import ResultsMonitoringView from "./results/ResultsMonitoringView";
+import StudentProgressTabs from "./results/StudentProgressTabs";
+import {
+  getSearchView,
+  resultFacultyNames,
+  resultFacultyPhotos,
+  type ResultCard,
+  type StudentProgressView,
+} from "./results/types";
 
 type StudentProgressSummary = Awaited<
   ReturnType<typeof getAdminStudentProgressSummary>
@@ -141,6 +153,11 @@ const StudentPerformancePageSkeleton = () => (
 );
 
 export default function Page() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeView = getSearchView(searchParams.get("view"));
+  const selectedResultId = searchParams.get("resultId");
   const {
     loading: adminLoading,
     collegeId,
@@ -358,6 +375,53 @@ export default function Page() {
     }).filter(([, value]) => value !== ""),
   ).toString();
 
+  const resultCards = useMemo<ResultCard[]>(() => {
+    const fallbackSubjects = [
+      "Applied Physics",
+      "Computer Networks",
+      "Engineering Chemistry",
+      "Electrical Circuits",
+      "Engineering Chemistry",
+      "Engineering Graphics",
+    ];
+    const sourceSubjects = [...subjects.map((subject) => subject.subjectName)];
+    while (sourceSubjects.length < 6) {
+      sourceSubjects.push(fallbackSubjects[sourceSubjects.length]);
+    }
+
+    return sourceSubjects.slice(0, 6).map((subject, index) => ({
+      id: `${index + 1}-${subject.replace(/\s+/g, "-").toLowerCase()}`,
+      subject,
+      facultyName: resultFacultyNames[index % resultFacultyNames.length],
+      facultyId: `ID - ${["20FA80A8012", "20FA80A8012", "ADS234", "E2099918", "E2099918", "E2099918"][index % 6]}`,
+      profileUrl: resultFacultyPhotos[index % resultFacultyPhotos.length],
+      totalStudents: Math.max(summary.totalStudents || 0, 115 + (index % 3) * 5),
+      passPercentage: index === 2 ? 88.5 : index % 2 === 0 ? 91 : 94.2,
+      status: index === 2 ? "Draft Mode" : "Uploaded",
+    }));
+  }, [subjects, summary.totalStudents]);
+
+  const selectedResult =
+    resultCards.find((result) => result.id === selectedResultId) ?? resultCards[0];
+
+  const updateView = (view: StudentProgressView, resultId?: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (view === "progress") {
+      params.delete("view");
+      params.delete("resultId");
+    } else {
+      params.set("view", view);
+      if (resultId) {
+        params.set("resultId", resultId);
+      } else {
+        params.delete("resultId");
+      }
+    }
+
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
+
   const shouldShowSkeleton =
     adminLoading ||
     (!hasLoadedOnce && filtersLoading) ||
@@ -372,8 +436,56 @@ export default function Page() {
     return <StudentPerformancePageSkeleton />;
   }
 
+  if (activeView === "results") {
+    return (
+      <main className="relative overflow-hidden p-4">
+        <StudentProgressTabs activeView={activeView} onChange={updateView} />
+        <ResultsMonitoringView
+          branchOptions={branches}
+          yearOptions={years}
+          selectedBranch={selectedBranch}
+          selectedYear={selectedYear}
+          selectBranch={selectBranch}
+          selectYear={selectYear}
+          resultCards={resultCards}
+          onViewDetails={(resultId) => updateView("result-details", resultId)}
+        />
+      </main>
+    );
+  }
+
+  if (activeView === "result-details") {
+    return (
+      <main className="relative overflow-hidden p-4">
+        <StudentProgressTabs activeView={activeView} onChange={updateView} />
+        <ResultDetailsView
+          result={selectedResult}
+          selectedBranch={selectedBranch?.collegeBranchCode ?? "ALL"}
+          selectedYear={selectedYear?.collegeAcademicYear ?? "ALL"}
+          selectedSection={selectedSection?.collegeSections ?? "ALL"}
+          selectedSemester={selectedSemester?.collegeSemester?.toString() ?? "ALL"}
+          onBack={() => updateView("results")}
+          onViewResult={() => updateView("result-preview", selectedResult.id)}
+        />
+      </main>
+    );
+  }
+
+  if (activeView === "result-preview") {
+    return (
+      <main className="relative overflow-hidden p-4">
+        <StudentProgressTabs activeView={activeView} onChange={updateView} />
+        <ResultPreviewView
+          result={selectedResult}
+          onBack={() => updateView("result-details", selectedResult.id)}
+        />
+      </main>
+    );
+  }
+
   return (
     <main className="relative overflow-hidden p-4">
+      <StudentProgressTabs activeView={activeView} onChange={updateView} />
       <section className="mb-4 flex items-center justify-between">
         <div>
           <div className="flex">
@@ -622,3 +734,4 @@ export default function Page() {
     </main>
   );
 }
+
