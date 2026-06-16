@@ -77,7 +77,8 @@ export const Avatar = ({
     !error &&
     (src.startsWith("http") ||
       src.startsWith("data:") ||
-      src.startsWith("blob:"));
+      src.startsWith("blob:") ||
+      src.startsWith("/"));
 
   const wrapperClass = clsx(
     "relative rounded-full overflow-hidden border border-gray-200 flex-shrink-0",
