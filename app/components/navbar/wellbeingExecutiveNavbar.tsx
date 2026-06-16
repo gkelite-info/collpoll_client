@@ -42,6 +42,7 @@ type WellbeingExecutiveNavbarProps = {
   basePath?: string;
   showExecutives?: boolean;
   showLeaveRequest?: boolean;
+  showStaffAttendance?: boolean;
   newIssueCountMode?: "executive" | "manager";
 };
 
@@ -50,6 +51,7 @@ export default function WellbeingExecutiveNavbar({
   basePath = "/wellbeing-executive",
   showExecutives = false,
   showLeaveRequest = true,
+  showStaffAttendance = true,
   newIssueCountMode = "executive",
 }: WellbeingExecutiveNavbarProps) {
   const pathname = usePathname();
@@ -211,6 +213,14 @@ export default function WellbeingExecutiveNavbar({
       },
       {
         icon: (isActive) => (
+          <CheckCircle size={iconSize} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: "Staff Attendance",
+        path: `${base}/staff-attendance`,
+        hidden: !showStaffAttendance,
+      },
+      {
+        icon: (isActive) => (
           <Gear size={iconSize} weight={isActive ? "fill" : "regular"} />
         ),
         label: "Settings",
@@ -219,7 +229,7 @@ export default function WellbeingExecutiveNavbar({
     ];
 
     return navItems.filter((item) => !item.hidden);
-  }, [base, newIssuesCount, showLeaveRequest]);
+  }, [base, newIssuesCount, showLeaveRequest, showStaffAttendance]);
 
   const prefetchRoute = useCallback(
     (path: string) => {

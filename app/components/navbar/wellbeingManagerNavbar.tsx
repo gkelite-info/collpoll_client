@@ -15,6 +15,7 @@ export default function WellbeingManagerNavbar({
       basePath="/wellbeing-manager"
       showExecutives
       showLeaveRequest={true}
+      showStaffAttendance={false}
       newIssueCountMode="manager"
     />
   );

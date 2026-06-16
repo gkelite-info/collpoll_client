@@ -262,7 +262,7 @@ function DropdownPill<T extends string>({
     options.find((option) => option.value === value)?.label ?? value;
 
   return (
-    <div className="relative z-50" onMouseLeave={() => setOpen(false)}>
+    <div className="relative z-10" onMouseLeave={() => setOpen(false)}>
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
@@ -277,7 +277,7 @@ function DropdownPill<T extends string>({
       </button>
 
       {open ? (
-        <div className="custom-scrollbar absolute left-0 top-full z-[80] mt-1 max-h-56 w-full min-w-full overflow-y-auto rounded-xl bg-white py-2 shadow-xl ring-1 ring-black/5">
+        <div className="custom-scrollbar absolute left-0 top-full z-20 mt-1 max-h-56 w-full min-w-full overflow-y-auto rounded-xl bg-white py-2 shadow-xl ring-1 ring-black/5">
           {options.map((option) => {
             const selected = option.value === value;
             return (
@@ -379,7 +379,7 @@ function IssuesHeader({
           Manage and resolve {roleLabel} issues efficiently
         </p>
       </div>
-      <div className="relative z-40 flex items-center justify-between gap-4 overflow-visible pb-2">
+      <div className="relative z-10 flex items-center justify-between gap-4 overflow-visible pb-2">
         <div className="flex shrink-0 items-center whitespace-nowrap text-[18px] font-bold leading-none">
           {tabs.map((tab, index) => (
             <div key={tab.key} className="flex items-center">

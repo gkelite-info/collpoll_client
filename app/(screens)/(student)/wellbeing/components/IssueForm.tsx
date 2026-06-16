@@ -17,6 +17,7 @@ import type {
 import toast, { Toaster } from "react-hot-toast";
 import CustomSelect from "@/app/utils/CustomSelect";
 import Field from "@/app/utils/Field";
+import { useRouter } from "next/navigation";
 
 type IssueFormProps = {
   editingIssue?: StudentWellbeingIssueListItem | null;
@@ -73,6 +74,7 @@ export default function IssueForm({
   onCancelEdit,
   onEditComplete,
 }: IssueFormProps) {
+  const router = useRouter();
   const { fullName, email, collegeId, userId, loading: userLoading } = useUser();
   const isEditing = Boolean(editingIssue);
   const [files, setFiles] = useState<File[]>([]);
@@ -212,24 +214,40 @@ export default function IssueForm({
 
   const handleSubmit = async () => {
     if (submitting) return;
-    if (!fullName || !email || !collegeId || !userId) {
+    if (!fullName?.trim()) {
+      toast.error("Full name is required.");
+      return;
+    }
+    if (!email?.trim()) {
+      toast.error("Email address is required.");
+      return;
+    }
+    if (!collegeId || !userId) {
       toast.error("User details are still loading. Please try again.");
       return;
     }
     if (!issueTitle.trim()) {
-      toast.error("Please enter an issue title");
+      toast.error("Issue title is required.");
+      return;
+    }
+    if (!appliesTo) {
+      toast.error("Please select where the issue applies.");
+      return;
+    }
+    if (!priority) {
+      toast.error("Priority is required.");
       return;
     }
     if (!selectedCategoryId) {
-      toast.error("Please select a category");
+      toast.error("Category is required.");
       return;
     }
     if (!selectedSubCategoryId) {
-      toast.error("Please select a subcategory");
+      toast.error("Subcategory is required.");
       return;
     }
     if (!description.trim()) {
-      toast.error("Please describe your issue");
+      toast.error("Description is required.");
       return;
     }
 
@@ -277,6 +295,7 @@ export default function IssueForm({
       window.dispatchEvent(new Event("wellbeing-issue-created"));
 
       resetForm();
+      router.push("?tab=raised");
     } catch (error: unknown) {
       console.error("saveWellbeingSupportIssue error:", error);
       toast.error(error instanceof Error ? error.message : "Failed to save wellbeing issue.");
@@ -306,7 +325,7 @@ export default function IssueForm({
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 custom-scrollbar">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4 sm:gap-y-5">
-          <Field label="Full Name">
+          <Field label="Full Name" required>
             <input
               value={fullName || ""}
               readOnly
@@ -315,7 +334,7 @@ export default function IssueForm({
             />
           </Field>
 
-          <Field label="Email address">
+          <Field label="Email address" required>
             <input
               value={email || ""}
               readOnly
@@ -324,7 +343,7 @@ export default function IssueForm({
             />
           </Field>
 
-          <Field label="Issue Title" htmlFor="issue-title">
+          <Field label="Issue Title" htmlFor="issue-title" required>
             <input
               id="issue-title"
               type="text"
@@ -335,7 +354,7 @@ export default function IssueForm({
             />
           </Field>
 
-          <Field label="Issue Visibility">
+          <Field label="Issue Visibility" required>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -364,7 +383,7 @@ export default function IssueForm({
             </div>
           </Field>
 
-          <Field label="Applies To">
+          <Field label="Applies To" required>
             <div className="flex flex-wrap py-[9px] w-full items-center max-[350px]:gap-3 gap-6 rounded border border-[#D0D0D0] bg-transparent px-4">
               {(["college", "hostel", "both"] as const).map((option) => {
                 const isSelected = appliesTo === option;
@@ -389,7 +408,7 @@ export default function IssueForm({
             </div>
           </Field>
 
-          <Field label="Priority" htmlFor="priority-select">
+          <Field label="Priority" htmlFor="priority-select" required>
             <CustomSelect
               id="priority-select"
               label="Select Priority"
@@ -403,7 +422,7 @@ export default function IssueForm({
             />
           </Field>
 
-          <Field label="Category" htmlFor="category-select">
+          <Field label="Category" htmlFor="category-select" required>
             <CustomSelect
               id="category-select"
               label={loadingCategories ? "Loading..." : "Select category"}
@@ -417,7 +436,7 @@ export default function IssueForm({
             />
           </Field>
 
-          <Field label="Subcategory" htmlFor="subcategory-select">
+          <Field label="Subcategory" htmlFor="subcategory-select" required>
             <CustomSelect
               id="subcategory-select"
               label="Select Subcategory"
@@ -429,7 +448,7 @@ export default function IssueForm({
           </Field>
 
           <div className="col-span-1 sm:col-span-2">
-            <Field label="Description" htmlFor="description">
+            <Field label="Description" htmlFor="description" required>
               <textarea
                 id="description"
                 value={description}

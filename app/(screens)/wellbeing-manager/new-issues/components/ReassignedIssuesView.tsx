@@ -21,14 +21,19 @@ type CategoryRelation =
 
 type SupportIssueRow = {
     wellbeingSupportIssueId: number;
+    fullName: string;
+    email: string;
     issueTitle: string;
     description: string;
     categoryId: number;
     priority: "high" | "medium" | "low";
+    issueRaisedRole: string;
+    createdBy: number;
+    createdAt: string | null;
     wellbeing_categories: CategoryRelation;
 };
 
-type CancelledIssueJobRow = {
+type IssueJobRow = {
     wellbeingIssueJobId: number;
     wellbeingSupportIssueId: number;
     wellBeingId: number;
@@ -49,12 +54,18 @@ type UserNameRow = {
 type ReassignedIssueRow = {
     supportIssueId: number;
     ticketId: string;
+    fullName: string;
+    email: string;
+    profileUrl: string | null;
     categoryId: number;
     category: string;
     issueTitle: string;
     description: string;
     assignedTo: string;
     priority: "high" | "medium" | "low";
+    issueRaisedRole: string;
+    createdBy: number;
+    createdAt: string | null;
 };
 
 type CategoryFilter = "all" | `${number}`;
@@ -97,7 +108,7 @@ function FilterDropdown<T extends string>({
     const selectedLabel = options.find((option) => option.value === value)?.label ?? "All";
 
     return (
-        <div className="relative z-40" onMouseLeave={() => setOpen(false)}>
+        <div className="relative z-10" onMouseLeave={() => setOpen(false)}>
             <button
                 type="button"
                 onClick={() => setOpen((current) => !current)}
@@ -115,7 +126,7 @@ function FilterDropdown<T extends string>({
             </button>
 
             {open ? (
-                <div className="custom-scrollbar absolute left-0 top-full z-[90] mt-1 max-h-72 w-full overflow-y-auto rounded-xl bg-white py-2 shadow-xl ring-1 ring-black/5">
+                <div className="custom-scrollbar absolute left-0 top-full z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-xl bg-white py-2 shadow-xl ring-1 ring-black/5">
                     {options.map((option) => {
                         const selected = option.value === value;
                         return (
@@ -204,10 +215,15 @@ function ReassignedIssuesContent() {
                 .from("wellbeing_support_issues")
                 .select(`
                     wellbeingSupportIssueId,
+                    fullName,
+                    email,
                     issueTitle,
                     description,
                     categoryId,
                     priority,
+                    issueRaisedRole,
+                    createdBy,
+                    createdAt,
                     wellbeing_categories(categoryName)
                 `)
                 .eq("collegeId", collegeId)
@@ -245,9 +261,9 @@ function ReassignedIssuesContent() {
                 throw jobsError;
             }
 
-            const latestJobByIssueId = new Map<number, CancelledIssueJobRow>();
+            const latestJobByIssueId = new Map<number, IssueJobRow>();
             (jobs || []).forEach((job) => {
-                const typedJob = job as CancelledIssueJobRow;
+                const typedJob = job as IssueJobRow;
                 if (!latestJobByIssueId.has(typedJob.wellbeingSupportIssueId)) {
                     latestJobByIssueId.set(typedJob.wellbeingSupportIssueId, typedJob);
                 }
@@ -255,13 +271,13 @@ function ReassignedIssuesContent() {
 
             const visibleIssueIds = issueIds.filter((issueId) => {
                 const latestJob = latestJobByIssueId.get(issueId);
-                return !latestJob || latestJob.status === "cancelled";
+                return !latestJob || latestJob.status !== "completed";
             });
 
             const wellBeingIds = Array.from(new Set(
                 visibleIssueIds
                     .map((issueId) => latestJobByIssueId.get(issueId))
-                    .filter((job): job is CancelledIssueJobRow => Boolean(job))
+                    .filter((job): job is IssueJobRow => Boolean(job))
                     .map((job) => job.wellBeingId)
             ));
             const { data: wellBeings, error: wellBeingsError } = wellBeingIds.length
@@ -296,6 +312,30 @@ function ReassignedIssuesContent() {
             const issueById = new Map<number, SupportIssueRow>(
                 issueRows.map((issue) => [issue.wellbeingSupportIssueId, issue])
             );
+            const createdByIds = Array.from(
+                new Set(
+                    visibleIssueIds
+                        .map((issueId) => issueById.get(issueId)?.createdBy)
+                        .filter((userId): userId is number => Boolean(userId))
+                )
+            );
+            const { data: profiles, error: profilesError } = createdByIds.length
+                ? await supabase
+                    .from("user_profile")
+                    .select("userId, profileUrl")
+                    .in("userId", createdByIds)
+                    .eq("is_deleted", false)
+                : { data: [], error: null };
+
+            if (profilesError) {
+                throw profilesError;
+            }
+
+            const profileUrlByUserId = new Map<number, string>(
+                ((profiles || []) as { userId: number; profileUrl: string | null }[])
+                    .filter((profile) => Boolean(profile.profileUrl))
+                    .map((profile) => [profile.userId, profile.profileUrl as string])
+            );
 
             const rows = visibleIssueIds.reduce<ReassignedIssueRow[]>((acc, issueId) => {
                 const issue = issueById.get(issueId);
@@ -310,12 +350,18 @@ function ReassignedIssuesContent() {
                 acc.push({
                     supportIssueId: issue.wellbeingSupportIssueId,
                     ticketId: `#TK-${issue.wellbeingSupportIssueId}`,
+                    fullName: issue.fullName,
+                    email: issue.email,
+                    profileUrl: profileUrlByUserId.get(issue.createdBy) || null,
                     categoryId: issue.categoryId,
                     category: getCategoryName(issue.wellbeing_categories),
                     issueTitle: issue.issueTitle,
                     description: issue.description,
                     assignedTo,
                     priority: issue.priority,
+                    issueRaisedRole: issue.issueRaisedRole,
+                    createdBy: issue.createdBy,
+                    createdAt: issue.createdAt,
                 });
 
                 return acc;
@@ -528,7 +574,13 @@ function ReassignedIssuesContent() {
                     </div>
                     <div className="p-1 overflow-x-auto select-none">
                         <div className="min-w-[1180px] w-full px-2">
-                            <TableComponent columns={columns} tableData={paginatedTableData} isLoading={isLoading} />
+                            <TableComponent
+                                columns={columns}
+                                tableData={paginatedTableData}
+                                isLoading={isLoading}
+                                height="none"
+                                stickyHeader={false}
+                            />
                         </div>
                     </div>
                     {totalItems > 0 && (
@@ -545,7 +597,9 @@ function ReassignedIssuesContent() {
             <ReassignTicketModal
                 isOpen={reassignModalTargetId !== null}
                 onClose={() => setReassignModalTargetId(null)}
+                onReassigned={loadReassignedIssues}
                 ticketId={reassignModalTargetId || undefined}
+                issue={reassignedIssues.find((issue) => issue.ticketId === reassignModalTargetId)}
             />
         </main>
     );

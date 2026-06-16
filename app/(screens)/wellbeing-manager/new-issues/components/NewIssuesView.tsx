@@ -158,7 +158,7 @@ const getLatestJobByIssueId = (jobs: IssueJobRow[]) => {
     return jobByIssueId;
 };
 
-const isManagerNewIssue = (job?: IssueJobRow) => !job || job.status === "cancelled";
+const isManagerOpenIssue = (job?: IssueJobRow) => !job || job.status !== "completed";
 
 const getExecutiveBadgeClass = (name: string) =>
     name === "-"
@@ -214,7 +214,7 @@ function DropdownPill<T extends string>({
             : "border border-[#D7D7D7] bg-white text-[#282828] hover:border-gray-400";
 
     return (
-        <div className="relative z-50" onMouseLeave={() => setOpen(false)}>
+        <div className="relative z-10" onMouseLeave={() => setOpen(false)}>
             <button
                 type="button"
                 onClick={() => setOpen((current) => !current)}
@@ -229,7 +229,7 @@ function DropdownPill<T extends string>({
             </button>
 
             {open ? (
-                <div className="custom-scrollbar absolute left-0 top-full z-[80] mt-1 max-h-80 w-full min-w-full overflow-y-auto rounded-xl bg-white py-2 shadow-xl ring-1 ring-black/5">
+                <div className="custom-scrollbar absolute left-0 top-full z-20 mt-1 max-h-80 w-full min-w-full overflow-y-auto rounded-xl bg-white py-2 shadow-xl ring-1 ring-black/5">
                     {options.map((option) => {
                         const selected = option.value === value;
                         return (
@@ -381,15 +381,15 @@ export default function NewIssuesPageContent() {
             if (jobsError) throw jobsError;
 
             const jobByIssueId = getLatestJobByIssueId((jobsData ?? []) as IssueJobRow[]);
-            const newIssueRows = rows.filter((issue) =>
-                isManagerNewIssue(jobByIssueId.get(issue.wellbeingSupportIssueId)),
+            const openIssueRows = rows.filter((issue) =>
+                isManagerOpenIssue(jobByIssueId.get(issue.wellbeingSupportIssueId)),
             );
             const categoryCounts = new Map<
                 number,
                 { name: string; count: number }
             >();
 
-            newIssueRows.forEach((issue) => {
+            openIssueRows.forEach((issue) => {
                 const current = categoryCounts.get(issue.categoryId) ?? {
                     name: getCategoryName(issue.wellbeing_categories),
                     count: 0,
@@ -405,8 +405,8 @@ export default function NewIssuesPageContent() {
             )[0];
 
             setSummaryCards({
-                totalIssues: newIssueRows.length,
-                highPriorityIssues: newIssueRows.filter((issue) => issue.priority === "high")
+                totalIssues: openIssueRows.length,
+                highPriorityIssues: openIssueRows.filter((issue) => issue.priority === "high")
                     .length,
                 totalCategories: categoryCounts.size,
                 highestCategoryName: highestCategory?.name ?? "No Issues",
@@ -491,13 +491,13 @@ export default function NewIssuesPageContent() {
             if (jobsError) throw jobsError;
 
             const jobByIssueId = getLatestJobByIssueId((jobsData ?? []) as IssueJobRow[]);
-            const newIssueRows = filteredIssues.filter((issue) =>
-                isManagerNewIssue(jobByIssueId.get(issue.wellbeingSupportIssueId)),
+            const openIssueRows = filteredIssues.filter((issue) =>
+                isManagerOpenIssue(jobByIssueId.get(issue.wellbeingSupportIssueId)),
             );
 
             const wellBeingIds = Array.from(
                 new Set(
-                    newIssueRows
+                    openIssueRows
                         .map((issue) => jobByIssueId.get(issue.wellbeingSupportIssueId))
                         .filter((job): job is IssueJobRow => Boolean(job))
                         .map((job) => job.wellBeingId),
@@ -535,7 +535,7 @@ export default function NewIssuesPageContent() {
             );
 
             setIssueRows(
-                newIssueRows.map((issue) => {
+                openIssueRows.map((issue) => {
                     const job = jobByIssueId.get(issue.wellbeingSupportIssueId);
                     const executiveUserId = job
                         ? userIdByWellBeingId.get(job.wellBeingId)
@@ -603,6 +603,7 @@ export default function NewIssuesPageContent() {
                     table: "wellbeing_issue_jobs",
                 },
                 () => {
+                    loadIssueSummaryCards();
                     loadIssueTableRows();
                 },
             )

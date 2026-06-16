@@ -105,9 +105,9 @@ export default function IssueCard({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 lg:flex-row lg:gap-6">
-        <span className="font-semibold text-gray-700 text-sm lg:w-[220px]">Description :</span>
-        <p className="text-sm text-gray-500 leading-relaxed">
+      <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-3">
+        <span className="font-semibold text-gray-700 whitespace-nowrap">Description :</span>
+        <p className="text-gray-500 leading-relaxed">
           {issue.description}
         </p>
       </div>
