@@ -9,7 +9,9 @@ type UpsertIdentifierParams = {
 };
 
 const getEmployeeIdentifierType = (role: string) =>
-  role === "FinanceManager" ? "Finance Manager" : role;
+  role === "FinanceManager"
+    ? "Finance Manager"
+    : role;
 
 async function getExistingStudentPin(
   studentId: number,

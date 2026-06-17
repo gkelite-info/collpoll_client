@@ -14,11 +14,6 @@ import ReassignTicketModal from "../../components/ReassignTicketModal";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 
-type CategoryRelation =
-    | { categoryName?: string | null }
-    | { categoryName?: string | null }[]
-    | null;
-
 type SupportIssueRow = {
     wellbeingSupportIssueId: number;
     fullName: string;
@@ -27,10 +22,10 @@ type SupportIssueRow = {
     description: string;
     categoryId: number;
     priority: "high" | "medium" | "low";
+    issueVisibilityRole?: string | null;
     issueRaisedRole: string;
     createdBy: number;
     createdAt: string | null;
-    wellbeing_categories: CategoryRelation;
 };
 
 type IssueJobRow = {
@@ -76,12 +71,24 @@ type DropdownOption<T extends string> = {
     value: T;
 };
 
-const getCategoryName = (category: CategoryRelation) => {
-    if (Array.isArray(category)) {
-        return category[0]?.categoryName || "-";
+const logSupabaseError = (label: string, error: unknown) => {
+    if (error && typeof error === "object") {
+        const err = error as {
+            code?: string;
+            message?: string;
+            details?: string | null;
+            hint?: string | null;
+        };
+        console.error(label, {
+            code: err.code,
+            message: err.message,
+            details: err.details,
+            hint: err.hint,
+        });
+        return;
     }
 
-    return category?.categoryName || "-";
+    console.error(label, error);
 };
 
 const formatCount = (count: number) => String(count).padStart(2, "0");
@@ -221,24 +228,27 @@ function ReassignedIssuesContent() {
                     description,
                     categoryId,
                     priority,
+                    issueVisibilityRole,
                     issueRaisedRole,
                     createdBy,
-                    createdAt,
-                    wellbeing_categories(categoryName)
+                    createdAt
                 `)
                 .eq("collegeId", collegeId)
                 .eq("IssueStatus", "pending")
                 .eq("isActive", true)
                 .eq("is_deleted", false)
                 .is("deletedAt", null)
-                .in("issueVisibilityRole", ["wellbeingmanager", "both"])
                 .order("createdAt", { ascending: false });
 
             if (issuesError) {
                 throw issuesError;
             }
 
-            const issueRows = (issues || []) as SupportIssueRow[];
+            const issueRows = ((issues || []) as SupportIssueRow[]).filter(
+                (issue) =>
+                    issue.issueVisibilityRole === "wellbeingmanager" ||
+                    issue.issueVisibilityRole === "both",
+            );
             const issueIds = issueRows
                 .map((issue) => issue.wellbeingSupportIssueId)
                 .filter((issueId): issueId is number => Boolean(issueId));
@@ -336,6 +346,23 @@ function ReassignedIssuesContent() {
                     .filter((profile) => Boolean(profile.profileUrl))
                     .map((profile) => [profile.userId, profile.profileUrl as string])
             );
+            const categoryIds = Array.from(new Set(issueRows.map((issue) => issue.categoryId)));
+            const { data: categories, error: categoriesError } = categoryIds.length
+                ? await supabase
+                    .from("wellbeing_categories")
+                    .select("categoryId, categoryName")
+                    .in("categoryId", categoryIds)
+                : { data: [], error: null };
+
+            if (categoriesError) {
+                throw categoriesError;
+            }
+
+            const categoryNameById = new Map<number, string>(
+                ((categories || []) as { categoryId: number; categoryName: string | null }[]).map(
+                    (category) => [category.categoryId, category.categoryName || "-"],
+                ),
+            );
 
             const rows = visibleIssueIds.reduce<ReassignedIssueRow[]>((acc, issueId) => {
                 const issue = issueById.get(issueId);
@@ -354,7 +381,7 @@ function ReassignedIssuesContent() {
                     email: issue.email,
                     profileUrl: profileUrlByUserId.get(issue.createdBy) || null,
                     categoryId: issue.categoryId,
-                    category: getCategoryName(issue.wellbeing_categories),
+                    category: categoryNameById.get(issue.categoryId) || "-",
                     issueTitle: issue.issueTitle,
                     description: issue.description,
                     assignedTo,
@@ -369,7 +396,7 @@ function ReassignedIssuesContent() {
 
             setReassignedIssues(rows);
         } catch (error) {
-            console.error("Failed to load reassigned issues:", error);
+            logSupabaseError("Failed to load reassigned issues:", error);
             setReassignedIssues([]);
         } finally {
             setIsLoading(false);

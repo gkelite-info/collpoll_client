@@ -72,7 +72,10 @@ type WellbeingCollegeDetailContext = {
 type WellbeingContextRow = {
   wellBeingId: number;
   registrationType?: string | null;
-  categoryId?: number | null;
+};
+type WellbeingAssignedCategoryContext = {
+  wellBeingId: number;
+  categoryId: number;
   wellbeing_categories?:
     | { categoryName?: string | null }
     | { categoryName?: string | null }[]
@@ -248,11 +251,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         .from("well_beings")
         .select(`
           wellBeingId,
-          registrationType,
-          categoryId,
-          wellbeing_categories:categoryId (
-            categoryName
-          )
+          registrationType
         `)
         .eq("userId", uid)
         .eq("collegeId", cid)
@@ -278,13 +277,31 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         .map((row) => row.registrationType)
         .filter((type): type is string => Boolean(type)),
     );
-    const firstCategory = rows.find((row) => row.wellbeing_categories);
-    const categoryRelation = firstCategory?.wellbeing_categories;
-    const categoryName = Array.isArray(categoryRelation)
-      ? categoryRelation[0]?.categoryName
-      : categoryRelation?.categoryName;
+    const { data: assignedCategoryRows } = wellBeingIdsForRole.length
+      ? await supabase
+        .from("wellbeing_assigned_categories")
+        .select(`
+          wellBeingId,
+          categoryId
+        `)
+        .in("wellBeingId", wellBeingIdsForRole)
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .is("deletedAt", null)
+        .order("assignedCategoryId", { ascending: true })
+      : { data: [] };
+    const firstCategory = (assignedCategoryRows ?? [])[0] as
+      | WellbeingAssignedCategoryContext
+      | undefined;
+    const { data: categoryData } = firstCategory?.categoryId
+      ? await supabase
+        .from("wellbeing_categories")
+        .select("categoryName")
+        .eq("categoryId", firstCategory.categoryId)
+        .maybeSingle()
+      : { data: null };
     s.setWellBeingCategoryId(firstCategory?.categoryId ?? null);
-    s.setWellBeingCategoryName(categoryName ?? null);
+    s.setWellBeingCategoryName(categoryData?.categoryName ?? null);
     s.setGender(userRes.data?.gender ?? null);
     s.setIdentifierId(empId ?? (rows[0]?.wellBeingId ? String(rows[0].wellBeingId) : null));
 

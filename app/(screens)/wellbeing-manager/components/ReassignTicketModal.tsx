@@ -131,8 +131,7 @@ export default function ReassignTicketModal({
         issueTitle,
         description,
         categoryId,
-        priority,
-        wellbeing_categories(categoryName)
+        priority
       `)
       .eq("collegeId", collegeId)
       .eq("wellbeingSupportIssueId", supportIssueId)
@@ -146,31 +145,33 @@ export default function ReassignTicketModal({
       return;
     }
 
-    const { data: profile } = await supabase
-      .from("user_profile")
-      .select("profileUrl")
-      .eq("userId", data.createdBy)
-      .eq("is_deleted", false)
-      .maybeSingle();
-
-    const relation = data.wellbeing_categories as
-      | { categoryName?: string | null }
-      | { categoryName?: string | null }[]
-      | null;
-    const category = Array.isArray(relation)
-      ? relation[0]?.categoryName
-      : relation?.categoryName;
+    const [profileResult, categoryResult] = await Promise.all([
+      supabase
+        .from("user_profile")
+        .select("profileUrl")
+        .eq("userId", data.createdBy)
+        .eq("is_deleted", false)
+        .maybeSingle(),
+      supabase
+        .from("wellbeing_categories")
+        .select("categoryName")
+        .eq("categoryId", data.categoryId)
+        .eq("collegeId", collegeId)
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .maybeSingle(),
+    ]);
 
     setFallbackIssue({
       supportIssueId: data.wellbeingSupportIssueId,
       ticketId: `#TK-${data.wellbeingSupportIssueId}`,
       fullName: data.fullName,
       email: data.email,
-      profileUrl: profile?.profileUrl ?? null,
+      profileUrl: profileResult.data?.profileUrl ?? null,
       issueTitle: data.issueTitle,
       description: data.description,
       categoryId: data.categoryId,
-      category: category || "-",
+      category: categoryResult.data?.categoryName || "-",
       priority: data.priority,
     });
   }, [collegeId, issue, ticketId]);
