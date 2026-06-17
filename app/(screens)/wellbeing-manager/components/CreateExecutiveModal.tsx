@@ -5,7 +5,10 @@ import toast, { Toaster } from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchModalInitialData } from "@/lib/helpers/admin/upsertFaculty";
 import { fetchWellbeingCategories } from "@/lib/helpers/wellbeingCategories/wellbeingCategoryAPI";
-import { saveWellbeingExecutive } from "@/lib/helpers/wellbeing/wellbeingExecutiveAPI";
+import {
+  saveGroundStaff,
+  saveWellbeingExecutive,
+} from "@/lib/helpers/wellbeing/wellbeingExecutiveAPI";
 import { supabase } from "@/lib/supabaseClient";
 
 const toPascalCase = (str: string) => {
@@ -66,6 +69,8 @@ const validateIdentifier = (value: string) => {
   }
   return null;
 };
+
+const STAFF_ROLE_OPTIONS = ["Wellbeing Executive", "Ground Staff"];
 
 interface CustomSingleSelectProps {
   label: string;
@@ -300,10 +305,9 @@ export default function CreateExecutiveModal({
   const [basicData, setBasicData] = useState<any>(initialBasicData);
 
   const [selectedEducation, setSelectedEducation] = useState("");
-  const [selectedBranch, setSelectedBranch] = useState("");
-  const [selectedYear, setSelectedYear] = useState("");
-  const [selectedSection, setSelectedSection] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedStaffRole, setSelectedStaffRole] = useState("Wellbeing Executive");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSubCategory, setSelectedSubCategory] = useState("");
   const [selectedRegistrationTypes, setSelectedRegistrationTypes] = useState<string[]>([]);
   const [managerEducationOptions, setManagerEducationOptions] = useState<string[]>([]);
   const [hostelBlock, setHostelBlock] = useState("");
@@ -332,7 +336,7 @@ export default function CreateExecutiveModal({
         try {
           const data = await fetchModalInitialData(collegeId);
           setDbData(data);
-        } catch (error) {
+        } catch {
           toast.error("Failed to load college metadata");
         }
       };
@@ -426,16 +430,44 @@ export default function CreateExecutiveModal({
   }, [collegeEducationType, isOpen, wellBeingIds]);
 
   const selectedCategoryId = useMemo(() => {
-    return categoriesObjList.find((cat) => cat.categoryName === selectedCategory)?.categoryId || null;
-  }, [categoriesObjList, selectedCategory]);
+    return categoriesObjList.find((cat) => cat.categoryName === selectedCategories[0])?.categoryId || null;
+  }, [categoriesObjList, selectedCategories]);
+
+  const selectedCategoryIds = useMemo(() => {
+    const selectedNames = new Set(selectedCategories);
+    return categoriesObjList
+      .filter((cat) => selectedNames.has(cat.categoryName))
+      .map((cat) => cat.categoryId);
+  }, [categoriesObjList, selectedCategories]);
+
+  const selectedCategoryObj = useMemo(() => {
+    return categoriesObjList.find((cat) => cat.categoryName === selectedCategories[0]) ?? null;
+  }, [categoriesObjList, selectedCategories]);
+
+  const subCategoryOptions = useMemo(() => {
+    const selectedNames = new Set(selectedCategories);
+    return categoriesObjList
+      .filter((cat) => selectedNames.has(cat.categoryName))
+      .flatMap((cat) => cat.wellbeing_sub_categories ?? [])
+      .map((sub: any) => sub.subCategoryName);
+  }, [categoriesObjList, selectedCategories]);
+
+  const selectedSubCategoryIds = useMemo(() => {
+    return (selectedCategoryObj?.wellbeing_sub_categories ?? [])
+      .filter((sub: any) => sub.subCategoryName === selectedSubCategory)
+      .map((sub: any) => sub.subCategoryId);
+  }, [selectedCategoryObj, selectedSubCategory]);
+
+  const isGroundLevelStaff = selectedStaffRole === "Ground Staff";
+  const shouldShowHostelAddressFields = isWellbeingHostel && !isGroundLevelStaff;
+  const shouldShowEducationType = isWellbeingCollege && !isGroundLevelStaff;
 
   const resetForm = () => {
     setBasicData(initialBasicData);
     setSelectedEducation(managerEducationOptions.length === 1 ? managerEducationOptions[0] : "");
-    setSelectedBranch("");
-    setSelectedYear("");
-    setSelectedSection("");
-    setSelectedCategory("");
+    setSelectedStaffRole("Wellbeing Executive");
+    setSelectedCategories([]);
+    setSelectedSubCategory("");
     setSelectedRegistrationTypes(managerRegistrationTypeOptions);
     setHostelBlock("");
     setBuildingNumber("");
@@ -484,62 +516,20 @@ export default function CreateExecutiveModal({
     return dbData.educations.find((e: any) => e.collegeEducationType === selectedEducation)?.collegeEducationId || null;
   }, [dbData.educations, selectedEducation]);
 
-  const filteredBranches = useMemo(
-    () =>
-      selectedEducationId
-        ? dbData.branches.filter(
-          (b) => b.collegeEducationId === selectedEducationId,
-        )
-        : [],
-    [dbData.branches, selectedEducationId],
-  );
+  const groundStaffEducationId = useMemo(() => {
+    const availableEducationTypes = managerEducationOptions.length
+      ? managerEducationOptions
+      : splitContextValues(collegeEducationType);
+    const selectedType = selectedEducation || availableEducationTypes[0];
 
-  const branchOptions = useMemo(
-    () => filteredBranches.map((b: any) => b.collegeBranchCode),
-    [filteredBranches],
-  );
-
-  const selectedBranchId = useMemo(() => {
-    return filteredBranches.find((b: any) => b.collegeBranchCode === selectedBranch)?.collegeBranchId || null;
-  }, [filteredBranches, selectedBranch]);
-
-  const filteredYears = useMemo(() => {
-    if (!selectedBranchId) return [];
-    const years = dbData.years.filter((y) => y.collegeBranchId == selectedBranchId);
-    return years.sort((a, b) => {
-      const numA = parseInt(a.collegeAcademicYear) || 0;
-      const numB = parseInt(b.collegeAcademicYear) || 0;
-      return numA - numB;
-    });
-  }, [dbData.years, selectedBranchId]);
-
-  const yearOptions = useMemo(
-    () => filteredYears.map((y: any) => y.collegeAcademicYear),
-    [filteredYears],
-  );
-
-  const selectedYearId = useMemo(() => {
-    return filteredYears.find((y: any) => y.collegeAcademicYear === selectedYear)?.collegeAcademicYearId || null;
-  }, [filteredYears, selectedYear]);
-
-  const filteredSections = useMemo(() => {
-    if (!selectedYearId) return [];
-    const rawSections = dbData.sections.filter(
-      (s) => s.collegeAcademicYearId == selectedYearId
+    return (
+      dbData.educations.find((education: any) =>
+        selectedType
+          ? education.collegeEducationType === selectedType
+          : availableEducationTypes.includes(education.collegeEducationType),
+      )?.collegeEducationId ?? null
     );
-    return Array.from(
-      new Map(rawSections.map((s) => [s.collegeSections, s])).values()
-    );
-  }, [dbData.sections, selectedYearId]);
-
-  const sectionOptions = useMemo(
-    () => filteredSections.map((s: any) => s.collegeSections),
-    [filteredSections],
-  );
-
-  const selectedSectionId = useMemo(() => {
-    return filteredSections.find((s: any) => s.collegeSections === selectedSection)?.collegeSectionsId || null;
-  }, [filteredSections, selectedSection]);
+  }, [collegeEducationType, dbData.educations, managerEducationOptions, selectedEducation]);
 
   const handleSave = async () => {
     if (!basicData.fullName) return toast.error("Full Name is required.");
@@ -566,19 +556,26 @@ export default function CreateExecutiveModal({
       }
     }
 
-    if (!selectedCategory) return toast.error("Category is required.");
+    if (!selectedStaffRole) return toast.error("Role is required.");
+    if (!selectedCategories.length) return toast.error("Category is required.");
+    if (isGroundLevelStaff && !selectedSubCategory) {
+      return toast.error("Sub Category is required for Ground Staff.");
+    }
+    if (isGroundLevelStaff && !groundStaffEducationId) {
+      return toast.error("Education Type is required for Ground Staff setup.");
+    }
     if (!selectedRegistrationTypes.length) return toast.error("Registration Type is required.");
 
-    if (isWellbeingCollege) {
+    if (shouldShowEducationType) {
       if (!selectedEducation) return toast.error("Education Type is required.");
-      if (!selectedBranch) return toast.error("Branch is required.");
-      if (!selectedYear) return toast.error("Year is required.");
-      if (!selectedSection) return toast.error("Section is required.");
+    }
+
+    if (shouldShowHostelAddressFields) {
+      if (!hostelBlock.trim()) return toast.error("Block is required.");
+      if (!buildingNumber.trim()) return toast.error("Building Number is required.");
     }
 
     if (isWellbeingHostel) {
-      if (!hostelBlock.trim()) return toast.error("Block is required.");
-      if (!buildingNumber.trim()) return toast.error("Building Number is required.");
       if (!hostelType) return toast.error("Hostel Type is required.");
     }
 
@@ -628,24 +625,49 @@ export default function CreateExecutiveModal({
         collegeId: collegeId!,
         collegePublicId: collegePublicId || "",
         categoryId: selectedCategoryId!,
+        categoryIds: selectedCategoryIds,
+        subCategoryIds: isGroundLevelStaff ? selectedSubCategoryIds : [],
+        staffRole: selectedStaffRole as "Wellbeing Executive" | "Ground Staff",
         byManager: userId!,
         registrationType: toPayloadRegistrationType(selectedRegistrationTypes),
-        collegeEducationId: isWellbeingCollege ? selectedEducationId! : null,
-        collegeBranchId: isWellbeingCollege ? selectedBranchId! : null,
-        collegeAcademicYearId: isWellbeingCollege ? selectedYearId! : null,
-        collegeSectionsId: isWellbeingCollege ? selectedSectionId! : null,
-        hostelBlock: isWellbeingHostel ? hostelBlock : undefined,
-        buildingNumber: isWellbeingHostel ? buildingNumber : undefined,
+        collegeEducationId: shouldShowEducationType ? selectedEducationId! : null,
+        collegeBranchId: null,
+        collegeBranchIds: [],
+        collegeAcademicYearId: null,
+        collegeSectionsId: null,
+        collegeDetails: [],
+        hostelBlock: shouldShowHostelAddressFields ? hostelBlock : undefined,
+        buildingNumber: shouldShowHostelAddressFields ? buildingNumber : undefined,
         hostelType: isWellbeingHostel ? hostelType : undefined,
       };
 
-      const res = await saveWellbeingExecutive(payload);
+      const res = isGroundLevelStaff
+        ? await saveGroundStaff({
+            fullName: payload.fullName,
+            email: payload.email,
+            mobileCode: payload.mobileCode,
+            mobileNumber: payload.mobileNumber,
+            gender: payload.gender,
+            dateOfJoining: payload.dateOfJoining,
+            professionalExperienceYears: payload.professionalExperienceYears,
+            employeeId: payload.employeeId,
+            password: payload.password,
+            collegeId: payload.collegeId,
+            collegePublicId: payload.collegePublicId,
+            categoryId: payload.categoryId,
+            subCategoryId: selectedSubCategoryIds[0]!,
+            registrationType: payload.registrationType,
+            hostelType: payload.hostelType ?? null,
+            collegeEducationId: groundStaffEducationId!,
+            createdBy: userId!,
+          })
+        : await saveWellbeingExecutive(payload);
 
       if (!res.success) {
         throw new Error(res.error);
       }
 
-      toast.success("Wellbeing Executive Created Successfully");
+      toast.success(`${selectedStaffRole} Created Successfully`);
       setIsSuccess(true);
       setTimeout(() => {
         resetForm();
@@ -668,7 +690,9 @@ export default function CreateExecutiveModal({
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 font-sans">
         <div className="bg-white text-black w-full max-w-[550px] max-h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-clip animate-in fade-in zoom-in duration-200">
           <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 shrink-0">
-            <h2 className="text-lg font-bold text-[#16284F]">Add Wellbeing Executive</h2>
+            <h2 className="text-lg font-bold text-[#16284F]">
+              Add {selectedStaffRole}
+            </h2>
             <X
               size={20}
               weight="bold"
@@ -752,35 +776,67 @@ export default function CreateExecutiveModal({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[#2D3748]">
-                  Role <span className="text-red-600">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value="Wellbeing Executive"
-                    readOnly
-                    disabled
-                    className="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-md px-3 py-1.5 text-sm outline-none cursor-not-allowed"
-                  />
-                  <Lock
-                    size={14}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  />
-                </div>
-              </div>
-
               <CustomSingleSelect
-                label="Category"
-                placeholder={loadingCategories ? "Loading categories..." : "Select Category"}
-                options={categoriesList}
-                selectedValue={selectedCategory}
-                onChange={setSelectedCategory}
-                hoverClassName="hover:bg-blue-600 hover:text-white"
+                label="Role"
+                placeholder="Select Role"
+                options={STAFF_ROLE_OPTIONS}
+                selectedValue={selectedStaffRole}
+                onChange={(val) => {
+                  setSelectedStaffRole(val);
+                  setSelectedCategories([]);
+                  setSelectedSubCategory("");
+                }}
                 required
               />
+
+              {isGroundLevelStaff ? (
+                <CustomSingleSelect
+                  label="Category"
+                  placeholder={loadingCategories ? "Loading categories..." : "Select Category"}
+                  options={categoriesList}
+                  selectedValue={selectedCategories[0] ?? ""}
+                  onChange={(val) => {
+                    setSelectedCategories([val]);
+                    setSelectedSubCategory("");
+                  }}
+                  required
+                />
+              ) : (
+                <CustomMultiSelect
+                  label="Category"
+                  placeholder={loadingCategories ? "Loading categories..." : "Select Category"}
+                  options={categoriesList}
+                  selectedValues={selectedCategories}
+                  onChange={(val) => {
+                    setSelectedCategories((prev) =>
+                      prev.includes(val)
+                        ? prev.filter((item) => item !== val)
+                        : [...prev, val],
+                    );
+                    setSelectedSubCategory("");
+                  }}
+                  required
+                />
+              )}
             </div>
+
+            {isGroundLevelStaff && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                <CustomSingleSelect
+                  label="Sub Category"
+                  placeholder={
+                    selectedCategories.length
+                      ? "Select Sub Categories"
+                      : "Select Category First"
+                  }
+                  options={subCategoryOptions}
+                  selectedValue={selectedSubCategory}
+                  onChange={setSelectedSubCategory}
+                  disabled={!selectedCategories.length}
+                  required
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <CustomMultiSelect
@@ -798,9 +854,6 @@ export default function CreateExecutiveModal({
 
                     if (!hasCollege) {
                       setSelectedEducation("");
-                      setSelectedBranch("");
-                      setSelectedYear("");
-                      setSelectedSection("");
                     }
                     if (!hasHostel) {
                       setHostelBlock("");
@@ -813,9 +866,34 @@ export default function CreateExecutiveModal({
                 }}
                 required
               />
+
+              {isWellbeingHostel ? (
+                <CustomSingleSelect
+                  label="Hostel Type"
+                  placeholder="Select Hostel Type"
+                  options={["boyshostel", "girlshostel", "both"]}
+                  selectedValue={hostelType}
+                  onChange={setHostelType}
+                  required
+                />
+              ) : shouldShowEducationType ? (
+                <CustomSingleSelect
+                  label="Education Type"
+                  placeholder={
+                    managerEducationOptions.length
+                      ? "Select Education Type"
+                      : "No Education Type Assigned"
+                  }
+                  options={managerEducationOptions}
+                  selectedValue={selectedEducation}
+                  onChange={setSelectedEducation}
+                  disabled={!managerEducationOptions.length}
+                  required
+                />
+              ) : null}
             </div>
 
-            {isWellbeingHostel && (
+            {shouldShowHostelAddressFields && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 animate-in fade-in duration-200">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
@@ -844,20 +922,7 @@ export default function CreateExecutiveModal({
               </div>
             )}
 
-            {isWellbeingHostel && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 animate-in fade-in duration-200">
-                <CustomSingleSelect
-                  label="Hostel Type"
-                  placeholder="Select Hostel Type"
-                  options={["boyshostel", "girlshostel", "both"]}
-                  selectedValue={hostelType}
-                  onChange={setHostelType}
-                  required
-                />
-              </div>
-            )}
-
-            {isWellbeingCollege && (
+            {shouldShowEducationType && isWellbeingHostel && (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 animate-in fade-in duration-200">
                   <CustomSingleSelect
@@ -869,52 +934,8 @@ export default function CreateExecutiveModal({
                     }
                     options={managerEducationOptions}
                     selectedValue={selectedEducation}
-                    onChange={(val) => {
-                      setSelectedEducation(val);
-                      setSelectedBranch("");
-                      setSelectedYear("");
-                      setSelectedSection("");
-                    }}
+                    onChange={setSelectedEducation}
                     disabled={!managerEducationOptions.length}
-                    required
-                  />
-
-                  <CustomSingleSelect
-                    label="Branch"
-                    placeholder="Select Branch"
-                    options={branchOptions}
-                    selectedValue={selectedBranch}
-                    onChange={(val) => {
-                      setSelectedBranch(val);
-                      setSelectedYear("");
-                      setSelectedSection("");
-                    }}
-                    disabled={!selectedEducation}
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 animate-in fade-in duration-200">
-                  <CustomSingleSelect
-                    label="Year"
-                    placeholder="Select Year"
-                    options={yearOptions}
-                    selectedValue={selectedYear}
-                    onChange={(val) => {
-                      setSelectedYear(val);
-                      setSelectedSection("");
-                    }}
-                    disabled={!selectedBranch}
-                    required
-                  />
-
-                  <CustomSingleSelect
-                    label="Section"
-                    placeholder="Select Section"
-                    options={sectionOptions}
-                    selectedValue={selectedSection}
-                    onChange={setSelectedSection}
-                    disabled={!selectedYear}
                     required
                   />
                 </div>

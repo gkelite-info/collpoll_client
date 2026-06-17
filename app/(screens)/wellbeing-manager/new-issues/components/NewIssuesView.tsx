@@ -22,18 +22,13 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
-type CategoryRelation =
-    | { categoryName?: string | null }
-    | { categoryName?: string | null }[]
-    | null;
-
 type ManagerIssueSummaryRow = {
     wellbeingSupportIssueId: number;
     categoryId: number;
     appliesTo: IssueScope | "both";
     priority: "high" | "medium" | "low";
+    issueVisibilityRole?: string | null;
     issueRaisedRole: IssueRoleFilter;
-    wellbeing_categories: CategoryRelation;
 };
 
 type ManagerIssueTableRow = ManagerIssueSummaryRow & {
@@ -130,11 +125,6 @@ const getDateBounds = (dateKey: string) => {
     };
 };
 
-const getCategoryName = (relation: CategoryRelation) => {
-    const category = Array.isArray(relation) ? relation[0] : relation;
-    return category?.categoryName?.trim() || "Not specified";
-};
-
 const formatCount = (count: number) => String(count).padStart(2, "0");
 
 const formatPriority = (priority: ManagerIssueSummaryRow["priority"]) =>
@@ -159,6 +149,47 @@ const getLatestJobByIssueId = (jobs: IssueJobRow[]) => {
 };
 
 const isManagerOpenIssue = (job?: IssueJobRow) => !job || job.status !== "completed";
+
+const logSupabaseError = (label: string, error: unknown) => {
+    if (error && typeof error === "object") {
+        const err = error as {
+            code?: string;
+            message?: string;
+            details?: string | null;
+            hint?: string | null;
+        };
+        console.error(label, {
+            code: err.code,
+            message: err.message,
+            details: err.details,
+            hint: err.hint,
+        });
+        return;
+    }
+
+    console.error(label, error);
+};
+
+const fetchCategoryNameMap = async (categoryIds: number[]) => {
+    const uniqueCategoryIds = Array.from(new Set(categoryIds.filter(Boolean)));
+
+    if (!uniqueCategoryIds.length) {
+        return new Map<number, string>();
+    }
+
+    const { data, error } = await supabase
+        .from("wellbeing_categories")
+        .select("categoryId, categoryName")
+        .in("categoryId", uniqueCategoryIds);
+
+    if (error) throw error;
+
+    return new Map(
+        ((data ?? []) as { categoryId: number; categoryName: string | null }[]).map(
+            (category) => [category.categoryId, category.categoryName?.trim() || "Not specified"],
+        ),
+    );
+};
 
 const getExecutiveBadgeClass = (name: string) =>
     name === "-"
@@ -335,23 +366,23 @@ export default function NewIssuesPageContent() {
                     categoryId,
                     appliesTo,
                     priority,
-                    issueRaisedRole,
-                    wellbeing_categories (
-                        categoryName
-                    )
+                    issueVisibilityRole,
+                    issueRaisedRole
                 `,
                 )
                 .eq("collegeId", collegeId)
                 .eq("IssueStatus", "pending")
                 .eq("isActive", true)
                 .eq("is_deleted", false)
-                .in("issueVisibilityRole", ["wellbeingmanager", "both"])
                 .gte("createdAt", start)
                 .lt("createdAt", end);
 
             if (error) throw error;
 
             const rows = ((data ?? []) as ManagerIssueSummaryRow[]).filter((issue) => {
+                const matchesVisibility =
+                    issue.issueVisibilityRole === "wellbeingmanager" ||
+                    issue.issueVisibilityRole === "both";
                 const matchesScope =
                     selectedScope === "all" ||
                     issue.appliesTo === selectedScope ||
@@ -362,7 +393,7 @@ export default function NewIssuesPageContent() {
                     selectedCategory === "all" ||
                     issue.categoryId === Number(selectedCategory);
 
-                return matchesScope && matchesRole && matchesCategory;
+                return matchesVisibility && matchesScope && matchesRole && matchesCategory;
             });
             const issueIds = rows.map((issue) => issue.wellbeingSupportIssueId);
             const { data: jobsData, error: jobsError } = issueIds.length
@@ -384,6 +415,9 @@ export default function NewIssuesPageContent() {
             const openIssueRows = rows.filter((issue) =>
                 isManagerOpenIssue(jobByIssueId.get(issue.wellbeingSupportIssueId)),
             );
+            const categoryNameById = await fetchCategoryNameMap(
+                openIssueRows.map((issue) => issue.categoryId),
+            );
             const categoryCounts = new Map<
                 number,
                 { name: string; count: number }
@@ -391,7 +425,7 @@ export default function NewIssuesPageContent() {
 
             openIssueRows.forEach((issue) => {
                 const current = categoryCounts.get(issue.categoryId) ?? {
-                    name: getCategoryName(issue.wellbeing_categories),
+                    name: categoryNameById.get(issue.categoryId) || "Not specified",
                     count: 0,
                 };
                 categoryCounts.set(issue.categoryId, {
@@ -413,7 +447,7 @@ export default function NewIssuesPageContent() {
                 highestCategoryCount: highestCategory?.count ?? 0,
             });
         } catch (error) {
-            console.error("load wellbeing manager issue summary error:", error);
+            logSupabaseError("load wellbeing manager issue summary error:", error);
             setSummaryCards(defaultSummaryCards);
         }
     }, [collegeId, selectedCategory, selectedDateKey, selectedRole, selectedScope]);
@@ -441,17 +475,14 @@ export default function NewIssuesPageContent() {
                     categoryId,
                     appliesTo,
                     priority,
-                    issueRaisedRole,
-                    wellbeing_categories (
-                        categoryName
-                    )
+                    issueVisibilityRole,
+                    issueRaisedRole
                 `,
                 )
                 .eq("collegeId", collegeId)
                 .eq("IssueStatus", "pending")
                 .eq("isActive", true)
                 .eq("is_deleted", false)
-                .in("issueVisibilityRole", ["wellbeingmanager", "both"])
                 .gte("createdAt", start)
                 .lt("createdAt", end)
                 .order("createdAt", { ascending: false });
@@ -460,6 +491,9 @@ export default function NewIssuesPageContent() {
 
             const filteredIssues = ((data ?? []) as ManagerIssueTableRow[]).filter(
                 (issue) => {
+                    const matchesVisibility =
+                        issue.issueVisibilityRole === "wellbeingmanager" ||
+                        issue.issueVisibilityRole === "both";
                     const matchesScope =
                         selectedScope === "all" ||
                         issue.appliesTo === selectedScope ||
@@ -470,7 +504,7 @@ export default function NewIssuesPageContent() {
                         selectedCategory === "all" ||
                         issue.categoryId === Number(selectedCategory);
 
-                    return matchesScope && matchesRole && matchesCategory;
+                    return matchesVisibility && matchesScope && matchesRole && matchesCategory;
                 },
             );
             const issueIds = filteredIssues.map((issue) => issue.wellbeingSupportIssueId);
@@ -533,6 +567,9 @@ export default function NewIssuesPageContent() {
                     user.fullName,
                 ]),
             );
+            const categoryNameById = await fetchCategoryNameMap(
+                openIssueRows.map((issue) => issue.categoryId),
+            );
 
             setIssueRows(
                 openIssueRows.map((issue) => {
@@ -550,7 +587,7 @@ export default function NewIssuesPageContent() {
                         email: issue.email,
                         title: issue.issueTitle,
                         description: issue.description,
-                        category: getCategoryName(issue.wellbeing_categories),
+                        category: categoryNameById.get(issue.categoryId) || "Not specified",
                         priority: formatPriority(issue.priority),
                         executiveName,
                         jobStatus: job ? formatJobStatus(job.status) : "-",
@@ -558,7 +595,7 @@ export default function NewIssuesPageContent() {
                 }),
             );
         } catch (error) {
-            console.error("load wellbeing manager issue table error:", error);
+            logSupabaseError("load wellbeing manager issue table error:", error);
             setIssueRows([]);
         } finally {
             setIssuesLoading(false);

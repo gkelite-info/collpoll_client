@@ -16,11 +16,6 @@ import ReassignTicketModal from "../../components/ReassignTicketModal";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 
-type CategoryRelation =
-  | { categoryName?: string | null }
-  | { categoryName?: string | null }[]
-  | null;
-
 type IssueDetailsRow = {
   wellbeingSupportIssueId: number;
   fullName: string;
@@ -34,7 +29,7 @@ type IssueDetailsRow = {
   createdAt: string | null;
   createdBy: number;
   profileUrl?: string | null;
-  wellbeing_categories: CategoryRelation;
+  categoryName?: string | null;
 };
 
 type AttachmentRow = {
@@ -51,14 +46,6 @@ interface TicketDetailsViewProps {
 const getIssueIdFromTicket = (ticketId: string) => {
   const match = ticketId.match(/\d+/);
   return match ? Number(match[0]) : null;
-};
-
-const getCategoryName = (category: CategoryRelation) => {
-  if (Array.isArray(category)) {
-    return category[0]?.categoryName || "-";
-  }
-
-  return category?.categoryName || "-";
 };
 
 const formatPriority = (priority?: IssueDetailsRow["priority"]) =>
@@ -86,7 +73,7 @@ export default function TicketDetailsView({ ticketId, onBack }: TicketDetailsVie
   const [isLoading, setIsLoading] = useState(true);
 
   const supportIssueId = useMemo(() => getIssueIdFromTicket(ticketId), [ticketId]);
-  const categoryName = getCategoryName(issue?.wellbeing_categories ?? null);
+  const categoryName = issue?.categoryName || "-";
   const displayTicketId = issue ? `#TK-${issue.wellbeingSupportIssueId}` : ticketId;
 
   const loadIssue = useCallback(async () => {
@@ -112,8 +99,7 @@ export default function TicketDetailsView({ ticketId, onBack }: TicketDetailsVie
           issueRaisedRole,
           appliesTo,
           createdAt,
-          createdBy,
-          wellbeing_categories(categoryName)
+          createdBy
         `)
         .eq("collegeId", collegeId)
         .eq("wellbeingSupportIssueId", supportIssueId)
@@ -125,16 +111,27 @@ export default function TicketDetailsView({ ticketId, onBack }: TicketDetailsVie
 
       const issueData = data as IssueDetailsRow | null;
       if (issueData) {
-        const { data: profile } = await supabase
-          .from("user_profile")
-          .select("profileUrl")
-          .eq("userId", issueData.createdBy)
-          .eq("is_deleted", false)
-          .maybeSingle();
+        const [profileResult, categoryResult] = await Promise.all([
+          supabase
+            .from("user_profile")
+            .select("profileUrl")
+            .eq("userId", issueData.createdBy)
+            .eq("is_deleted", false)
+            .maybeSingle(),
+          supabase
+            .from("wellbeing_categories")
+            .select("categoryName")
+            .eq("categoryId", issueData.categoryId)
+            .eq("collegeId", collegeId)
+            .eq("isActive", true)
+            .eq("is_deleted", false)
+            .maybeSingle(),
+        ]);
 
         setIssue({
           ...issueData,
-          profileUrl: profile?.profileUrl ?? null,
+          profileUrl: profileResult.data?.profileUrl ?? null,
+          categoryName: categoryResult.data?.categoryName ?? null,
         });
       } else {
         setIssue(null);
