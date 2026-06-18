@@ -1,86 +1,68 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { staffAttendanceRecords, type StaffAttendanceRecord } from "../data";
 import GroundStaffMembersScreen from "./list/GroundStaffMembersScreen";
 import StaffAttendanceListScreen from "./list/StaffAttendanceListScreen";
 import StaffProfileScreen from "./profile/StaffProfileScreen";
-import type { StaffAttendanceStatus } from "../data";
 
-type StaffMembersFilter = "all" | StaffAttendanceStatus;
-type ProfileReturnView = "attendance" | "members";
+type ProfileSection = "profile" | "history";
 
 const STAFF_ATTENDANCE_PATH = "/wellbeing-executive/staff-attendance";
-const staffStatuses: StaffAttendanceStatus[] = ["present", "absent", "late"];
 
-const getValidStatusFilter = (status: string | null): StaffMembersFilter => {
-  if (status && staffStatuses.includes(status as StaffAttendanceStatus)) {
-    return status as StaffAttendanceStatus;
-  }
-
-  return "all";
-};
+const getProfileSection = (value: string | null): ProfileSection =>
+  value === "history" ? "history" : "profile";
 
 export default function StaffAttendancePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [records, setRecords] =
-    useState<StaffAttendanceRecord[]>(staffAttendanceRecords);
+  const [records, setRecords] = useState<StaffAttendanceRecord[]>(staffAttendanceRecords);
 
-  const handleViewMembers = (filter: StaffMembersFilter) => {
-    router.push(`${STAFF_ATTENDANCE_PATH}?view=members&status=${filter}`);
-  };
+  const selectedStaffId = Number(searchParams.get("staffId") ?? records[0]?.id);
+  const selectedStaff = useMemo(
+    () => records.find((record) => record.id === selectedStaffId) ?? records[0],
+    [records, selectedStaffId],
+  );
+  const view = searchParams.get("view");
+  const profileSection = getProfileSection(searchParams.get("section"));
 
-  const handleViewProfile = (
-    record: StaffAttendanceRecord,
-    returnView: ProfileReturnView,
-  ) => {
-    const params = new URLSearchParams({
-      view: "profile",
-      staffId: String(record.id),
-      return: returnView,
-    });
+  const openDirectory = (status?: StaffAttendanceRecord["status"]) => {
+    const params = new URLSearchParams({ view: "directory" });
 
-    if (returnView === "members") {
-      params.set("status", getValidStatusFilter(searchParams.get("status")));
+    if (status) {
+      params.set("status", status);
     }
 
     router.push(`${STAFF_ATTENDANCE_PATH}?${params.toString()}`);
   };
 
-  const view = searchParams.get("view");
-  const membersFilter = getValidStatusFilter(searchParams.get("status"));
-  const selectedStaffId = Number(searchParams.get("staffId"));
-  const selectedStaff = records.find((record) => record.id === selectedStaffId);
+  const openProfile = (record: StaffAttendanceRecord, section: ProfileSection) => {
+    const params = new URLSearchParams({
+      view: "profile",
+      staffId: String(record.id),
+      section,
+    });
 
-  if (selectedStaff) {
-    const returnView = searchParams.get("return");
-    const backPath =
-      returnView === "members"
-        ? `${STAFF_ATTENDANCE_PATH}?view=members&status=${membersFilter}`
-        : STAFF_ATTENDANCE_PATH;
+    router.push(`${STAFF_ATTENDANCE_PATH}?${params.toString()}`);
+  };
 
+  if (view === "directory") {
     return (
-      <StaffProfileScreen
-        staff={selectedStaff}
-        onBack={() => router.push(backPath)}
+      <GroundStaffMembersScreen
+        records={records}
+        onBack={() => router.push(STAFF_ATTENDANCE_PATH)}
+        onViewProfile={(record) => openProfile(record, "profile")}
       />
     );
   }
 
-  if (view === "members") {
-    const memberRecords =
-      membersFilter === "all"
-        ? records
-        : records.filter((record) => record.status === membersFilter);
-
+  if (view === "profile" && selectedStaff) {
     return (
-      <GroundStaffMembersScreen
-        records={memberRecords}
-        activeFilter={membersFilter}
+      <StaffProfileScreen
+        staff={selectedStaff}
+        activeSection={profileSection}
         onBack={() => router.push(STAFF_ATTENDANCE_PATH)}
-        onViewProfile={(record) => handleViewProfile(record, "members")}
       />
     );
   }
@@ -89,9 +71,10 @@ export default function StaffAttendancePage() {
     <StaffAttendanceListScreen
       records={records}
       setRecords={setRecords}
-      onViewProfile={(record) => handleViewProfile(record, "attendance")}
-      onViewAllStaff={() => handleViewMembers("all")}
-      onViewStaffByStatus={handleViewMembers}
+      onViewProfile={(record) => openProfile(record, "profile")}
+      onViewHistory={(record) => openProfile(record, "history")}
+      onViewAllStaff={() => openDirectory()}
+      onViewStatusStaff={(status) => openDirectory(status)}
     />
   );
 }
