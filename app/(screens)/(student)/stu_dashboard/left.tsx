@@ -23,6 +23,7 @@ import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studen
 import { ValueShimmer } from "@/app/components/shimmers/valueShimmer";
 import { fetchStudentFeePlan } from "@/lib/helpers/student/payments/fetchStudentFeePlan";
 import { useStudent } from "@/app/utils/context/student/useStudent";
+import { useUser } from "@/app/utils/context/UserContext";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 
@@ -49,34 +50,24 @@ export default function StuDashLeft() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [subjectsLoading, setSubjectsLoading] = useState(true);
   const { studentId } = useStudent();
+  const { userId } = useUser();
 
   const t = useTranslations("Dashboard.student");
 
   useEffect(() => {
+    if (!userId) return;
     loadUpcomingClasses();
     loadAssignmentCount();
     loadAttendancePercent();
     loadPendingFee();
     loadSubjects();
-  }, []);
+  }, [userId]);
 
   const loadSubjects = async () => {
     try {
       setSubjectsLoading(true);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: userRow } = await supabase
-        .from("users")
-        .select("userId")
-        .eq("auth_id", user.id)
-        .single();
-      if (!userRow) return;
-
-      const studentContext = await fetchStudentContext(userRow.userId);
+      const studentContext = await fetchStudentContext(userId!);
 
       let query = supabase
         .from("college_subjects")
@@ -198,19 +189,7 @@ export default function StuDashLeft() {
     try {
       setFeeLoading(true);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: userRow } = await supabase
-        .from("users")
-        .select("userId")
-        .eq("auth_id", user.id)
-        .single();
-      if (!userRow) return;
-
-      const plan = await fetchStudentFeePlan(userRow.userId);
+      const plan = await fetchStudentFeePlan(userId!);
 
       setPendingFeeAmount(plan?.pendingAmount ?? 0);
     } catch (err) {
@@ -221,26 +200,12 @@ export default function StuDashLeft() {
   };
 
   const loadAttendancePercent = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    const { data: userRow } = await supabase
-      .from("users")
-      .select("userId")
-      .eq("auth_id", user.id)
-      .single();
-
-    if (!userRow) return;
-
-    const studentContext = await fetchStudentContext(userRow.userId);
+    const studentContext = await fetchStudentContext(userId!);
 
     const today = new Date().toISOString().split("T")[0];
 
     const res = await getStudentDashboardData(
-      userRow.userId,
+      userId!,
       today,
       1,
       1,
@@ -252,21 +217,7 @@ export default function StuDashLeft() {
 
   const loadAssignmentCount = async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) return;
-
-      const { data: userRow } = await supabase
-        .from("users")
-        .select("userId")
-        .eq("auth_id", user.id)
-        .single();
-
-      if (!userRow) return;
-
-      const studentContext = await fetchStudentContext(userRow.userId);
+      const studentContext = await fetchStudentContext(userId!);
 
       const res = await fetchAssignmentsForStudent(
         {
@@ -293,27 +244,7 @@ export default function StuDashLeft() {
     try {
       setLoadingLectures(true);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error("No auth user found");
-      }
-
-      const { data: userRow, error: userErr } = await supabase
-        .from("users")
-        .select("userId")
-        .eq("auth_id", user.id)
-        .single();
-
-      if (userErr || !userRow) {
-        throw new Error("Internal user not found");
-      }
-
-      const internalUserId = userRow.userId;
-
-      const studentContext = await fetchStudentContext(internalUserId);
+      const studentContext = await fetchStudentContext(userId!);
 
       const data = await fetchUpcomingClassesForStudent({
         collegeEducationId: studentContext.collegeEducationId,

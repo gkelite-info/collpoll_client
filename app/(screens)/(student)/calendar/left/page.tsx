@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { fetchStudentTimetableByDate } from "@/lib/helpers/profile/calender/fetchStudentTimetable";
 import { useStudent } from "@/app/utils/context/student/useStudent";
-import { getUserIdFromAuth } from "@/lib/helpers/fetchUserDetails";
+import { useUser } from "@/app/utils/context/UserContext";
 import { fetchFacultyTasksForStudent } from "@/lib/helpers/faculty/facultyTasks";
 
 function getWeekDays(locale: string) {
@@ -61,6 +61,7 @@ export default function CalendarLeft({
 
   const week = useMemo(() => getWeekDays(locale), [locale]);
   const { collegeEducationType } = useStudent();
+  const { userId } = useUser();
 
   const [weeklyData, setWeeklyData] = useState<Record<string, DayData>>({});
   const [loading, setLoading] = useState(true);
@@ -82,15 +83,9 @@ export default function CalendarLeft({
     const loadAllData = async () => {
       try {
         setLoading(true);
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!userId) return;
 
-        const userResult = await getUserIdFromAuth(user.id);
-        if (!userResult.success || !userResult.userId) return;
-
-        const studentContext = await fetchStudentContext(userResult.userId);
+        const studentContext = await fetchStudentContext(userId);
         if (!studentContext) return;
 
         const resultsMap: Record<string, DayData> = {};

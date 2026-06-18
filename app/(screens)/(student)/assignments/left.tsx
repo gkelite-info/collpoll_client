@@ -36,6 +36,7 @@ import { QuizCardSkeletonGroup } from "./components/QuizCardShimmer";
 import { StudentDiscussionCardSkeletonGroup } from "./components/StudentDiscussionCardShimmer";
 import { Pagination } from "../../admin/academic-setup/components/pagination";
 import { useTranslations } from "next-intl";
+import { useUser } from "@/app/utils/context/UserContext";
 import FacultyLabCard, {
   type LabManual,
 } from "../../faculty/assignments/components/FacultyLabCard";
@@ -97,6 +98,8 @@ function AssignmentsLeftContent() {
   const [totalRecords, setTotalRecords] = useState(0);
   const rowsPerPage = 10;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
+
+  const { userId } = useUser();
 
   const [discussionUploads, setDiscussionUploads] = useState<
     Record<string, any[]>
@@ -432,37 +435,23 @@ function AssignmentsLeftContent() {
   };
 
   useEffect(() => {
-    loadAssignments();
-  }, [activeView, currentPage]);
+    if (userId) {
+      loadAssignments();
+    }
+  }, [activeView, currentPage, userId]);
 
   async function loadAssignments() {
     try {
       setLoading(true);
 
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !user) {
-        throw new Error("User not authenticated");
-      }
-
-      const { data: userRow, error: userErr } = await supabase
-        .from("users")
-        .select("userId, role")
-        .eq("auth_id", user.id)
-        .eq("is_deleted", false)
-        .single();
-
-      if (userErr || !userRow || userRow.role !== "Student") {
-        throw new Error("Invalid student user");
+      if (!userId) {
+        return;
       }
 
       const { data: student } = await supabase
         .from("students")
         .select("studentId, collegeBranchId")
-        .eq("userId", userRow.userId)
+        .eq("userId", userId)
         .is("deletedAt", null)
         .single();
 
@@ -505,6 +494,7 @@ function AssignmentsLeftContent() {
         res.assignments.map(async (a: any) => {
           const submission = await getSubmissionDetailsForAssignment(
             a.assignmentId,
+            studentId ?? undefined,
           );
           const marksScored =
             submission?.marksScored !== null &&

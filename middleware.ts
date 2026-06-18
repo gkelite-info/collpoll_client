@@ -59,6 +59,8 @@ export async function middleware(request: NextRequest) {
         currentUrlCode = parts[0].toUpperCase();
     }
 
+    // --- TEMPORARILY COMMENTED OUT FOR PASSWORD HASHING MIGRATION ---
+    /*
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -264,6 +266,7 @@ export async function middleware(request: NextRequest) {
     } else if (isProtectedRoute(pathname)) {
         return response;
     }
+    */
 
     return response;
 }

@@ -153,6 +153,7 @@ export const AdminRegistration = () => {
                 return;
             }
  
+            /*
             const { data, error } = await supabase.auth.signUp({
                 email: form.email,
                 password: form.password,
@@ -167,9 +168,14 @@ export const AdminRegistration = () => {
             if (!authUser) {
                 throw new Error("Auth user not created");
             }
+            */
+            const bcrypt = await import("bcryptjs");
+            const hashedPassword = await bcrypt.hash(form.password, 10);
+            const authUser = { id: null };
  
             const result = await upsertUser({
                 auth_id: authUser.id,
+                password: hashedPassword,
                 fullName: toPascalCase(form.fullName),
                 email: form.email.toLowerCase(),
                 mobile: fullPhoneNumber,

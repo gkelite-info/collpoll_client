@@ -230,6 +230,7 @@ export async function saveGroundStaff(payload: GroundStaffPayload) {
       return { success: false, error: "Employee ID is already taken by another employee." };
     }
 
+    /*
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: payload.email,
       password: payload.password!,
@@ -243,6 +244,10 @@ export async function saveGroundStaff(payload: GroundStaffPayload) {
     }
 
     const authId = authData.user.id;
+    */
+    const bcrypt = await import("bcryptjs");
+    const hashedPassword = await bcrypt.hash(payload.password!, 10);
+    const authId = null;
     const fullMobile = payload.mobileNumber
       ? `${payload.mobileCode}${payload.mobileNumber}`
       : null;
@@ -256,6 +261,7 @@ export async function saveGroundStaff(payload: GroundStaffPayload) {
         role: "GroundStaff",
         gender: payload.gender,
         auth_id: authId,
+        password: hashedPassword,
         collegeId: payload.collegeId,
         collegePublicId: payload.collegePublicId,
         dateOfJoining: payload.dateOfJoining ?? null,
@@ -345,6 +351,7 @@ export async function saveWellbeingExecutive(payload: WellbeingExecutivePayload)
       return { success: false, error: "Employee ID is already taken by another employee." };
     }
 
+    /*
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: payload.email,
       password: payload.password!,
@@ -358,11 +365,16 @@ export async function saveWellbeingExecutive(payload: WellbeingExecutivePayload)
     }
 
     const authId = authData.user.id;
+    */
+    const bcrypt = await import("bcryptjs");
+    const hashedPassword = await bcrypt.hash(payload.password!, 10);
+    const authId = null;
 
     const { data: existing } = await supabase
       .from("users")
       .select("userId")
-      .eq("auth_id", authId)
+      // .eq("auth_id", authId)
+      .eq("email", payload.email)
       .maybeSingle();
     if (existing) {
       throw new Error("User already exists.");
@@ -381,6 +393,7 @@ export async function saveWellbeingExecutive(payload: WellbeingExecutivePayload)
         role: "WellbeingExecutive",
         gender: payload.gender,
         auth_id: authId,
+        password: hashedPassword,
         collegeId: payload.collegeId,
         collegePublicId: payload.collegePublicId,
         dateOfJoining: payload.dateOfJoining ?? null,

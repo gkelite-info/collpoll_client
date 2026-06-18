@@ -111,6 +111,8 @@ export default function ClientLayout({
   );
 
   useEffect(() => {
+    // --- TEMPORARILY COMMENTED OUT FOR PASSWORD HASHING MIGRATION ---
+    /*
     let isMounted = true;
 
     const resolveRoleDashboard = (rawRole: string | null) => {
@@ -213,111 +215,7 @@ export default function ClientLayout({
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [matchesRouteSegment, pathname, refreshUserContext, role, router]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const resolveRoleDashboard = (rawRole: string | null) => {
-      const normalizedRole = normalizeRole(rawRole);
-      return normalizedRole ? getLandingPageForRole(normalizedRole) : null;
-    };
-
-    const redirectForAuthState = async () => {
-      if (isExemptedRoute(pathname)) return;
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!isMounted) return;
-
-      if (!user) {
-        if (!isPublicRoute(pathname)) {
-          router.replace("/login");
-          router.refresh();
-        }
-        return;
-      }
-
-      if (isAuthOnlyRoute(pathname) || pathname === "/") {
-        let dashboardPath = resolveRoleDashboard(role);
-
-        if (!dashboardPath) {
-          await refreshUserContext();
-          const { data: profile } = await supabase
-            .from("users")
-            .select("role")
-            .eq("auth_id", user.id)
-            .maybeSingle();
-
-          if (!isMounted) return;
-
-          dashboardPath = resolveRoleDashboard(profile?.role ?? null);
-        }
-
-        if (dashboardPath && pathname !== dashboardPath) {
-          router.replace(dashboardPath);
-          router.refresh();
-        }
-        return;
-      }
-
-      if (!isPublicRoute(pathname) && !isAuthProtectedRoute(pathname)) {
-        let dashboardPath = resolveRoleDashboard(role);
-
-        if (!dashboardPath) {
-          await refreshUserContext();
-          const { data: profile } = await supabase
-            .from("users")
-            .select("role")
-            .eq("auth_id", user.id)
-            .maybeSingle();
-
-          if (!isMounted) return;
-
-          dashboardPath = resolveRoleDashboard(profile?.role ?? null);
-        }
-
-        const isStudentLegacyPath =
-          dashboardPath === "/stu_dashboard" && isLegacyStudentRoute(pathname);
-
-        if (
-          dashboardPath &&
-          !matchesRouteSegment(dashboardPath) &&
-          !isStudentLegacyPath
-        ) {
-          router.replace(dashboardPath);
-          router.refresh();
-        }
-      }
-    };
-
-    const handlePageShow = () => {
-      redirectForAuthState();
-    };
-
-    const handleFocus = () => {
-      redirectForAuthState();
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        redirectForAuthState();
-      }
-    };
-
-    redirectForAuthState();
-    window.addEventListener("pageshow", handlePageShow);
-    window.addEventListener("focus", handleFocus);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener("pageshow", handlePageShow);
-      window.removeEventListener("focus", handleFocus);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
+    */
   }, [matchesRouteSegment, pathname, refreshUserContext, role, router]);
 
   // const wellbeingRouteShimmer = useMemo(() => {

@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { insertAssignmentSubmission } from "@/lib/helpers/student/assignments/insertAssignmentSubmission";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
+import { useStudent } from "@/app/utils/context/student/useStudent";
 
 type UploadModalProps = {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export default function UploadModal({
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const t = useTranslations("Assignment.student"); // Hook
+  const { studentId } = useStudent();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -114,6 +116,7 @@ export default function UploadModal({
       const res = await insertAssignmentSubmission({
         assignmentId: Number(card.assignmentId),
         filePath,
+        studentId: studentId ?? undefined,
       });
 
       if (!res.success) {
@@ -145,31 +148,7 @@ export default function UploadModal({
         throw storageErr;
       }
 
-      const { data: authData, error: authErr } = await supabase.auth.getUser();
-
-      if (authErr || !authData?.user) {
-        throw new Error("No auth user");
-      }
-
-      const user = authData.user;
-
-      const { data: userRow, error: userErr } = await supabase
-        .from("users")
-        .select("userId")
-        .eq("auth_id", user.id)
-        .single();
-
-      if (userErr || !userRow) {
-        throw new Error("Internal user not found");
-      }
-
-      const { data: student, error: studentErr } = await supabase
-        .from("students")
-        .select("studentId")
-        .eq("userId", userRow.userId)
-        .single();
-
-      if (studentErr || !student) {
+      if (!studentId) {
         throw new Error("Student not found");
       }
 
@@ -179,7 +158,7 @@ export default function UploadModal({
           file: "",
           updatedAt: new Date().toISOString(),
         })
-        .eq("studentId", student.studentId)
+        .eq("studentId", studentId)
         .eq("assignmentId", card.assignmentId)
         .is("deletedAt", null)
         .select();

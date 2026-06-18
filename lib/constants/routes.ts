@@ -151,17 +151,25 @@ export const isPublicRoute = (pathname: string): boolean => {
 
 
 export const isAuthOnlyRoute = (pathname: string): boolean => {
+  // --- TEMPORARILY COMMENTED OUT FOR PASSWORD HASHING MIGRATION ---
+  /*
   return AUTH_ONLY_ROUTES.some((route) => matchesRouteSegment(pathname, route));
+  */
+  return false;
 };
 
 
 
 export const isProtectedRoute = (pathname: string): boolean => {
+  // --- TEMPORARILY COMMENTED OUT FOR PASSWORD HASHING MIGRATION ---
+  /*
   // return PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
   if (isPublicRoute(pathname)) return false;
   if (isExemptedRoute(pathname)) return false;
 
   return true;
+  */
+  return false;
 };
 
 export const isLegacyStudentRoute = (pathname: string): boolean => {
@@ -236,6 +244,8 @@ export const isValidRole = (role: unknown): role is UserRole => {
 
 
 export const needsRolePortalProtection = (pathname: string): boolean => {
+  // --- TEMPORARILY COMMENTED OUT FOR PASSWORD HASHING MIGRATION ---
+  /*
   // return ROLE_PROTECTED_PORTALS.some((portal) => pathname.startsWith(portal));
   const isSpecificPortal = ROLE_PROTECTED_PORTALS.some((portal) => matchesRouteSegment(pathname, portal));
   const isLegacyRoute = isLegacyStudentRoute(pathname);
@@ -245,10 +255,16 @@ export const needsRolePortalProtection = (pathname: string): boolean => {
     isLegacyRoute ||
     (!isPublicRoute(pathname) && !isAuthProtectedRoute(pathname))
   );
+  */
+  return false;
 };
 
 
 
 export const isAuthProtectedRoute = (pathname: string): boolean => {
+  // --- TEMPORARILY COMMENTED OUT FOR PASSWORD HASHING MIGRATION ---
+  /*
   return AUTH_PROTECTED_ROUTES.some((route) => matchesRouteSegment(pathname, route));
+  */
+  return false;
 };

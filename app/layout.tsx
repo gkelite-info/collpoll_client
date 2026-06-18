@@ -148,7 +148,7 @@ export default async function RootLayout({
                       <CollegeAdminProvider>
                         <FinanceManagerProvider>
                           <HrProvider>
-                            <SessionRefresher />
+                            {/* <SessionRefresher /> */}
                             <ClientLayout>{children}</ClientLayout>
                           </HrProvider>
                         </FinanceManagerProvider>

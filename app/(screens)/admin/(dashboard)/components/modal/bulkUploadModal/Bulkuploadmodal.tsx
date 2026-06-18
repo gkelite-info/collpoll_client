@@ -20,6 +20,7 @@ import { upsertIdentifier } from "@/lib/helpers/identifiers/upsertIdentifier";
 import { fetchModalInitialData } from "@/lib/helpers/admin/upsertFaculty";
 import { fetchSessionOptions } from "@/lib/helpers/collegeSessionAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { useUser } from "@/app/utils/context/UserContext";
 import { BulkRow, BulkUploadModalProps, formatDateOnly, ROLE_OPTIONS, RowResult, Step } from "./splits/types";
 import validateRow from "./splits/rowValidations";
 import { parseExcelToRows } from "./splits/parseExcelToRows";
@@ -33,6 +34,7 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
     onClose,
 }) => {
     const { collegeEducationId, collegeEducationType } = useAdmin();
+    const { userId } = useUser();
 
     const [step, setStep] = useState<Step>("upload");
     const [file, setFile] = useState<File | null>(null);
@@ -131,19 +133,9 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
         let sessionOptions: any[] = [];
 
         try {
-            const {
-                data: { user: authUser },
-            } = await supabase.auth.getUser();
-            if (!authUser) throw new Error("Not authenticated");
+            if (!userId) throw new Error("Not authenticated");
 
-            const { data: userData } = await supabase
-                .from("users")
-                .select("userId")
-                .eq("auth_id", authUser.id)
-                .single();
-            if (!userData) throw new Error("User record not found");
-
-            adminContext = await fetchAdminContext(userData.userId);
+            adminContext = await fetchAdminContext(userId);
             dbData = await fetchModalInitialData(adminContext.collegeId);
             sessionOptions = await fetchSessionOptions(adminContext.collegeId);
 
@@ -180,15 +172,17 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                         ? formatDateOnly(row.dateOfJoining)
                         : null;
 
+                    /*
                     const { data: { session } } = await supabase.auth.getSession();
                     const accessToken = session?.access_token;
-                    if (!accessToken) throw new Error("No active session");
+                    if (!accessToken) throw new Error("No active session for rollback");
+                    */
 
                     const createRes = await fetch("/api/admin/create-auth-user", {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
-                            "Authorization": `Bearer ${accessToken}`,
+                            "Authorization": `Bearer dummy-token`,
                         },
                         body: JSON.stringify({
                             action: "create",
@@ -216,14 +210,18 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                         );
                     }
 
+                    /*
                     if (!createJson?.authId) {
                         throw new Error("Auth user creation failed: Missing authId");
                     }
+                    */
 
                     createdAuthId = createJson.authId;
+                    const hashedPassword = createJson.hashedPassword;
 
                     const userRes = await upsertUser({
                         auth_id: createdAuthId,
+                        password: hashedPassword,
                         fullName: row.fullName,
                         email: row.email,
                         // mobile: `${mobileCode}${row.mobileNumber}`,
@@ -282,12 +280,11 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                         await supabase.from("users").delete().eq("userId", createdUserId);
                     }
                     if (createdAuthId) {
-                        const { data: { session } } = await supabase.auth.getSession();
                         await fetch("/api/admin/create-auth-user", {
                             method: "POST",
                             headers: {
                                 "Content-Type": "application/json",
-                                "Authorization": `Bearer ${session?.access_token}`,
+                                "Authorization": `Bearer dummy-token`,
                             },
                             body: JSON.stringify({ action: "delete", authId: createdAuthId }),
                         });
