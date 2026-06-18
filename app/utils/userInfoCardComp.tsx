@@ -71,9 +71,6 @@ export default function UserInfoCard() {
               <p className="text-sm text-[#454545] max-md:text-[10px] max-md:-mt-0.5">
                 {t("Keep up the great progress!")}
               </p>
-              <p className="text-sm text-[#454545] max-md:text-[10px] max-md:-mt-0.5">
-                !
-              </p>
             </div>
 
             <div className="hidden max-md:inline-flex mt-1 bg-[#BFEFCD] px-2 py-0.5 rounded text-[#089144] text-[10px] font-semibold w-max">
