@@ -23,7 +23,7 @@ export default function UserInfoCard() {
     month: "2-digit",
     year: "numeric",
   }).format(new Date());
-  
+
 
   return (
     <>
@@ -70,6 +70,9 @@ export default function UserInfoCard() {
               </p>
               <p className="text-sm text-[#454545] max-md:text-[10px] max-md:-mt-0.5">
                 {t("Keep up the great progress!")}
+              </p>
+              <p className="text-sm text-[#454545] max-md:text-[10px] max-md:-mt-0.5">
+                !
               </p>
             </div>
 
