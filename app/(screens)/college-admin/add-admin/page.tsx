@@ -201,20 +201,16 @@ export default function AdminRegistration() {
 
             setIsLoading(true);
 
+            /*
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: form.email,
                 password: form.password,
             });
 
-            // if (authError || !authData.user) {
-            //     throw new Error(authError?.message || "Auth creation failed");
-            // }
-
             if (authError) {
                 if (authError.message.includes("User already registered")) {
                     throw new Error("This email is already registered.");
                 }
-
                 throw new Error(authError.message);
             }
 
@@ -223,8 +219,13 @@ export default function AdminRegistration() {
             }
 
             const authId = authData.user.id;
+            */
+            const bcrypt = await import("bcryptjs");
+            const hashedPassword = await bcrypt.hash(form.password, 10);
+            const authId = null;
             const userRes = await upsertUser({
                 auth_id: authId,
+                password: hashedPassword,
                 fullName: form.fullName,
                 email: form.email.toLowerCase(),
                 mobile: `${form.countryCode}${form.phone}`,

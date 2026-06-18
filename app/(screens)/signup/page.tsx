@@ -200,6 +200,7 @@ export default function Signup() {
     const { confirmPassword, ...payload } = formData;
 
     try {
+      /*
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -214,9 +215,14 @@ export default function Signup() {
       if (!authUser) {
         throw new Error("Auth user not created");
       }
+      */
+      const bcrypt = await import("bcryptjs");
+      const hashedPassword = await bcrypt.hash(formData.password, 10);
+      const authUser = { id: null };
 
       const res = await upsertUser({
         auth_id: authUser.id,
+        password: hashedPassword,
         fullName: formData.fullName,
         email: formData.email,
         mobile: formData.mobile,

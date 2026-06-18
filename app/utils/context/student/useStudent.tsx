@@ -3,6 +3,7 @@
 import { supabase } from "@/lib/supabaseClient";
 import { createContext, useContext, useEffect, useState } from "react";
 import { fetchStudentContext } from "./studentContextAPI";
+import { useUser } from "@/app/utils/context/UserContext";
 
 type StudentContextType = {
     loading: boolean;
@@ -45,6 +46,7 @@ const StudentContext = createContext<StudentContextType>({
 });
 
 export const StudentProvider = ({ children }: { children: React.ReactNode }) => {
+    const { userId, role, loading: userLoading } = useUser();
     const [subjects, setSubjects] = useState<any[]>([]);
     const [state, setState] = useState<StudentContextType>({
         ...useContext(StudentContext),
@@ -53,7 +55,14 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
 
     useEffect(() => {
         const loadStudent = async () => {
+            if (userLoading) return;
+            if (!userId || role !== "Student") {
+                setState(prev => ({ ...prev, loading: false }));
+                return;
+            }
+
             try {
+                /*
                 const { data: auth } = await supabase.auth.getUser();
                 if (!auth.user) {
                     setState(prev => ({ ...prev, loading: false }));
@@ -67,9 +76,13 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
                     .single();
 
                 if (!user || user.role !== "Student") return;
+                */
 
-                const student = await fetchStudentContext(user.userId);
-                if (!student) return;
+                const student = await fetchStudentContext(userId);
+                if (!student) {
+                    setState(prev => ({ ...prev, loading: false }));
+                    return;
+                }
 
                 let query = supabase
                     .from("college_subjects")
@@ -95,7 +108,7 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
 
                 setState({
                     loading: false,
-                    userId: user.userId,
+                    userId: userId,
                     studentId: student.studentId,
                     collegeId: student.collegeId,
                     collegeEducationId: student.collegeEducationId,
@@ -119,7 +132,7 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
         };
 
         loadStudent();
-    }, []);
+    }, [userId, role, userLoading]);
 
     return (
         <StudentContext.Provider value={{ ...state, subjects }}>

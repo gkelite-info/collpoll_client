@@ -205,6 +205,7 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
 
       const actualCollegeId = collegeValidation.collegeId;
 
+      /*
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
@@ -215,11 +216,17 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
 
       if (signUpError) throw signUpError;
       if (!data.user) throw new Error("Auth user not created");
+      */
 
       setIsLoading(true);
 
+      const bcrypt = await import("bcryptjs");
+      const hashedPassword = await bcrypt.hash(form.password, 10);
+      const authId = null; // Since we are not using supabase auth
+
       const userResult = await upsertUser({
-        auth_id: data.user.id,
+        auth_id: authId,
+        password: hashedPassword,
         fullName: toPascalCase(form.fullName),
         email: form.email.toLowerCase(),
         mobile: `${form.countryCode}${form.mobile}`,

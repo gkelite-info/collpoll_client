@@ -1,6 +1,7 @@
 "use client";
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { useStudent } from "@/app/utils/context/student/useStudent";
+import { useUser } from "@/app/utils/context/UserContext";
 import { fetchStudentTimetableByDate } from "@/lib/helpers/profile/calender/fetchStudentTimetable";
 import { supabase } from "@/lib/supabaseClient";
 import { FilePdf } from "@phosphor-icons/react";
@@ -37,6 +38,7 @@ export default function CalendarTimeTable({
   const [timetable, setTimetable] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { collegeEducationType } = useStudent();
+  const { userId } = useUser();
   const t = useTranslations("Calendar.student");
 
   useEffect(() => {
@@ -58,20 +60,9 @@ export default function CalendarTimeTable({
     const loadTimetable = async () => {
       try {
         setLoading(true);
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) throw new Error("No auth user");
+        if (!userId) throw new Error("Internal user not found");
 
-        const { data: userRow } = await supabase
-          .from("users")
-          .select("userId")
-          .eq("auth_id", user.id)
-          .single();
-
-        if (!userRow) throw new Error("Internal user not found");
-
-        const studentContext = await fetchStudentContext(userRow.userId);
+        const studentContext = await fetchStudentContext(userId);
         const isInter = collegeEducationType === "Inter";
 
         const rawData = await fetchStudentTimetableByDate({

@@ -6,7 +6,8 @@ export default function SessionRefresher() {
     useEffect(() => {
         const handleVisibilityChange = async () => {
             if (document.visibilityState === "visible") {
-                await supabase.auth.refreshSession();
+                // --- TEMPORARILY COMMENTED OUT FOR PASSWORD HASHING MIGRATION ---
+                // await supabase.auth.refreshSession();
             }
         };
 

@@ -28,6 +28,7 @@ import {
 } from "@/lib/helpers/upsertUser";
 import { fetchSessionOptions } from "@/lib/helpers/collegeSessionAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { useUser } from "@/app/utils/context/UserContext";
 import { createCollegeHR } from "@/lib/helpers/admin/registrations/collegeHr/hrRegistration";
 import { upsertIdentifier } from "@/lib/helpers/identifiers/upsertIdentifier";
 import { upsertPlacementEmployee } from "@/lib/helpers/admin/registrations/placement/placementregistration";
@@ -134,6 +135,10 @@ const AddUserModal: React.FC<{
   );
   const [selectedSectionIds, setSelectedSectionIds] = useState<number[]>([]);
 
+  const [wellbeingCategories, setWellbeingCategories] = useState<any[]>([]);
+
+  const { userId } = useUser();
+
   const [selectedDegrees, setSelectedDegrees] = useState<string[]>([]);
   const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
   const [selectedYears, setSelectedYears] = useState<string[]>([]);
@@ -221,19 +226,9 @@ const AddUserModal: React.FC<{
     if (isOpen) {
       const init = async () => {
         try {
-          const {
-            data: { user: authUser },
-          } = await supabase.auth.getUser();
-          if (!authUser) return;
+          if (!userId) return;
 
-          const { data: userData } = await supabase
-            .from("users")
-            .select("userId")
-            .eq("auth_id", authUser.id)
-            .single();
-          if (!userData) return;
-
-          const adminContext = await fetchAdminContext(userData.userId);
+          const adminContext = await fetchAdminContext(userId);
 
           setBasicData((prev: any) => ({
             ...prev,
@@ -276,7 +271,7 @@ const AddUserModal: React.FC<{
         resetForm();
       }
     }
-  }, [isOpen, user]);
+  }, [isOpen, user, userId]);
 
   const selectedEducation = useMemo(
     () =>
@@ -797,6 +792,7 @@ const AddUserModal: React.FC<{
         //   },
         // );
 
+        /*
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: basicData.email,
           password: basicData.password!,
@@ -811,9 +807,15 @@ const AddUserModal: React.FC<{
         }
 
         const authId = authData.user.id;
+        */
+
+        const bcrypt = await import("bcryptjs");
+        const hashedPassword = await bcrypt.hash(basicData.password!, 10);
+        const authId = null; // Since we are not using supabase auth
 
         const userRes = await upsertUser({
           auth_id: authId,
+          password: hashedPassword,
           fullName: basicData.fullName,
           email: basicData.email,
           mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,

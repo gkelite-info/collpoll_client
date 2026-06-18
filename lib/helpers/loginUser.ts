@@ -54,44 +54,42 @@ export async function loginUser(email: string, password: string) {
       };
     }
 
-    const {
-      data: authData,
-      error: authError,
-    } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (authError || !authData.user) {
-      return {
-        success: false,
-        error: "Invalid email or password.",
-      };
-    }
-
+    // --- NEW CUSTOM AUTH ---
     const {
       data: userProfile,
       error: profileError,
     } = await supabase
       .from("users")
-      .select("userId, fullName, role, collegeId, isActive")
-      .eq("auth_id", authData.user.id)
+      .select("userId, fullName, role, collegeId, isActive, password")
+      .eq("email", email)
       .maybeSingle();
 
     if (!userProfile || profileError) {
-      await supabase.auth.signOut();
-
       return {
         success: false,
         error: "User profile not found.",
       };
     }
 
+    const bcrypt = await import("bcryptjs");
+    const isPasswordValid = await bcrypt.compare(password, userProfile.password || "");
+
+    if (!isPasswordValid) {
+      return {
+        success: false,
+        error: "Invalid email or password.",
+      };
+    }
+
+    // Set the custom session cookie for testing
+    const { setTestingSession } = await import("./testingAuth");
+    await setTestingSession(email);
+
     if (
       Number(userProfile.collegeId) !==
       Number(currentPortal.collegeId)
     ) {
-      await supabase.auth.signOut();
+      // await supabase.auth.signOut();
 
       return {
         success: false,
@@ -101,7 +99,7 @@ export async function loginUser(email: string, password: string) {
     }
 
     if (!userProfile.isActive) {
-      await supabase.auth.signOut();
+      // await supabase.auth.signOut();
 
       return {
         success: false,
@@ -130,7 +128,7 @@ export async function loginUser(email: string, password: string) {
         .limit(1);
 
       if (wellbeingError || !wellbeingAccess?.length) {
-        await supabase.auth.signOut();
+        // await supabase.auth.signOut();
 
         return {
           success: false,
@@ -141,7 +139,7 @@ export async function loginUser(email: string, password: string) {
 
     return {
       success: true,
-      session: authData.session,
+      session: { user: userProfile },
       user: userProfile,
     };
   } catch (err) {

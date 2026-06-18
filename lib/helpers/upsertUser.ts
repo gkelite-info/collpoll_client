@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 export const upsertUser = async (payload: {
   auth_id?: string | null;
+  password?: string;
   fullName: string;
   email: string;
   mobile: string | null;
@@ -19,6 +20,7 @@ export const upsertUser = async (payload: {
   try {
     const {
       auth_id,
+      password,
       fullName,
       mobile,
       email,
@@ -43,6 +45,7 @@ export const upsertUser = async (payload: {
       .upsert(
         {
           auth_id,
+          password,
           fullName,
           mobile,
           email,

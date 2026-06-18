@@ -1,48 +1,81 @@
 import { supabase } from "@/lib/supabaseClient";
+import { getTestingSession } from "../../testingAuth";
 
 type InsertSubmissionParams = {
     assignmentId: number;
     filePath: string;
+    studentId?: number;
 };
 
 export async function insertAssignmentSubmission({
     assignmentId,
     filePath,
+    studentId: passedStudentId,
 }: InsertSubmissionParams) {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("User not authenticated");
+        let finalStudentId = passedStudentId;
 
-        const { data: userRow, error: userErr } = await supabase
-            .from("users")
-            .select("userId")
-            .eq("auth_id", user.id)
-            .single();
+        if (!finalStudentId) {
+            /*
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("User not authenticated");
 
-        if (userErr || !userRow) {
-            throw new Error("Internal user not found");
-        }
+            const { data: userRow, error: userErr } = await supabase
+                .from("users")
+                .select("userId")
+                .eq("auth_id", user.id)
+                .single();
 
-        const { data: student, error: studentErr } = await supabase
-            .from("students")
-            .select("studentId")
-            .eq("userId", userRow.userId)
-            .single();
+            if (userErr || !userRow) {
+                throw new Error("Internal user not found");
+            }
 
-        if (studentErr || !student) {
-            throw new Error("Student not found");
+            const { data: student, error: studentErr } = await supabase
+                .from("students")
+                .select("studentId")
+                .eq("userId", userRow.userId)
+                .single();
+
+            if (studentErr || !student) {
+                throw new Error("Student not found");
+            }
+            finalStudentId = student.studentId;
+            */
+            const testEmail = await getTestingSession();
+            if (!testEmail) throw new Error("User not authenticated");
+
+            const { data: userRow, error: userErr } = await supabase
+                .from("users")
+                .select("userId")
+                .eq("email", testEmail)
+                .single();
+
+            if (userErr || !userRow) {
+                throw new Error("Internal user not found");
+            }
+
+            const { data: student, error: studentErr } = await supabase
+                .from("students")
+                .select("studentId")
+                .eq("userId", userRow.userId)
+                .single();
+
+            if (studentErr || !student) {
+                throw new Error("Student not found");
+            }
+            finalStudentId = student.studentId;
         }
 
         const { data: existing } = await supabase
             .from("student_assignments_submission")
             .select("studentAssignmentSubmissionId")
-            .eq("studentId", student.studentId)
+            .eq("studentId", finalStudentId)
             .eq("assignmentId", assignmentId)
             .is("deletedAt", null)
             .maybeSingle();
 
         const payload = {
-            studentId: student.studentId,
+            studentId: finalStudentId,
             assignmentId,
             submittedOn: new Date().toISOString().split("T")[0],
             file: filePath,
@@ -76,31 +109,57 @@ export async function insertAssignmentSubmission({
     }
 }
 
-export async function getSubmissionForAssignment(assignmentId: number) {
-    const { data: { user } } = await supabase.auth.getUser();
+export async function getSubmissionForAssignment(assignmentId: number, passedStudentId?: number) {
+    let finalStudentId = passedStudentId;
 
-    if (!user) return null;
+    if (!finalStudentId) {
+        /*
+        const { data: { user } } = await supabase.auth.getUser();
 
-    const { data: userRow } = await supabase
-        .from("users")
-        .select("userId")
-        .eq("auth_id", user.id)
-        .single();
+        if (!user) return null;
 
-    if (!userRow) return null;
+        const { data: userRow } = await supabase
+            .from("users")
+            .select("userId")
+            .eq("auth_id", user.id)
+            .single();
 
-    const { data: student } = await supabase
-        .from("students")
-        .select("studentId")
-        .eq("userId", userRow.userId)
-        .single();
+        if (!userRow) return null;
 
-    if (!student) return null;
+        const { data: student } = await supabase
+            .from("students")
+            .select("studentId")
+            .eq("userId", userRow.userId)
+            .single();
+
+        if (!student) return null;
+        finalStudentId = student.studentId;
+        */
+        const testEmail = await getTestingSession();
+        if (!testEmail) return null;
+
+        const { data: userRow } = await supabase
+            .from("users")
+            .select("userId")
+            .eq("email", testEmail)
+            .single();
+
+        if (!userRow) return null;
+
+        const { data: student } = await supabase
+            .from("students")
+            .select("studentId")
+            .eq("userId", userRow.userId)
+            .single();
+
+        if (!student) return null;
+        finalStudentId = student.studentId;
+    }
 
     const { data } = await supabase
         .from("student_assignments_submission")
         .select("file, studentId, assignmentId, deletedAt")
-        .eq("studentId", student.studentId)
+        .eq("studentId", finalStudentId)
         .eq("assignmentId", assignmentId)
         .is("deletedAt", null)
         .maybeSingle();
@@ -108,31 +167,57 @@ export async function getSubmissionForAssignment(assignmentId: number) {
     return data?.file ?? null;
 }
 
-export async function getSubmissionDetailsForAssignment(assignmentId: number) {
-    const { data: { user } } = await supabase.auth.getUser();
+export async function getSubmissionDetailsForAssignment(assignmentId: number, passedStudentId?: number) {
+    let finalStudentId = passedStudentId;
 
-    if (!user) return null;
+    if (!finalStudentId) {
+        /*
+        const { data: { user } } = await supabase.auth.getUser();
 
-    const { data: userRow } = await supabase
-        .from("users")
-        .select("userId")
-        .eq("auth_id", user.id)
-        .single();
+        if (!user) return null;
 
-    if (!userRow) return null;
+        const { data: userRow } = await supabase
+            .from("users")
+            .select("userId")
+            .eq("auth_id", user.id)
+            .single();
 
-    const { data: student } = await supabase
-        .from("students")
-        .select("studentId")
-        .eq("userId", userRow.userId)
-        .single();
+        if (!userRow) return null;
 
-    if (!student) return null;
+        const { data: student } = await supabase
+            .from("students")
+            .select("studentId")
+            .eq("userId", userRow.userId)
+            .single();
+
+        if (!student) return null;
+        finalStudentId = student.studentId;
+        */
+        const testEmail = await getTestingSession();
+        if (!testEmail) return null;
+
+        const { data: userRow } = await supabase
+            .from("users")
+            .select("userId")
+            .eq("email", testEmail)
+            .single();
+
+        if (!userRow) return null;
+
+        const { data: student } = await supabase
+            .from("students")
+            .select("studentId")
+            .eq("userId", userRow.userId)
+            .single();
+
+        if (!student) return null;
+        finalStudentId = student.studentId;
+    }
 
     const { data } = await supabase
         .from("student_assignments_submission")
         .select("file, marksScored, status")
-        .eq("studentId", student.studentId)
+        .eq("studentId", finalStudentId)
         .eq("assignmentId", assignmentId)
         .is("deletedAt", null)
         .maybeSingle();

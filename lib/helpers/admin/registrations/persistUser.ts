@@ -13,6 +13,7 @@ export const persistUser = async (
   let finalUserId = targetUserId;
 
   if (isNewUser) {
+    /*
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: basicData.email,
       password: basicData.password!,
@@ -24,11 +25,17 @@ export const persistUser = async (
     if (authError) throw authError;
     const authId = authData.user?.id;
     if (!authId) throw new Error("Authentication failed");
+    */
+
+    const bcrypt = await import("bcryptjs");
+    const hashedPassword = await bcrypt.hash(basicData.password!, 10);
+    const authId = null; // Since we are not using supabase auth
 
     const { data: existing } = await supabase
       .from("users")
       .select("userId")
-      .eq("auth_id", authId)
+      // .eq("auth_id", authId)
+      .eq("email", basicData.email)
       .maybeSingle();
     if (existing) throw new Error("User already exists.");
 
@@ -41,6 +48,7 @@ export const persistUser = async (
         role: basicData.role,
         gender: basicData.gender,
         auth_id: authId,
+        password: hashedPassword, // Added password to insert
         collegeId: basicData.collegeIntId,
         collegePublicId: basicData.collegePublicId,
         collegeCode: basicData.collegeCode,

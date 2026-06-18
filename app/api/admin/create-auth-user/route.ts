@@ -25,6 +25,7 @@ const supabaseSignup = createClient(
 
 export async function POST(req: NextRequest) {
     try {
+        /*
         const authHeader = req.headers.get("authorization");
 
         if (!authHeader?.startsWith("Bearer ")) {
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
         if (verifyError || !user) {
             return NextResponse.json({ error: "Invalid session" }, { status: 401 });
         }
+        */
 
         const body = await req.json();
         const { action } = body;
@@ -55,6 +57,7 @@ export async function POST(req: NextRequest) {
                 );
             }
 
+            /*
             console.info("[create-auth-user] sending signup confirmation", {
                 email,
                 role,
@@ -89,6 +92,10 @@ export async function POST(req: NextRequest) {
             }
 
             return NextResponse.json({ success: true, authId: data.user.id });
+            */
+            const bcrypt = await import("bcryptjs");
+            const hashedPassword = await bcrypt.hash(password, 10);
+            return NextResponse.json({ success: true, authId: null, hashedPassword });
         }
 
         if (action === "delete") {
