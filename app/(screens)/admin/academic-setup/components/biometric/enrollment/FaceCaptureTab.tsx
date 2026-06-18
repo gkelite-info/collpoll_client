@@ -8,6 +8,7 @@ import { BiometricDeviceRow } from "@/lib/helpers/devices/biometricDeviceAPI";
 import { registerUserOnDevice, registerFaceOnDevice } from "@/lib/helpers/devices/hikvisionAPI";
 import { UserSearchResult } from "./types";
 import imageCompression from 'browser-image-compression';
+import { getBiometricValidity } from "@/lib/helpers/biometric/biometricValidity";
 
 interface FaceCaptureTabProps {
   collegeId: number;
@@ -67,7 +68,7 @@ export default function FaceCaptureTab({
         lastModified: Date.now(),
       });
     } catch {
-      console.error("Compression failed, using original.");
+      fileToUpload = file;
     }
 
     if (fileToUpload.size > 1 * 1024 * 1024) {
@@ -98,19 +99,19 @@ export default function FaceCaptureTab({
         selectedDevices.map(async (device) => {
           try {
             try {
+              const { beginTime, endTime } = getBiometricValidity(selectedUser.role, selectedUser.educationType);
               await registerUserOnDevice(
                 device.deviceId,
                 selectedUser.userId,
                 selectedUser.fullName,
+                beginTime,
+                endTime
               );
             } catch (e: unknown) {
               const subStatusCode =
                 typeof e === "object" && e !== null && "subStatusCode" in e
                   ? (e as { subStatusCode?: string }).subStatusCode
                   : undefined;
-              if (subStatusCode !== "employeeNoAlreadyExist") {
-                console.warn(`Device ${device.deviceId} user registration warning:`, e);
-              }
             }
 
             // Provide the compressed image file directly for multipart upload

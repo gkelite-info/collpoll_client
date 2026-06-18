@@ -20,7 +20,7 @@ export function calculateAttendancePercentage(
   totalClasses: number,
 ) {
   if (totalClasses <= 0) return 0;
-  return Math.floor((attendedClasses / totalClasses) * 100);
+  return Math.round((attendedClasses / totalClasses) * 100);
 }
 
 function getFirstName(name: string) {

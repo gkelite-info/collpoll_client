@@ -26,7 +26,26 @@ export async function POST(req: Request) {
     // We expect the frontend to pass its origin in the payload, but if not we can try headers.
     // However, the cleanest is to let configureDeviceWebhook read NEXT_PUBLIC_APP_URL, 
     // but on the server, process.env is safest, OR we can extract the Host header.
-    const hostHeader = req.headers.get("host");
+    let hostHeader = req.headers.get("host");
+
+    // SaaS fix: If testing locally, the device cannot push to "localhost" (it will push to itself).
+    // Automatically replace "localhost" with the server's local IPv4 address.
+    if (hostHeader && hostHeader.includes("localhost")) {
+      const os = require("os");
+      const interfaces = os.networkInterfaces();
+      let localIp = "localhost";
+      for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+          if (iface.family === "IPv4" && !iface.internal) {
+            localIp = iface.address;
+            break;
+          }
+        }
+        if (localIp !== "localhost") break;
+      }
+      hostHeader = hostHeader.replace("localhost", localIp);
+    }
+
     const protocol = req.headers.get("x-forwarded-proto") || (hostHeader?.includes("localhost") ? "http" : "https");
     const dynamicAppUrl = hostHeader ? `${protocol}://${hostHeader}` : undefined;
 

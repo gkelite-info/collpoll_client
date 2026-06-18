@@ -21,6 +21,7 @@ export interface DeviceRow {
   collegeId: number;
   deviceCategory: "classroom" | "gate";
   deviceSerialNumber: string;
+  deviceIp: string;
   isActive: boolean;
   is_deleted: boolean;
 }
@@ -63,13 +64,12 @@ export async function validateAndLookupDevice(
   const { data, error } = await adminSupabase
     .from("biometric_devices")
     .select(
-      "deviceId, collegeId, deviceCategory, deviceSerialNumber, isActive, is_deleted",
+      "deviceId, collegeId, deviceCategory, deviceSerialNumber, deviceIp, isActive, is_deleted",
     )
     .eq("deviceSerialNumber", deviceSerialNumber)
     .maybeSingle();
 
   if (error) {
-    console.error("[validateAndLookupDevice]", error.message);
     return null;
   }
   if (!data || data.is_deleted || !data.isActive) return null;
@@ -87,13 +87,12 @@ export async function validateAndLookupDeviceById(
   const { data, error } = await adminSupabase
     .from("biometric_devices")
     .select(
-      "deviceId, collegeId, deviceCategory, deviceSerialNumber, isActive, is_deleted",
+      "deviceId, collegeId, deviceCategory, deviceSerialNumber, deviceIp, isActive, is_deleted",
     )
     .eq("deviceId", deviceId)
     .maybeSingle();
 
   if (error) {
-    console.error("[validateAndLookupDeviceById]", error.message);
     return null;
   }
   if (!data || data.is_deleted || !data.isActive) return null;
@@ -111,17 +110,34 @@ export async function validateAndLookupDeviceByIp(
   const { data, error } = await adminSupabase
     .from("biometric_devices")
     .select(
-      "deviceId, collegeId, deviceCategory, deviceSerialNumber, isActive, is_deleted",
+      "deviceId, collegeId, deviceCategory, deviceSerialNumber, deviceIp, isActive, is_deleted",
     )
     .or(`deviceIp.eq.${deviceIp},deviceIp.eq.http://${deviceIp},deviceIp.eq.https://${deviceIp}`)
     .maybeSingle();
 
   if (error) {
-    console.error("[validateAndLookupDeviceByIp]", error.message);
     return null;
   }
   if (!data || data.is_deleted || !data.isActive) return null;
   return data as DeviceRow;
+}
+
+/* ------------------------------------------------------------------ */
+/*  updateDeviceIp                                                      */
+/*  Updates the dynamic IP of the device.                               */
+/* ------------------------------------------------------------------ */
+
+export async function updateDeviceIp(
+  deviceId: number,
+  deviceIp: string,
+): Promise<void> {
+  const { error } = await adminSupabase
+    .from("biometric_devices")
+    .update({ deviceIp, updatedAt: new Date().toISOString() })
+    .eq("deviceId", deviceId);
+
+  if (error) {
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -144,7 +160,6 @@ export async function lookupUserByEmployeeNo(
     .maybeSingle();
 
   if (error) {
-    console.error("[lookupUserByEmployeeNo]", error.message);
     return null;
   }
   if (!data || data.is_deleted || !data.isActive) return null;
@@ -176,7 +191,6 @@ export async function lookupUserByCredential(
     .maybeSingle();
 
   if (error) {
-    console.error("[lookupUserByCredential]", error.message);
     return null;
   }
   if (!data) return null;
@@ -212,7 +226,6 @@ export async function insertPendingLog(
     .single();
 
   if (error) {
-    console.error("[insertPendingLog]", error.message);
     return null;
   }
   return data.deviceAttendanceLogId;
@@ -267,3 +280,26 @@ export async function getUserRole(
   if (error || !data) return null;
   return data.role;
 }
+
+/* ------------------------------------------------------------------ */
+/*  insertRetryQueue                                                    */
+/*  Adds a failed raw scan payload to the retry queue for background    */
+/*  processing.                                                         */
+/* ------------------------------------------------------------------ */
+
+export async function insertRetryQueue(
+  collegeId: number,
+  rawPayload: any,
+  failureReason: string,
+): Promise<void> {
+  const { error } = await adminSupabase.from("scan_retry_queue").insert({
+    collegeId,
+    rawPayload,
+    failureReason,
+    createdAt: new Date().toISOString(),
+  });
+
+  if (error) {
+  }
+}
+

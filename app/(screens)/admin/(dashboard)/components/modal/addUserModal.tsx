@@ -1061,7 +1061,11 @@ const AddUserModal: React.FC<{
         }
 
         try {
-          await registerUserToHikvision(targetUserId, basicData.fullName);
+          let eduTypeToPass = null;
+          if (basicData.role === "Student" && studentSelectedEducation) {
+            eduTypeToPass = studentSelectedEducation.collegeEducationType;
+          }
+          await registerUserToHikvision(targetUserId, basicData.fullName, basicData.role, eduTypeToPass);
         } catch (hivErr) {
           console.warn("Hikvision registration failed (non-blocking):", hivErr);
         }

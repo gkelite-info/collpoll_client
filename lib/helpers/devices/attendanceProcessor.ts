@@ -38,26 +38,27 @@ function isoToScanDate(iso: string): string {
 }
 
 function isoToScanTime(iso: string): string {
-  // Returns HH:MM from an ISO timestamp
-  return new Date(iso).toTimeString().slice(0, 5);
+  // Returns exactly HH:MM extracted from the device's provided string to ignore server timezone
+  const match = iso.match(/T(\d{2}:\d{2})/);
+  return match ? match[1] : "00:00";
 }
 
 /* ------------------------------------------------------------------ */
-/*  findActiveClassSession                                              */
-/*  Finds a device_class_session active at the time of scan.           */
+/*  findActiveClassSessions                                             */
+/*  Finds all device_class_sessions active at the time of scan.         */
 /* ------------------------------------------------------------------ */
 
-async function findActiveClassSession(
+async function findActiveClassSessions(
   deviceId: number,
   scanDate: string,
   scanTime: string,
-): Promise<{
+): Promise<Array<{
   deviceClassSessionId: number;
   calendarEventId: number;
   fromTime: string;
   toTime: string;
   bufferMinutes: number;
-} | null> {
+}>> {
   const { data: sessions, error } = await adminSupabase
     .from("device_class_sessions")
     .select(
@@ -69,7 +70,7 @@ async function findActiveClassSession(
     .is("deletedAt", null);
 
   if (error) throw new Error(`Session query failed: ${error.message}`);
-  if (!sessions || sessions.length === 0) return null;
+  if (!sessions || sessions.length === 0) return [];
 
   const scanMin = timeToMin(scanTime);
 
@@ -83,21 +84,16 @@ async function findActiveClassSession(
     return scanMin >= from && scanMin <= to;
   });
 
-  if (validSessions.length === 0) return null;
+  if (validSessions.length === 0) return [];
 
-  // 2. Resolve Overlaps (SaaS Level Edge Case Handling)
-  // If a student taps in during the overlapping boundary of two consecutive classes
-  // (e.g., 09:55 for classes 09:00-10:00 and 10:00-11:00), we must avoid marking
-  // the previous class present when they are actually arriving for the next class.
-  // Solution: Pick the session whose start time (fromTime) is closest to the scan time.
+  // 2. Sort overlaps to prioritize the class starting closest to the scan time
   validSessions.sort((a: any, b: any) => {
     const diffA = Math.abs(scanMin - timeToMin(a.fromTime));
     const diffB = Math.abs(scanMin - timeToMin(b.fromTime));
     return diffA - diffB;
   });
 
-  // Return the best matching session
-  return validSessions[0];
+  return validSessions;
 }
 
 /* ------------------------------------------------------------------ */
@@ -167,19 +163,7 @@ export async function processClassroomAttendance(params: {
       };
     }
 
-    // 2. Find active class session for this device + time
-    const session = await findActiveClassSession(deviceId, scanDate, scanTime);
-
-    if (!session) {
-      return {
-        success: false,
-        rejectionReason: "NoActiveSession",
-      };
-    }
-
-    const { deviceClassSessionId, calendarEventId } = session;
-
-    // 3. Get studentId from students table (via userId)
+    // 2. Get studentId from students table (via userId)
     const { data: student, error: stuErr } = await adminSupabase
       .from("students")
       .select("studentId")
@@ -195,14 +179,34 @@ export async function processClassroomAttendance(params: {
     }
     const { studentId } = student;
 
-    // 4. Verify student is enrolled in this class's sections
-    const isEnrolled = await verifyStudentEnrollment(studentId, calendarEventId);
-    if (!isEnrolled) {
+    // 3. Find active class sessions for this device + time
+    const sessions = await findActiveClassSessions(deviceId, scanDate, scanTime);
+
+    if (!sessions || sessions.length === 0) {
+      return {
+        success: false,
+        rejectionReason: "NoActiveSession",
+      };
+    }
+
+    // 4. Verify student is enrolled in one of the active matching classes
+    let matchedSession = null;
+    for (const session of sessions) {
+      const isEnrolled = await verifyStudentEnrollment(studentId, session.calendarEventId);
+      if (isEnrolled) {
+        matchedSession = session;
+        break;
+      }
+    }
+
+    if (!matchedSession) {
       return {
         success: false,
         rejectionReason: "StudentNotEnrolledInClass",
       };
     }
+
+    const { deviceClassSessionId, calendarEventId } = matchedSession;
 
     // 5. Check for existing attendance_record (idempotency)
     const { data: existing, error: existErr } = await adminSupabase
@@ -260,6 +264,37 @@ export async function processClassroomAttendance(params: {
 
     if (insertErr) throw new Error(insertErr.message);
 
+    // 7. Broadcast realtime update
+    const payload = {
+      attendanceRecordId: newRecord.attendanceRecordId,
+      studentId,
+      calendarEventId,
+      status: "PRESENT",
+      studentLoginTime: scanTime,
+      markedAt: scanDate,
+    };
+
+    try {
+      // Broadcast to specific class channel (for faculty)
+      await adminSupabase
+        .channel(`public:attendance_record:eventId=${calendarEventId}`)
+        .send({
+          type: "broadcast",
+          event: "new_attendance",
+          payload,
+        });
+
+      // Broadcast to global admin channel
+      await adminSupabase
+        .channel(`public:attendance_record:admin`)
+        .send({
+          type: "broadcast",
+          event: "new_attendance",
+          payload,
+        });
+    } catch (broadcastErr) {
+    }
+
     return {
       success: true,
       attendanceRecordId: newRecord.attendanceRecordId,
@@ -267,7 +302,6 @@ export async function processClassroomAttendance(params: {
       calendarEventId,
     };
   } catch (err) {
-    console.error("[processClassroomAttendance]", err);
     return {
       success: false,
       rejectionReason: "DBError",

@@ -198,7 +198,6 @@ export async function activateDeviceSessionForClass(params: {
     return { success: true, deviceClassSessionId };
   } catch (err) {
     // Non-blocking — failure here must NOT break the accept flow
-    console.error("[activateDeviceSessionForClass] Error:", e(err));
     return { success: false, error: e(err) };
   }
 }
@@ -224,6 +223,38 @@ export async function deactivateSessionsForEvent(
       })
       .eq("calendarEventId", calendarEventId)
       .eq("isActive", true);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: e(err) };
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  updateDeviceSessionForEvent                                        */
+/*  Updates active device sessions when event timings change.          */
+/* ------------------------------------------------------------------ */
+
+export async function updateDeviceSessionForEvent(params: {
+  calendarEventId: number;
+  eventDate: string;
+  fromTime: string;
+  toTime: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const now = new Date().toISOString();
+    const { error } = await adminSupabase
+      .from("device_class_sessions")
+      .update({
+        eventDate: params.eventDate,
+        fromTime: params.fromTime,
+        toTime: params.toTime,
+        updatedAt: now,
+      })
+      .eq("calendarEventId", params.calendarEventId)
+      .eq("isActive", true)
+      .is("deletedAt", null);
 
     if (error) throw error;
     return { success: true };
