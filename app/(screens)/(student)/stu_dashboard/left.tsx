@@ -219,12 +219,11 @@ export default function StuDashLeft() {
     try {
       const studentContext = await fetchStudentContext(userId!);
 
-      const res = await fetchAssignmentsForStudent(
-        {
-          collegeBranchId: studentContext.collegeBranchId,
-          collegeAcademicYearId: studentContext.collegeAcademicYearId,
-          collegeSectionsId: studentContext.collegeSectionsId,
-        },
+      const res = await fetchAssignmentsForStudent({
+        collegeBranchId: studentContext.collegeBranchId,
+        collegeAcademicYearId: studentContext.collegeAcademicYearId,
+        collegeSectionsId: studentContext.collegeSectionsId,
+      },
         1,
         1,
         "active",
