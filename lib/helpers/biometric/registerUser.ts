@@ -1,12 +1,15 @@
-export const registerUserToHikvision = async (userId: number, fullName: string) => {
+import { getBiometricValidity } from "./biometricValidity";
+
+export const registerUserToHikvision = async (userId: number, fullName: string, role?: string, educationType?: string | null) => {
+  const { beginTime, endTime } = getBiometricValidity(role, educationType);
   const payload = {
     UserInfo: [
       {
         employeeNo: String(userId),
         name: fullName,
         Valid: {
-          beginTime: "2026-01-01T00:00:00",
-          endTime: "2027-12-31T23:59:59",
+          beginTime,
+          endTime,
         },
       },
     ],

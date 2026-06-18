@@ -1,7 +1,19 @@
 import { supabase } from "@/lib/supabaseClient";
 import { adminSupabase } from "@/lib/helpers/devices/scanIngestionHelper";
 
-const err = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
+const err = (e: unknown) => {
+  if (e instanceof Error) {
+    const msg = e.message;
+    if (msg.includes("duplicate key value violates unique constraint")) {
+      return "This record already exists.";
+    }
+    if (msg.includes("violates foreign key constraint")) {
+      return "Invalid reference provided.";
+    }
+    return msg;
+  }
+  return "Something went wrong. Please try again.";
+};
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -119,7 +131,8 @@ export const processGateScan = async (payload: GateScanPayload) => {
       .single();
     if (userErr) throw userErr;
 
-    const isStaff = userData.role !== "Student";
+    const excludedRoles = ["super-admin", "student", "parent"];
+    const isStaff = !excludedRoles.includes((userData.role || "").toLowerCase());
 
     // 2. Create gate_scan_logs entry
     const { data: scanLog, error: scanErr } = await adminSupabase
@@ -164,6 +177,23 @@ export const processGateScan = async (payload: GateScanPayload) => {
     let attendanceDailyId: number | null = null;
     if (isStaff) {
       attendanceDailyId = await processStaffAttendance(payload, scanLog.gateScanLogId);
+
+      // Broadcast HR realtime update
+      try {
+        await adminSupabase
+          .channel(`public:attendance_daily:hr`)
+          .send({
+            type: "broadcast",
+            event: "new_daily_attendance",
+            payload: {
+              userId: payload.userId,
+              attendanceDate: payload.scanDate,
+              scanType: payload.scanType,
+              scanTime: payload.scanTime,
+            },
+          });
+      } catch (broadcastErr) {
+      }
     }
 
     // 5. Update scan log with processed status
@@ -202,7 +232,8 @@ async function processStaffAttendance(
   _gateScanLogId: number,
 ): Promise<number | null> {
   const now = new Date().toISOString();
-  const scanTimeStr = new Date(payload.scanTime).toTimeString().slice(0, 5); // HH:MM
+  const timeMatch = payload.scanTime.match(/T(\d{2}:\d{2})/);
+  const scanTimeStr = timeMatch ? timeMatch[1] : "00:00"; // Strict local extraction (HH:MM)
 
   // Check if attendance_daily record exists for this user + date
   const { data: existing } = await adminSupabase

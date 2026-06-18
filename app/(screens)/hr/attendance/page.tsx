@@ -19,6 +19,7 @@ import {
 } from "@/lib/helpers/Hr/attendance/Getattendancestaff";
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import AttendanceFilters from "./components/AttendanceFilteres";
+import { useHrAttendanceRealtime } from "@/lib/helpers/Hr/attendance/liveHrAttendanceAPI";
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -173,6 +174,14 @@ function FacultyAttendanceDashboard() {
     }, 400);
     return () => clearTimeout(timer);
   }, [searchQuery, activeRole]);
+
+  // Realtime HR Attendance Updates
+  useHrAttendanceRealtime((payload) => {
+    // We do a silent fetch so we don't flash loading states
+    if (payload.new && payload.new.userId) {
+      fetchStaffSilent(searchQuery, filterDateRef.current);
+    }
+  });
 
   // Table Shimmer on localTab Change (Optimistic UI)
   useEffect(() => {

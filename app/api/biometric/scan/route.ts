@@ -8,6 +8,8 @@ import {
   insertPendingLog,
   updateLogStatus,
   getUserRole,
+  updateDeviceIp,
+  insertRetryQueue,
 } from "@/lib/helpers/devices/scanIngestionHelper";
 import { processClassroomAttendance } from "@/lib/helpers/devices/attendanceProcessor";
 import { processGateScan } from "@/lib/helpers/devices/gateScanLogAPI";
@@ -55,8 +57,7 @@ function isRateLimited(userId: number, deviceId: number): boolean {
 /*  }                                                                   */
 /* ------------------------------------------------------------------ */
 
-import * as fs from "fs";
-import * as path from "path";
+// Removed fs and path since they crash in serverless environments (e.g. Vercel)
 
 export async function POST(req: NextRequest) {
   try {
@@ -67,18 +68,18 @@ export async function POST(req: NextRequest) {
     // -- DEBUG LOGGING --
     const rawReqBodyBytes = await req.arrayBuffer();
     const rawReqBodyString = new TextDecoder().decode(rawReqBodyBytes);
-    fs.appendFileSync(path.join(process.cwd(), "webhook_debug.log"), `\n\n--- [${new Date().toISOString()}] ---\nContent-Type: ${contentType}\n\n${rawReqBodyString}\n`);
+    console.log(`[Webhook] Scan Received. Content-Type: ${contentType}`, rawReqBodyString);
     // -------------------
 
-    // Reconstruct Request since we consumed the body
-    const reqClone = new Request(req.url, {
-      method: req.method,
-      headers: req.headers,
-      body: rawReqBodyBytes,
-      duplex: 'half'
-    } as any);
-
     if (contentType.includes("multipart/form-data")) {
+      // Reconstruct Request since we consumed the body
+      const reqClone = new Request(req.url, {
+        method: req.method,
+        headers: req.headers,
+        body: rawReqBodyBytes,
+        duplex: 'half'
+      } as any);
+      
       const formData = await reqClone.formData();
       const eventLogPart = formData.get("event_log") || formData.get("event_info");
       if (eventLogPart && typeof eventLogPart === "string") {
@@ -90,7 +91,8 @@ export async function POST(req: NextRequest) {
       }
     } else {
       try {
-        body = await reqClone.json();
+        // Safer and avoids NextJS req.clone() or JSON hanging bugs
+        body = JSON.parse(rawReqBodyString);
       } catch {
         return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
       }
@@ -170,6 +172,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Dynamic IP update: if the device payload gives us an IP and it's different from what we have, update it!
+    if (body.ipAddress && device.deviceIp !== body.ipAddress && body.ipAddress !== "0.0.0.0") {
+      await updateDeviceIp(device.deviceId, body.ipAddress);
+    }
+
     // 4. Lookup user
     let userId: number | null = null;
     let isActive = false;
@@ -247,97 +254,129 @@ export async function POST(req: NextRequest) {
     }
 
     // 9. Route to appropriate processor based on device category
-    if (device.deviceCategory === "classroom") {
-      // ── Classroom scan → attendance_record
-      if (!deviceAttendanceLogId) {
+    try {
+      if (device.deviceCategory === "classroom") {
+        // ── Classroom scan → attendance_record
+        if (!deviceAttendanceLogId) {
+          return NextResponse.json(
+            { processed: false, reason: "LogInsertFailed" },
+            { status: 200 },
+          );
+        }
+
+        const result = await processClassroomAttendance({
+          deviceId: device.deviceId,
+          userId,
+          collegeId: device.collegeId,
+          authMethod: dbAuthMethod,
+          scanTimestamp,
+          deviceAttendanceLogId,
+        });
+
+        await updateLogStatus({
+          deviceAttendanceLogId,
+          processedStatus: result.success ? "accepted" : "rejected",
+          rejectionReason: result.success ? undefined : result.rejectionReason,
+          calendarEventId: result.calendarEventId ?? null,
+          deviceClassSessionId: result.deviceClassSessionId ?? null,
+          attendanceRecordId: result.attendanceRecordId ?? null,
+        });
+
         return NextResponse.json(
-          { processed: false, reason: "LogInsertFailed" },
+          {
+            processed: result.success,
+            alreadyMarked: result.alreadyMarked ?? false,
+            attendanceRecordId: result.attendanceRecordId,
+            reason: result.rejectionReason,
+          },
           { status: 200 },
         );
       }
 
-      const result = await processClassroomAttendance({
-        deviceId: device.deviceId,
-        userId,
-        collegeId: device.collegeId,
-        authMethod: dbAuthMethod,
-        scanTimestamp,
-        deviceAttendanceLogId,
-      });
+      if (device.deviceCategory === "gate") {
+        // ── Gate scan → gate_scan_logs + attendance_daily (staff)
+        const userRole = await getUserRole(userId);
+        const actualLogType = "Entry"; // Default; real direction comes from rawDeviceData
+        // Hikvision sends direction in rawDeviceData.direction or similar field
+        const scanType =
+          ((rawDeviceData as any)?.direction === "exit" ? "Exit" : "Entry") as
+            | "Entry"
+            | "Exit";
 
-      await updateLogStatus({
-        deviceAttendanceLogId,
-        processedStatus: result.success ? "accepted" : "rejected",
-        rejectionReason: result.success ? undefined : result.rejectionReason,
-        calendarEventId: result.calendarEventId ?? null,
-        deviceClassSessionId: result.deviceClassSessionId ?? null,
-        attendanceRecordId: result.attendanceRecordId ?? null,
-      });
+        const scanDate = scanTimestamp.split("T")[0];
 
-      return NextResponse.json(
-        {
-          processed: result.success,
-          alreadyMarked: result.alreadyMarked ?? false,
-          attendanceRecordId: result.attendanceRecordId,
-          reason: result.rejectionReason,
-        },
-        { status: 200 },
-      );
-    }
+        let gateAuthMethod: "Card" | "Fingerprint" | "FaceRecognition" | "QRCode" = "FaceRecognition";
+        if (dbAuthMethod === "card") gateAuthMethod = "Card";
+        else if (dbAuthMethod === "fingerprint") gateAuthMethod = "Fingerprint";
+        else if (dbAuthMethod === "facerecognition") gateAuthMethod = "FaceRecognition";
+        else if (dbAuthMethod === "manual") gateAuthMethod = "FaceRecognition";
 
-    if (device.deviceCategory === "gate") {
-      // ── Gate scan → gate_scan_logs + attendance_daily (staff)
-      const userRole = await getUserRole(userId);
-      const actualLogType = "Entry"; // Default; real direction comes from rawDeviceData
-      // Hikvision sends direction in rawDeviceData.direction or similar field
-      const scanType =
-        ((rawDeviceData as any)?.direction === "exit" ? "Exit" : "Entry") as
-          | "Entry"
-          | "Exit";
+        const gateResult = await processGateScan({
+          userId,
+          collegeId: device.collegeId,
+          deviceId: device.deviceId,
+          scanType,
+          scanTime: scanTimestamp,
+          scanDate,
+          authMethod: gateAuthMethod,
+        });
 
-      const scanDate = scanTimestamp.split("T")[0];
+        if (deviceAttendanceLogId) {
+          await updateLogStatus({
+            deviceAttendanceLogId,
+            processedStatus: gateResult.success ? "accepted" : "rejected",
+            rejectionReason: gateResult.success
+              ? undefined
+              : "GateProcessFailed",
+            gateScanLogId: gateResult.data?.gateScanLogId ?? null,
+            attendanceDailyId:
+              (gateResult.data as any)?.attendanceDailyId ?? null,
+          });
+        }
 
-      let gateAuthMethod: "Card" | "Fingerprint" | "FaceRecognition" | "QRCode" = "FaceRecognition";
-      if (dbAuthMethod === "card") gateAuthMethod = "Card";
-      else if (dbAuthMethod === "fingerprint") gateAuthMethod = "Fingerprint";
-      else if (dbAuthMethod === "facerecognition") gateAuthMethod = "FaceRecognition";
-      else if (dbAuthMethod === "manual") gateAuthMethod = "FaceRecognition";
+        return NextResponse.json(
+          { processed: gateResult.success },
+          { status: 200 },
+        );
+      }
 
-      const gateResult = await processGateScan({
-        userId,
-        collegeId: device.collegeId,
-        deviceId: device.deviceId,
-        scanType,
-        scanTime: scanTimestamp,
-        scanDate,
-        authMethod: gateAuthMethod,
-      });
+      // Unknown category
+      return NextResponse.json({ processed: false, reason: "UnknownCategory" }, { status: 200 });
 
+    } catch (processError: any) {
+      console.error("[POST /api/biometric/scan] Processing Error:", processError.message);
+      
+      // Update pending log to error
       if (deviceAttendanceLogId) {
         await updateLogStatus({
           deviceAttendanceLogId,
-          processedStatus: gateResult.success ? "accepted" : "rejected",
-          rejectionReason: gateResult.success
-            ? undefined
-            : "GateProcessFailed",
-          gateScanLogId: gateResult.data?.gateScanLogId ?? null,
-          attendanceDailyId:
-            (gateResult.data as any)?.attendanceDailyId ?? null,
+          processedStatus: "error",
+          rejectionReason: "SystemError-Queued",
         });
       }
 
+      // Insert raw payload into Dead-Letter Retry Queue (only if it's not already a retry)
+      if (!body.isRetry) {
+        await insertRetryQueue(
+          device.collegeId, 
+          body, 
+          processError.message || "Unknown Error"
+        );
+      }
+
+      // Return 200 so device thinks it succeeded and deletes its local cache
       return NextResponse.json(
-        { processed: gateResult.success },
-        { status: 200 },
+        { processed: true, queued: true, reason: processError.message || "SystemError-Queued" },
+        { status: 200 }
       );
     }
 
-    // Unknown category
-    return NextResponse.json({ processed: false, reason: "UnknownCategory" }, { status: 200 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
-    console.error("[POST /api/biometric/scan]", message);
-    // Return 200 to prevent device retry loops
+    console.error("[POST /api/biometric/scan] Critical Wrapper Error:", message);
+    
+    // Last ditch effort: if we somehow failed before device lookup, we can't reliably queue per college, 
+    // but returning 200 prevents infinite retry loops from the device.
     return NextResponse.json(
       { processed: false, reason: "ServerError" },
       { status: 200 },

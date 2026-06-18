@@ -9,6 +9,7 @@ import AttendanceStatusCardShimmer from "../shimmers/AttendanceStatusCardShimmer
 import AttendanceTableShimmer from "../shimmers/AttendanceTableShimmer";
 import { getAttendanceData } from "@/lib/helpers/myAttendance/getAttendanceData";
 import { getAttendanceMonthlyStats } from "@/lib/helpers/myAttendance/getAttendanceMonthlyStats";
+import { useHrAttendanceRealtime } from "@/lib/helpers/Hr/attendance/liveHrAttendanceAPI";
 
 export interface AdminProfile {
   name: string;
@@ -66,7 +67,16 @@ const AttendancePage = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [stats, setStats] = useState<AttendanceStats | null>(null);
 
-  const itemsPerPage = 15
+  const itemsPerPage = 15;
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Listen to realtime changes for my attendance
+  useHrAttendanceRealtime((payload) => {
+    // Refresh if the attendance record is for this user
+    if (payload.new && String(payload.new.userId) === String(userId)) {
+      setRefreshKey((prev) => prev + 1);
+    }
+  });
 
   useEffect(() => {
     if (!userId) return;
@@ -100,7 +110,7 @@ const AttendancePage = () => {
       }
     };
     fetchStats();
-  }, [userId, selectedMonth, selectedYear]);
+  }, [userId, selectedMonth, selectedYear, refreshKey]);
 
   useEffect(() => {
     if (!userId) return;
@@ -127,7 +137,7 @@ const AttendancePage = () => {
     };
 
     fetchAttendance();
-  }, [userId, selectedMonth, selectedYear, currentPage]);
+  }, [userId, selectedMonth, selectedYear, currentPage, refreshKey]);
 
   useEffect(() => {
     if (!adminId) return;

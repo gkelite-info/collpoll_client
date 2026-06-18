@@ -7,4 +7,5 @@ export type UserSearchResult = {
   email: string;
   mobile: string;
   role: string;
+  educationType?: string;
 };

@@ -1,7 +1,18 @@
 import { supabase } from "@/lib/supabaseClient";
 
-const err = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
-
+const err = (e: unknown) => {
+  if (e instanceof Error) {
+    const msg = e.message;
+    if (msg.includes("duplicate key value violates unique constraint")) {
+      return "This credential already exists for the user.";
+    }
+    if (msg.includes("violates foreign key constraint")) {
+      return "Invalid reference provided.";
+    }
+    return msg;
+  }
+  return "Something went wrong. Please try again.";
+};
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -255,7 +266,32 @@ export const searchUsersForEnrollment = async (collegeId: number, search: string
       .limit(20);
 
     if (error) throw error;
-    return { success: true as const, data: data ?? [] };
+    
+    let results: any[] = data ?? [];
+    
+    // Fetch education types for students
+    const studentUserIds = results.filter((u: any) => u.role === "Student").map((u: any) => u.userId);
+    if (studentUserIds.length > 0) {
+      const { data: studentData } = await supabase
+        .from("students")
+        .select(`
+          userId,
+          college_education:collegeEducationId ( collegeEducationType )
+        `)
+        .in("userId", studentUserIds);
+        
+      if (studentData) {
+        results = results.map((u: any) => {
+          if (u.role !== "Student") return u;
+          const stu = studentData.find((s: any) => s.userId === u.userId);
+          const eduRelation = stu?.college_education;
+          const eduType = Array.isArray(eduRelation) ? eduRelation[0]?.collegeEducationType : (eduRelation as any)?.collegeEducationType;
+          return { ...u, educationType: eduType };
+        });
+      }
+    }
+
+    return { success: true as const, data: results };
   } catch (e) {
     return { success: false as const, data: [], error: err(e) };
   }
@@ -277,7 +313,6 @@ export const uploadFaceCredentialImage = async (userId: number, file: File): Pro
       });
 
     if (error) {
-      console.error("Storage upload error:", error);
       return { success: false, error: "Failed to save image to cloud storage." };
     }
 
@@ -290,7 +325,6 @@ export const uploadFaceCredentialImage = async (userId: number, file: File): Pro
     
     return { success: false, error: "Unknown error during upload" };
   } catch (e) {
-    console.error("Storage error:", e);
     return { success: false, error: err(e) };
   }
 };
