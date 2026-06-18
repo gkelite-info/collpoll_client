@@ -23,7 +23,7 @@ export type WellbeingExecutivePayload = {
   mobileNumber: string;
   gender: string;
   dateOfJoining: string;
-  professionalExperienceYears: number;
+  professionalExperienceYears?: number;
   employeeId: string;
   password?: string;
   collegeId: number;
@@ -57,7 +57,7 @@ export type GroundStaffPayload = {
   mobileNumber: string;
   gender: string;
   dateOfJoining: string;
-  professionalExperienceYears: number;
+  professionalExperienceYears?: number;
   employeeId: string;
   password?: string;
   collegeId: number;

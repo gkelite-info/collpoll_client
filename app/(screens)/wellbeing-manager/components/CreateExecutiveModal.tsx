@@ -583,7 +583,11 @@ export default function CreateExecutiveModal({
       return toast.error("Date of Joining is required.");
     }
 
-    if (basicData.professionalExperienceYears === undefined || basicData.professionalExperienceYears === null) {
+    if (
+      !isGroundLevelStaff &&
+      (basicData.professionalExperienceYears === undefined ||
+        basicData.professionalExperienceYears === null)
+    ) {
       return toast.error("Experience (Years) is required.");
     }
 
@@ -619,7 +623,12 @@ export default function CreateExecutiveModal({
         mobileNumber: basicData.mobileNumber,
         gender: basicData.gender,
         dateOfJoining: basicData.dateOfJoining,
-        professionalExperienceYears: Number(basicData.professionalExperienceYears),
+        professionalExperienceYears:
+          basicData.professionalExperienceYears === undefined ||
+          basicData.professionalExperienceYears === null ||
+          basicData.professionalExperienceYears === ""
+            ? undefined
+            : Number(basicData.professionalExperienceYears),
         employeeId: basicData.identifierValue,
         password: basicData.password,
         collegeId: collegeId!,
@@ -959,7 +968,7 @@ export default function CreateExecutiveModal({
 
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D3748]">
-                  Experience (Years) <span className="text-red-600">*</span>
+                  Experience (Years) {!isGroundLevelStaff && <span className="text-red-600">*</span>}
                 </label>
                 <input
                   type="number"
