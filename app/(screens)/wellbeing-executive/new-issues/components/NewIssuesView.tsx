@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CaretDown, FilePdf, ListDashes } from "@phosphor-icons/react";
+import { CaretDown, DownloadSimple, FilePdf, ListDashes, X } from "@phosphor-icons/react";
 import toast, { Toaster } from "react-hot-toast";
 import TableComponent from "@/app/utils/table/table";
 import WellbeingExecutiveRight from "../../components/WellbeingExecutiveRight";
@@ -26,6 +26,13 @@ type IssueRoleFilter = "all" | WellbeingIssueRaisedRole;
 type IssueRoleOption = {
   label: string;
   value: IssueRoleFilter;
+};
+
+type EvidenceAttachment = {
+  name: string;
+  size: string;
+  path: string;
+  url: string;
 };
 
 type ExecutiveIssue = {
@@ -51,7 +58,7 @@ type ExecutiveIssue = {
   canTakeAction: boolean;
   jobId: number | null;
   jobStatus: WellbeingIssueJobStatus | null;
-  attachments: { name: string; size: string }[];
+  attachments: EvidenceAttachment[];
 };
 
 const tabs: { key: IssueView; label: string }[] = [
@@ -91,6 +98,30 @@ const getIssueSubjectHeader = (value: IssueRoleFilter) =>
 const getIssueScopeLabel = (value: IssueAppliesTo) =>
   value === "both" ? "Both" : value === "college" ? "College" : "Hostel";
 
+const formatRequesterRole = (role?: string | null) => {
+  const normalizedRole = role?.trim();
+  const roleLabels: Record<string, string> = {
+    Student: "Student",
+    SuperAdmin: "Super Admin",
+    "Super-Admin": "Super Admin",
+    CollegeAdmin: "College Admin",
+    "College-Admin": "College Admin",
+    Admin: "Admin",
+    Faculty: "Faculty",
+    Finance: "Finance",
+    CollegeHr: "College HR",
+    HR: "College HR",
+    PlacementOfficer: "Placement Officer",
+    Placement: "Placement Officer",
+    WellbeingExecutive: "Wellbeing Executive",
+    WellbeingManager: "Wellbeing Manager",
+    FinanceManager: "Finance Manager",
+    GroundStaff: "Ground Staff",
+  };
+
+  return normalizedRole ? roleLabels[normalizedRole] ?? normalizedRole : "Requester";
+};
+
 type ExecutiveIssueRow = {
   wellbeingSupportIssueId: number;
   fullName: string;
@@ -101,8 +132,8 @@ type ExecutiveIssueRow = {
   priority: "high" | "medium" | "low";
   description: string;
   IssueStatus: "pending" | "resolved" | "rejected";
-  issueRaisedRole: WellbeingIssueRaisedRole;
   createdAt: string | null;
+  createdBy: number;
   wellbeing_categories:
     | { categoryName?: string | null }
     | { categoryName?: string | null }[]
@@ -115,6 +146,11 @@ type ExecutiveIssueRow = {
         deletedAt: string | null;
       }[]
     | null;
+};
+
+type IssueRequester = {
+  role: string;
+  profileUrl: string | null;
 };
 
 type IssueJobRow = {
@@ -169,14 +205,60 @@ function getAttachmentName(path: string) {
   return fileName.replace(/^\d+_\d+_/, "");
 }
 
+const WELLBEING_ATTACHMENT_BUCKET_CANDIDATES = [
+  "wellbeing-support-attachments",
+  "wellbeing_support_attachments",
+  "wellbeing_support_issue_attachments",
+];
+
+function getWellbeingAttachmentUrl(path: string) {
+  if (/^(https?:|blob:|data:)/i.test(path)) return path;
+  return supabase.storage
+    .from(WELLBEING_ATTACHMENT_BUCKET_CANDIDATES[0])
+    .getPublicUrl(path).data.publicUrl;
+}
+
+async function openWellbeingAttachment(attachment: EvidenceAttachment) {
+  const targetWindow = window.open("about:blank", "_blank");
+  if (targetWindow) {
+    targetWindow.opener = null;
+  }
+
+  if (/^(https?:|blob:|data:)/i.test(attachment.path)) {
+    if (targetWindow) targetWindow.location.href = attachment.path;
+    return;
+  }
+
+  for (const bucketName of WELLBEING_ATTACHMENT_BUCKET_CANDIDATES) {
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .createSignedUrl(attachment.path, 60);
+
+    if (!error && data?.signedUrl) {
+      if (targetWindow) targetWindow.location.href = data.signedUrl;
+      return;
+    }
+  }
+
+  if (targetWindow) targetWindow.location.href = attachment.url;
+}
+
+function getUserProfileUrl(profileUrl: string | null | undefined) {
+  if (!profileUrl) return null;
+  if (/^(https?:|blob:|data:|\/)/i.test(profileUrl)) return profileUrl;
+  return supabase.storage.from("user_profiles").getPublicUrl(profileUrl).data.publicUrl;
+}
+
 function toExecutiveIssue({
   row,
   job,
-  registeredCategoryId,
+  requester,
+  registeredCategoryIds,
 }: {
   row: ExecutiveIssueRow;
   job?: IssueJobRow;
-  registeredCategoryId?: number | null;
+  requester?: IssueRequester;
+  registeredCategoryIds?: number[];
 }): ExecutiveIssue {
   const categoryRelation = row.wellbeing_categories;
   const categoryName = Array.isArray(categoryRelation)
@@ -187,6 +269,8 @@ function toExecutiveIssue({
     .map((attachment) => ({
       name: getAttachmentName(attachment.attachment),
       size: "File",
+      path: attachment.attachment,
+      url: getWellbeingAttachmentUrl(attachment.attachment),
     }));
 
   return {
@@ -194,10 +278,10 @@ function toExecutiveIssue({
     supportIssueId: row.wellbeingSupportIssueId,
     student: row.fullName,
     meta: row.email,
-    role: getIssueRoleFilterLabel(row.issueRaisedRole),
+    role: requester?.role ?? "Requester",
     scopeLabel: getIssueScopeLabel(row.appliesTo),
     categoryId: row.categoryId,
-    image: "/male-student.png",
+    image: requester?.profileUrl || "/male-student.png",
     title: row.issueTitle,
     description: row.description,
     category: categoryName || "Not specified",
@@ -222,7 +306,7 @@ function toExecutiveIssue({
       job?.status === "inprogress" ||
       job?.status === "completed" ||
       job?.status === "cancelled",
-    canTakeAction: registeredCategoryId === row.categoryId,
+    canTakeAction: Boolean(registeredCategoryIds?.includes(row.categoryId)),
     jobId: job?.wellbeingIssueJobId ?? null,
     jobStatus: job?.status ?? null,
     attachments,
@@ -258,11 +342,39 @@ function DropdownPill<T extends string>({
   minWidth: string;
 }) {
   const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const selectedLabel =
     options.find((option) => option.value === value)?.label ?? value;
 
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
   return (
-    <div className="relative z-10" onMouseLeave={() => setOpen(false)}>
+    <div ref={dropdownRef} className="relative z-30">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
@@ -277,7 +389,7 @@ function DropdownPill<T extends string>({
       </button>
 
       {open ? (
-        <div className="custom-scrollbar absolute left-0 top-full z-20 mt-1 max-h-56 w-full min-w-full overflow-y-auto rounded-xl bg-white py-2 shadow-xl ring-1 ring-black/5">
+        <div className="custom-scrollbar absolute left-0 top-full z-40 mt-1 max-h-56 w-full min-w-full overflow-y-auto rounded-xl bg-white py-2 shadow-xl ring-1 ring-black/5">
           {options.map((option) => {
             const selected = option.value === value;
             return (
@@ -455,16 +567,121 @@ function CategoryBadge({ label }: { label: string }) {
   );
 }
 
-function EvidencePill({ label }: { label: string }) {
+function EvidencePill({
+  label,
+  attachments,
+  onOpen,
+}: {
+  label: string;
+  attachments: EvidenceAttachment[];
+  onOpen: () => void;
+}) {
+  const hasAttachments = attachments.length > 0;
+
+  const handleOpenAttachments = () => {
+    if (!hasAttachments) {
+      toast.error("No attachments available.");
+      return;
+    }
+
+    onOpen();
+  };
+
   return (
     <button
       type="button"
       title={label}
-      className="inline-flex min-w-[140px] items-center justify-center gap-2 rounded-full bg-[#E8F3EC] px-3 py-1 text-[13px] font-bold text-[#16284F]"
+      onClick={handleOpenAttachments}
+      disabled={!hasAttachments}
+      className={`inline-flex min-w-[140px] items-center justify-center gap-2 rounded-full px-3 py-1 text-[13px] font-bold ${
+        hasAttachments
+          ? "cursor-pointer bg-[#E8F3EC] text-[#16284F] hover:bg-[#DCEDE3]"
+          : "cursor-not-allowed bg-gray-100 text-gray-400"
+      }`}
     >
       <FilePdf size={18} weight="fill" className="text-[#FF2525]" />
-      <span className="whitespace-nowrap">View PDF</span>
+      <span className="whitespace-nowrap">{hasAttachments ? "View PDF" : "No PDF"}</span>
     </button>
+  );
+}
+
+function EvidenceAttachmentsModal({
+  issue,
+  onClose,
+}: {
+  issue: ExecutiveIssue | null;
+  onClose: () => void;
+}) {
+  const [openingPath, setOpeningPath] = useState<string | null>(null);
+
+  if (!issue) return null;
+
+  const handleOpenAttachment = async (attachment: EvidenceAttachment) => {
+    try {
+      setOpeningPath(attachment.path);
+      await openWellbeingAttachment(attachment);
+    } catch (error) {
+      const message = getSupabaseErrorMessage(error);
+      toast.error(message || "Failed to open attachment.");
+    } finally {
+      setOpeningPath(null);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-[520px] overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4">
+          <div className="min-w-0">
+            <h2 className="text-[18px] font-extrabold text-[#16284F]">Evidence Attachments</h2>
+            <p className="mt-1 truncate text-[13px] font-semibold text-gray-500">
+              {issue.title}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
+            title="Close"
+          >
+            <X size={16} weight="bold" />
+          </button>
+        </div>
+
+        <div className="custom-scrollbar max-h-[420px] space-y-3 overflow-y-auto p-5">
+          {issue.attachments.length ? (
+            issue.attachments.map((attachment) => (
+              <button
+                key={attachment.path}
+                type="button"
+                onClick={() => handleOpenAttachment(attachment)}
+                disabled={openingPath === attachment.path}
+                className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-xl border border-[#E8F0E4] bg-[#F3FCEF] p-3 text-left transition-colors hover:bg-[#E8F8EF] disabled:cursor-wait disabled:opacity-70"
+              >
+                <span className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#FCE8E8]">
+                    <FilePdf size={24} weight="fill" className="text-[#D32F2F]" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-[14px] font-bold text-[#16284F]">
+                      {attachment.name}
+                    </span>
+                    <span className="mt-1 block text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                      {openingPath === attachment.path ? "Opening..." : "Click to open PDF"}
+                    </span>
+                  </span>
+                </span>
+                <DownloadSimple size={20} weight="bold" className="shrink-0 text-[#047857]" />
+              </button>
+            ))
+          ) : (
+            <div className="rounded-xl border border-dashed border-gray-200 p-5 text-sm font-semibold text-gray-400">
+              No evidence uploaded for this issue.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -540,6 +757,7 @@ function IssuesTable({
   scope,
   roleLabel,
   onRequestJobStatus,
+  onOpenEvidence,
   actionLoadingIssueId,
   currentPage,
   totalItems,
@@ -552,6 +770,7 @@ function IssuesTable({
   scope: IssueScope;
   roleLabel: string;
   onRequestJobStatus: (issue: ExecutiveIssue, status: WellbeingIssueJobStatus) => void;
+  onOpenEvidence: (issue: ExecutiveIssue) => void;
   actionLoadingIssueId: number | null;
   currentPage: number;
   totalItems: number;
@@ -588,7 +807,13 @@ function IssuesTable({
     block: <TextCell value={issue.block} className="min-w-[70px]" />,
     room: <TextCell value={issue.room} className="min-w-[130px]" />,
     category: <CategoryBadge label={issue.category} />,
-    evidence: <EvidencePill label={issue.evidence} />,
+    evidence: (
+      <EvidencePill
+        label={issue.evidence}
+        attachments={issue.attachments}
+        onOpen={() => onOpenEvidence(issue)}
+      />
+    ),
     action: (
       <div className="flex min-w-[180px] justify-center">
         <AssignmentActionCell
@@ -875,6 +1100,7 @@ function IssuesContent({
   rows,
   selectedRole,
   onRequestJobStatus,
+  onOpenEvidence,
   actionLoadingIssueId,
   currentPage,
   itemsPerPage,
@@ -886,6 +1112,7 @@ function IssuesContent({
   rows: ExecutiveIssue[];
   selectedRole: IssueRoleFilter;
   onRequestJobStatus: (issue: ExecutiveIssue, status: WellbeingIssueJobStatus) => void;
+  onOpenEvidence: (issue: ExecutiveIssue) => void;
   actionLoadingIssueId: number | null;
   currentPage: number;
   itemsPerPage: number;
@@ -968,6 +1195,7 @@ function IssuesContent({
         scope={selectedScope}
         roleLabel={getIssueSubjectHeader(selectedRole)}
         onRequestJobStatus={onRequestJobStatus}
+        onOpenEvidence={onOpenEvidence}
         actionLoadingIssueId={actionLoadingIssueId}
         currentPage={currentPage}
         totalItems={urgentIssues.length}
@@ -997,6 +1225,7 @@ function IssuesContent({
       scope={selectedScope}
       roleLabel={getIssueSubjectHeader(selectedRole)}
       onRequestJobStatus={onRequestJobStatus}
+      onOpenEvidence={onOpenEvidence}
       actionLoadingIssueId={actionLoadingIssueId}
       currentPage={currentPage}
       totalItems={rows.length}
@@ -1009,7 +1238,20 @@ function IssuesContent({
 function NewIssuesBody() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { collegeId, wellBeingId, wellBeingCategoryId, wellBeingCategoryName } = useUser();
+  const {
+    collegeId,
+    wellBeingId,
+    wellBeingCategoryId,
+    wellBeingCategoryIds,
+    wellBeingCategoryName,
+  } = useUser();
+  const assignedCategoryIds = useMemo(
+    () =>
+      wellBeingCategoryIds.length || !wellBeingCategoryId
+        ? wellBeingCategoryIds
+        : [wellBeingCategoryId],
+    [wellBeingCategoryId, wellBeingCategoryIds],
+  );
   const [activeView, setActiveView] = useState<IssueView>(() =>
     getView(searchParams.get("issueView")),
   );
@@ -1024,6 +1266,8 @@ function NewIssuesBody() {
     issue: ExecutiveIssue;
     status: WellbeingIssueJobStatus;
   } | null>(null);
+  const [selectedEvidenceIssue, setSelectedEvidenceIssue] =
+    useState<ExecutiveIssue | null>(null);
   const [counts, setCounts] =
     useState<WellbeingExecutiveNewIssueCounts>(defaultIssueCounts);
 
@@ -1034,7 +1278,7 @@ function NewIssuesBody() {
       try {
         const nextCounts = await fetchWellbeingExecutiveNewIssueCounts(
           collegeId,
-          wellBeingCategoryId,
+          assignedCategoryIds,
           selectedRole === "all" ? null : selectedRole,
           wellBeingId,
         );
@@ -1043,12 +1287,17 @@ function NewIssuesBody() {
         setCounts(defaultIssueCounts);
       }
     },
-    [collegeId, selectedRole, wellBeingCategoryId, wellBeingId],
+    [assignedCategoryIds, collegeId, selectedRole, wellBeingId],
   );
 
   const loadIssues = useMemo(
     () => async () => {
       if (!collegeId) return;
+
+      if (!assignedCategoryIds.length) {
+        setIssueRows([]);
+        return;
+      }
 
       try {
         let assignedIssueIds: number[] | null = null;
@@ -1101,8 +1350,8 @@ function NewIssuesBody() {
             priority,
             description,
             IssueStatus,
-            issueRaisedRole,
             createdAt,
+            createdBy,
             wellbeing_categories (
               categoryName
             ),
@@ -1118,12 +1367,9 @@ function NewIssuesBody() {
           .eq("IssueStatus", "pending")
           .eq("isActive", true)
           .eq("is_deleted", false)
+          .in("categoryId", assignedCategoryIds)
           .in("issueVisibilityRole", ["wellbeingexecutive", "both"])
           .order("createdAt", { ascending: false });
-
-        if (selectedRole !== "all") {
-          query = query.eq("issueRaisedRole", selectedRole);
-        }
 
         if (selectedScope !== "all") {
           query = query.in("appliesTo", [selectedScope, "both"]);
@@ -1143,6 +1389,53 @@ function NewIssuesBody() {
               assignedIssueIdSet.has(issue.wellbeingSupportIssueId),
             )
           : fetchedRows;
+        const requesterUserIds = Array.from(
+          new Set(rows.map((issue) => issue.createdBy).filter(Boolean)),
+        );
+        const { data: requesterUsers, error: requesterUsersError } =
+          requesterUserIds.length
+            ? await supabase
+                .from("users")
+                .select("userId, role")
+                .in("userId", requesterUserIds)
+            : { data: [], error: null };
+
+        if (requesterUsersError) throwSupabaseError(requesterUsersError);
+
+        const { data: requesterProfiles, error: requesterProfilesError } =
+          requesterUserIds.length
+            ? await supabase
+                .from("user_profile")
+                .select("userId, profileUrl, createdAt")
+                .in("userId", requesterUserIds)
+                .eq("is_deleted", false)
+                .is("deletedAt", null)
+                .order("createdAt", { ascending: false })
+            : { data: [], error: null };
+
+        if (requesterProfilesError) throwSupabaseError(requesterProfilesError);
+
+        const rawRoleByUserId = new Map(
+          ((requesterUsers ?? []) as { userId: number; role: string | null }[]).map(
+            (user) => [user.userId, user.role],
+          ),
+        );
+        const profileUrlByUserId = new Map<number, string | null>();
+        (
+          (requesterProfiles ?? []) as {
+            userId: number;
+            profileUrl: string | null;
+            createdAt?: string | null;
+          }[]
+        ).forEach((profile) => {
+          if (!profileUrlByUserId.has(profile.userId)) {
+            profileUrlByUserId.set(profile.userId, getUserProfileUrl(profile.profileUrl));
+          }
+        });
+        const filteredRows =
+          selectedRole === "all"
+            ? rows
+            : rows.filter((issue) => rawRoleByUserId.get(issue.createdBy) === selectedRole);
         const issueIds = rows.map((issue) => issue.wellbeingSupportIssueId);
         const { data: jobs, error: jobsError } =
           wellBeingId && issueIds.length
@@ -1168,11 +1461,15 @@ function NewIssuesBody() {
         );
 
         setIssueRows(
-          rows.map((row) =>
+          filteredRows.map((row) =>
             toExecutiveIssue({
               row,
               job: jobByIssueId.get(row.wellbeingSupportIssueId),
-              registeredCategoryId: wellBeingCategoryId,
+              requester: {
+                role: formatRequesterRole(rawRoleByUserId.get(row.createdBy)),
+                profileUrl: profileUrlByUserId.get(row.createdBy) ?? null,
+              },
+              registeredCategoryIds: assignedCategoryIds,
             }),
           ),
         );
@@ -1182,7 +1479,7 @@ function NewIssuesBody() {
         setIssueRows([]);
       }
     },
-    [activeView, collegeId, selectedRole, selectedScope, wellBeingCategoryId, wellBeingId],
+    [activeView, assignedCategoryIds, collegeId, selectedRole, selectedScope, wellBeingId],
   );
 
   useEffect(() => {
@@ -1196,6 +1493,29 @@ function NewIssuesBody() {
   useEffect(() => {
     loadIssues();
   }, [loadIssues]);
+
+  useEffect(() => {
+    const refreshIssues = () => {
+      loadCounts();
+      loadIssues();
+    };
+
+    const refreshIssuesOnFocus = () => {
+      if (document.visibilityState === "visible") {
+        refreshIssues();
+      }
+    };
+
+    window.addEventListener("wellbeing-issue-created", refreshIssues);
+    window.addEventListener("focus", refreshIssues);
+    document.addEventListener("visibilitychange", refreshIssuesOnFocus);
+
+    return () => {
+      window.removeEventListener("wellbeing-issue-created", refreshIssues);
+      window.removeEventListener("focus", refreshIssues);
+      document.removeEventListener("visibilitychange", refreshIssuesOnFocus);
+    };
+  }, [loadCounts, loadIssues]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -1213,6 +1533,18 @@ function NewIssuesBody() {
           schema: "public",
           table: "wellbeing_support_issues",
           filter: `collegeId=eq.${collegeId}`,
+        },
+        () => {
+          loadCounts();
+          loadIssues();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "wellbeing_issue_jobs",
         },
         () => {
           loadCounts();
@@ -1378,6 +1710,7 @@ function NewIssuesBody() {
           rows={issueRows}
           selectedRole={selectedRole}
           onRequestJobStatus={(issue, status) => setPendingJobAction({ issue, status })}
+          onOpenEvidence={setSelectedEvidenceIssue}
           actionLoadingIssueId={actionLoadingIssueId}
           currentPage={currentPage}
           itemsPerPage={NEW_ISSUES_ITEMS_PER_PAGE}
@@ -1385,6 +1718,10 @@ function NewIssuesBody() {
         />
       </section>
       <WellbeingExecutiveRight />
+      <EvidenceAttachmentsModal
+        issue={selectedEvidenceIssue}
+        onClose={() => setSelectedEvidenceIssue(null)}
+      />
       <ConfirmDeleteModal
         open={pendingJobAction !== null}
         onConfirm={confirmPendingJobAction}

@@ -8,6 +8,9 @@ export async function getUserProfilePhoto(userId: number) {
     .select("userProfileId, profileUrl")
     .eq("userId", userId)
     .eq("is_deleted", false)
+    .is("deletedAt", null)
+    .order("createdAt", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error && error.code !== "PGRST116") throw error;
@@ -23,7 +26,7 @@ async function deleteImageByUrl(url: string, userId: number) {
     
     if (!url.includes(searchPath)) return;
 
-    let extractedPath = url.split(searchPath)[1]?.split('?')[0];
+    const extractedPath = url.split(searchPath)[1]?.split('?')[0];
     
     if (extractedPath) {
       const decodedPath = decodeURIComponent(extractedPath); 
@@ -52,11 +55,11 @@ async function uploadProfilePhoto(file: File, userId: number): Promise<string> {
 
   let attempt = 0;
   const maxAttempts = 2;
-  let lastError: any = null;
+  let lastError: unknown = null;
 
   while (attempt < maxAttempts) {
       try {
-          const { data, error: uploadError } = await supabase.storage
+          const { error: uploadError } = await supabase.storage
               .from("user_profiles")
               .upload(filePath, file, { contentType: file.type, upsert: false });
 
@@ -70,7 +73,8 @@ async function uploadProfilePhoto(file: File, userId: number): Promise<string> {
           if (attempt < maxAttempts) await new Promise(resolve => setTimeout(resolve, 500));
       }
   }
-  throw new Error(`Storage Error: ${lastError?.message || "Unknown error"}`);
+  const message = lastError instanceof Error ? lastError.message : "Unknown error";
+  throw new Error(`Storage Error: ${message}`);
 }
 
 export async function upsertUserProfilePhoto(userId: number, file: File | string, oldProfileUrl: string | null) {
@@ -81,7 +85,7 @@ export async function upsertUserProfilePhoto(userId: number, file: File | string
       finalUrl = await uploadProfilePhoto(file, userId);
     }
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("user_profile")
       .upsert(
         { userId, profileUrl: finalUrl, updatedAt: now(), createdAt: now(), is_deleted: false },

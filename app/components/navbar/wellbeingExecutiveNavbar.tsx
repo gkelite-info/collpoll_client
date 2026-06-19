@@ -46,6 +46,14 @@ type WellbeingExecutiveNavbarProps = {
   newIssueCountMode?: "executive" | "manager";
 };
 
+const normalizeCategoryName = (categoryName: string | null | undefined) =>
+  categoryName?.toLowerCase().replace(/[^a-z]/g, "") ?? "";
+
+const isSafetyAndSecurityCategory = (categoryName: string | null | undefined) => {
+  const normalizedCategory = normalizeCategoryName(categoryName);
+  return normalizedCategory === "safetyandsecurity" || normalizedCategory === "safetysecurity";
+};
+
 export default function WellbeingExecutiveNavbar({
   onClose,
   basePath = "/wellbeing-executive",
@@ -60,8 +68,17 @@ export default function WellbeingExecutiveNavbar({
   const iconSize = 18;
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { collegeId, wellBeingCategoryId } = useUser();
+  const {
+    collegeId,
+    wellBeingCategoryId,
+    wellBeingCategoryIds,
+    wellBeingCategoryName,
+    wellBeingCategoryNames,
+  } = useUser();
   const [newIssuesCount, setNewIssuesCount] = useState(0);
+  const canViewStaffAttendance = [wellBeingCategoryName, ...wellBeingCategoryNames].some(
+    isSafetyAndSecurityCategory,
+  );
 
   const loadNewIssueCount = useCallback(async () => {
     if (!collegeId) return;
@@ -75,16 +92,38 @@ export default function WellbeingExecutiveNavbar({
 
       const counts = await fetchWellbeingExecutiveNewIssueCounts(
         collegeId,
-        wellBeingCategoryId,
+        wellBeingCategoryIds.length ? wellBeingCategoryIds : wellBeingCategoryId,
       );
       setNewIssuesCount(counts.my);
     } catch {
       setNewIssuesCount(0);
     }
-  }, [collegeId, newIssueCountMode, wellBeingCategoryId]);
+  }, [collegeId, newIssueCountMode, wellBeingCategoryId, wellBeingCategoryIds]);
 
   useEffect(() => {
     loadNewIssueCount();
+  }, [loadNewIssueCount]);
+
+  useEffect(() => {
+    const refreshNewIssueCount = () => {
+      loadNewIssueCount();
+    };
+
+    const refreshNewIssueCountOnFocus = () => {
+      if (document.visibilityState === "visible") {
+        loadNewIssueCount();
+      }
+    };
+
+    window.addEventListener("wellbeing-issue-created", refreshNewIssueCount);
+    window.addEventListener("focus", refreshNewIssueCount);
+    document.addEventListener("visibilitychange", refreshNewIssueCountOnFocus);
+
+    return () => {
+      window.removeEventListener("wellbeing-issue-created", refreshNewIssueCount);
+      window.removeEventListener("focus", refreshNewIssueCount);
+      document.removeEventListener("visibilitychange", refreshNewIssueCountOnFocus);
+    };
   }, [loadNewIssueCount]);
 
   useEffect(() => {
@@ -217,7 +256,7 @@ export default function WellbeingExecutiveNavbar({
         ),
         label: "Staff Attendance",
         path: `${base}/staff-attendance`,
-        hidden: !showStaffAttendance,
+        hidden: !showStaffAttendance || !canViewStaffAttendance,
       },
       {
         icon: (isActive) => (
@@ -229,7 +268,7 @@ export default function WellbeingExecutiveNavbar({
     ];
 
     return navItems.filter((item) => !item.hidden);
-  }, [base, newIssuesCount, showLeaveRequest, showStaffAttendance]);
+  }, [base, canViewStaffAttendance, newIssuesCount, showLeaveRequest, showStaffAttendance]);
 
   const prefetchRoute = useCallback(
     (path: string) => {

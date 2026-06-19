@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useUser } from "@/app/utils/context/UserContext";
 import { staffAttendanceRecords, type StaffAttendanceRecord } from "../data";
 import GroundStaffMembersScreen from "./list/GroundStaffMembersScreen";
 import StaffAttendanceListScreen from "./list/StaffAttendanceListScreen";
@@ -14,10 +15,28 @@ const STAFF_ATTENDANCE_PATH = "/wellbeing-executive/staff-attendance";
 const getProfileSection = (value: string | null): ProfileSection =>
   value === "history" ? "history" : "profile";
 
+const normalizeCategoryName = (categoryName: string | null | undefined) =>
+  categoryName?.toLowerCase().replace(/[^a-z]/g, "") ?? "";
+
+const isSafetyAndSecurityCategory = (categoryName: string | null | undefined) => {
+  const normalizedCategory = normalizeCategoryName(categoryName);
+  return normalizedCategory === "safetyandsecurity" || normalizedCategory === "safetysecurity";
+};
+
 export default function StaffAttendancePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { loading, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
   const [records, setRecords] = useState<StaffAttendanceRecord[]>(staffAttendanceRecords);
+  const canViewStaffAttendance = [wellBeingCategoryName, ...wellBeingCategoryNames].some(
+    isSafetyAndSecurityCategory,
+  );
+
+  useEffect(() => {
+    if (!loading && !canViewStaffAttendance) {
+      router.replace("/wellbeing-executive");
+    }
+  }, [canViewStaffAttendance, loading, router]);
 
   const selectedStaffId = Number(searchParams.get("staffId") ?? records[0]?.id);
   const selectedStaff = useMemo(
@@ -26,6 +45,10 @@ export default function StaffAttendancePage() {
   );
   const view = searchParams.get("view");
   const profileSection = getProfileSection(searchParams.get("section"));
+
+  if (loading || !canViewStaffAttendance) {
+    return null;
+  }
 
   const openDirectory = (status?: StaffAttendanceRecord["status"]) => {
     const params = new URLSearchParams({ view: "directory" });

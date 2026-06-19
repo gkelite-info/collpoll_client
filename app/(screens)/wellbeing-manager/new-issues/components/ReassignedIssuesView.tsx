@@ -23,7 +23,6 @@ type SupportIssueRow = {
     categoryId: number;
     priority: "high" | "medium" | "low";
     issueVisibilityRole?: string | null;
-    issueRaisedRole: string;
     createdBy: number;
     createdAt: string | null;
 };
@@ -58,7 +57,6 @@ type ReassignedIssueRow = {
     description: string;
     assignedTo: string;
     priority: "high" | "medium" | "low";
-    issueRaisedRole: string;
     createdBy: number;
     createdAt: string | null;
 };
@@ -175,6 +173,10 @@ function ReassignedIssuesContent() {
     const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>("all");
     const [selectedPriority, setSelectedPriority] = useState<PriorityFilter>("all");
     const [isLoading, setIsLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState<{
+        ticketId: string;
+        action: "view" | "reassign";
+    } | null>(null);
 
     const loadCategories = useCallback(async () => {
         if (!collegeId) {
@@ -229,7 +231,6 @@ function ReassignedIssuesContent() {
                     categoryId,
                     priority,
                     issueVisibilityRole,
-                    issueRaisedRole,
                     createdBy,
                     createdAt
                 `)
@@ -335,6 +336,7 @@ function ReassignedIssuesContent() {
                     .select("userId, profileUrl")
                     .in("userId", createdByIds)
                     .eq("is_deleted", false)
+                    .is("deletedAt", null)
                 : { data: [], error: null };
 
             if (profilesError) {
@@ -386,7 +388,6 @@ function ReassignedIssuesContent() {
                     description: issue.description,
                     assignedTo,
                     priority: issue.priority,
-                    issueRaisedRole: issue.issueRaisedRole,
                     createdBy: issue.createdBy,
                     createdAt: issue.createdAt,
                 });
@@ -468,6 +469,18 @@ function ReassignedIssuesContent() {
 
     const highPriorityCount = filteredReassignedIssues.filter((issue) => issue.priority === "high").length;
 
+    const handleViewTicket = (ticketId: string) => {
+        setActionLoading({ ticketId, action: "view" });
+        router.push(`?tab=reassigned&ticketId=${encodeURIComponent(ticketId.replace("#", ""))}`);
+        window.setTimeout(() => setActionLoading(null), 500);
+    };
+
+    const handleOpenReassign = (ticketId: string) => {
+        setActionLoading({ ticketId, action: "reassign" });
+        setReassignModalTargetId(ticketId);
+        window.setTimeout(() => setActionLoading(null), 250);
+    };
+
     const columns = [
         { title: "TICKET ID", key: "ticketId" },
         { title: "CATEGORY", key: "category" },
@@ -483,19 +496,36 @@ function ReassignedIssuesContent() {
         issueTitle: <span className="font-bold text-[#16284F] text-[13px] w-[240px] block truncate">{row.issueTitle}</span>,
         description: <span className="text-gray-500 text-[12px] w-[340px] block truncate leading-relaxed">{row.description}</span>,
         assignedTo: <span className="text-gray-600 text-[13px] w-[180px] block font-medium truncate">{row.assignedTo}</span>,
-        action:
-            <button className="text-gray-700 flex gap-2 hover:text-[#16284F] text-[13px] font-semibold underline decoration-gray-300">
-                <span
-                    onClick={() => router.push(`?tab=reassigned&ticketId=${encodeURIComponent(row.ticketId.toString().replace('#', ''))}`)}
-                    className="bg-[#16284F] cursor-pointer text-[#ffffff] p-1.5 rounded-full">
+        action: (
+            <div className="flex gap-2 text-[13px] font-semibold text-gray-700">
+                <button
+                    type="button"
+                    onClick={() => handleViewTicket(row.ticketId)}
+                    disabled={actionLoading !== null}
+                    className={`rounded-full bg-[#16284F] p-1.5 text-white transition-opacity disabled:cursor-wait ${
+                        actionLoading?.ticketId === row.ticketId && actionLoading.action === "view"
+                            ? "animate-pulse opacity-70"
+                            : "cursor-pointer hover:opacity-90"
+                    }`}
+                    title="View ticket"
+                >
                     <EyeIcon size={16} weight="fill" />
-                </span>
-                <span
-                    onClick={() => setReassignModalTargetId(row.ticketId as string)}
-                    className="bg-[#16284F] cursor-pointer text-[#ffffff] p-1.5 rounded-full">
+                </button>
+                <button
+                    type="button"
+                    onClick={() => handleOpenReassign(row.ticketId)}
+                    disabled={actionLoading !== null}
+                    className={`rounded-full bg-[#16284F] p-1.5 text-white transition-opacity disabled:cursor-wait ${
+                        actionLoading?.ticketId === row.ticketId && actionLoading.action === "reassign"
+                            ? "animate-pulse opacity-70"
+                            : "cursor-pointer hover:opacity-90"
+                    }`}
+                    title="Reassign ticket"
+                >
                     <RepeatIcon size={16} weight="fill" />
-                </span>
-            </button>
+                </button>
+            </div>
+        ),
     }));
 
     const totalItems = filteredReassignedIssues.length;
@@ -505,7 +535,10 @@ function ReassignedIssuesContent() {
         return (
             <TicketDetailsView
                 ticketId={`#${selectedTicketId}`}
-                onBack={() => router.push('?tab=reassigned')}
+                onBack={() => {
+                    setActionLoading(null);
+                    router.push("?tab=reassigned");
+                }}
             />
         );
     }
