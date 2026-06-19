@@ -61,7 +61,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
                   Class Title
                 </label>
                 <div className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-600 bg-gray-50">
-                  {`${lesson.degree} - Year ${lesson.year} - Section ${lesson.section ?? "N/A"} ${lesson.title}`}
+                  {`${lesson.degree ? lesson.degree + " - " : ""}${lesson.year ? "Year " + lesson.year + " - " : ""}Section ${lesson.section ?? "N/A"} - ${lesson.title}`}
                 </div>
               </div>
 

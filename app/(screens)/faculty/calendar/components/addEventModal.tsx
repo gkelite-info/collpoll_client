@@ -214,8 +214,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       ? String(y)
       : "";
 
+  const hasInitializedRef = useRef(false);
+
   useEffect(() => {
     if (!isOpen) {
+      hasInitializedRef.current = false;
       resetFormState();
     }
   }, [isOpen]);
@@ -586,45 +589,43 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   }, [isOpen, onClose, handleSave]);
 
   useEffect(() => {
-    if (!value || mode !== "edit") return;
+    if (isOpen && value && mode === "edit" && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      
+      setSelectedType(value.type);
+      setRoomNo(value.roomNo ?? "");
+      setCollegeRoomId(value.collegeRoomId ?? null);
+      setDate(value.date ?? getTodayDateString());
 
-    setSelectedType(value.type);
-    setRoomNo(value.roomNo ?? "");
-    setCollegeRoomId(value.collegeRoomId ?? null);
-    setDate(value.date ?? getTodayDateString());
+      setStartHour(value.startHour ?? "09");
+      setStartMinute(value.startMinute ?? "00");
+      setStartPeriod(value.startPeriod ?? "AM");
 
-    setStartHour(value.startHour ?? "09");
-    setStartMinute(value.startMinute ?? "00");
-    setStartPeriod(value.startPeriod ?? "AM");
+      setEndHour(value.endHour ?? "10");
+      setEndMinute(value.endMinute ?? "00");
+      setEndPeriod(value.endPeriod ?? "AM");
 
-    setEndHour(value.endHour ?? "10");
-    setEndMinute(value.endMinute ?? "00");
-    setEndPeriod(value.endPeriod ?? "AM");
+      setTitle(value.title ?? "");
+      setMeetingLink(value.meetingLink ?? "");
+      setMeetingId(value.meetingId ?? "");
+      setMeetingPassword(value.meetingPassword ?? "");
 
-    setTitle(value.title ?? "");
-    setMeetingLink(value.meetingLink ?? "");
-    setMeetingId(value.meetingId ?? "");
-    setMeetingPassword(value.meetingPassword ?? "");
+      if (value.meetingId) setMeetingPlatform("zoom");
+      else if (value.meetingLink?.includes("meet.google"))
+        setMeetingPlatform("meet");
+      else setMeetingPlatform("others");
 
-    if (value.meetingId) setMeetingPlatform("zoom");
-    else if (value.meetingLink?.includes("meet.google"))
-      setMeetingPlatform("meet");
-    else setMeetingPlatform("others");
-
-    setTopicId(value.topicId ?? null);
-    if (value.semesterId) {
-      setSemester(value.semesterId);
-      setIsSemesterAuto(false);
+      setTopicId(value.topicId ?? null);
+      if (value.semesterId) {
+        setSemester(value.semesterId);
+        setIsSemesterAuto(false);
+      }
+      
+      if (Array.isArray(value.sectionIds)) {
+        setEditSectionIds(value.sectionIds);
+      }
     }
-  }, [value, mode]);
-
-  useEffect(() => {
-    if (!value || mode !== "edit") return;
-
-    if (Array.isArray(value.sectionIds)) {
-      setEditSectionIds(value.sectionIds);
-    }
-  }, [value, mode]);
+  }, [isOpen, value, mode]);
 
   useEffect(() => {
     if (!editSectionIds) return;

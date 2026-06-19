@@ -3,6 +3,31 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
+export function recalculateAttendancePercentage(
+  oldAttendance: string,
+  newRecordStatus: string,
+  oldStats: { present: number; total: number }
+) {
+  const isPresentStatus = (status: string) => status === "PRESENT" || status === "LATE";
+  const wasPresent = oldAttendance === "Present" || oldAttendance === "Late";
+  const isNowPresent = isPresentStatus(newRecordStatus);
+  const wasNotMarked = oldAttendance === "Not Marked";
+
+  let newPresent = oldStats.present;
+  let newTotal = oldStats.total;
+
+  if (wasNotMarked) {
+    newTotal += 1;
+    if (isNowPresent) newPresent += 1;
+  } else {
+    if (wasPresent && !isNowPresent) newPresent -= 1;
+    else if (!wasPresent && isNowPresent) newPresent += 1;
+  }
+
+  const percentage = newTotal > 0 ? Math.round((newPresent / newTotal) * 100) : 0;
+  return { newStats: { present: newPresent, total: newTotal }, newPercentage: `${percentage}%` };
+}
+
 export function useAttendanceRealtime(
   calendarEventId: number | null,
   onAttendanceMarked: (payload: any) => void

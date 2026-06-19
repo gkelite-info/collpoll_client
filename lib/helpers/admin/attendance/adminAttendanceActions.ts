@@ -28,6 +28,7 @@ export interface UIStudent {
   | "Late"
   | "Class Cancel";
   reason: string;
+  stats?: { present: number; total: number };
 }
 
 interface AttendancePayload {
@@ -267,6 +268,7 @@ export async function getStudentsForClass(
       percentage: `${pct}%`,
       attendance: status as any,
       reason: reason,
+      stats: { present: stats.present, total: stats.total },
     };
   });
 }

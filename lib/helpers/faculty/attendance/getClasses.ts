@@ -15,7 +15,7 @@ export interface UpcomingLesson {
   department: { name: string }[];
   sessionStatus?: "Scheduled" | "Accepted" | "Cancel";
   degree: string;
-  year: number;
+  year: number | string;
 }
 
 function convertTo12HourFormat(time: string): string {
@@ -170,14 +170,14 @@ calendar_event_section (
       const degree = safeGet(
         sectionRow.education,
         "collegeEducationType",
-        "B.Tech",
+        "",
       );
       const yearString = safeGet(
         sectionRow.yearData,
         "collegeAcademicYear",
-        "1",
+        "",
       );
-      const year = parseInt(yearString) || 1;
+      const year = yearString ? (parseInt(yearString) || yearString) : "";
       const subjectName = safeGet(
         event.subjectData,
         "subjectName",
@@ -266,10 +266,10 @@ export async function getClassDetails(
   const degree = safeGet(
     firstSection?.education,
     "collegeEducationType",
-    "B.Tech",
+    "",
   );
-  const yearString = safeGet(firstSection?.yearData, "collegeAcademicYear");
-  const year = parseInt(yearString) || 1;
+  const yearString = safeGet(firstSection?.yearData, "collegeAcademicYear", "");
+  const year = yearString ? (parseInt(yearString) || yearString) : "";
 
   const subjectName = safeGet(
     event.subjectData,

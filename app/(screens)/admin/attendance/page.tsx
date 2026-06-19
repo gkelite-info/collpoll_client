@@ -29,6 +29,7 @@ import { getBatchSectionStats } from "@/lib/helpers/admin/attendance/getBatchSec
 import { supabase } from "@/lib/supabaseClient";
 import { AcademicSectionsSkeleton } from "../academics/shimmer/academicSectionsSkeleton";
 import { StatsCardsSkeleton } from "./shimmers/statsCardsSkeleton";
+import { useAdminAttendanceRealtime } from "@/lib/helpers/faculty/attendance/liveAttendanceAPI";
 
 interface ExtendedDepartment extends Department {
   id: string;
@@ -98,6 +99,7 @@ const AttendancePage = () => {
   const [cards, setCards] = useState<AcademicCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [realtimeTrigger, setRealtimeTrigger] = useState(0);
 
   const [adminContext, setAdminContext] = useState<{
     adminId: number;
@@ -235,7 +237,8 @@ const AttendancePage = () => {
 
     const loadStats = async () => {
       try {
-        setStatsLoading(true);
+        // Only show loader on initial load
+        if (realtimeTrigger === 0) setStatsLoading(true);
 
         const data = await fetchAttendanceStats({
           collegeId: adminContext.collegeId,
@@ -257,20 +260,32 @@ const AttendancePage = () => {
     return () => {
       isMounted = false;
     };
-  }, [adminContext]);
+  }, [adminContext, realtimeTrigger]);
+
+  useAdminAttendanceRealtime((payload) => {
+    // When a scan happens, increment trigger to debounce a refresh
+    setRealtimeTrigger((prev) => prev + 1);
+  });
 
   useEffect(() => {
     if (!userId || adminLoading || !adminContext) return;
-    // if (adminContext.collegeEducationId && (!education || educations.length === 0)) {
-    //   return;
-    // }
     loadCardsOnly();
   }, [userId, adminLoading, adminContext, currentPage, debouncedSearch, apiFiltersStr]);
 
-  const loadCardsOnly = async () => {
+  // Debounced refresh for real-time dashboard updates (waits 2.5s after last scan)
+  useEffect(() => {
+    if (realtimeTrigger > 0 && adminContext?.collegeId) {
+      const timer = setTimeout(() => {
+        loadCardsOnly(false); // background refresh
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [realtimeTrigger, adminContext]);
+
+  const loadCardsOnly = async (showLoader = true) => {
     if (!adminContext?.collegeId) return;
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       // const { collegeId } = await fetchAdminContext(userId!);
 
       const { data, totalCount } = await getAdminAcademicsCards(

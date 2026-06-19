@@ -238,49 +238,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       ? String(y)
       : "";
 
-  useEffect(() => {
-    if (!isOpen || !value) return;
-    setRoomNo(value.roomNo || "");
-    setCollegeRoomId(value.collegeRoomId ?? null);
-    setDegree(value.degree || "");
-    setSelectedSections(value.sections || []);
-    setYear(normalizeYear(value.year));
-    setSelectedType(value.type || "class");
-    setDate(value.date || getTodayDateString());
-    if (typeof value.subjectId === "number") {
-      setSubjectId(value.subjectId);
-    }
-    if (typeof value.topicId === "number") {
-      setTopicId(value.topicId);
-    }
-    if (isEditMode && typeof value.semester === "number") {
-      setSemester(value.semester);
-    }
-
-    setMeetingTitle(value.title ?? "");
-    setMeetingLink(value.meetingLink ?? "");
-    setMeetingId(value.meetingId ?? "");
-    setMeetingPassword(value.meetingPassword ?? "");
-
-    if (value.meetingId) setMeetingPlatform("zoom");
-    else if (value.meetingLink?.includes("meet.google"))
-      setMeetingPlatform("meet");
-    else setMeetingPlatform("others");
-
-    if (value.startTime && value.endTime) {
-      const start = parse24HourTo12Hour(value.startTime);
-      const end = parse24HourTo12Hour(value.endTime);
-      setStartHour(start.hour);
-      setStartMinute(start.minute);
-      setStartPeriod(start.period);
-      setEndHour(end.hour);
-      setEndMinute(end.minute);
-      setEndPeriod(end.period);
-    }
-  }, [isOpen, value]);
+  const hasInitializedRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen) {
+      hasInitializedRef.current = false;
       setRoomNo("");
       setDegree("");
       setSelectedSections([]);
@@ -304,8 +266,52 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       setMeetingId("");
       setMeetingPassword("");
       setMeetingPlatform("meet");
+      return;
     }
-  }, [isOpen]);
+
+    if (isOpen && value && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      setRoomNo(value.roomNo || "");
+      setCollegeRoomId(value.collegeRoomId ?? null);
+      setDegree(value.degree || "");
+      setSelectedSections(value.sections || []);
+      setYear(normalizeYear(value.year));
+      setSelectedType(value.type || "class");
+      setDate(value.date || getTodayDateString());
+      if (typeof value.subjectId === "number") {
+        setSubjectId(value.subjectId);
+      }
+      if (typeof value.topicId === "number") {
+        setTopicId(value.topicId);
+      }
+      if (isEditMode && typeof value.semester === "number") {
+        setSemester(value.semester);
+      }
+
+      setMeetingTitle(value.title ?? "");
+      setMeetingLink(value.meetingLink ?? "");
+      setMeetingId(value.meetingId ?? "");
+      setMeetingPassword(value.meetingPassword ?? "");
+
+      if (value.meetingId) setMeetingPlatform("zoom");
+      else if (value.meetingLink?.includes("meet.google"))
+        setMeetingPlatform("meet");
+      else setMeetingPlatform("others");
+
+      if (value.startTime && value.endTime) {
+        const start = parse24HourTo12Hour(value.startTime);
+        const end = parse24HourTo12Hour(value.endTime);
+        setStartHour(start.hour);
+        setStartMinute(start.minute);
+        setStartPeriod(start.period);
+        setEndHour(end.hour);
+        setEndMinute(end.minute);
+        setEndPeriod(end.period);
+      }
+    }
+  }, [isOpen, value, isEditMode]);
+
+
 
   useEffect(() => {
     if (!isEditMode) return;
