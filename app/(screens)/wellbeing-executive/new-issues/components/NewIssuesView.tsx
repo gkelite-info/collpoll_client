@@ -1,11 +1,11 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CaretDown, DownloadSimple, FilePdf, ListDashes, X } from "@phosphor-icons/react";
 import toast, { Toaster } from "react-hot-toast";
 import TableComponent from "@/app/utils/table/table";
+import { Avatar } from "@/app/utils/Avatar";
 import WellbeingExecutiveRight from "../../components/WellbeingExecutiveRight";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
@@ -28,6 +28,11 @@ type IssueRoleOption = {
   value: IssueRoleFilter;
 };
 
+type IssueCategoryOption = {
+  id: number;
+  name: string;
+};
+
 type EvidenceAttachment = {
   name: string;
   size: string;
@@ -43,7 +48,7 @@ type ExecutiveIssue = {
   role: string;
   scopeLabel: string;
   categoryId: number;
-  image: string;
+  image: string | null;
   title: string;
   description: string;
   category: string;
@@ -281,7 +286,7 @@ function toExecutiveIssue({
     role: requester?.role ?? "Requester",
     scopeLabel: getIssueScopeLabel(row.appliesTo),
     categoryId: row.categoryId,
-    image: requester?.profileUrl || "/male-student.png",
+    image: requester?.profileUrl ?? null,
     title: row.issueTitle,
     description: row.description,
     category: categoryName || "Not specified",
@@ -315,6 +320,40 @@ function toExecutiveIssue({
 
 function getView(value: string | null): IssueView {
   return value === "my" || value === "urgent" ? value : "all";
+}
+
+function getSelectedCategoryId(value: string | null, categoryIds: number[]) {
+  const parsedCategoryId = value ? Number(value) : null;
+  return parsedCategoryId && categoryIds.includes(parsedCategoryId)
+    ? parsedCategoryId
+    : null;
+}
+
+function normalizeCategoryIds(categoryIds: Array<number | string | null | undefined>) {
+  return Array.from(
+    new Set(
+      categoryIds
+        .map((categoryId) => Number(categoryId))
+        .filter((categoryId) => Number.isFinite(categoryId) && categoryId > 0),
+    ),
+  );
+}
+
+function applyCategoryFilter<T extends { eq: (column: string, value: number) => T; or: (filters: string) => T }>(
+  query: T,
+  categoryIds: number[] | null,
+) {
+  if (!categoryIds?.length) {
+    return query;
+  }
+
+  if (categoryIds.length === 1) {
+    return query.eq("categoryId", categoryIds[0]);
+  }
+
+  return query.or(
+    categoryIds.map((categoryId) => `categoryId.eq.${categoryId}`).join(","),
+  );
 }
 
 function CountBadge({ count }: { count: number }) {
@@ -465,6 +504,9 @@ function IssuesHeader({
   categoryName,
   selectedRole,
   onRoleChange,
+  categoryOptions,
+  selectedCategoryId,
+  onCategoryChange,
 }: {
   activeView: IssueView;
   onChange: (view: IssueView) => void;
@@ -474,8 +516,12 @@ function IssuesHeader({
   categoryName?: string | null;
   selectedRole: IssueRoleFilter;
   onRoleChange: (role: IssueRoleFilter) => void;
+  categoryOptions: IssueCategoryOption[];
+  selectedCategoryId: number | null;
+  onCategoryChange: (categoryId: number | null) => void;
 }) {
   const roleLabel = getIssueRoleFilterLabel(selectedRole).toLowerCase();
+  const showCategoryButtons = categoryOptions.length > 1;
 
   return (
     <div className="flex shrink-0 flex-col gap-3">
@@ -491,6 +537,35 @@ function IssuesHeader({
           Manage and resolve {roleLabel} issues efficiently
         </p>
       </div>
+      {showCategoryButtons ? (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => onCategoryChange(null)}
+            className={`h-9 cursor-pointer rounded-md px-4 text-[13px] font-bold transition-colors ${
+              selectedCategoryId === null
+                ? "bg-[#43C17A] text-white"
+                : "bg-[#E8F3EC] text-[#16284F] hover:bg-[#DCEDE3]"
+            }`}
+          >
+            All Categories
+          </button>
+          {categoryOptions.map((category) => (
+            <button
+              key={category.id}
+              type="button"
+              onClick={() => onCategoryChange(category.id)}
+              className={`h-9 cursor-pointer rounded-md px-4 text-[13px] font-bold transition-colors ${
+                selectedCategoryId === category.id
+                  ? "bg-[#43C17A] text-white"
+                  : "bg-[#E8F3EC] text-[#16284F] hover:bg-[#DCEDE3]"
+              }`}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="relative z-10 flex items-center justify-between gap-4 overflow-visible pb-2">
         <div className="flex shrink-0 items-center whitespace-nowrap text-[18px] font-bold leading-none">
           {tabs.map((tab, index) => (
@@ -519,21 +594,7 @@ function IssuesHeader({
 function StudentCell({ issue }: { issue: ExecutiveIssue }) {
   return (
     <div className="flex min-w-[250px] items-center gap-4 text-left">
-      <span className="relative block h-10 w-10 shrink-0 object-cover overflow-hidden rounded-full bg-gray-100">
-        <Image
-          src={issue.image}
-          alt={issue.student}
-          height={40}
-          width={40}
-          unoptimized={true}
-          className=" object-cover"
-        />
-        {/* <Avatar
-          src={issue.image}
-          alt={issue.student}
-          size={40}
-        /> */}
-      </span>
+      <Avatar src={issue.image} alt={issue.student} size={40} />
       <div className="min-w-0">
         <p className="truncate text-[14px] font-bold text-[#282828]">
           {issue.student}
@@ -1244,14 +1305,47 @@ function NewIssuesBody() {
     wellBeingCategoryId,
     wellBeingCategoryIds,
     wellBeingCategoryName,
+    wellBeingCategoryNames,
   } = useUser();
   const assignedCategoryIds = useMemo(
-    () =>
-      wellBeingCategoryIds.length || !wellBeingCategoryId
-        ? wellBeingCategoryIds
-        : [wellBeingCategoryId],
+    () => {
+      const ids =
+        wellBeingCategoryIds.length || !wellBeingCategoryId
+          ? wellBeingCategoryIds
+          : [wellBeingCategoryId];
+
+      return normalizeCategoryIds(ids);
+    },
     [wellBeingCategoryId, wellBeingCategoryIds],
   );
+  const categoryOptions = useMemo<IssueCategoryOption[]>(
+    () =>
+      assignedCategoryIds.map((categoryId, index) => ({
+        id: categoryId,
+        name:
+          wellBeingCategoryNames[index]?.trim() ||
+          (categoryId === wellBeingCategoryId
+            ? wellBeingCategoryName?.trim()
+            : null) ||
+          `Category ${categoryId}`,
+      })),
+    [
+      assignedCategoryIds,
+      wellBeingCategoryId,
+      wellBeingCategoryName,
+      wellBeingCategoryNames,
+    ],
+  );
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(() =>
+    getSelectedCategoryId(searchParams.get("categoryId"), assignedCategoryIds),
+  );
+  const activeCategoryIds = useMemo<number[] | null>(
+    () => (selectedCategoryId ? [selectedCategoryId] : null),
+    [selectedCategoryId],
+  );
+  const activeCategoryName =
+    categoryOptions.find((category) => category.id === selectedCategoryId)?.name ??
+    wellBeingCategoryName;
   const [activeView, setActiveView] = useState<IssueView>(() =>
     getView(searchParams.get("issueView")),
   );
@@ -1278,7 +1372,7 @@ function NewIssuesBody() {
       try {
         const nextCounts = await fetchWellbeingExecutiveNewIssueCounts(
           collegeId,
-          assignedCategoryIds,
+          activeCategoryIds,
           selectedRole === "all" ? null : selectedRole,
           wellBeingId,
         );
@@ -1287,17 +1381,12 @@ function NewIssuesBody() {
         setCounts(defaultIssueCounts);
       }
     },
-    [assignedCategoryIds, collegeId, selectedRole, wellBeingId],
+    [activeCategoryIds, collegeId, selectedRole, wellBeingId],
   );
 
   const loadIssues = useMemo(
     () => async () => {
       if (!collegeId) return;
-
-      if (!assignedCategoryIds.length) {
-        setIssueRows([]);
-        return;
-      }
 
       try {
         let assignedIssueIds: number[] | null = null;
@@ -1367,9 +1456,10 @@ function NewIssuesBody() {
           .eq("IssueStatus", "pending")
           .eq("isActive", true)
           .eq("is_deleted", false)
-          .in("categoryId", assignedCategoryIds)
           .in("issueVisibilityRole", ["wellbeingexecutive", "both"])
           .order("createdAt", { ascending: false });
+
+        query = applyCategoryFilter(query, activeCategoryIds);
 
         if (selectedScope !== "all") {
           query = query.in("appliesTo", [selectedScope, "both"]);
@@ -1479,12 +1569,15 @@ function NewIssuesBody() {
         setIssueRows([]);
       }
     },
-    [activeView, assignedCategoryIds, collegeId, selectedRole, selectedScope, wellBeingId],
+    [activeCategoryIds, activeView, assignedCategoryIds, collegeId, selectedRole, selectedScope, wellBeingId],
   );
 
   useEffect(() => {
     setActiveView(getView(searchParams.get("issueView")));
-  }, [searchParams]);
+    setSelectedCategoryId(
+      getSelectedCategoryId(searchParams.get("categoryId"), assignedCategoryIds),
+    );
+  }, [assignedCategoryIds, searchParams]);
 
   useEffect(() => {
     loadCounts();
@@ -1525,7 +1618,7 @@ function NewIssuesBody() {
     if (!collegeId) return;
 
     const channel = supabase
-      .channel(`wellbeing_executive_new_issues_page_${collegeId}_${wellBeingCategoryId ?? "all"}`)
+      .channel(`wellbeing_executive_new_issues_page_${collegeId}_${selectedCategoryId ?? "all"}`)
       .on(
         "postgres_changes",
         {
@@ -1556,14 +1649,35 @@ function NewIssuesBody() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [collegeId, loadCounts, loadIssues, wellBeingCategoryId]);
+  }, [collegeId, loadCounts, loadIssues, selectedCategoryId]);
 
   const handleViewChange = (view: IssueView) => {
     if (view === activeView) return;
     setActiveView(view);
     setCurrentPage(1);
     setLoadingView(true);
-    router.push(`?issueView=${view}`);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("issueView", view);
+    if (selectedCategoryId) {
+      params.set("categoryId", String(selectedCategoryId));
+    } else {
+      params.delete("categoryId");
+    }
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleCategoryChange = (categoryId: number | null) => {
+    setSelectedCategoryId(categoryId);
+    setCurrentPage(1);
+    setLoadingView(true);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("issueView", activeView);
+    if (categoryId) {
+      params.set("categoryId", String(categoryId));
+    } else {
+      params.delete("categoryId");
+    }
+    router.push(`?${params.toString()}`);
   };
 
   useEffect(() => {
@@ -1690,13 +1804,16 @@ function NewIssuesBody() {
           onChange={handleViewChange}
           selectedScope={selectedScope}
           counts={counts}
-          categoryName={wellBeingCategoryName}
+          categoryName={activeCategoryName}
           selectedRole={selectedRole}
           onRoleChange={(role) => {
             setSelectedRole(role);
             setCurrentPage(1);
             setLoadingView(true);
           }}
+          categoryOptions={categoryOptions}
+          selectedCategoryId={selectedCategoryId}
+          onCategoryChange={handleCategoryChange}
           onScopeChange={(scope) => {
             setSelectedScope(scope);
             setCurrentPage(1);

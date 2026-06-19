@@ -709,17 +709,26 @@ export async function fetchWellbeingExecutiveNewIssueCounts(
   issueRaisedRole?: WellbeingIssueRaisedRole | null,
   wellBeingId?: number | null,
 ): Promise<WellbeingExecutiveNewIssueCounts> {
-  const categoryIds = Array.isArray(categoryIdOrIds)
-    ? categoryIdOrIds
-    : categoryIdOrIds
-      ? [categoryIdOrIds]
-      : [];
+  const shouldFilterByCategory =
+    categoryIdOrIds !== undefined && categoryIdOrIds !== null;
+  const categoryIds = Array.from(
+    new Set(
+      (Array.isArray(categoryIdOrIds)
+        ? categoryIdOrIds
+        : categoryIdOrIds
+          ? [categoryIdOrIds]
+          : []
+      )
+        .map((categoryId) => Number(categoryId))
+        .filter((categoryId) => Number.isFinite(categoryId) && categoryId > 0),
+    ),
+  );
 
-  if (!categoryIds.length) {
+  if (shouldFilterByCategory && !categoryIds.length) {
     return { all: 0, my: 0, urgent: 0 };
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("wellbeing_support_issues")
     .select("wellbeingSupportIssueId, categoryId, priority, createdBy")
     .eq("collegeId", collegeId)
@@ -727,8 +736,16 @@ export async function fetchWellbeingExecutiveNewIssueCounts(
     .eq("isActive", true)
     .eq("is_deleted", false)
     .is("deletedAt", null)
-    .in("categoryId", categoryIds)
     .in("issueVisibilityRole", ["wellbeingexecutive", "both"]);
+
+  if (shouldFilterByCategory) {
+    query =
+      categoryIds.length === 1
+        ? query.eq("categoryId", categoryIds[0])
+        : query.or(categoryIds.map((categoryId) => `categoryId.eq.${categoryId}`).join(","));
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("fetchWellbeingExecutiveNewIssueCounts error:", error);
