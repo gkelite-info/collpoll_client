@@ -10,8 +10,8 @@ import {
   Warning,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { MdPictureAsPdf } from "react-icons/md";
+import { Avatar } from "@/app/utils/Avatar";
 import ReassignTicketModal from "../../components/ReassignTicketModal";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
@@ -298,16 +298,7 @@ export default function TicketDetailsView({ ticketId, onBack }: TicketDetailsVie
         </div>
         <div className="rounded-2xl bg-white p-5 shadow-sm md:p-7">
           <div className="flex flex-col gap-5 md:flex-row md:items-start">
-            {issue.profileUrl ? (
-              <Image
-                src={issue.profileUrl}
-                alt={issue.fullName}
-                width={112}
-                height={112}
-                unoptimized
-                className="h-28 w-28 shrink-0 rounded-2xl object-cover"
-              />
-            ) : null}
+            <Avatar src={issue.profileUrl} alt={issue.fullName} size={112} />
           <div className="grid w-full grid-cols-2 gap-x-4 gap-y-5 px-2 md:grid-cols-3 md:px-0">
             <InfoItem label="Full Name" value={issue.fullName} />
             <InfoItem label="Email" value={issue.email} />

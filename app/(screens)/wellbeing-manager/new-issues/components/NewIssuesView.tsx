@@ -12,8 +12,8 @@ import {
     CalendarIcon,
     X,
 } from "@phosphor-icons/react";
-import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Avatar } from "@/app/utils/Avatar";
 import WellbeingRight from "../../components/WellbeingRight";
 import AddExecutiveModal from "../../components/AddExecutiveModal";
 import { useRouter } from "next/navigation";
@@ -857,26 +857,7 @@ export default function NewIssuesPageContent() {
     const tableData = issueRows.map((issue) => ({
         student: (
             <div className="flex min-w-[260px] max-w-[280px] items-center gap-3 text-left">
-                <div className="w-[42px] h-[42px] rounded-full overflow-hidden flex-shrink-0 bg-gray-200 border border-gray-100 shadow-sm relative">
-                    {issue.profileUrl ? (
-                        <Image
-                            src={issue.profileUrl}
-                            alt={issue.student}
-                            fill
-                            sizes="42px"
-                            className="object-cover"
-                            unoptimized
-                        />
-                    ) : (
-                        <Image
-                            src="/male-student.png"
-                            alt={issue.student}
-                            fill
-                            sizes="42px"
-                            className="object-cover"
-                        />
-                    )}
-                </div>
+                <Avatar src={issue.profileUrl} alt={issue.student} size={42} />
                 <div className="flex min-w-0 flex-col">
                     <p className="text-[14px] font-bold text-[#16284F] truncate">{issue.student}</p>
                     <p className="text-[11px] font-bold text-[#43C17A] truncate mt-0.5">{issue.requesterRole}</p>

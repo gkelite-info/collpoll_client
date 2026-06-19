@@ -101,11 +101,7 @@ export const Avatar = ({
         <svg
           viewBox="0 0 24 24"
           aria-hidden
-          className="
-    text-gray-400
-    w-2/4 h-2/4
-    md:w-2/4 md:h-2/4
-  "
+          className="h-2/4 w-2/4 text-gray-400"
           fill="currentColor"
         >
           <path d="M12 2a5 5 0 1 1 0 10a5 5 0 0 1 0-10zm0 12c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5z" />
