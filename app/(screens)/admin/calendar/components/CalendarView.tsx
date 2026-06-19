@@ -299,7 +299,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
       if (conflict) {
         setPendingEvent(data);
         setShowConflictModal(true);
-        setIsModalOpen(false);
         return;
       }
 
@@ -527,8 +526,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
 
   const handleConflictCancel = () => {
     setShowConflictModal(false);
-    setFormMode("create");
-    setIsModalOpen(true);
     setPendingEvent(null);
   };
 

@@ -22,6 +22,7 @@ import {
   saveAttendance,
   UIStudent,
 } from "@/lib/helpers/admin/attendance/adminAttendanceActions";
+import { useAttendanceRealtime, recalculateAttendancePercentage } from "@/lib/helpers/faculty/attendance/liveAttendanceAPI";
 import StuAttendanceTable from "../tables/stuAttendanceTable";
 import StudentAttendanceDetailsPage from "../components/stuSubjectWise";
 import CardComponent from "../components/cards";
@@ -66,6 +67,58 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
   const [cancelReason, setCancelReason] = useState("");
 
   const { adminId } = useAdmin();
+
+  useAttendanceRealtime(
+    selectedClassId ? parseInt(selectedClassId.split("-")[0]) : null,
+    (payload) => {
+      const newRecord = payload.new;
+      if (newRecord && newRecord.studentId) {
+        let matchedStudentName = "";
+        let status = "Not Marked";
+
+        setStudentsList((prev) => {
+          return prev.map((s) => {
+            if (s.id === String(newRecord.studentId)) {
+              if (newRecord.status === "PRESENT") status = "Present";
+              else if (newRecord.status === "LATE") status = "Late";
+              else if (newRecord.status === "ABSENT") status = "Absent";
+              
+              if (s.attendance !== status) {
+                matchedStudentName = s.name;
+              }
+
+              let newPercentage = s.percentage;
+              let newStats = s.stats;
+              if (s.stats) {
+                const recalc = recalculateAttendancePercentage(
+                  s.attendance,
+                  newRecord.status,
+                  s.stats
+                );
+                newPercentage = recalc.newPercentage;
+                newStats = recalc.newStats;
+              }
+              
+              return {
+                ...s,
+                attendance: status as any,
+                reason: newRecord.reason || "",
+                percentage: newPercentage,
+                stats: newStats,
+              };
+            }
+            return s;
+          });
+        });
+
+        if (matchedStudentName) {
+          setTimeout(() => {
+            toast.success(`${matchedStudentName} was marked ${status}!`, { id: `bio-${newRecord.studentId}` });
+          }, 0);
+        }
+      }
+    }
+  );
 
   useEffect(() => {
     if (!collegeSectionsId) return;
