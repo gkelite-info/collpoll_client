@@ -41,7 +41,9 @@ type UserContextType = {
   wellBeingIds: number[];
   wellBeingRegistrationTypes: string[];
   wellBeingCategoryId: number | null;
+  wellBeingCategoryIds: number[];
   wellBeingCategoryName: string | null;
+  wellBeingCategoryNames: string[];
   collegeEducationType: string | null;
   collegeBranchCode: string | null;
   collegeAcademicYear: string | null;
@@ -124,7 +126,9 @@ const UserContext = createContext<UserContextType>({
   wellBeingIds: [],
   wellBeingRegistrationTypes: [],
   wellBeingCategoryId: null,
+  wellBeingCategoryIds: [],
   wellBeingCategoryName: null,
+  wellBeingCategoryNames: [],
   collegeEducationType: null,
   collegeBranchCode: null,
   collegeAcademicYear: null,
@@ -159,7 +163,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [wellBeingIds, setWellBeingIds] = useState<number[]>([]);
   const [wellBeingRegistrationTypes, setWellBeingRegistrationTypes] = useState<string[]>([]);
   const [wellBeingCategoryId, setWellBeingCategoryId] = useState<number | null>(null);
+  const [wellBeingCategoryIds, setWellBeingCategoryIds] = useState<number[]>([]);
   const [wellBeingCategoryName, setWellBeingCategoryName] = useState<string | null>(null);
+  const [wellBeingCategoryNames, setWellBeingCategoryNames] = useState<string[]>([]);
   const [collegeEducationType, setCollegeEducationType] = useState<string | null>(null);
   const [collegeBranchCode, setCollegeBranchCode] = useState<string | null>(null);
   const [collegeAcademicYear, setCollegeAcademicYear] = useState<string | null>(null);
@@ -195,7 +201,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     setWellBeingIds,
     setWellBeingRegistrationTypes,
     setWellBeingCategoryId,
+    setWellBeingCategoryIds,
     setWellBeingCategoryName,
+    setWellBeingCategoryNames,
     setCollegeEducationType,
     setCollegeBranchCode,
     setCollegeAcademicYear,
@@ -229,7 +237,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     s.setWellBeingIds([]);
     s.setWellBeingRegistrationTypes([]);
     s.setWellBeingCategoryId(null);
+    s.setWellBeingCategoryIds([]);
     s.setWellBeingCategoryName(null);
+    s.setWellBeingCategoryNames([]);
     s.setCollegeEducationType(null);
     s.setCollegeBranchCode(null);
     s.setCollegeAcademicYear(null);
@@ -290,18 +300,36 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         .is("deletedAt", null)
         .order("assignedCategoryId", { ascending: true })
       : { data: [] };
-    const firstCategory = (assignedCategoryRows ?? [])[0] as
-      | WellbeingAssignedCategoryContext
-      | undefined;
-    const { data: categoryData } = firstCategory?.categoryId
+    const assignedCategories = (assignedCategoryRows ?? []) as WellbeingAssignedCategoryContext[];
+    const assignedCategoryIds = Array.from(
+      new Set(
+        assignedCategories
+          .map((category) => category.categoryId)
+          .filter((categoryId): categoryId is number => Boolean(categoryId)),
+      ),
+    );
+    const firstCategory = assignedCategories[0];
+    const { data: categoryRows } = assignedCategoryIds.length
       ? await supabase
         .from("wellbeing_categories")
-        .select("categoryName")
-        .eq("categoryId", firstCategory.categoryId)
-        .maybeSingle()
-      : { data: null };
+        .select("categoryId, categoryName")
+        .in("categoryId", assignedCategoryIds)
+      : { data: [] };
+    const categoryNameById = new Map(
+      ((categoryRows ?? []) as { categoryId: number; categoryName?: string | null }[]).map(
+        (category) => [category.categoryId, category.categoryName ?? null],
+      ),
+    );
     s.setWellBeingCategoryId(firstCategory?.categoryId ?? null);
-    s.setWellBeingCategoryName(categoryData?.categoryName ?? null);
+    s.setWellBeingCategoryIds(assignedCategoryIds);
+    s.setWellBeingCategoryName(
+      firstCategory?.categoryId ? categoryNameById.get(firstCategory.categoryId) ?? null : null,
+    );
+    s.setWellBeingCategoryNames(
+      assignedCategoryIds
+        .map((categoryId) => categoryNameById.get(categoryId))
+        .filter((categoryName): categoryName is string => Boolean(categoryName)),
+    );
     s.setGender(userRes.data?.gender ?? null);
     s.setIdentifierId(empId ?? (rows[0]?.wellBeingId ? String(rows[0].wellBeingId) : null));
 
@@ -730,7 +758,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       wellBeingIds,
       wellBeingRegistrationTypes,
       wellBeingCategoryId,
+      wellBeingCategoryIds,
       wellBeingCategoryName,
+      wellBeingCategoryNames,
       collegeEducationType,
       collegeBranchCode,
       collegeAcademicYear,
@@ -764,7 +794,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       wellBeingIds,
       wellBeingRegistrationTypes,
       wellBeingCategoryId,
+      wellBeingCategoryIds,
       wellBeingCategoryName,
+      wellBeingCategoryNames,
       collegeEducationType,
       collegeBranchCode,
       collegeAcademicYear,

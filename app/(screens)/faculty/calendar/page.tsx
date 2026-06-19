@@ -362,7 +362,6 @@ export default function Page() {
     if (conflict) {
       setPendingEvent(payload);
       setShowConflictModal(true);
-      setIsModalOpen(false);
       return { success: false };
     }
 
@@ -433,7 +432,6 @@ export default function Page() {
   const handleConflictCancel = () => {
     setPendingEvent(null);
     setShowConflictModal(false);
-    setIsModalOpen(true);
   };
 
   const confirmAddEvent = async () => {

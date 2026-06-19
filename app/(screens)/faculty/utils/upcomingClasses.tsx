@@ -473,9 +473,10 @@ const LessonCard: React.FC<{ lesson: UpcomingLesson }> = ({ lesson }) => (
           )}
         </div>
         <h3 className="text-[#1e2952] font-bold text-xs leading-tight mt-1">
-          {lesson.degree}{" "}
-          {lesson.department.map((item) => item.name).join(", ")} - Year{" "}
-          {lesson.year} {lesson.section && ` - Section ${lesson.section}`}
+          {lesson.degree ? `${lesson.degree} ` : ""}
+          {lesson.department.map((item) => item.name).join(", ")}
+          {lesson.year ? ` - Year ${lesson.year}` : ""}
+          {lesson.section ? ` - Section ${lesson.section}` : ""}
         </h3>
         <p className="text-gray-600 text-[13px] mt-1 leading-snug line-clamp-2">
           {lesson.description}

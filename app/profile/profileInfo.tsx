@@ -109,6 +109,10 @@ export default function ProfileInfo() {
     collegeHrId,
     wellBeingId,
     wellBeingRegistrationTypes,
+    wellBeingCategoryId,
+    wellBeingCategoryIds,
+    wellBeingCategoryName,
+    wellBeingCategoryNames,
     identifierId
   } = useUser();
 
@@ -140,6 +144,19 @@ export default function ProfileInfo() {
   const showEducationType = isWellbeingRole
     ? wellBeingRegistrationTypes.includes("college")
     : !isSuperAdminOrOther;
+  const wellbeingCategoryOptions = Array.from(
+    new Map(
+      (wellBeingCategoryIds.length || !wellBeingCategoryId
+        ? wellBeingCategoryIds
+        : [wellBeingCategoryId]
+      ).map((categoryId, index) => [
+        categoryId,
+        wellBeingCategoryNames[index]?.trim() ||
+          (categoryId === wellBeingCategoryId ? wellBeingCategoryName?.trim() : null) ||
+          `Category ${categoryId}`,
+      ]),
+    ),
+  );
 
   useEffect(() => {
     const registrationId = getRegistrationIdByRole({
@@ -414,6 +431,29 @@ export default function ProfileInfo() {
                 {showEducationType &&
                   <ProfileRow label="Education Type" value={profileData.educationType} />
                 }
+                {role === "WellbeingExecutive" && wellbeingCategoryOptions.length ? (
+                  <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[180px_1fr] gap-4 py-2">
+                    <span className="text-gray-700 font-medium text-sm sm:text-base">
+                      Categories
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {wellbeingCategoryOptions.map(([categoryId, categoryName]) => (
+                        <button
+                          key={categoryId}
+                          type="button"
+                          onClick={() =>
+                            router.push(
+                              `/wellbeing-executive/new-issues?issueView=all&categoryId=${categoryId}`,
+                            )
+                          }
+                          className="rounded-md bg-[#43C17A] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#34A362]"
+                        >
+                          {categoryName}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 {isStudentOrFaculty &&
                   <>
                     <ProfileRow label="Branch" value={profileData.branch} />

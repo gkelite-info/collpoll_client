@@ -12,8 +12,8 @@ import {
     CalendarIcon,
     X,
 } from "@phosphor-icons/react";
-import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Avatar } from "@/app/utils/Avatar";
 import WellbeingRight from "../../components/WellbeingRight";
 import AddExecutiveModal from "../../components/AddExecutiveModal";
 import { useRouter } from "next/navigation";
@@ -28,7 +28,6 @@ type ManagerIssueSummaryRow = {
     appliesTo: IssueScope | "both";
     priority: "high" | "medium" | "low";
     issueVisibilityRole?: string | null;
-    issueRaisedRole: IssueRoleFilter;
 };
 
 type ManagerIssueTableRow = ManagerIssueSummaryRow & {
@@ -36,12 +35,15 @@ type ManagerIssueTableRow = ManagerIssueSummaryRow & {
     email: string;
     issueTitle: string;
     description: string;
+    createdBy: number;
 };
 
 type ManagerIssueTableItem = {
     id: number;
     student: string;
     email: string;
+    requesterRole: string;
+    profileUrl: string | null;
     title: string;
     description: string;
     category: string;
@@ -137,6 +139,30 @@ const formatJobStatus = (status: IssueJobRow["status"]) =>
             ? "Completed"
             : "Cancelled";
 
+const formatRequesterRole = (role?: string | null) => {
+    const normalizedRole = role?.trim();
+    const roleLabels: Record<string, string> = {
+        Student: "Student",
+        SuperAdmin: "Super Admin",
+        "Super-Admin": "Super Admin",
+        CollegeAdmin: "College Admin",
+        "College-Admin": "College Admin",
+        Admin: "Admin",
+        Faculty: "Faculty",
+        Finance: "Finance",
+        CollegeHr: "College HR",
+        HR: "College HR",
+        PlacementOfficer: "Placement Officer",
+        Placement: "Placement Officer",
+        WellbeingExecutive: "Wellbeing Executive",
+        WellbeingManager: "Wellbeing Manager",
+        FinanceManager: "Finance Manager",
+        GroundStaff: "Ground Staff",
+    };
+
+    return normalizedRole ? roleLabels[normalizedRole] ?? normalizedRole : "Requester";
+};
+
 const getLatestJobByIssueId = (jobs: IssueJobRow[]) => {
     const jobByIssueId = new Map<number, IssueJobRow>();
     jobs.forEach((job) => {
@@ -147,8 +173,6 @@ const getLatestJobByIssueId = (jobs: IssueJobRow[]) => {
 
     return jobByIssueId;
 };
-
-const isManagerOpenIssue = (job?: IssueJobRow) => !job || job.status !== "completed";
 
 const logSupabaseError = (label: string, error: unknown) => {
     if (error && typeof error === "object") {
@@ -237,6 +261,7 @@ function DropdownPill<T extends string>({
     variant?: "dark" | "light";
 }) {
     const [open, setOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
     const selectedLabel =
         options.find((option) => option.value === value)?.label ?? value;
     const buttonClass =
@@ -244,8 +269,35 @@ function DropdownPill<T extends string>({
             ? "bg-[#16284F] text-white hover:bg-[#102044]"
             : "border border-[#D7D7D7] bg-white text-[#282828] hover:border-gray-400";
 
+    useEffect(() => {
+        if (!open) return;
+
+        const handlePointerDown = (event: PointerEvent) => {
+            if (
+                dropdownRef.current &&
+                !dropdownRef.current.contains(event.target as Node)
+            ) {
+                setOpen(false);
+            }
+        };
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                setOpen(false);
+            }
+        };
+
+        document.addEventListener("pointerdown", handlePointerDown);
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            document.removeEventListener("pointerdown", handlePointerDown);
+            document.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [open]);
+
     return (
-        <div className="relative z-10" onMouseLeave={() => setOpen(false)}>
+        <div ref={dropdownRef} className="relative z-30">
             <button
                 type="button"
                 onClick={() => setOpen((current) => !current)}
@@ -260,7 +312,7 @@ function DropdownPill<T extends string>({
             </button>
 
             {open ? (
-                <div className="custom-scrollbar absolute left-0 top-full z-20 mt-1 max-h-80 w-full min-w-full overflow-y-auto rounded-xl bg-white py-2 shadow-xl ring-1 ring-black/5">
+                <div className="custom-scrollbar absolute left-0 top-full z-40 mt-1 max-h-80 w-full min-w-full overflow-y-auto rounded-xl bg-white py-2 shadow-xl ring-1 ring-black/5">
                     {options.map((option) => {
                         const selected = option.value === value;
                         return (
@@ -366,8 +418,7 @@ export default function NewIssuesPageContent() {
                     categoryId,
                     appliesTo,
                     priority,
-                    issueVisibilityRole,
-                    issueRaisedRole
+                    issueVisibilityRole
                 `,
                 )
                 .eq("collegeId", collegeId)
@@ -387,8 +438,7 @@ export default function NewIssuesPageContent() {
                     selectedScope === "all" ||
                     issue.appliesTo === selectedScope ||
                     issue.appliesTo === "both";
-                const matchesRole =
-                    selectedRole === "all" || issue.issueRaisedRole === selectedRole;
+                const matchesRole = true;
                 const matchesCategory =
                     selectedCategory === "all" ||
                     issue.categoryId === Number(selectedCategory);
@@ -399,9 +449,7 @@ export default function NewIssuesPageContent() {
             const { data: jobsData, error: jobsError } = issueIds.length
                 ? await supabase
                     .from("wellbeing_issue_jobs")
-                    .select(
-                        "wellbeingIssueJobId, wellbeingSupportIssueId, wellBeingId, status, updatedAt",
-                    )
+                    .select("wellbeingIssueJobId, wellbeingSupportIssueId, wellBeingId, status, updatedAt")
                     .in("wellbeingSupportIssueId", issueIds)
                     .eq("isActive", true)
                     .eq("is_deleted", false)
@@ -411,10 +459,13 @@ export default function NewIssuesPageContent() {
 
             if (jobsError) throw jobsError;
 
-            const jobByIssueId = getLatestJobByIssueId((jobsData ?? []) as IssueJobRow[]);
-            const openIssueRows = rows.filter((issue) =>
-                isManagerOpenIssue(jobByIssueId.get(issue.wellbeingSupportIssueId)),
+            const latestJobByIssueId = getLatestJobByIssueId(
+                (jobsData ?? []) as IssueJobRow[],
             );
+            const openIssueRows = rows.filter((issue) => {
+                const latestJob = latestJobByIssueId.get(issue.wellbeingSupportIssueId);
+                return latestJob?.status !== "completed";
+            });
             const categoryNameById = await fetchCategoryNameMap(
                 openIssueRows.map((issue) => issue.categoryId),
             );
@@ -450,7 +501,7 @@ export default function NewIssuesPageContent() {
             logSupabaseError("load wellbeing manager issue summary error:", error);
             setSummaryCards(defaultSummaryCards);
         }
-    }, [collegeId, selectedCategory, selectedDateKey, selectedRole, selectedScope]);
+    }, [collegeId, selectedCategory, selectedDateKey, selectedScope]);
 
     const loadIssueTableRows = useCallback(async () => {
         if (!collegeId) {
@@ -472,11 +523,11 @@ export default function NewIssuesPageContent() {
                     email,
                     issueTitle,
                     description,
+                    createdBy,
                     categoryId,
                     appliesTo,
                     priority,
-                    issueVisibilityRole,
-                    issueRaisedRole
+                    issueVisibilityRole
                 `,
                 )
                 .eq("collegeId", collegeId)
@@ -498,8 +549,7 @@ export default function NewIssuesPageContent() {
                         selectedScope === "all" ||
                         issue.appliesTo === selectedScope ||
                         issue.appliesTo === "both";
-                    const matchesRole =
-                        selectedRole === "all" || issue.issueRaisedRole === selectedRole;
+                    const matchesRole = true;
                     const matchesCategory =
                         selectedCategory === "all" ||
                         issue.categoryId === Number(selectedCategory);
@@ -525,9 +575,7 @@ export default function NewIssuesPageContent() {
             if (jobsError) throw jobsError;
 
             const jobByIssueId = getLatestJobByIssueId((jobsData ?? []) as IssueJobRow[]);
-            const openIssueRows = filteredIssues.filter((issue) =>
-                isManagerOpenIssue(jobByIssueId.get(issue.wellbeingSupportIssueId)),
-            );
+            const openIssueRows = filteredIssues;
 
             const wellBeingIds = Array.from(
                 new Set(
@@ -551,21 +599,53 @@ export default function NewIssuesPageContent() {
                     (wellBeing) => [wellBeing.wellBeingId, wellBeing.userId],
                 ),
             );
-            const userIds = Array.from(new Set(userIdByWellBeingId.values()));
+            const requesterUserIds = Array.from(
+                new Set(openIssueRows.map((issue) => issue.createdBy).filter(Boolean)),
+            );
+            const userIds = Array.from(
+                new Set([...Array.from(userIdByWellBeingId.values()), ...requesterUserIds]),
+            );
             const { data: usersData, error: usersError } = userIds.length
                 ? await supabase
                     .from("users")
-                    .select("userId, fullName")
+                    .select("userId, fullName, role")
                     .in("userId", userIds)
                 : { data: [], error: null };
 
             if (usersError) throw usersError;
 
+            const users = (usersData ?? []) as {
+                userId: number;
+                fullName: string | null;
+                role: string | null;
+            }[];
             const fullNameByUserId = new Map(
-                ((usersData ?? []) as { userId: number; fullName: string }[]).map((user) => [
+                users.map((user) => [
                     user.userId,
-                    user.fullName,
+                    user.fullName || "-",
                 ]),
+            );
+            const roleByUserId = new Map(
+                users.map((user) => [
+                    user.userId,
+                    formatRequesterRole(user.role),
+                ]),
+            );
+            const { data: profilesData, error: profilesError } = requesterUserIds.length
+                ? await supabase
+                    .from("user_profile")
+                    .select("userId, profileUrl")
+                    .in("userId", requesterUserIds)
+                    .eq("is_deleted", false)
+                    .is("deletedAt", null)
+                : { data: [], error: null };
+
+            if (profilesError) throw profilesError;
+
+            const profileUrlByUserId = new Map(
+                ((profilesData ?? []) as { userId: number; profileUrl: string | null }[])
+                    .filter((profile) => Boolean(profile.profileUrl))
+                    .map((profile) => [profile.userId, profile.profileUrl as string]),
             );
             const categoryNameById = await fetchCategoryNameMap(
                 openIssueRows.map((issue) => issue.categoryId),
@@ -580,17 +660,20 @@ export default function NewIssuesPageContent() {
                     const executiveName = executiveUserId
                         ? fullNameByUserId.get(executiveUserId) || "-"
                         : "-";
+                    const hasValidExecutiveAssignment = Boolean(executiveUserId) && executiveName !== "-";
 
                     return {
                         id: issue.wellbeingSupportIssueId,
                         student: issue.fullName,
                         email: issue.email,
+                        requesterRole: roleByUserId.get(issue.createdBy) || "Requester",
+                        profileUrl: profileUrlByUserId.get(issue.createdBy) || null,
                         title: issue.issueTitle,
                         description: issue.description,
                         category: categoryNameById.get(issue.categoryId) || "Not specified",
                         priority: formatPriority(issue.priority),
                         executiveName,
-                        jobStatus: job ? formatJobStatus(job.status) : "-",
+                        jobStatus: hasValidExecutiveAssignment && job ? formatJobStatus(job.status) : "-",
                     };
                 }),
             );
@@ -600,7 +683,7 @@ export default function NewIssuesPageContent() {
         } finally {
             setIssuesLoading(false);
         }
-    }, [collegeId, selectedCategory, selectedDateKey, selectedRole, selectedScope]);
+    }, [collegeId, selectedCategory, selectedDateKey, selectedScope]);
 
     useEffect(() => {
         loadIssueSummaryCards();
@@ -774,17 +857,10 @@ export default function NewIssuesPageContent() {
     const tableData = issueRows.map((issue) => ({
         student: (
             <div className="flex min-w-[260px] max-w-[280px] items-center gap-3 text-left">
-                <div className="w-[42px] h-[42px] rounded-full overflow-hidden flex-shrink-0 bg-gray-200 border border-gray-100 shadow-sm relative">
-                    <Image
-                        src="/male-student.png"
-                        alt={issue.student}
-                        fill
-                        sizes="42px"
-                        className="object-cover"
-                    />
-                </div>
+                <Avatar src={issue.profileUrl} alt={issue.student} size={42} />
                 <div className="flex min-w-0 flex-col">
                     <p className="text-[14px] font-bold text-[#16284F] truncate">{issue.student}</p>
+                    <p className="text-[11px] font-bold text-[#43C17A] truncate mt-0.5">{issue.requesterRole}</p>
                     <p className="text-[12px] text-gray-500 font-medium truncate mt-0.5">{issue.email}</p>
                 </div>
             </div>
@@ -904,14 +980,14 @@ export default function NewIssuesPageContent() {
                                 <button
                                     type="button"
                                     onClick={() => setIsDatePickerOpen(true)}
-                                    className="inline-flex h-[38px] min-w-[190px] cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[#DFF1E8] px-4 text-[15px] font-extrabold text-[#43C17A]"
+                                    className="inline-flex h-[36px] min-w-[132px] cursor-pointer items-center justify-center gap-1.5 rounded-2xl bg-[#DFF1E8] px-2.5 text-[14px] font-extrabold text-[#43C17A]"
                                     title="Select date"
                                 >
-                                    <CalendarIcon size={17} weight="fill" />
+                                    <CalendarIcon size={15} weight="fill" />
                                     {displayDate}
                                 </button>
                             ) : (
-                                <div className="flex h-[38px] min-w-[275px] items-center gap-2 rounded-2xl border border-[#43C17A] bg-white px-3 text-[#43C17A] shadow-sm">
+                                <div className="flex h-[38px] min-w-[210px] items-center gap-2 rounded-2xl border border-[#43C17A] bg-white px-2.5 text-[#43C17A] shadow-sm">
                                     <CalendarIcon size={17} weight="fill" />
                                     <input
                                         type="date"
@@ -920,7 +996,7 @@ export default function NewIssuesPageContent() {
                                             setSelectedDateKey(event.target.value || getTodayDateKey());
                                             setIsDatePickerOpen(false);
                                         }}
-                                        className="h-7 rounded-xl border border-[#D7D7D7] px-3 text-center text-[13px] font-medium text-[#282828] outline-none"
+                                        className="h-7 w-[135px] rounded-xl border border-[#D7D7D7] px-2 text-center text-[13px] font-medium text-[#282828] outline-none"
                                     />
                                     <button
                                         type="button"
@@ -953,6 +1029,7 @@ export default function NewIssuesPageContent() {
                                 <TableComponent
                                     columns={columns}
                                     tableData={paginatedTableData}
+                                    height="620px"
                                     isLoading={issuesLoading}
                                     tableClassName="min-w-[1280px]"
                                 />

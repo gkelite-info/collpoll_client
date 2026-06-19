@@ -32,7 +32,7 @@ import {
 import AttendanceSkeleton from "./shimmer/attendanceSkeleton";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { Loader } from "../../(student)/calendar/right/timetable";
-import { useAttendanceRealtime } from "@/lib/helpers/faculty/attendance/liveAttendanceAPI";
+import { useAttendanceRealtime, recalculateAttendancePercentage } from "@/lib/helpers/faculty/attendance/liveAttendanceAPI";
 
 function AttendanceContent() {
   const searchParams = useSearchParams();
@@ -77,11 +77,25 @@ function AttendanceContent() {
               if (s.attendance !== status) {
                 matchedStudentName = s.name;
               }
+
+              let newPercentage = s.percentage;
+              let newStats = s.stats;
+              if (s.stats) {
+                const recalc = recalculateAttendancePercentage(
+                  s.attendance,
+                  newRecord.status,
+                  s.stats
+                );
+                newPercentage = recalc.newPercentage;
+                newStats = recalc.newStats;
+              }
               
               return {
                 ...s,
                 attendance: status as any,
                 reason: newRecord.reason || "",
+                percentage: newPercentage,
+                stats: newStats,
               };
             }
             return s;
