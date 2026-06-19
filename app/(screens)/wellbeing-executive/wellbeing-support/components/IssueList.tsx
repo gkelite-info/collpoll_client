@@ -92,7 +92,14 @@ const isTabStatus = (
 export default function IssueList() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { collegeId } = useUser();
+  const { collegeId, wellBeingCategoryId, wellBeingCategoryIds } = useUser();
+  const assignedCategoryIds = useMemo(
+    () =>
+      wellBeingCategoryIds.length || !wellBeingCategoryId
+        ? wellBeingCategoryIds
+        : [wellBeingCategoryId],
+    [wellBeingCategoryId, wellBeingCategoryIds],
+  );
 
   const currentTab = searchParams.get("tab") || "raised";
   const currentPageStr = searchParams.get("page") || "1";
@@ -120,6 +127,11 @@ export default function IssueList() {
   const loadIssues = useCallback(async () => {
     if (!collegeId) return;
 
+    if (!assignedCategoryIds.length) {
+      setIssues([]);
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -137,9 +149,9 @@ export default function IssueList() {
         `,
         )
         .eq("collegeId", collegeId)
-        .eq("issueRaisedRole", selectedRole)
         .eq("isActive", true)
         .eq("is_deleted", false)
+        .in("categoryId", assignedCategoryIds)
         .in("issueVisibilityRole", ["wellbeingexecutive", "both"])
         .order("createdAt", { ascending: false });
 
@@ -222,7 +234,7 @@ export default function IssueList() {
     } finally {
       setLoading(false);
     }
-  }, [collegeId, selectedRole]);
+  }, [assignedCategoryIds, collegeId]);
 
   useEffect(() => {
     loadIssues();
