@@ -69,15 +69,23 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
                 if (!user || user.role !== "Student") return;
 
                 const student = await fetchStudentContext(user.userId);
-                if (!student) return;
+                if (!student) {
+                    setState(prev => ({ ...prev, loading: false }));
+                    return;
+                }
 
                 let query = supabase
                     .from("college_subjects")
                     .select("*")
                     .eq("collegeId", student.collegeId)
-                    .eq("collegeAcademicYearId", student.collegeAcademicYearId)
                     .eq("isActive", true)
                     .is("deletedAt", null);
+
+                if (student.collegeAcademicYearId !== null && student.collegeAcademicYearId !== undefined) {
+                    query = query.eq("collegeAcademicYearId", student.collegeAcademicYearId);
+                } else {
+                    query = query.is("collegeAcademicYearId", null);
+                }
 
                 if (student.collegeSemesterId !== null && student.collegeSemesterId !== undefined) {
                     query = query.eq("collegeSemesterId", student.collegeSemesterId);

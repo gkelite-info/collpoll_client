@@ -10,6 +10,7 @@ import {
   Clock,
   CheckCircle,
   WarningCircle,
+  UploadSimple,
 } from "@phosphor-icons/react";
 import ResultsDropdown from "./resultsDropdown";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
@@ -33,6 +34,8 @@ export default function ClassResultDetails() {
   const year = searchParams.get("year") || "3rd Year";
   const section = searchParams.get("section") || "A";
   const totalStudents = Number(searchParams.get("students")) || 62;
+  const branch = searchParams.get("branch") || "CSE";
+  const subject = searchParams.get("subject") || "DBMS";
 
   const [selectedSemester, setSelectedSemester] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,6 +87,8 @@ export default function ClassResultDetails() {
     params.delete("year");
     params.delete("section");
     params.delete("students");
+    params.delete("branch");
+    params.delete("subject");
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -120,14 +125,14 @@ export default function ClassResultDetails() {
 
         <div className="flex-1 space-y-4">
           <h2 className="text-lg font-bold text-gray-800">Class Information</h2>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 pt-1">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Subject</p>
-              <p className="text-sm font-bold text-gray-800 mt-1">DBMS</p>
+              <p className="text-sm font-bold text-gray-800 mt-1">{subject}</p>
             </div>
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Branch</p>
-              <p className="text-sm font-bold text-gray-800 mt-1">CSE</p>
+              <p className="text-sm font-bold text-gray-800 mt-1">{branch}</p>
             </div>
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Year</p>
@@ -136,10 +141,6 @@ export default function ClassResultDetails() {
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Section</p>
               <p className="text-sm font-bold text-gray-800 mt-1">{section}</p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Semester</p>
-              <p className="text-sm font-bold text-gray-800 mt-1">IV</p>
             </div>
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Total Students</p>
@@ -229,10 +230,17 @@ export default function ClassResultDetails() {
                             onClick={() => handleViewResult(row)}
                             className="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-300 hover:border-gray-400 rounded-lg text-xs font-semibold text-gray-600 hover:text-gray-800 bg-white transition-colors shadow-sm cursor-pointer"
                           >
+                            <UploadSimple size={14} />
+                            <span>Upload</span>
+                          </button>
+                          <button
+                            onClick={() => handleViewResult(row)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 border border-gray-300 hover:border-gray-400 rounded-lg text-xs font-semibold text-gray-600 hover:text-gray-800 bg-white transition-colors shadow-sm cursor-pointer"
+                          >
                             <Eye size={14} />
                             <span>View Result</span>
                           </button>
-                          <button
+                          {/* <button
                             onClick={() => {
                               downloadSamplePDF();
                               toast.success("Downloading PDF document...");
@@ -241,7 +249,7 @@ export default function ClassResultDetails() {
                           >
                             <DownloadSimple size={14} />
                             <span>Download PDF</span>
-                          </button>
+                          </button> */}
                         </div>
                       </td>
                     </tr>

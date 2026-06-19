@@ -34,10 +34,59 @@ const formatTimeToAMPM = (time24: string) => {
   return `${hour}:${m} ${period}`;
 };
 
+interface UpcomingLecture {
+  calendarEventId: number;
+  date: string;
+  fromTime: string;
+  toTime: string;
+  eventTitle: string;
+  eventTopic: string;
+  facultyName: string;
+  isCancelled?: boolean;
+  type: string;
+  meetingLink?: string | null;
+}
+
+interface SubjectProgress {
+  title: string;
+  professor: string;
+  image: string;
+  percentage: number;
+  radialStart: string;
+  radialEnd: string;
+  remainingColor: string;
+}
+
+interface DashboardCardItem {
+  style: string;
+  icon: React.ReactNode;
+  value: React.ReactNode;
+  label: string;
+  to?: string;
+  onClick?: () => void;
+}
+
+interface CollegeSubjectUnit {
+  completionPercentage: number | null;
+  createdBy: number | null;
+}
+
+interface SubjectData {
+  collegeSubjectId: number;
+  subjectName: string;
+  image: string | null;
+  college_subject_units: CollegeSubjectUnit[];
+}
+
+interface FacultyRow {
+  facultyId: number;
+  fullName: string;
+}
+
 export default function StuDashLeft() {
   const [view, setView] = useState<"dashboard" | "exams">("dashboard");
   const [loadingLectures, setLoadingLectures] = useState(true);
-  const [lectures, setLectures] = useState<any[]>([]);
+  const [lectures, setLectures] = useState<UpcomingLecture[]>([]);
   const router = useRouter();
   const [dueAssignmentsCount, setDueAssignmentsCount] = useState(0);
   const [attendancePercent, setAttendancePercent] = useState<number | null>(
@@ -46,7 +95,7 @@ export default function StuDashLeft() {
   const [assignmentsLoading, setAssignmentsLoading] = useState(true);
   const [pendingFeeAmount, setPendingFeeAmount] = useState<number | null>(null);
   const [feeLoading, setFeeLoading] = useState(true);
-  const [subjects, setSubjects] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<SubjectProgress[]>([]);
   const [subjectsLoading, setSubjectsLoading] = useState(true);
   const { studentId } = useStudent();
 
@@ -58,6 +107,7 @@ export default function StuDashLeft() {
     loadAttendancePercent();
     loadPendingFee();
     loadSubjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSubjects = async () => {
@@ -77,6 +127,10 @@ export default function StuDashLeft() {
       if (!userRow) return;
 
       const studentContext = await fetchStudentContext(userRow.userId);
+      if (!studentContext) {
+        setSubjects([]);
+        return;
+      }
 
       let query = supabase
         .from("college_subjects")
@@ -93,9 +147,14 @@ export default function StuDashLeft() {
         )
         .eq("collegeBranchId", studentContext.collegeBranchId)
         .eq("collegeEducationId", studentContext.collegeEducationId)
-        .eq("collegeAcademicYearId", studentContext.collegeAcademicYearId)
         .eq("isActive", true)
         .is("deletedAt", null);
+
+      if (studentContext.collegeAcademicYearId) {
+        query = query.eq("collegeAcademicYearId", studentContext.collegeAcademicYearId);
+      } else {
+        query = query.is("collegeAcademicYearId", null);
+      }
 
       if (
         studentContext.collegeSemesterId !== null &&
@@ -113,8 +172,8 @@ export default function StuDashLeft() {
       }
 
       const facultyIds = new Set<number>();
-      subjectData.forEach((sub: any) => {
-        sub.college_subject_units?.forEach((unit: any) => {
+      (subjectData as SubjectData[]).forEach((sub) => {
+        sub.college_subject_units?.forEach((unit) => {
           if (unit.createdBy) facultyIds.add(unit.createdBy);
         });
       });
@@ -125,7 +184,7 @@ export default function StuDashLeft() {
           .from("faculty")
           .select("facultyId, fullName")
           .in("facultyId", Array.from(facultyIds));
-        facultyData?.forEach((f: any) => {
+        (facultyData as FacultyRow[])?.forEach((f) => {
           facultyMap[f.facultyId] = f.fullName;
         });
       }
@@ -153,7 +212,7 @@ export default function StuDashLeft() {
         },
       ];
 
-      const mappedSubjects = subjectData.map((sub: any, index: number) => {
+      const mappedSubjects = (subjectData as SubjectData[]).map((sub, index: number) => {
         const units = sub.college_subject_units || [];
         const totalUnits = units.length;
 
@@ -161,7 +220,7 @@ export default function StuDashLeft() {
           totalUnits > 0
             ? Math.round(
               units.reduce(
-                (acc: number, curr: any) =>
+                (acc: number, curr: CollegeSubjectUnit) =>
                   acc + (curr.completionPercentage || 0),
                 0,
               ) / totalUnits,
@@ -169,9 +228,10 @@ export default function StuDashLeft() {
             : 0;
 
         const firstUnit = units[0];
+        const profId = firstUnit?.createdBy;
         const professor =
-          firstUnit && facultyMap[firstUnit.createdBy]
-            ? t("Prof {name}", { name: facultyMap[firstUnit.createdBy] })
+          profId != null && facultyMap[profId]
+            ? t("Prof {name}", { name: facultyMap[profId] })
             : t("Faculty not assigned");
         const colors = colorPalettes[index % colorPalettes.length];
 
@@ -187,7 +247,7 @@ export default function StuDashLeft() {
       });
 
       setSubjects(mappedSubjects);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load subjects");
     } finally {
       setSubjectsLoading(false);
@@ -221,33 +281,41 @@ export default function StuDashLeft() {
   };
 
   const loadAttendancePercent = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!user) return;
+      if (!user) return;
 
-    const { data: userRow } = await supabase
-      .from("users")
-      .select("userId")
-      .eq("auth_id", user.id)
-      .single();
+      const { data: userRow } = await supabase
+        .from("users")
+        .select("userId")
+        .eq("auth_id", user.id)
+        .single();
 
-    if (!userRow) return;
+      if (!userRow) return;
 
-    const studentContext = await fetchStudentContext(userRow.userId);
+      const studentContext = await fetchStudentContext(userRow.userId);
+      if (!studentContext) {
+        setAttendancePercent(0);
+        return;
+      }
 
-    const today = new Date().toISOString().split("T")[0];
+      const today = new Date().toISOString().split("T")[0];
 
-    const res = await getStudentDashboardData(
-      userRow.userId,
-      today,
-      1,
-      1,
-      studentContext.collegeEducationType === "Inter",
-    );
+      const res = await getStudentDashboardData(
+        userRow.userId,
+        today,
+        1,
+        1,
+        studentContext.collegeEducationType === "Inter",
+      );
 
-    setAttendancePercent(res?.cards?.percentage ?? 0);
+      setAttendancePercent(res?.cards?.percentage ?? 0);
+    } catch (err) {
+      console.error("Failed to load attendance percent", err);
+    }
   };
 
   const loadAssignmentCount = async () => {
@@ -267,6 +335,14 @@ export default function StuDashLeft() {
       if (!userRow) return;
 
       const studentContext = await fetchStudentContext(userRow.userId);
+      if (
+        !studentContext ||
+        studentContext.collegeAcademicYearId === null ||
+        studentContext.collegeSectionsId === null
+      ) {
+        setDueAssignmentsCount(0);
+        return;
+      }
 
       const res = await fetchAssignmentsForStudent(
         {
@@ -314,6 +390,16 @@ export default function StuDashLeft() {
       const internalUserId = userRow.userId;
 
       const studentContext = await fetchStudentContext(internalUserId);
+      if (
+        !studentContext ||
+        studentContext.collegeEducationId === null ||
+        studentContext.collegeBranchId === null ||
+        studentContext.collegeAcademicYearId === null ||
+        studentContext.collegeSectionsId === null
+      ) {
+        setLectures([]);
+        return;
+      }
 
       const data = await fetchUpcomingClassesForStudent({
         collegeEducationId: studentContext.collegeEducationId,
@@ -331,7 +417,7 @@ export default function StuDashLeft() {
     }
   };
 
-  const cardData = [
+  const cardData: DashboardCardItem[] = [
     {
       style: "bg-[#E2DAFF] h-[126.35px] w-[182px]",
       icon: <Chalkboard size={32} weight="fill" color="#714EF2" />,
@@ -400,7 +486,7 @@ export default function StuDashLeft() {
             </div>
 
             <div className="mt-5 max-md:mt-0 rounded-lg flex max-md:grid max-md:grid-cols-2 gap-3 max-md:gap-3 text-xs max-md:order-2 w-full max-md:justify-items-center max-md:place-content-center">
-              {cardData.map((item: any, index: number) => (
+              {cardData.map((item, index: number) => (
                 <CardComponent
                   key={index}
                   style={item.style}
@@ -450,7 +536,7 @@ export default function StuDashLeft() {
                         </p>
                       </div>
                     ) : (
-                      lectures.map((lec: any) => (
+                      lectures.map((lec) => (
                         <div
                           key={lec.calendarEventId}
                           className="relative mb-3 last:mb-0"

@@ -279,6 +279,7 @@ export default function Page() {
             sectionId: sectionId,
 
             rawFormData: {
+              subjectId: row.subject,
               topicId: row.eventTopic,
               topicTitle: safelyExtractedTopic, // 🟢 Passed perfectly down to Details Modal
               roomNo: row.college_rooms?.roomNo ?? "",
@@ -569,6 +570,7 @@ export default function Page() {
 
     setEventForm({
       title: event.title ?? "",
+      subjectId: event.rawFormData?.subjectId ?? null,
       topicId: event.rawFormData?.topicId ?? null,
       roomNo: event.rawFormData?.roomNo ?? "",
       collegeRoomId: event.rawFormData?.collegeRoomId ?? null,

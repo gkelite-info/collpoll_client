@@ -209,6 +209,21 @@ export async function getStudentProgressData(userId: number) {
   const today = formatDate(new Date());
   const studentContext = await fetchStudentContext(userId);
 
+  if (!studentContext) {
+    return {
+      overallAttendancePercentage: 0,
+      absentPercentage: 0,
+      leavePercentage: 0,
+      subjectAttendance: [],
+      conductedCount: 0,
+      attendedCount: 0,
+      absentCount: 0,
+      leaveCount: 0,
+      assignmentsSummary: [],
+      subjectProgressRows: [],
+    };
+  }
+
   let subjectsQuery = supabase
     .from("college_subjects")
     .select("collegeSubjectId, subjectName, subjectKey")
@@ -698,11 +713,15 @@ export async function getStudentProgressData(userId: number) {
           collegeId: studentContext.collegeId,
           collegeEducationId: studentContext.collegeEducationId,
           collegeBranchIds: [studentContext.collegeBranchId],
-          academicYearIds: [studentContext.collegeAcademicYearId],
+          academicYearIds: studentContext.collegeAcademicYearId
+            ? [studentContext.collegeAcademicYearId]
+            : [],
           semesterIds: studentContext.collegeSemesterId
             ? [studentContext.collegeSemesterId]
             : [],
-          sectionIds: [studentContext.collegeSectionsId],
+          sectionIds: studentContext.collegeSectionsId
+            ? [studentContext.collegeSectionsId]
+            : [],
           subjectIds: semesterSubjectIds,
           departmentLabel: studentContext.collegeBranchCode,
         })

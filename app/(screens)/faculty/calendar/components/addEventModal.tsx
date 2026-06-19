@@ -22,6 +22,7 @@ type DegreeOption = {
 type SubjectRow = {
   collegeSubjectId: number;
   subjectName: string;
+  collegeAcademicYearId?: number;
 };
 
 type SectionRow = {
@@ -305,52 +306,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         });
         if (cancelled) return;
         setAcademicYears(academicYears ?? []);
-        if (facultyCtx.academicYearIds?.length === 1) {
-          setAcademicYearId(facultyCtx.academicYearIds[0]);
-        }
-        const semesters = await fetchAcademicDropdowns({
-          type: "semester",
-          collegeId,
-          educationId: facultyCtx.collegeEducationId,
-          branchId: facultyCtx.collegeBranchId,
-          academicYearId: facultyCtx.academicYearIds?.[0],
-        });
-        if (cancelled) return;
-        setSemesters(semesters ?? []);
-        if ((semesters ?? []).length === 1) {
-          setSemester(semesters[0].collegeSemesterId);
-          setIsSemesterAuto(true);
-        }
-        const sections = await fetchAcademicDropdowns({
-          type: "section",
-          collegeId,
-          educationId: facultyCtx.collegeEducationId,
-          branchId: facultyCtx.collegeBranchId,
-          academicYearId: facultyCtx.academicYearIds?.[0],
-        });
 
-        const filteredSections = (sections ?? []).filter((s: any) =>
-          facultyCtx.sectionIds.includes(s.collegeSectionsId),
-        );
-
-        setSections(filteredSections);
-        if (filteredSections.length === 1) {
-          setSectionIds([filteredSections[0].collegeSectionsId]);
-        }
-
-        if (cancelled) return;
-        setSections(filteredSections);
-
-        if (filteredSections.length === 1) {
-          setSectionId(filteredSections[0].collegeSectionsId);
-        }
         const { data: subjectRows, error } = await supabase
           .from("college_subjects")
-          .select("collegeSubjectId, subjectName")
+          .select("collegeSubjectId, subjectName, collegeAcademicYearId")
           .eq("collegeId", collegeId)
           .eq("collegeEducationId", facultyCtx.collegeEducationId)
           .eq("collegeBranchId", facultyCtx.collegeBranchId)
-          .eq("collegeAcademicYearId", facultyCtx.academicYearIds?.[0])
           .in("collegeSubjectId", facultyCtx.subjectIds)
           .eq("isActive", true)
           .is("deletedAt", null);
@@ -363,6 +325,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         if (subjects.length === 1) {
           setSubjectId(subjects[0].collegeSubjectId);
           setSubject(subjects[0].subjectName);
+          setAcademicYearId(subjects[0].collegeAcademicYearId);
+        } else if (facultyCtx.academicYearIds?.length === 1) {
+          setAcademicYearId(facultyCtx.academicYearIds[0]);
         }
       } catch (err) { }
     };
@@ -373,6 +338,65 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       cancelled = true;
     };
   }, [collegeId, facultyCtx]);
+
+  useEffect(() => {
+    if (!collegeId || !facultyCtx || !academicYearId || !subjectId) {
+      setSections([]);
+      setSemesters([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadSectionsAndSemesters = async () => {
+      try {
+        const semesters = await fetchAcademicDropdowns({
+          type: "semester",
+          collegeId,
+          educationId: facultyCtx.collegeEducationId,
+          branchId: facultyCtx.collegeBranchId,
+          academicYearId: academicYearId,
+        });
+        if (cancelled) return;
+        setSemesters(semesters ?? []);
+        if ((semesters ?? []).length === 1) {
+          setSemester(semesters[0].collegeSemesterId);
+          setIsSemesterAuto(true);
+        }
+
+        const sections = await fetchAcademicDropdowns({
+          type: "section",
+          collegeId,
+          educationId: facultyCtx.collegeEducationId,
+          branchId: facultyCtx.collegeBranchId,
+          academicYearId: academicYearId,
+        });
+        if (cancelled) return;
+
+        // Filter sections to only those assigned to the faculty for the selected subject
+        const assignedSectionIds = facultyCtx.sections
+          .filter((s: any) => s.collegeSubjectId === subjectId)
+          .map((s: any) => s.collegeSectionsId);
+
+        const filteredSections = (sections ?? []).filter((s: any) =>
+          assignedSectionIds.includes(s.collegeSectionsId),
+        );
+
+        setSections(filteredSections);
+        if (filteredSections.length === 1) {
+          setSectionIds([filteredSections[0].collegeSectionsId]);
+        }
+      } catch (err) {
+        console.error("Error loading sections/semesters:", err);
+      }
+    };
+
+    loadSectionsAndSemesters();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [collegeId, facultyCtx, academicYearId, subjectId]);
 
   useEffect(() => {
     if (!subjectId) return;
@@ -591,7 +615,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   useEffect(() => {
     if (isOpen && value && mode === "edit" && !hasInitializedRef.current) {
       hasInitializedRef.current = true;
-      
+
       setSelectedType(value.type);
       setRoomNo(value.roomNo ?? "");
       setCollegeRoomId(value.collegeRoomId ?? null);
@@ -620,7 +644,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         setSemester(value.semesterId);
         setIsSemesterAuto(false);
       }
-      
+
       if (Array.isArray(value.sectionIds)) {
         setEditSectionIds(value.sectionIds);
       }
@@ -763,9 +787,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   <CaretDown
                     size={16}
                     weight="bold"
-                    className={`transition-transform duration-200 ${
-                      isSubjectFocused ? "rotate-180" : "rotate-0"
-                    }`}
+                    className={`transition-transform duration-200 ${isSubjectFocused ? "rotate-180" : "rotate-0"
+                      }`}
                   />
                 </div>
               </div>
@@ -809,9 +832,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 <CaretDown
                   size={16}
                   weight="bold"
-                  className={`transition-transform duration-200 ${
-                    isTopicFocused ? "rotate-180" : "rotate-0"
-                  }`}
+                  className={`transition-transform duration-200 ${isTopicFocused ? "rotate-180" : "rotate-0"
+                    }`}
                 />
               </div>
             </div>
@@ -868,7 +890,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                     <label className="block text-gray-700 font-medium text-sm">
                       Zoom ID <span className="text-red-500">*</span>
                     </label>
-                     <input
+                    <input
                       type="text"
                       value={meetingId}
                       onChange={(e) => setMeetingId(e.target.value)}
@@ -880,7 +902,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                     <label className="block text-gray-700 font-medium text-sm">
                       Password <span className="text-red-500">*</span>
                     </label>
-                     <input
+                    <input
                       type="text"
                       value={meetingPassword}
                       onChange={(e) => setMeetingPassword(e.target.value)}
@@ -897,7 +919,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                       : "Meeting Link"}{" "}
                     <span className="text-red-500">*</span>
                   </label>
-                   <input
+                  <input
                     type="text"
                     value={meetingLink}
                     onChange={(e) => setMeetingLink(e.target.value)}
@@ -914,32 +936,32 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
           )}
 
           <div>
-          <div className="flex flex-col md:flex-row gap-4 items-start">
-            <div className="flex-1 w-full min-w-0">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={date}
-                min={TODAY}
-                onChange={(e) => setDate(e.target.value)}
-                className={`w-full cursor-pointer border border-[#C9C9C9] rounded-lg px-3 ${INPUT_HEIGHT} outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white`}
-              />
-            </div>
+            <div className="flex flex-col md:flex-row gap-4 items-start">
+              <div className="flex-1 w-full min-w-0">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={date}
+                  min={TODAY}
+                  onChange={(e) => setDate(e.target.value)}
+                  className={`w-full cursor-pointer border border-[#C9C9C9] rounded-lg px-3 ${INPUT_HEIGHT} outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white`}
+                />
+              </div>
 
-            <div className="flex-1 w-full min-w-0">
-               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Room No. <span className="text-red-500">*</span>
-              </label>
-              <RoomSelectDropdown
-                value={roomNo}
-                onChange={(rNo, rId) => { setRoomNo(rNo); setCollegeRoomId(rId); }}
-                collegeId={collegeId || 0}
-                placeholder="Select Room No. / Room Name"
-              />
+              <div className="flex-1 w-full min-w-0">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Room No. <span className="text-red-500">*</span>
+                </label>
+                <RoomSelectDropdown
+                  value={roomNo}
+                  onChange={(rNo, rId) => { setRoomNo(rNo); setCollegeRoomId(rId); }}
+                  collegeId={collegeId || 0}
+                  placeholder="Select Room No. / Room Name"
+                />
+              </div>
             </div>
-          </div>
 
             <div className="bg-red-00 flex flex-col space-y-1 mt-3">
               <label className="block text-gray-700 font-medium text-sm">
@@ -1159,9 +1181,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                     <CaretDown
                       size={16}
                       weight="bold"
-                      className={`transition-transform duration-200 ${
-                        isSemesterFocused ? "rotate-180" : "rotate-0"
-                      }`}
+                      className={`transition-transform duration-200 ${isSemesterFocused ? "rotate-180" : "rotate-0"
+                        }`}
                     />
                   </div>
                 </div>
@@ -1202,9 +1223,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               <CaretDown
                 size={16}
                 weight="bold"
-                className={`text-gray-400 transition-transform duration-200 ${
-                  isSectionOpen ? "rotate-180" : "rotate-0"
-                }`}
+                className={`text-gray-400 transition-transform duration-200 ${isSectionOpen ? "rotate-180" : "rotate-0"
+                  }`}
               />
             </div>
 
