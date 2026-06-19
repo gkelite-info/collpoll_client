@@ -41,10 +41,10 @@ export function AssignmentsSummaryTable({
   rows,
   semesterLabel,
 }: SubjectProgressTableProps) {
-  const t = useTranslations("Progress.student"); // Hook
+  const t = useTranslations("Progress.student");
 
   return (
-    <div className="w-full rounded-3xl bg-white p-6 shadow-sm max-md:p-0 max-md:bg-transparent max-md:shadow-none max-md:rounded-none">
+    <div className="w-full rounded-2xl bg-white p-6 shadow-sm max-md:p-0 max-md:bg-transparent max-md:shadow-none max-md:rounded-none">
       <div className="mb-6 flex items-center justify-between max-md:flex-col-reverse max-md:items-stretch max-md:gap-3 max-md:mb-3">
         <h2 className="text-lg font-bold text-[#282828] max-md:text-[14.5px] max-md:font-bold max-md:tracking-tight max-md:text-gray-800">
           {t("Class Progress Overview")}
