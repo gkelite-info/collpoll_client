@@ -109,6 +109,13 @@ export const registerUserOnDevice = async (
           name: fullName,
           userType: "normal",
           Valid: { enable: true, beginTime, endTime },
+          doorRight: "1",
+          RightPlan: [
+            {
+              doorNo: 1,
+              planTemplateNo: "1"
+            }
+          ]
         },
       },
     });
@@ -124,6 +131,13 @@ export const registerUserOnDevice = async (
             name: fullName,
             userType: "normal",
             Valid: { enable: true, beginTime, endTime },
+            doorRight: "1",
+            RightPlan: [
+              {
+                doorNo: 1,
+                planTemplateNo: "1"
+              }
+            ]
           },
         },
       });

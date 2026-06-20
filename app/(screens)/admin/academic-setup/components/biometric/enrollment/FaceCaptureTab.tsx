@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Camera, CheckCircle, WarningCircle } from "@phosphor-icons/react";
+import { useState, useRef, useEffect } from "react";
+import { Camera, CheckCircle, WarningCircle, UploadSimple, X, VideoCamera } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { getCredentialsForUser, upsertUserCredential, uploadFaceCredentialImage } from "@/lib/helpers/devices/userDeviceCredentialAPI";
 import { BiometricDeviceRow } from "@/lib/helpers/devices/biometricDeviceAPI";
@@ -28,6 +28,12 @@ export default function FaceCaptureTab({
   const [faceImage, setFaceImage] = useState<File | null>(null);
   const [facePreview, setFacePreview] = useState<string>("");
   const [isEnrolling, setIsEnrolling] = useState(false);
+  
+  // Camera state
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+
   const [enrollResult, setEnrollResult] = useState<{
     success: boolean;
     message: string;
@@ -35,6 +41,60 @@ export default function FaceCaptureTab({
   const [deviceEnrollStatuses, setDeviceEnrollStatuses] = useState<
     Record<number, { status: "idle" | "enrolling" | "success" | "failed"; error?: string }>
   >({});
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  // Bind stream to video element when it mounts
+  useEffect(() => {
+    if (isCameraOpen && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [isCameraOpen]);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      streamRef.current = stream;
+      setIsCameraOpen(true);
+    } catch (err) {
+      toast.error("Unable to access camera. Please check browser permissions.");
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraOpen(false);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    
+    // Draw mirrored if using front camera (optional, but standard UX)
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(videoRef.current, 0, 0);
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const file = new File([blob], `camera_capture_${Date.now()}.jpg`, { type: "image/jpeg" });
+      
+      stopCamera();
+      await processAndSetImage(file);
+    }, "image/jpeg", 0.9);
+  };
 
   const handleFaceImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -52,6 +112,11 @@ export default function FaceCaptureTab({
       return;
     }
 
+    await processAndSetImage(file);
+    e.target.value = "";
+  };
+
+  const processAndSetImage = async (file: File) => {
     let fileToUpload = file;
     try {
       const options = {
@@ -73,7 +138,6 @@ export default function FaceCaptureTab({
 
     if (fileToUpload.size > 1 * 1024 * 1024) {
       toast.error("Image could not be compressed enough. Please use a smaller file.");
-      e.target.value = "";
       return;
     }
 
@@ -112,9 +176,13 @@ export default function FaceCaptureTab({
                 typeof e === "object" && e !== null && "subStatusCode" in e
                   ? (e as { subStatusCode?: string }).subStatusCode
                   : undefined;
+              if (subStatusCode === "employeeNoAlreadyExist") {
+                // Already handled
+              } else {
+                throw e;
+              }
             }
 
-            // Provide the compressed image file directly for multipart upload
             await registerFaceOnDevice(
               device.deviceId,
               selectedUser.userId,
@@ -131,7 +199,6 @@ export default function FaceCaptureTab({
             const errObj = e as any;
             const subStatusCode = errObj?.subStatusCode || "";
             
-            // Map Hikvision raw errors to user-friendly messages
             if (
               subStatusCode === "employeeNoAlreadyExist" ||
               subStatusCode === "deviceUserAlreadyExistFace" ||
@@ -200,13 +267,10 @@ export default function FaceCaptureTab({
           message: `Face enrollment failed on all devices. Details: ${errors.join(", ")}`,
         });
         
-        // Show the specific error if possible, rather than a generic one
         if (errors.length > 0) {
-          // If the error contains our friendly mapped string, show it cleanly
           if (errors[0].includes("already has a face registered")) {
             toast.error("This user already has a face registered on the device.");
           } else {
-            // Otherwise show the first device's error
             toast.error(errors[0]);
           }
         } else {
@@ -216,7 +280,6 @@ export default function FaceCaptureTab({
     } catch (e: unknown) {
       let msg = e instanceof Error ? e.message : "Face enrollment failed";
       
-      // Intercept DB constraint errors (e.g. duplicate key, unique constraint)
       if (
         msg.includes("duplicate key") || 
         msg.includes("Unique constraint") || 
@@ -237,75 +300,120 @@ export default function FaceCaptureTab({
 
   return (
     <div className="space-y-4">
-      <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-[#43C17A] transition-colors bg-white">
-        {facePreview ? (
-          <div className="flex flex-col items-center gap-3">
+      <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-[#43C17A] transition-colors bg-white min-h-[200px] flex flex-col items-center justify-center">
+        {isCameraOpen ? (
+          <div className="flex flex-col items-center gap-3 w-full animate-in fade-in zoom-in duration-200">
+            <div className="relative w-full max-w-[240px] rounded-xl overflow-hidden bg-black aspect-square shadow-inner">
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                className="w-full h-full object-cover scale-x-[-1]"
+              />
+            </div>
+            <div className="flex items-center justify-center gap-3 w-full mt-2">
+              <button
+                onClick={stopCamera}
+                className="px-4 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer border-none flex-1 max-w-[120px]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={capturePhoto}
+                className="px-4 py-2.5 text-sm font-semibold text-white bg-[#43C17A] hover:bg-[#3ab06e] rounded-lg transition-colors cursor-pointer border-none flex items-center justify-center gap-2 flex-1 max-w-[120px] shadow-sm"
+              >
+                <Camera size={18} weight="bold" />
+                Capture
+              </button>
+            </div>
+          </div>
+        ) : facePreview ? (
+          <div className="flex flex-col items-center gap-3 animate-in fade-in duration-200">
             <img
               src={facePreview}
               alt="Face preview"
-              className="w-32 h-32 rounded-xl object-cover shadow-sm"
+              className="w-32 h-32 rounded-xl object-cover shadow-sm ring-4 ring-[#43C17A]/20"
             />
             <button
               onClick={() => {
                 setFaceImage(null);
                 setFacePreview("");
               }}
-              className="text-xs text-red-500 hover:text-red-600 font-medium cursor-pointer border-none bg-transparent outline-none"
+              className="text-xs text-red-500 hover:text-red-600 font-semibold cursor-pointer border-none bg-red-50 px-3 py-1.5 rounded-full outline-none flex items-center gap-1.5 transition-colors"
             >
-              Remove Image
+              <X size={14} weight="bold" /> Remove Image
             </button>
           </div>
         ) : (
-          <label className="flex flex-col items-center gap-2 cursor-pointer">
-            <Camera size={40} className="text-gray-300" />
-            <span className="text-sm text-gray-500">Click to upload face photo</span>
-            <span className="text-[10px] text-gray-400">
-              JPG, PNG, WEBP — max 5MB
-            </span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFaceImageChange}
-              className="hidden"
-            />
-          </label>
+          <div className="flex flex-col items-center gap-4 w-full">
+            <div className="w-16 h-16 bg-[#E6F4EA]/50 rounded-full flex items-center justify-center mb-1">
+              <Camera size={32} className="text-[#43C17A]" weight="duotone" />
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <p className="text-[15px] text-[#16284F] font-bold">Add Face Photo</p>
+              <p className="text-[11px] text-gray-500 max-w-[200px] leading-tight">
+                Upload an image or take a clear photo with your camera
+              </p>
+            </div>
+            
+            <div className="flex items-center justify-center gap-3 w-full mt-3">
+              <label className="flex-1 max-w-[140px] py-2.5 px-3 bg-white border border-gray-200 text-gray-700 rounded-lg hover:border-[#43C17A] hover:text-[#43C17A] hover:bg-[#E6F4EA]/30 transition-all cursor-pointer flex items-center justify-center gap-2 text-[13px] font-bold shadow-sm">
+                <UploadSimple size={18} weight="bold" />
+                Upload File
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFaceImageChange}
+                  className="hidden"
+                />
+              </label>
+              <button
+                onClick={startCamera}
+                className="flex-1 max-w-[140px] py-2.5 px-3 bg-white border border-gray-200 text-gray-700 rounded-lg hover:border-[#43C17A] hover:text-[#43C17A] hover:bg-[#E6F4EA]/30 transition-all cursor-pointer flex items-center justify-center gap-2 text-[13px] font-bold shadow-sm"
+              >
+                <VideoCamera size={18} weight="bold" />
+                Take Photo
+              </button>
+            </div>
+          </div>
         )}
       </div>
+
       <button
         onClick={enrollFace}
-        disabled={!faceImage || isEnrolling}
-        className="w-full py-2.5 bg-[#43C17A] text-white rounded-lg font-medium hover:bg-[#3ab06e] disabled:opacity-60 transition-colors cursor-pointer flex items-center justify-center gap-2 text-sm font-semibold border-none"
+        disabled={!faceImage || isEnrolling || isCameraOpen}
+        className="w-full py-3 bg-[#43C17A] text-white rounded-lg hover:bg-[#3ab06e] disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center gap-2 text-sm font-bold border-none shadow-sm"
       >
         {isEnrolling && (
           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
         )}
-        Register Face
+        {isEnrolling ? "Registering Face..." : "Register Face on Devices"}
       </button>
 
       {(isEnrolling || Object.keys(deviceEnrollStatuses).length > 0) && (
-        <div className="border border-gray-200 rounded-lg p-3 mt-4 bg-gray-50/50 space-y-2">
-          <p className="text-xs font-bold text-gray-500 mb-2">Device Enrollment Sync Status:</p>
+        <div className="border border-gray-200 rounded-xl p-3.5 mt-4 bg-gray-50 space-y-2.5">
+          <p className="text-[11px] uppercase tracking-wider font-bold text-gray-500 mb-3">Device Sync Status:</p>
           {selectedDevices.map((d) => {
             const statusInfo = deviceEnrollStatuses[d.deviceId];
             if (!statusInfo) return null;
             return (
-              <div key={d.deviceId} className="flex items-center justify-between text-xs py-1 border-b border-gray-100 last:border-0">
-                <span className="font-medium text-[#16284F]">{d.deviceName}</span>
+              <div key={d.deviceId} className="flex items-center justify-between text-xs py-1.5 border-b border-gray-200/60 last:border-0">
+                <span className="font-semibold text-[#16284F]">{d.deviceName}</span>
                 <div className="flex items-center gap-1.5">
                   {statusInfo.status === "enrolling" && (
                     <>
-                      <div className="w-3 h-3 border border-[#43C17A] border-t-transparent rounded-full animate-spin shrink-0" />
-                      <span className="text-gray-500">Enrolling...</span>
+                      <div className="w-3.5 h-3.5 border-2 border-[#43C17A] border-t-transparent rounded-full animate-spin shrink-0" />
+                      <span className="text-gray-500 font-medium">Syncing...</span>
                     </>
                   )}
                   {statusInfo.status === "success" && (
-                    <span className="text-green-600 font-semibold flex items-center gap-1">
-                      <CheckCircle size={14} weight="fill" /> Success
+                    <span className="text-green-600 font-bold flex items-center gap-1.5 bg-green-50 px-2 py-0.5 rounded-md">
+                      <CheckCircle size={15} weight="fill" /> Success
                     </span>
                   )}
                   {statusInfo.status === "failed" && (
-                    <span className="text-red-500 font-semibold flex items-center gap-1" title={statusInfo.error}>
-                      <WarningCircle size={14} weight="fill" /> Failed
+                    <span className="text-red-600 font-bold flex items-center gap-1.5 bg-red-50 px-2 py-0.5 rounded-md" title={statusInfo.error}>
+                      <WarningCircle size={15} weight="fill" /> Failed
                     </span>
                   )}
                 </div>
@@ -317,18 +425,18 @@ export default function FaceCaptureTab({
 
       {enrollResult && (
         <div
-          className={`mt-4 p-3 rounded-lg flex items-center gap-2 text-sm font-medium ${
+          className={`mt-4 p-3.5 rounded-xl flex items-center gap-2.5 text-sm font-semibold ${
             enrollResult.success
-              ? "bg-[#E6F4EA] text-[#1E8E3E]"
-              : "bg-red-50 text-red-600"
+              ? "bg-[#E6F4EA] text-[#1E8E3E] border border-[#43C17A]/20"
+              : "bg-red-50 text-red-600 border border-red-200"
           }`}
         >
           {enrollResult.success ? (
-            <CheckCircle size={18} weight="fill" />
+            <CheckCircle size={20} weight="fill" className="shrink-0" />
           ) : (
-            <WarningCircle size={18} weight="fill" />
+            <WarningCircle size={20} weight="fill" className="shrink-0" />
           )}
-          {enrollResult.message}
+          <span>{enrollResult.message}</span>
         </div>
       )}
     </div>
