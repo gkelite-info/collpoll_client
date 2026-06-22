@@ -13,9 +13,12 @@ import AttendanceStatCards from "./components/AttendanceStatCards";
 import AttendanceToolbar from "./components/AttendanceToolbar";
 
 import AttendanceTable from "./components/AttendanceTable";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import {
   AttendanceStaffRow,
   getAttendanceStaff,
+  getAttendanceStaffStats,
+  AttendanceStatsResult,
 } from "@/lib/helpers/Hr/attendance/Getattendancestaff";
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import AttendanceFilters from "./components/AttendanceFilteres";
@@ -108,6 +111,10 @@ function FacultyAttendanceDashboard() {
   const [staffList, setStaffList] = useState<AttendanceStaffRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+  const [stats, setStats] = useState<AttendanceStatsResult>({ total: 0, present: 0, absent: 0, late: 0, leave: 0 });
+
   // States to manage loading and UI feel
   const [isFetching, setIsFetching] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -132,17 +139,33 @@ function FacultyAttendanceDashboard() {
     setLocalTab(urlTab);
   }, [urlTab]);
 
+  const fetchStats = useCallback(async (search = "", date?: string | null, rFilter?: string | null) => {
+    if (!collegeId) return;
+    try {
+      const result = await getAttendanceStaffStats({
+        collegeId,
+        search,
+        date: date ?? undefined,
+        role: rFilter ?? undefined,
+      });
+      setStats(result);
+    } catch (err) {
+      console.error("Attendance stats error:", err);
+    }
+  }, [collegeId]);
+
   const fetchStaff = useCallback(
-    async (search = "", date?: string | null, rFilter?: string | null) => {
+    async (search = "", date?: string | null, rFilter?: string | null, pageNum = 1, tab = "total") => {
       if (!collegeId) return;
       try {
         const result = await getAttendanceStaff({
           collegeId,
           search,
-          page: 1,
-          limit: 100,
+          page: pageNum,
+          limit: itemsPerPage,
           date: date ?? undefined,
           role: rFilter ?? undefined,
+          tabStatus: tab,
         });
         setStaffList(result.staff);
         setTotalCount(result.totalCount);
@@ -158,7 +181,8 @@ function FacultyAttendanceDashboard() {
 
   useEffect(() => {
     if (!hrLoading && collegeId) {
-      fetchStaff(searchQuery, filterDateRef.current, activeRole);
+      fetchStats(searchQuery, filterDateRef.current, activeRole);
+      fetchStaff(searchQuery, filterDateRef.current, activeRole, currentPage, localTab);
     }
   }, [hrLoading, collegeId]);
 
@@ -169,9 +193,11 @@ function FacultyAttendanceDashboard() {
     }
 
     setIsFetching(true);
+    setCurrentPage(1);
 
     const timer = setTimeout(() => {
-      fetchStaff(searchQuery, filterDateRef.current, activeRole);
+      fetchStats(searchQuery, filterDateRef.current, activeRole);
+      fetchStaff(searchQuery, filterDateRef.current, activeRole, 1, localTab);
     }, 400);
     return () => clearTimeout(timer);
   }, [searchQuery, activeRole]);
@@ -180,7 +206,8 @@ function FacultyAttendanceDashboard() {
   useHrAttendanceRealtime((payload) => {
     // We do a silent fetch so we don't flash loading states
     if (payload.new && payload.new.userId) {
-      fetchStaffSilent(searchQuery, filterDateRef.current);
+      fetchStats(searchQuery, filterDateRef.current, activeRole);
+      fetchStaffSilent(searchQuery, filterDateRef.current, currentPage, localTab);
       toast.success("Attendance updated successfully", { id: "hr-realtime-toast" });
     }
   });
@@ -194,15 +221,16 @@ function FacultyAttendanceDashboard() {
   }, [localTab]);
 
   const fetchStaffSilent = useCallback(
-    async (search = "", date?: string | null) => {
+    async (search = "", date?: string | null, pageNum = 1, tab = "total") => {
       if (!collegeId) return;
       try {
         const result = await getAttendanceStaff({
           collegeId,
           search,
-          page: 1,
-          limit: 100,
+          page: pageNum,
+          limit: itemsPerPage,
           date: date ?? undefined,
+          tabStatus: tab,
         });
         setStaffList(result.staff);
         setTotalCount(result.totalCount);
@@ -217,51 +245,30 @@ function FacultyAttendanceDashboard() {
     setIsFetching(true);
     setFilterDate(date);
     filterDateRef.current = date;
-    fetchStaff(searchQuery, date, activeRole);
+    setCurrentPage(1);
+    fetchStats(searchQuery, date, activeRole);
+    fetchStaff(searchQuery, date, activeRole, 1, localTab);
   };
 
-  const presentCount = staffList.filter(
-    (s) => s.status?.toLowerCase() === "present",
-  ).length;
-  const absentCount = staffList.filter(
-    (s) => s.status?.toLowerCase() === "absent",
-  ).length;
-  const lateCount = staffList.filter(
-    (s) => s.status?.toLowerCase() === "late",
-  ).length;
-  const leaveCount = staffList.filter(
-    (s) => s.status?.toLowerCase() === "leave",
-  ).length;
-
-  const filteredByTab = (() => {
-    const tabFilter = (s: AttendanceStaffRow) => {
-      switch (activeTab) {
-        case "present":
-          return s.status?.toLowerCase() === "present";
-        case "absent":
-          return s.status?.toLowerCase() === "absent";
-        case "late":
-          return s.status?.toLowerCase() === "late";
-        case "leave":
-          return s.status?.toLowerCase() === "leave";
-        default:
-          return true;
-      }
-    };
-
-    if (!isEditMode) return staffList.filter(tabFilter);
-
-    return staffList.filter((s) => tabFilter(s) || markedUserIds.has(s.userId));
-  })();
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    setIsFetching(true);
+    fetchStaff(searchQuery, filterDateRef.current, activeRole, newPage, localTab);
+  };
 
   const handleTabChange = (tabId: string) => {
     // FIX: Instant state updates before the router can delay
     setLocalTab(tabId);
     setActiveRole(null);
     setSearchQuery("");
+    setCurrentPage(1);
     setIsEditMode(false);
     setSelectAll(false);
     setSelectedRows(new Set());
+
+    setIsFetching(true);
+    fetchStats("", filterDateRef.current, null);
+    fetchStaff("", filterDateRef.current, null, 1, tabId);
 
     // Non-blocking URL push
     const params = new URLSearchParams(searchParams.toString());
@@ -314,10 +321,10 @@ function FacultyAttendanceDashboard() {
       prev.map((s) =>
         selectedUserIds.includes(s.userId)
           ? {
-              ...s,
-              status:
-                status.charAt(0).toUpperCase() + status.slice(1).toLowerCase(),
-            }
+            ...s,
+            status:
+              status.charAt(0).toUpperCase() + status.slice(1).toLowerCase(),
+          }
           : s,
       ),
     );
@@ -405,11 +412,11 @@ function FacultyAttendanceDashboard() {
         <div className="w-[68%] flex flex-col gap-6">
           <AttendanceStatCards
             activeTab={activeTab} // Uses localTab for immediate visual updates
-            totalCount={totalCount}
-            presentCount={presentCount}
-            absentCount={absentCount}
-            lateCount={lateCount}
-            leaveCount={leaveCount}
+            totalCount={stats.total}
+            presentCount={stats.present}
+            absentCount={stats.absent}
+            lateCount={stats.late}
+            leaveCount={stats.leave}
             isLoading={isInitialLoad}
             onTabChange={handleTabChange}
           />
@@ -421,8 +428,8 @@ function FacultyAttendanceDashboard() {
               onToggleEdit={handleToggleEdit}
               onMarkStatus={(status) => {
                 const visibleList = activeRole
-                  ? filteredByTab.filter((s) => s.role === activeRole)
-                  : filteredByTab;
+                  ? staffList.filter((s) => s.role === activeRole)
+                  : staffList;
                 handleMarkStatus(status, visibleList);
               }}
               onDateFilter={handleDateFilter}
@@ -439,7 +446,7 @@ function FacultyAttendanceDashboard() {
               isEditMode={isEditMode}
               isFetching={isFetching || isTabSwitching}
               activeRole={activeRole}
-              staffList={filteredByTab}
+              staffList={staffList}
               fullStaffList={staffList}
               selectedRows={selectedRows}
               selectAll={selectAll}
@@ -450,10 +457,20 @@ function FacultyAttendanceDashboard() {
               onSelectRow={handleSelectRow}
               onSave={handleSave}
               onCancel={handleCancel}
-              onRefresh={() =>
-                fetchStaffSilent(searchQuery, filterDateRef.current)
-              }
+              onRefresh={() => {
+                fetchStats(searchQuery, filterDateRef.current, activeRole);
+                fetchStaffSilent(searchQuery, filterDateRef.current, currentPage, localTab);
+              }}
             />
+            <div className={`${isEditMode ? "mt-1" : "-mt-4"} mb-3`}>
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalCount}
+                itemsPerPage={itemsPerPage}
+                onPageChange={handlePageChange}
+                roundedBottom="rounded-b-xl border-x border-b border-gray-100"
+              />
+            </div>
           </div>
         </div>
 
