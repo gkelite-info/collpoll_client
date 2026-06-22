@@ -11,6 +11,8 @@ import {
   XCircle,
 } from "@phosphor-icons/react";
 import Image from "next/image";
+import CardComponent from "@/app/utils/card";
+import TableComponent from "@/app/utils/table/table";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import type { StaffAttendanceRecord, StaffAttendanceStatus } from "../../data";
@@ -34,6 +36,24 @@ export default function StaffProfileScreen({
 }: StaffProfileScreenProps) {
   const profileRef = useRef<HTMLDivElement>(null);
   const historyRef = useRef<HTMLDivElement>(null);
+  const historyColumns = [
+    { title: "DATE", key: "date" },
+    { title: "CHECK-IN", key: "checkIn" },
+    { title: "CHECK-OUT", key: "checkOut" },
+    { title: "STATUS", key: "status" },
+    { title: "WORK HOURS", key: "workHours" },
+  ];
+  const historyData = staff.history.map((log) => ({
+    date: log.date,
+    checkIn: log.checkIn,
+    checkOut: log.checkOut,
+    status: (
+      <span className={`rounded-full px-3 py-1 text-[10px] font-extrabold uppercase ${statusClass[log.status]}`}>
+        {log.status}
+      </span>
+    ),
+    workHours: log.workHours,
+  }));
 
   useEffect(() => {
     const target = activeSection === "history" ? historyRef.current : profileRef.current;
@@ -41,8 +61,8 @@ export default function StaffProfileScreen({
   }, [activeSection]);
 
   return (
-    <main className="min-h-screen w-full bg-[#EEF0F3] p-5">
-      <section className="mx-auto max-w-[1280px] rounded-2xl bg-white p-5 shadow-sm">
+    <main className="m-2 mb-7 rounded-2xl bg-white p-8 shadow-sm md:mb-0 md:mt-4 lg:mb-5 lg:mt-0">
+      <section className="mx-auto max-w-[1280px]">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -140,33 +160,8 @@ export default function StaffProfileScreen({
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-center">
-              <thead className="bg-[#F3F6FA] text-[10px] uppercase tracking-wide text-[#64748B]">
-                <tr>
-                  <th className="px-5 py-4">Date</th>
-                  <th className="px-5 py-4">Check-In</th>
-                  <th className="px-5 py-4">Check-Out</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Work Hours</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#D7DFEC]">
-                {staff.history.map((log) => (
-                  <tr key={log.date} className="text-[12px] font-semibold text-[#34425E]">
-                    <td className="px-5 py-4">{log.date}</td>
-                    <td className="px-5 py-4">{log.checkIn}</td>
-                    <td className="px-5 py-4">{log.checkOut}</td>
-                    <td className="px-5 py-4">
-                      <span className={`rounded-full px-3 py-1 text-[10px] font-extrabold uppercase ${statusClass[log.status]}`}>
-                        {log.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">{log.workHours}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="[&>div]:mt-0 [&>div>div]:rounded-none [&>div>div]:shadow-none [&_th]:bg-[#F3F6FA] [&_th]:py-4 [&_th]:text-[10px] [&_th]:font-extrabold [&_th]:uppercase [&_th]:text-[#64748B] [&_td]:py-4 [&_td]:text-[12px] [&_td]:font-semibold [&_td]:text-[#34425E]">
+            <TableComponent columns={historyColumns} tableData={historyData} tableClassName="min-w-[760px]" height="none" stickyHeader={false} />
           </div>
 
           <div className="flex items-center justify-between px-5 py-4 text-[11px] text-[#8A9AB5]">
@@ -220,11 +215,14 @@ function ProfileStat({
   }[tone];
 
   return (
-    <div className="rounded-md border border-[#D7DFEC] bg-white p-5">
-      <span className={`grid h-10 w-10 place-items-center rounded-md ${toneClass}`}>{icon}</span>
-      <p className="mt-4 text-[10px] font-bold uppercase tracking-wide text-[#64748B]">{label}</p>
-      <p className="mt-1 text-[28px] font-extrabold text-[#08244A]">{value}</p>
-    </div>
+    <CardComponent
+      icon={<span className={`grid h-10 w-10 place-items-center rounded-md ${toneClass}`}>{icon}</span>}
+      value={<span className="text-[10px] font-bold uppercase tracking-wide text-[#64748B]">{label}</span>}
+      label={<span className="text-[28px] font-extrabold text-[#08244A]">{value}</span>}
+      style="min-h-[138px] !h-[138px] border border-[#D7DFEC] bg-white p-5 shadow-sm"
+      iconBgColor="transparent"
+      iconColor="inherit"
+    />
   );
 }
 

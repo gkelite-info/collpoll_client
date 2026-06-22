@@ -25,6 +25,10 @@ type InventoryOverviewProps = {
   onHistory: () => void;
   onEdit: (item: EquipmentItem) => void;
   onDelete: (item: EquipmentItem) => void;
+  title?: string;
+  description?: string;
+  addButtonLabel?: string;
+  itemColumnLabel?: string;
 };
 
 export function InventoryOverview({
@@ -39,12 +43,16 @@ export function InventoryOverview({
   onHistory,
   onEdit,
   onDelete,
+  title = "Inventory Overview",
+  description = "Track and manage all sports equipment and assets.",
+  addButtonLabel = "Add New Equipment",
+  itemColumnLabel = "Item Name",
 }: InventoryOverviewProps) {
   return (
     <section className="mx-auto max-w-[1180px] rounded-xl bg-white p-5 shadow-sm md:p-8">
       <div className="mb-8">
-        <h1 className="text-[22px] font-extrabold text-[#16284F]">Inventory Overview</h1>
-        <p className="mt-1 text-[13px] font-medium text-[#64748B]">Track and manage all sports equipment and assets.</p>
+        <h1 className="text-[22px] font-extrabold text-[#16284F]">{title}</h1>
+        <p className="mt-1 text-[13px] font-medium text-[#64748B]">{description}</p>
       </div>
 
       <div className="grid gap-5 md:grid-cols-4">
@@ -67,14 +75,14 @@ export function InventoryOverview({
             <option value="Out of Stock">Out of Stock</option>
           </select>
           <button className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded border border-[#E2E8F0] px-4 text-[13px] font-bold text-[#475569] hover:bg-[#F8FAFC]"><FunnelSimple size={16} weight="bold" />Filters</button>
-          <button type="button" onClick={onAdd} className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded bg-[#0F8A4B] px-5 text-[13px] font-bold text-white hover:bg-[#0B743F]"><Plus size={16} weight="bold" />Add New Equipment</button>
+          <button type="button" onClick={onAdd} className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded bg-[#0F8A4B] px-5 text-[13px] font-bold text-white hover:bg-[#0B743F]"><Plus size={16} weight="bold" />{addButtonLabel}</button>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] border-collapse text-left">
             <thead className="bg-[#F8FAFC] text-[11px] font-extrabold uppercase tracking-[0.04em] text-[#94A3B8]">
               <tr>
-                <th className="px-5 py-5">Item Name</th><th className="px-5 py-5">Total Qty</th><th className="px-5 py-5">Available</th><th className="px-5 py-5">Status</th><th className="px-5 py-5">Last Updated</th><th className="px-5 py-5 text-center">Actions</th>
+                <th className="px-5 py-5">{itemColumnLabel}</th><th className="px-5 py-5">Total Qty</th><th className="px-5 py-5">Available</th><th className="px-5 py-5">Status</th><th className="px-5 py-5">Last Updated</th><th className="px-5 py-5 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EEF2F7]">

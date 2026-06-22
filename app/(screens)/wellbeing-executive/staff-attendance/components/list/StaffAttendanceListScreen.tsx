@@ -126,8 +126,8 @@ export default function StaffAttendanceListScreen({
   };
 
   return (
-    <main className="min-h-screen w-full bg-[#EEF0F3] p-5">
-      <section className="mx-auto max-w-[1280px] rounded-2xl bg-white p-5 shadow-sm">
+    <main className="m-2 mb-7 rounded-2xl bg-white p-8 shadow-sm md:mb-0 md:mt-4 lg:mb-5 lg:mt-0">
+      <section className="mx-auto max-w-[1280px]">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <h1 className="text-[24px] font-extrabold text-[#08244A]">Attendance Management</h1>

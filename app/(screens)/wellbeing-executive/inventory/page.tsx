@@ -9,6 +9,7 @@ import {
   emptyForm,
   getStatus,
   normalizeCategoryName,
+  safetyItems,
 } from "./inventory-data";
 import { StockHistoryModal, UpdateStockModal } from "./modals";
 import type {
@@ -18,6 +19,8 @@ import type {
   StockUpdateState,
 } from "./types";
 
+type InventoryVariant = "sports" | "safety";
+
 const createStockUpdate = (): StockUpdateState => ({
   actionType: "add",
   quantity: "15",
@@ -25,16 +28,15 @@ const createStockUpdate = (): StockUpdateState => ({
   remarks: "",
 });
 
-function InventoryPageContent() {
+function InventoryWorkspace({ variant }: { variant: InventoryVariant }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { loading, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
-  const canViewInventory = [wellBeingCategoryName, ...wellBeingCategoryNames].some(
-    (category) => normalizeCategoryName(category) === "sports",
-  );
-  const [items, setItems] = useState<EquipmentItem[]>(defaultItems);
+  const isSafety = variant === "safety";
   const view = searchParams.get("view") === "add" ? "add" : "list";
+  const [items, setItems] = useState<EquipmentItem[]>(() =>
+    isSafety ? safetyItems : defaultItems,
+  );
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | EquipmentStatus>("all");
   const [form, setForm] = useState<EquipmentFormState>(emptyForm);
@@ -65,16 +67,16 @@ function InventoryPageContent() {
     };
   }, [items]);
 
-  const saveNewEquipment = () => {
+  const saveNewItem = () => {
     const totalQty = Number(form.quantity) || 0;
     const available = Number(form.available || form.quantity) || 0;
     if (!form.name.trim() || totalQty <= 0) return;
 
     setItems((current) => [
       {
-        id: `SP${String(current.length + 27).padStart(3, "0")}`,
+        id: `${isSafety ? "SS" : "SP"}${String(current.length + 27).padStart(3, "0")}`,
         name: form.name.trim(),
-        category: "Sports",
+        category: isSafety ? "Safety and Security" : "Sports",
         totalQty,
         available: Math.min(available, totalQty),
         lastUpdated: new Date().toLocaleDateString("en-GB", {
@@ -121,31 +123,19 @@ function InventoryPageContent() {
     setStockItem(null);
   };
 
-  if (!loading && !canViewInventory) {
-    return (
-      <main className="min-h-screen p-2">
-        <section className="rounded-xl bg-white p-8 text-center shadow-sm">
-          <h1 className="text-[22px] font-extrabold text-[#16284F]">Inventory</h1>
-          <p className="mt-2 text-[14px] font-semibold text-[#64748B]">
-            Inventory is available only for Sports wellbeing executives.
-          </p>
-        </section>
-      </main>
-    );
-  }
-
   if (view === "add") {
     return (
       <main className="m-2 mb-7 rounded-2xl bg-white p-8 shadow-sm md:mb-0 md:mt-4 lg:mb-5 lg:mt-0">
         <section className="mx-auto max-w-[1180px]">
           <EquipmentForm
-            title="Add New Equipment"
+            title={isSafety ? "Add New Asset" : "Add New Equipment"}
             description="Register new physical assets into the logistics ecosystem."
             form={form}
             onChange={setForm}
             onCancel={() => router.push(pathname)}
-            onSubmit={saveNewEquipment}
-            submitText="Save Equipment"
+            onSubmit={saveNewItem}
+            submitText={isSafety ? "Save Asset" : "Save Equipment"}
+            itemLabel={isSafety ? "Asset" : "Equipment"}
             compact
           />
         </section>
@@ -169,6 +159,13 @@ function InventoryPageContent() {
         onDelete={(item) =>
           setItems((current) => current.filter((row) => row.id !== item.id))
         }
+        description={
+          isSafety
+            ? "Track and manage all safety and security equipment and assets across the campus."
+            : "Track and manage all sports equipment and assets."
+        }
+        addButtonLabel={isSafety ? "Add New Asset" : "Add New Equipment"}
+        itemColumnLabel={isSafety ? "Asset Name" : "Item Name"}
       />
 
       {stockItem ? (
@@ -180,9 +177,39 @@ function InventoryPageContent() {
           onSave={saveStockUpdate}
         />
       ) : null}
-      {historyOpen ? <StockHistoryModal onClose={() => setHistoryOpen(false)} /> : null}
+      {historyOpen ? <StockHistoryModal variant={variant} onClose={() => setHistoryOpen(false)} /> : null}
     </main>
   );
+}
+
+function InventoryPageContent() {
+  const { loading, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
+  const categories = [wellBeingCategoryName, ...wellBeingCategoryNames].map(
+    normalizeCategoryName,
+  );
+  const isSports = categories.includes("sports");
+  const isSafety = categories.some(
+    (category) => category === "safetyandsecurity" || category === "safetysecurity",
+  );
+
+  if (loading) {
+    return <main className="min-h-screen bg-[#F4F4F4] p-2" />;
+  }
+
+  if (!isSports && !isSafety) {
+    return (
+      <main className="min-h-screen p-2">
+        <section className="rounded-xl bg-white p-8 text-center shadow-sm">
+          <h1 className="text-[22px] font-extrabold text-[#16284F]">Inventory</h1>
+          <p className="mt-2 text-[14px] font-semibold text-[#64748B]">
+            Inventory is available only for Sports and Safety &amp; Security wellbeing executives.
+          </p>
+        </section>
+      </main>
+    );
+  }
+
+  return <InventoryWorkspace key={isSafety ? "safety" : "sports"} variant={isSafety ? "safety" : "sports"} />;
 }
 
 export default function WellbeingInventoryPage() {

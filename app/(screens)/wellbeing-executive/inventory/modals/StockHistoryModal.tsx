@@ -2,14 +2,28 @@
 
 import { ClockCounterClockwise, X } from "@phosphor-icons/react";
 
-const history = [
+const sportsHistory = [
   { type: "Stock Added", quantity: "+15", date: "16 May 2025 • 10:30 AM", note: "Received 15 footballs from Decathlon.", added: true },
   { type: "Lost Equipment", quantity: "-2", date: "14 May 2025 • 04:20 PM", note: "Lost during inter-college tournament.", added: false },
   { type: "Stock Added", quantity: "+10", date: "10 May 2025 • 11:15 AM", note: "Purchased new footballs.", added: true },
-  { type: "Lost Equipment", quantity: "-2", date: "14 May 2025 • 04:20 PM", note: "Lost during inter-college tournament.", added: false },
+  { type: "Lost Equipment", quantity: "-2", date: "08 May 2025 • 02:45 PM", note: "Lost during inter-college tournament.", added: false },
 ];
 
-export function StockHistoryModal({ onClose }: { onClose: () => void }) {
+const safetyHistory = [
+  { type: "Stock Added", quantity: "+15", date: "16 May 2025 • 10:30 AM", note: "Received new walkie talkies for the security team.", added: true },
+  { type: "Damaged Asset", quantity: "-2", date: "14 May 2025 • 04:20 PM", note: "Damaged during campus patrol duty.", added: false },
+  { type: "Stock Added", quantity: "+10", date: "10 May 2025 • 11:15 AM", note: "Purchased new reflective safety jackets.", added: true },
+  { type: "Lost Asset", quantity: "-2", date: "08 May 2025 • 02:45 PM", note: "Reported missing after event security duty.", added: false },
+];
+
+type StockHistoryModalProps = {
+  onClose: () => void;
+  variant?: "sports" | "safety";
+};
+
+export function StockHistoryModal({ onClose, variant = "sports" }: StockHistoryModalProps) {
+  const history = variant === "safety" ? safetyHistory : sportsHistory;
+
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-end bg-black/55 p-2">
       <aside className="relative h-full w-full max-w-[430px] overflow-y-auto rounded-2xl bg-white p-7 shadow-2xl">

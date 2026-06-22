@@ -12,6 +12,7 @@ type EquipmentFormProps = {
   onSubmit: () => void;
   submitText: string;
   compact?: boolean;
+  itemLabel?: string;
 };
 
 export function EquipmentForm({
@@ -23,6 +24,7 @@ export function EquipmentForm({
   onSubmit,
   submitText,
   compact = false,
+  itemLabel = "Equipment",
 }: EquipmentFormProps) {
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -47,19 +49,19 @@ export function EquipmentForm({
             <Package size={compact ? 16 : 20} weight="fill" />
           </span>
           <h2 className={`${compact ? "text-[14px]" : "text-[17px]"} font-extrabold text-[#16284F]`}>
-            Equipment Details
+            {itemLabel} Details
           </h2>
         </div>
 
         <div className={`${compact ? "space-y-5 px-6 py-6" : "space-y-6 px-7 py-7"}`}>
           <label className="block">
             <span className="text-[12px] font-extrabold uppercase tracking-wide text-[#475569]">
-              Equipment Name <span className="text-[#FF2A2A]">*</span>
+              {itemLabel} Name <span className="text-[#FF2A2A]">*</span>
             </span>
             <input
               value={form.name}
               onChange={(event) => onChange({ ...form, name: event.target.value })}
-              placeholder="e.g. Cricket Bat (SG Club)"
+              placeholder={`Enter ${itemLabel.toLowerCase()} name`}
               className={`${compact ? "h-9" : "h-12"} mt-2 w-full rounded-sm border border-[#CBD5E1] bg-[#F8FAFC] px-4 text-[13px] font-semibold text-[#16284F] outline-none focus:border-[#43C17A]`}
             />
           </label>

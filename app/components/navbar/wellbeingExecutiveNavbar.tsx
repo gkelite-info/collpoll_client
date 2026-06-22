@@ -4,9 +4,10 @@ import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarCheck,
   CalendarDots,
+  Car,
   ChartBarHorizontal,
   CheckCircle,
-  ClipboardText,
+  Book,
   Cube,
   FolderOpen,
   Gear,
@@ -84,8 +85,10 @@ export default function WellbeingExecutiveNavbar({
   const canViewStaffAttendance = [wellBeingCategoryName, ...wellBeingCategoryNames].some(
     isSafetyAndSecurityCategory,
   );
-  const canViewInventory = [wellBeingCategoryName, ...wellBeingCategoryNames].some(
-    isSportsCategory,
+  const executiveCategories = [wellBeingCategoryName, ...wellBeingCategoryNames];
+  const canViewSportsFeatures = executiveCategories.some(isSportsCategory);
+  const canViewInventory = executiveCategories.some(
+    (category) => isSportsCategory(category) || isSafetyAndSecurityCategory(category),
   );
 
   const loadNewIssueCount = useCallback(async () => {
@@ -268,11 +271,11 @@ export default function WellbeingExecutiveNavbar({
       },
       {
         icon: (isActive) => (
-          <ClipboardText size={iconSize} weight={isActive ? "fill" : "regular"} />
+          <Book size={iconSize} weight={isActive ? "fill" : "regular"} />
         ),
         label: "Visitors Log",
         path: `${base}/visitors-log`,
-        hidden: !canViewInventory,
+        hidden: !canViewSportsFeatures,
       },
       {
         icon: (isActive) => (
@@ -280,7 +283,31 @@ export default function WellbeingExecutiveNavbar({
         ),
         label: "Staff Attendance",
         path: `${base}/staff-attendance`,
-        hidden: !showStaffAttendance || !canViewStaffAttendance,
+        hidden:
+          !canViewStaffAttendance ||
+          (base !== "/wellbeing-executive" && !showStaffAttendance),
+      },
+      {
+        icon: (isActive) => (
+          <Book size={iconSize} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: "Visitors Log",
+        path: `${base}/visitors-log`,
+        hidden:
+          !canViewStaffAttendance ||
+          canViewSportsFeatures ||
+          (base !== "/wellbeing-executive" && !showStaffAttendance),
+      },
+      {
+        icon: (isActive) => (
+          <Car size={iconSize} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: "Vehicle Log",
+        path: `${base}/vehicle-log`,
+        hidden:
+          !canViewStaffAttendance ||
+          canViewSportsFeatures ||
+          (base !== "/wellbeing-executive" && !showStaffAttendance),
       },
       {
         icon: (isActive) => (
@@ -292,7 +319,7 @@ export default function WellbeingExecutiveNavbar({
     ];
 
     return navItems.filter((item) => !item.hidden);
-  }, [base, canViewInventory, canViewStaffAttendance, newIssuesCount, showLeaveRequest, showStaffAttendance]);
+  }, [base, canViewInventory, canViewSportsFeatures, canViewStaffAttendance, newIssuesCount, showLeaveRequest, showStaffAttendance]);
 
   const prefetchRoute = useCallback(
     (path: string) => {
