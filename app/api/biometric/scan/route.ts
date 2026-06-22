@@ -299,9 +299,9 @@ export async function POST(req: NextRequest) {
         const actualLogType = "Entry"; // Default; real direction comes from rawDeviceData
         // Hikvision sends direction in rawDeviceData.direction or similar field
         const scanType =
-          ((rawDeviceData as any)?.direction === "exit" ? "Exit" : "Entry") as
-            | "Entry"
-            | "Exit";
+          device.gateDirection === "In" ? "Entry" :
+          device.gateDirection === "Out" ? "Exit" :
+          "Standalone";
 
         const scanDate = scanTimestamp.split("T")[0];
 
@@ -319,7 +319,12 @@ export async function POST(req: NextRequest) {
           scanTime: scanTimestamp,
           scanDate,
           authMethod: gateAuthMethod,
+          deviceAttendanceLogId: deviceAttendanceLogId ?? undefined,
         });
+
+        if (!gateResult.success) {
+          console.error("Gate Process Error:", gateResult.error);
+        }
 
         if (deviceAttendanceLogId) {
           await updateLogStatus({

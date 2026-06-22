@@ -179,6 +179,25 @@ export async function processClassroomAttendance(params: {
     }
     const { studentId } = student;
 
+    // 2.5 Debounce check (60 seconds)
+    const { data: lastScanLogs } = await adminSupabase
+      .from("device_attendance_logs")
+      .select("scanTimestamp")
+      .eq("userId", userId)
+      .eq("deviceId", deviceId)
+      .eq("logType", "classattendance")
+      .order("scanTimestamp", { ascending: false })
+      .limit(2);
+
+    if (lastScanLogs && lastScanLogs.length > 1) {
+      const lastTime = new Date(lastScanLogs[1].scanTimestamp).getTime();
+      const currTime = new Date(scanTimestamp).getTime();
+      
+      if (currTime - lastTime < 60000 && currTime >= lastTime) {
+        return { success: true, alreadyMarked: true };
+      }
+    }
+
     // 3. Find active class sessions for this device + time
     const sessions = await findActiveClassSessions(deviceId, scanDate, scanTime);
 
@@ -234,6 +253,25 @@ export async function processClassroomAttendance(params: {
           .update({ studentLoginTime: scanTime, updatedAt: now })
           .eq("attendanceRecordId", existing.attendanceRecordId);
       }
+
+      const payload = {
+        attendanceRecordId: existing.attendanceRecordId,
+        studentId,
+        calendarEventId,
+        status: "PRESENT",
+        studentLoginTime: scanMin < existingMin ? scanTime : existing.studentLoginTime,
+        markedAt: scanDate,
+      };
+
+      try {
+        await adminSupabase
+          .channel(`public:attendance_record:eventId=${calendarEventId}`)
+          .send({ type: "broadcast", event: "new_attendance", payload });
+
+        await adminSupabase
+          .channel(`public:attendance_record:admin`)
+          .send({ type: "broadcast", event: "new_attendance", payload });
+      } catch (broadcastErr) {}
 
       return {
         success: true,

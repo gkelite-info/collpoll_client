@@ -20,6 +20,7 @@ import {
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import AttendanceFilters from "./components/AttendanceFilteres";
 import { useHrAttendanceRealtime } from "@/lib/helpers/Hr/attendance/liveHrAttendanceAPI";
+import toast, { Toaster } from "react-hot-toast";
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -180,6 +181,7 @@ function FacultyAttendanceDashboard() {
     // We do a silent fetch so we don't flash loading states
     if (payload.new && payload.new.userId) {
       fetchStaffSilent(searchQuery, filterDateRef.current);
+      toast.success("Attendance updated successfully", { id: "hr-realtime-toast" });
     }
   });
 
@@ -384,6 +386,7 @@ function FacultyAttendanceDashboard() {
 
   return (
     <div className="text-[#282828] p-2 w-full h-full flex flex-col">
+      <Toaster position="top-right" />
       <div className="flex justify-between items-start mb-6">
         <div className="flex flex-col justify-start">
           <h1 className="text-xl font-bold text-[#282828] whitespace-nowrap">

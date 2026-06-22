@@ -470,7 +470,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       }
     }
 
-    if (!roomNo.trim()) {
+    if (selectedType === "class" && !roomNo.trim()) {
       toast.error("Please select a Room No.");
       return;
     }
@@ -950,18 +950,18 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 />
               </div>
 
-              <div className="flex-1 w-full min-w-0">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Room No. <span className="text-red-500">*</span>
-                </label>
-                <RoomSelectDropdown
-                  value={roomNo}
-                  onChange={(rNo, rId) => { setRoomNo(rNo); setCollegeRoomId(rId); }}
-                  collegeId={collegeId || 0}
-                  placeholder="Select Room No. / Room Name"
-                />
-              </div>
+            <div className="flex-1 w-full min-w-0">
+               <label className="block text-sm font-medium text-gray-700 mb-1">
+                Room No. {selectedType === "class" && <span className="text-red-500">*</span>}
+              </label>
+              <RoomSelectDropdown
+                value={roomNo}
+                onChange={(rNo, rId) => { setRoomNo(rNo); setCollegeRoomId(rId); }}
+                collegeId={collegeId || 0}
+                placeholder="Select Room No. / Room Name"
+              />
             </div>
+          </div>
 
             <div className="bg-red-00 flex flex-col space-y-1 mt-3">
               <label className="block text-gray-700 font-medium text-sm">

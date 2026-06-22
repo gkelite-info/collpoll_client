@@ -21,7 +21,7 @@ const err = (e: unknown) => {
 
 export type DeviceCategory = "classroom" | "gate";
 export type DeviceType = "fingerprint" | "facerecognition" | "card" | "multi";
-export type GateDirection = "In" | "Out";
+export type GateDirection = "In" | "Out" | "Standalone";
 
 export interface BiometricDevicePayload {
   deviceId?: number;

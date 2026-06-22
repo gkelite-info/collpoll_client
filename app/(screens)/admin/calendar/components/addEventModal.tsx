@@ -423,7 +423,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       return;
     }
 
-    if (!roomNo.trim()) {
+    if (selectedType === "class" && !roomNo.trim()) {
       toast.error("Please select a Room No.");
       return;
     }
@@ -769,7 +769,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               <div className="flex-1 w-full min-w-0">
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-sm font-medium text-gray-700">
-                    Room No. <span className="text-red-600">*</span>
+                    Room No. {selectedType === "class" && <span className="text-red-600">*</span>}
                   </label>
                   <button
                     type="button"
