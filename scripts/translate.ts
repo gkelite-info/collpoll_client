@@ -18,6 +18,7 @@ const EN_PATH = path.join(MESSAGES_DIR, "en.json");
 const TARGET_LANGS = [
   { code: "hi", name: "Hindi" },
   { code: "te", name: "Telugu" },
+  { code: "ur", name: "Urdu" },
 ];
 
 const CHUNK_SIZE = 20;
@@ -128,7 +129,8 @@ ${JSON.stringify(chunk, null, 2)}
           const cleaned = text.replace(/```json|```/g, "").trim();
           parsed = JSON.parse(cleaned);
         } catch (err) {
-          console.error("❌ Invalid JSON:\n", text);
+          console.error(`❌ Invalid JSON for ${target.name}:`);
+          console.error("RAW TEXT RECEIVED:", JSON.stringify(text));
           continue;
         }
 

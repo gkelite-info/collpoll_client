@@ -7,6 +7,7 @@ export type DriveFolderRow = {
   collegeId: number;
   parentFolderId: number | null;
   folderName: string;
+  color?: string | null;
   createdBy: number;
   is_deleted: boolean | null;
   createdAt: string;
@@ -26,6 +27,7 @@ export async function fetchRootDriveFolders(
       collegeId,
       parentFolderId,
       folderName,
+      color,
       createdBy,
       is_deleted,
       createdAt,
@@ -62,6 +64,7 @@ export async function fetchSubDriveFolders(
       collegeId,
       parentFolderId,
       folderName,
+      color,
       createdBy,
       is_deleted,
       createdAt,
@@ -118,6 +121,7 @@ export async function saveDriveFolder(
     collegeId: number;
     folderName: string;
     parentFolderId?: number | null;
+    color?: string | null;
   },
   userId: number,
 ) {
@@ -127,6 +131,7 @@ export async function saveDriveFolder(
     collegeId: payload.collegeId,
     folderName: payload.folderName.trim(),
     parentFolderId: payload.parentFolderId ?? null,
+    color: payload.color ?? null,
     updatedAt: now,
   };
 

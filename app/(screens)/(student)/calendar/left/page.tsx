@@ -23,7 +23,7 @@ function getWeekDays(locale: string) {
     date.setDate(monday.getDate() + i);
     days.push({
       dayName: date.toLocaleDateString(
-        locale === "te" ? "te-IN" : locale === "hi" ? "hi-IN" : "en-US",
+        locale === "te" ? "te-IN" : locale === "hi" ? "hi-IN" : locale === "ur" ? "ur-IN" : "en-US",
         { weekday: "short" },
       ),
       dateNum: date.getDate(),

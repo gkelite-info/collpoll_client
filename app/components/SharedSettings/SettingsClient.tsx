@@ -505,6 +505,12 @@ export default function SettingsClient({ CardIsVisible }: settingsProps) {
               >
                 తెలుగు (Telugu)
               </button>
+              <button
+                onClick={() => handleLanguageChange("ur")}
+                className="p-3 rounded-lg border border-[#CECECE] hover:bg-[#43C17A26] hover:border-[#43C17A] cursor-pointer text-left transition-colors font-medium text-[#282828]"
+              >
+                اردو (Urdu)
+              </button>
             </div>
 
             <button
