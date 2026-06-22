@@ -35,6 +35,9 @@ export interface DeviceAttendanceLogRow {
   rejectionReason: string | null;
   createdAt: string;
   user?: { fullName: string; role: string } | null;
+  device?: { deviceName: string } | null;
+  checkIn?: string | null;
+  checkOut?: string | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -48,10 +51,11 @@ export const getDeviceAttendanceLogs = async (
   filters?: {
     deviceId?: number;
     userId?: number;
-    logType?: string;
+    logTypes?: string[];
     processedStatus?: string;
     fromDate?: string;
     toDate?: string;
+    searchQuery?: string;
   },
 ) => {
   try {
@@ -64,14 +68,29 @@ export const getDeviceAttendanceLogs = async (
         "deviceAttendanceLogId, deviceId, userId, collegeId, calendarEventId, deviceClassSessionId, attendanceRecordId, gateScanLogId, attendanceDailyId, logType, authMethod, scanTimestamp, processedStatus, rejectionReason, createdAt",
         { count: "exact" },
       )
-      .eq("collegeId", collegeId);
+      .eq("collegeId", collegeId)
+      .or('"rejectionReason".is.null,"rejectionReason".neq.RateLimited');
 
     if (filters?.deviceId) query = query.eq("deviceId", filters.deviceId);
     if (filters?.userId) query = query.eq("userId", filters.userId);
-    if (filters?.logType) query = query.eq("logType", filters.logType);
+    if (filters?.logTypes && filters.logTypes.length > 0) query = query.in("logType", filters.logTypes);
     if (filters?.processedStatus) query = query.eq("processedStatus", filters.processedStatus);
     if (filters?.fromDate) query = query.gte("scanTimestamp", filters.fromDate);
     if (filters?.toDate) query = query.lte("scanTimestamp", filters.toDate);
+
+    if (filters?.searchQuery) {
+      const { data: usersMatch } = await supabase
+        .from("users")
+        .select("userId")
+        .eq("collegeId", collegeId)
+        .ilike("fullName", `%${filters.searchQuery}%`);
+      
+      if (!usersMatch || usersMatch.length === 0) {
+        return { success: true as const, data: [], total: 0 };
+      }
+      const matchingUserIds = usersMatch.map(u => u.userId);
+      query = query.in("userId", matchingUserIds);
+    }
 
     const { data, error, count } = await query
       .order("scanTimestamp", { ascending: false })
@@ -89,10 +108,90 @@ export const getDeviceAttendanceLogs = async (
     const userMap: Record<number, any> = {};
     (users ?? []).forEach((u: any) => { userMap[u.userId] = u; });
 
-    const enriched: DeviceAttendanceLogRow[] = data.map((d: any) => ({
-      ...d,
-      user: userMap[d.userId] || null,
-    }));
+    // Enrich with device info
+    const deviceIds = [...new Set(data.map((d: any) => d.deviceId))];
+    const { data: devices } = await supabase
+      .from("biometric_devices")
+      .select("deviceId, deviceName")
+      .in("deviceId", deviceIds);
+    const deviceMap: Record<number, any> = {};
+    (devices ?? []).forEach((d: any) => { deviceMap[d.deviceId] = d; });
+
+    // Fetch daily attendance for staff
+    const attendanceDailyIds = [...new Set(data.map((d: any) => d.attendanceDailyId).filter(Boolean))];
+    const { data: attendanceDailies } = attendanceDailyIds.length > 0 
+      ? await supabase.from("attendance_daily").select("attendanceDailyId, checkIn, checkOut").in("attendanceDailyId", attendanceDailyIds)
+      : { data: [] };
+    const attendanceDailyMap: Record<number, any> = {};
+    (attendanceDailies ?? []).forEach((a: any) => { attendanceDailyMap[a.attendanceDailyId] = a; });
+
+    // Fetch gate logs for students
+    const studentLogs = data.filter((d: any) => d.gateScanLogId && !d.attendanceDailyId);
+    const studentUserIds = [...new Set(studentLogs.map((d: any) => d.userId))];
+    const studentDates = [...new Set(studentLogs.map((d: any) => d.scanTimestamp.split("T")[0]))];
+    const { data: studentGateLogs } = studentUserIds.length > 0 && studentDates.length > 0
+      ? await supabase
+          .from("gate_scan_logs")
+          .select("userId, scanDate, scanType, scanTime")
+          .in("userId", studentUserIds)
+          .in("scanDate", studentDates)
+          .order("scanTime", { ascending: true })
+      : { data: [] };
+    
+    const studentGateMap: Record<string, { checkIn: string | null; checkOut: string | null }> = {};
+    (studentGateLogs ?? []).forEach((g: any) => {
+      const key = `${g.userId}_${g.scanDate}`;
+      if (!studentGateMap[key]) studentGateMap[key] = { checkIn: null, checkOut: null };
+
+      let timeStr = "00:00";
+      const st = g.scanTime;
+      if (!st.includes("Z") && !st.match(/[+-]\d{2}:\d{2}$/)) {
+        const match = st.match(/T(\d{2}:\d{2})/);
+        if (match) timeStr = match[1];
+      } else {
+        try {
+          timeStr = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(st));
+        } catch {
+          const match = st.match(/T(\d{2}:\d{2})/);
+          if (match) timeStr = match[1];
+        }
+      }
+
+      if (g.scanType === "Entry" && !studentGateMap[key].checkIn) {
+        studentGateMap[key].checkIn = timeStr;
+      } else if (g.scanType === "Exit") {
+        studentGateMap[key].checkOut = timeStr;
+      }
+    });
+
+    const enriched: DeviceAttendanceLogRow[] = data.map((d: any) => {
+      let checkIn = null;
+      let checkOut = null;
+
+      if (d.attendanceDailyId) {
+        const ad = attendanceDailyMap[d.attendanceDailyId];
+        if (ad) {
+          checkIn = ad.checkIn;
+          checkOut = ad.checkOut;
+        }
+      } else if (d.gateScanLogId) {
+        const dateStr = d.scanTimestamp.split("T")[0];
+        const key = `${d.userId}_${dateStr}`;
+        const sg = studentGateMap[key];
+        if (sg) {
+          checkIn = sg.checkIn;
+          checkOut = sg.checkOut;
+        }
+      }
+
+      return {
+        ...d,
+        user: userMap[d.userId] || null,
+        device: deviceMap[d.deviceId] || null,
+        checkIn,
+        checkOut,
+      };
+    });
 
     return { success: true as const, data: enriched, total: count ?? 0 };
   } catch (e) {
