@@ -191,7 +191,8 @@
       "Next Exam Date": "తదుపరి పరీక్ష తేదీ",
       "Date :": "తేదీ :",
       "NA": "లభించదు",
-      "Subject -": "విషయం -"
+      "Subject -": "విషయం -",
+      "Next Due:": "తదుపరి గడువు:"
     }
   },
   "Calendar": {
@@ -332,7 +333,9 @@
       "Faculty :": "ఫ్యాకల్టీ :",
       "Attendance :": "హాజరు :",
       "Subject Name": "విషయ పేరు",
-      "Sem Attendance": "సెమిస్టర్ హాజరు"
+      "Sem Attendance": "సెమిస్టర్ హాజరు",
+      "Semester Attendance": "సెమిస్టర్ హాజరు",
+      "Classes Held": "పాఠాలు నిర్వహించబడ్డాయి"
     }
   },
   "Assignment": {

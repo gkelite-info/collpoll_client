@@ -21,7 +21,8 @@
     "Add Admin": "व्यवस्थापक जोड़ें",
     "Finance / Analytics": "वित्त / एनालिटिक्स",
     "Add Fee Structure": "शुल्क संरचना जोड़ें",
-    "Registration": "पंजीकरण"
+    "Registration": "पंजीकरण",
+    "Wellbeing": "कल्याण"
   },
   "Settings": {
     "Settings": "सेटिंग्स",
@@ -190,7 +191,8 @@
       "Next Exam Date": "अगली परीक्षा तिथि",
       "Date :": "तारीख :",
       "NA": "उपलब्ध नहीं",
-      "Subject -": "विषय -"
+      "Subject -": "विषय -",
+      "Next Due:": "अगला देय:"
     }
   },
   "Calendar": {
@@ -331,7 +333,9 @@
       "Faculty :": "फैकल्टी :",
       "Attendance :": "उपस्थिति :",
       "Subject Name": "विषय का नाम",
-      "Sem Attendance": "सत्र उपस्थिति"
+      "Sem Attendance": "सत्र उपस्थिति",
+      "Semester Attendance": "सत्र उपस्थिति",
+      "Classes Held": "किए गए कक्षाएं"
     }
   },
   "Assignment": {
