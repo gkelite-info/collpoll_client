@@ -176,15 +176,11 @@ const DriveClient = () => {
       fetchRecentDriveFiles(collegeId, currentPage, rowsPerPage, userId),
     ])
       .then(([folderData, stats, filesResult]) => {
-        const savedColors: Record<number, string> = JSON.parse(
-          localStorage.getItem("folderColors") ?? "{}",
-        );
-
         setFolders(
           (folderData as DriveFolderRow[]).map((f) => ({
             driveFolderId: f.driveFolderId,
             name: f.folderName,
-            color: savedColors[f.driveFolderId] ?? "#0096A6",
+            color: f.color ?? "#0096A6",
             filesCount: stats[f.driveFolderId]?.totalFiles ?? 0,
             sizeLabel: formatSize(stats[f.driveFolderId]?.totalSizeBytes ?? 0),
           })),
@@ -234,23 +230,13 @@ const DriveClient = () => {
     }
 
     setIsSaving(true);
-
     try {
       const result = await saveDriveFolder(
-        { collegeId, folderName: data.name, parentFolderId: null },
+        { collegeId, folderName: data.name, parentFolderId: null, color: data.color },
         userId,
       );
 
-      if (!result.success) {
-        showToast(t("Failed to create folder"), "error");
-        return;
-      }
-
-      const savedColors: Record<number, string> = JSON.parse(
-        localStorage.getItem("folderColors") ?? "{}",
-      );
-      savedColors[result.driveFolderId!] = data.color;
-      localStorage.setItem("folderColors", JSON.stringify(savedColors));
+      if (!result.success) throw new Error("Failed");
 
       setFolders((prev) => [
         {
