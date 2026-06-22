@@ -23,6 +23,30 @@ export const Loader = () => (
   </div>
 );
 
+interface TimetableItem {
+  start: string;
+  end: string;
+  title: string;
+  topic: string;
+  room: string;
+  faculty: string;
+  img: string;
+  isCancelled?: boolean;
+  pdfUrl: string | null;
+}
+
+interface RawTimetableItem {
+  calendarEventId: number;
+  fromTime: string;
+  toTime: string;
+  eventTitle: string;
+  eventTopic: string;
+  topicId?: number | null;
+  facultyName: string;
+  roomNo: string;
+  isCancelled?: boolean;
+}
+
 export default function CalendarTimeTable({
   selectedDate,
   height = "lg:min-h-[784px]",
@@ -34,7 +58,7 @@ export default function CalendarTimeTable({
   const [todayDay, setTodayDay] = useState("");
   const [mobileDayName, setMobileDayName] = useState("");
 
-  const [timetable, setTimetable] = useState<any[]>([]);
+  const [timetable, setTimetable] = useState<TimetableItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { collegeEducationType } = useStudent();
   const t = useTranslations("Calendar.student");
@@ -72,6 +96,17 @@ export default function CalendarTimeTable({
         if (!userRow) throw new Error("Internal user not found");
 
         const studentContext = await fetchStudentContext(userRow.userId);
+        if (
+          !studentContext ||
+          studentContext.collegeEducationId === null ||
+          studentContext.collegeBranchId === null ||
+          studentContext.collegeAcademicYearId === null ||
+          studentContext.collegeSectionsId === null
+        ) {
+          setTimetable([]);
+          return;
+        }
+
         const isInter = collegeEducationType === "Inter";
 
         const rawData = await fetchStudentTimetableByDate({
@@ -85,7 +120,7 @@ export default function CalendarTimeTable({
         });
 
         const timetableWithResources = await Promise.all(
-          rawData.map(async (item: any) => {
+          (rawData as RawTimetableItem[]).map(async (item) => {
             let pdfUrl = null;
             if (item.topicId) {
               const resources = await fetchTopicResources(item.topicId);

@@ -57,9 +57,19 @@ export async function fetchStudentTimetableByDate(params: {
     .eq("is_deleted", false)
     .eq("date", params.date)
     .eq("sections.collegeEducationId", params.collegeEducationId)
-    .eq("sections.collegeBranchId", params.collegeBranchId)
-    .eq("sections.collegeAcademicYearId", params.collegeAcademicYearId)
-    .eq("sections.collegeSectionId", params.collegeSectionId);
+    .eq("sections.collegeBranchId", params.collegeBranchId);
+
+  if (params.collegeAcademicYearId !== null && params.collegeAcademicYearId !== undefined) {
+    query = query.eq("sections.collegeAcademicYearId", params.collegeAcademicYearId);
+  } else {
+    query = query.is("sections.collegeAcademicYearId", null);
+  }
+
+  if (params.collegeSectionId !== null && params.collegeSectionId !== undefined) {
+    query = query.eq("sections.collegeSectionId", params.collegeSectionId);
+  } else {
+    query = query.is("sections.collegeSectionId", null);
+  }
 
   if (!params.isInter && params.collegeSemesterId) {
     query = query.eq("sections.collegeSemesterId", params.collegeSemesterId);

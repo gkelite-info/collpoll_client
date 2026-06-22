@@ -25,11 +25,10 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   absentCount,
   leaveCount,
 }) => {
-  const t = useTranslations("Progress.student"); // Hook
+  const t = useTranslations("Progress.student");
 
   return (
     <div className="bg-white w-full max-w-5xl rounded-3xl p-5 max-md:p-3 max-md:rounded-2xl">
-      {/* Header Info */}
       <div className="flex flex-col md:flex-row md:items-center mb-8 gap-4 max-md:mb-4 max-md:flex-row max-md:gap-3">
         <Avatar
           src={avatarUrl}
@@ -52,7 +51,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-md:grid-cols-3 max-md:gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-md:grid-cols-2 max-md:gap-2">
         <div className="bg-green-50 rounded-xl p-5 flex items-center gap-5 max-md:p-2 max-md:gap-2 max-md:rounded-lg">
           <div className="bg-green-500 w-14 h-14 rounded-lg flex items-center justify-center shadow-sm max-md:w-8 max-md:h-8 max-md:rounded-md max-md:shrink-0">
             <div className="hidden md:block">

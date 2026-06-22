@@ -103,6 +103,7 @@ export async function getStudentDashboardData(
   const to = from + limit - 1;
 
   const ctx = await fetchStudentContext(userId);
+  if (!ctx) return emptyDashboard();
   const {
     studentId,
     collegeId,
@@ -116,10 +117,20 @@ export async function getStudentDashboardData(
   let sahQuery = supabase
     .from("student_academic_history")
     .select("studentId")
-    .eq("collegeAcademicYearId", collegeAcademicYearId)
-    .eq("collegeSectionsId", collegeSectionsId)
     .eq("isCurrent", true)
     .is("deletedAt", null);
+
+  if (collegeAcademicYearId !== null && collegeAcademicYearId !== undefined) {
+    sahQuery = sahQuery.eq("collegeAcademicYearId", collegeAcademicYearId);
+  } else {
+    sahQuery = sahQuery.is("collegeAcademicYearId", null);
+  }
+
+  if (collegeSectionsId !== null && collegeSectionsId !== undefined) {
+    sahQuery = sahQuery.eq("collegeSectionsId", collegeSectionsId);
+  } else {
+    sahQuery = sahQuery.is("collegeSectionsId", null);
+  }
 
   if (!isInter && collegeSemesterId) {
     sahQuery = sahQuery.eq("collegeSemesterId", collegeSemesterId);
@@ -392,7 +403,12 @@ export async function getStudentDashboardData(
   });
   const attendancePolicyInsight = await buildStudentAttendancePolicyInsight({
     userId,
-    context: ctx,
+    context: {
+      collegeEducationId: ctx.collegeEducationId,
+      collegeBranchId: ctx.collegeBranchId,
+      collegeAcademicYearId: ctx.collegeAcademicYearId as number,
+      collegeSemesterId: ctx.collegeSemesterId,
+    },
     attendedClasses: eligibilityAttended,
     totalClasses: eligibilityConducted,
   });

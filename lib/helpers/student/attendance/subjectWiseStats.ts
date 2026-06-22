@@ -78,6 +78,7 @@ export async function getStudentDashboardData(
   const to = from + limit - 1;
 
   const ctx = await fetchStudentContext(userId);
+  if (!ctx) return emptyDashboard();
   const {
     studentId,
     collegeId,
@@ -273,7 +274,12 @@ export async function getStudentDashboardData(
   );
   const attendancePolicyInsight = await buildStudentAttendancePolicyInsight({
     userId,
-    context: ctx,
+    context: {
+      collegeEducationId: ctx.collegeEducationId,
+      collegeBranchId: ctx.collegeBranchId,
+      collegeAcademicYearId: ctx.collegeAcademicYearId as number,
+      collegeSemesterId: ctx.collegeSemesterId,
+    },
     attendedClasses: eligibilityAttended,
     totalClasses: eligibilityConducted,
   });

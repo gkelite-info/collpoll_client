@@ -74,15 +74,15 @@ export function AttendanceSummaryCard({ percentage }: AttendanceSummaryProps) {
 
         <div className="flex gap-10 mt-10">
           <div className="flex items-center gap-3">
-            <div className="w-4 h-4 rounded-full bg-[#D9F9C3]"></div>
-            <span className="text-lg font-medium text-gray-600">
-              {t("Absent")}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
             <div className="w-4 h-4 rounded-full bg-[#4ABF08]"></div>
             <span className="text-lg font-medium text-gray-600">
               {t("Present")}
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-4 h-4 rounded-full bg-[#D9F9C3]"></div>
+            <span className="text-lg font-medium text-gray-600">
+              {t("Absent")}
             </span>
           </div>
         </div>

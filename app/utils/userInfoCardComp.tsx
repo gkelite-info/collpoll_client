@@ -14,6 +14,8 @@ export default function UserInfoCard() {
     identifierId,
   } = useUser();
   const { collegeAcademicYear } = useStudent();
+  console.log("What is year", collegeAcademicYear);
+
   const t = useTranslations("Dashboard.student");
 
   const bgBanner = "/dashboard-banner-bg.png";
@@ -23,7 +25,7 @@ export default function UserInfoCard() {
     month: "2-digit",
     year: "numeric",
   }).format(new Date());
-  
+
 
   return (
     <>

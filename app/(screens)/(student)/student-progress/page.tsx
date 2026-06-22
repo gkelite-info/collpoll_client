@@ -308,7 +308,7 @@ const Page = () => {
                   />
                 </section>
 
-                <section className="bg-white rounded-2xl lg:col-span-4">
+                <section className="bg-white rounded-2xl lg:col-span-4 shadow-md">
                   <AttendanceList data={progressData?.subjectAttendance || []} />
                 </section>
               </article>

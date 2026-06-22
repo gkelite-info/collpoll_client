@@ -13,10 +13,10 @@ type AttendanceListProps = {
   data?: AttendanceItem[];
 };
 export function AttendanceList({ data }: AttendanceListProps) {
-  const t = useTranslations("Progress.student"); // Hook
+  const t = useTranslations("Progress.student");
 
   return (
-    <div className="w-full h-[400px] flex flex-col font-sans overflow-hidden ">
+    <div className="w-full h-[400px] flex flex-col font-sans overflow-hidden">
       <div className="p-5 pb-2 flex justify-between items-center">
         <h2 className="text-lg font-bold text-gray-800">
           {t("Attendance by Subject")}
