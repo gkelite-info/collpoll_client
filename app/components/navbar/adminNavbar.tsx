@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   CheckCircle,
   ClipboardText,
+  FileText,
   FolderOpen,
   Gear,
   GraduationCap,
@@ -109,6 +110,11 @@ export default function AdminNavbar({ onClose }: AdminNavbarProps) {
       icon: (isActive) => <Laptop size={18} weight={isActive ? "fill" : "regular"} />,
       label: t("Meetings"),
       path: "/admin/meetings",
+    },
+    {
+      icon: (isActive) => <FileText size={18} weight={isActive ? "fill" : "regular"} />,
+      label: t("Exams"),
+      path: "/admin/exams",
     },
     {
       icon: (isActive) => <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />,
