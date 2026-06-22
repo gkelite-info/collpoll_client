@@ -128,7 +128,14 @@ export default function FingerprintCaptureTab({
                 endTime
               );
             } catch (e: any) {
-              // Registration warning ignored
+              const subStatusCode = e?.subStatusCode || "";
+              // User already exists on device — safe to proceed with credential enrollment
+              if (subStatusCode === "employeeNoAlreadyExist") {
+                // Already handled by registerUserOnDevice's internal modify fallback
+              } else {
+                // Network failure, device offline, or unexpected error — must fail this device
+                throw e;
+              }
             }
 
             await registerFingerprintOnDevice(
