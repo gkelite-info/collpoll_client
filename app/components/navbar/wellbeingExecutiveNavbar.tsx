@@ -6,6 +6,8 @@ import {
   CalendarDots,
   ChartBarHorizontal,
   CheckCircle,
+  ClipboardText,
+  Cube,
   FolderOpen,
   Gear,
   Headset,
@@ -54,6 +56,9 @@ const isSafetyAndSecurityCategory = (categoryName: string | null | undefined) =>
   return normalizedCategory === "safetyandsecurity" || normalizedCategory === "safetysecurity";
 };
 
+const isSportsCategory = (categoryName: string | null | undefined) =>
+  normalizeCategoryName(categoryName) === "sports";
+
 export default function WellbeingExecutiveNavbar({
   onClose,
   basePath = "/wellbeing-executive",
@@ -78,6 +83,9 @@ export default function WellbeingExecutiveNavbar({
   const [newIssuesCount, setNewIssuesCount] = useState(0);
   const canViewStaffAttendance = [wellBeingCategoryName, ...wellBeingCategoryNames].some(
     isSafetyAndSecurityCategory,
+  );
+  const canViewInventory = [wellBeingCategoryName, ...wellBeingCategoryNames].some(
+    isSportsCategory,
   );
 
   const loadNewIssueCount = useCallback(async () => {
@@ -252,6 +260,22 @@ export default function WellbeingExecutiveNavbar({
       },
       {
         icon: (isActive) => (
+          <Cube size={iconSize} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: "Inventory",
+        path: `${base}/inventory`,
+        hidden: !canViewInventory,
+      },
+      {
+        icon: (isActive) => (
+          <ClipboardText size={iconSize} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: "Visitors Log",
+        path: `${base}/visitors-log`,
+        hidden: !canViewInventory,
+      },
+      {
+        icon: (isActive) => (
           <CheckCircle size={iconSize} weight={isActive ? "fill" : "regular"} />
         ),
         label: "Staff Attendance",
@@ -268,7 +292,7 @@ export default function WellbeingExecutiveNavbar({
     ];
 
     return navItems.filter((item) => !item.hidden);
-  }, [base, canViewStaffAttendance, newIssuesCount, showLeaveRequest, showStaffAttendance]);
+  }, [base, canViewInventory, canViewStaffAttendance, newIssuesCount, showLeaveRequest, showStaffAttendance]);
 
   const prefetchRoute = useCallback(
     (path: string) => {
@@ -338,18 +362,18 @@ export default function WellbeingExecutiveNavbar({
                 onFocus={() => prefetchRoute(item.path)}
                 onMouseEnter={() => prefetchRoute(item.path)}
                 onTouchStart={() => prefetchRoute(item.path)}
-                className={`group relative flex w-full cursor-pointer items-center gap-3 rounded-l-full py-2 pl-4 text-sm font-medium transition-all duration-300 before:transition-all before:duration-300 after:transition-all after:duration-300 sm:text-sm md:text-base lg:text-sm ${active
+                className={`group relative grid w-full grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 rounded-l-full py-2 pl-4 text-sm font-medium transition-colors duration-300 sm:text-sm md:text-base lg:text-sm ${active
                     ? "activeNav bg-[#F4F4F4] text-[#43C17A] focus:outline-none"
                     : "text-white hover:bg-white/10"
                   }`}
               >
                 <span
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center ${active ? "text-[#43C17A]" : "text-white"
+                  className={`flex h-5 w-5 items-center justify-center ${active ? "text-[#43C17A]" : "text-white"
                     }`}
                 >
                   {item.icon(active)}
                 </span>
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                <span className="min-w-0 truncate">{item.label}</span>
                 {item.badge ? (
                   <span className="mr-4 flex h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
                     {item.badge}
