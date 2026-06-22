@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import {
@@ -10,20 +10,24 @@ import {
   PaperPlaneRight,
   DownloadSimple,
   FunnelSimple,
+  SpinnerGap,
 } from "@phosphor-icons/react";
 import ResultsDropdown from "./resultsDropdown";
 import TableComponent from "@/app/utils/table/table";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { downloadSamplePDF } from "../utils/downloadHelper";
 import toast from "react-hot-toast";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { supabase } from "@/lib/supabaseClient";
+import { fetchStudentsWithProfile } from "@/lib/helpers/faculty/fetchStudents";
 
 interface StudentGradeRow {
   studentId: string;
   studentName: string;
   subjectCode: string;
-  gradeSecured: "A+" | "A" | "B+" | "B" | "F";
+  gradeSecured: string;
   gradePoints: number;
-  results: "P" | "F";
+  results: "P" | "F" | "-";
   credits: string;
   section: string;
 }
@@ -35,48 +39,239 @@ export default function MemorandumOfGrades() {
 
   const examType = searchParams.get("examType") || "Mid Term";
   const semester = searchParams.get("semester") || "I Semester";
+  const subjectParam = searchParams.get("subject") || "N/A";
+  const [collegeName, setCollegeName] = useState("St. Xavier's College of Excellence");
 
+  const collegeAbbreviation = useMemo(() => {
+    if (!collegeName) return "CO";
+    return collegeName
+      .split(/\s+/)
+      .map(w => w[0])
+      .join("")
+      .substring(0, 2)
+      .toUpperCase();
+  }, [collegeName]);
+
+  const subtitleText = useMemo(() => {
+    if (!semester || semester.toLowerCase() === "general") {
+      return `Previewing results data for ${examType}`;
+    }
+    return `Previewing results data for ${semester} (${examType})`;
+  }, [semester, examType]);
+
+  const {
+    collegeId,
+    collegeEducationId,
+    collegeBranchId,
+    college_branch,
+    sections: facultySections
+  } = useFaculty();
+
+  const branchParam = searchParams.get("branch") || college_branch || "N/A";
+
+  const [gradesList, setGradesList] = useState<StudentGradeRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedSection, setSelectedSection] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  const sectionOptions = [
-    { label: "All Sections", value: "all" },
-    { label: "Section A", value: "A" },
-    { label: "Section B", value: "B" },
-    { label: "Section C", value: "C" },
-  ];
+  // Dynamically populate section options from facultySections
+  const sectionOptions = useMemo(() => {
+    const opts = [{ label: "All Sections", value: "all" }];
+    const uniqueSections = Array.from(new Set(
+      facultySections
+        .map(fs => fs.college_sections?.collegeSections)
+        .filter(Boolean)
+    ));
+    uniqueSections.sort().forEach(sec => {
+      opts.push({ label: `Section ${sec}`, value: sec! });
+    });
+    return opts;
+  }, [facultySections]);
 
-  const staticGrades: StudentGradeRow[] = [
-    { studentId: "208234", studentName: "Elena Rodriguez", subjectCode: "PHY-701", gradeSecured: "A+", gradePoints: 6, results: "P", credits: "3.0", section: "A" },
-    { studentId: "208235", studentName: "Adrian Sterling", subjectCode: "PHY-701", gradeSecured: "B", gradePoints: 6, results: "P", credits: "3.0", section: "B" },
-    { studentId: "208236", studentName: "Marcus Chen", subjectCode: "PHY-702", gradeSecured: "F", gradePoints: 2, results: "F", credits: "3.0", section: "C" },
-    { studentId: "208237", studentName: "Sophia Loren", subjectCode: "PHY-701", gradeSecured: "A", gradePoints: 6, results: "P", credits: "3.0", section: "A" },
-    { studentId: "208238", studentName: "Jameson Blake", subjectCode: "PHY-703", gradeSecured: "B+", gradePoints: 6, results: "P", credits: "3.0", section: "B" },
-    { studentId: "208239", studentName: "Isabella Martinez", subjectCode: "PHY-701", gradeSecured: "A+", gradePoints: 6, results: "P", credits: "3.0", section: "A" },
-    { studentId: "208240", studentName: "Liam Henderson", subjectCode: "PHY-702", gradeSecured: "B", gradePoints: 6, results: "P", credits: "3.0", section: "B" },
-    { studentId: "208241", studentName: "Olivia Vance", subjectCode: "PHY-701", gradeSecured: "F", gradePoints: 2, results: "F", credits: "3.0", section: "C" },
-    { studentId: "208242", studentName: "Ethan Hunt", subjectCode: "PHY-703", gradeSecured: "A", gradePoints: 6, results: "P", credits: "3.0", section: "A" },
-    { studentId: "208243", studentName: "Lucas Scott", subjectCode: "PHY-701", gradeSecured: "B+", gradePoints: 6, results: "P", credits: "3.0", section: "B" },
-    { studentId: "208244", studentName: "Charlotte Bronte", subjectCode: "PHY-701", gradeSecured: "A+", gradePoints: 6, results: "P", credits: "3.0", section: "A" },
-    { studentId: "208245", studentName: "Daniel Craig", subjectCode: "PHY-702", gradeSecured: "B", gradePoints: 6, results: "P", credits: "3.0", section: "B" },
-    { studentId: "208246", studentName: "Emma Watson", subjectCode: "PHY-701", gradeSecured: "A", gradePoints: 6, results: "P", credits: "3.0", section: "A" },
-    { studentId: "208247", studentName: "Alexander Great", subjectCode: "PHY-703", gradeSecured: "B+", gradePoints: 6, results: "P", credits: "3.0", section: "B" },
-    { studentId: "208248", studentName: "Zoe Saldana", subjectCode: "PHY-701", gradeSecured: "A+", gradePoints: 6, results: "P", credits: "3.0", section: "A" },
-    { studentId: "208249", studentName: "Ryan Gosling", subjectCode: "PHY-702", gradeSecured: "F", gradePoints: 2, results: "F", credits: "3.0", section: "C" },
-    { studentId: "208250", studentName: "Chloe Grace", subjectCode: "PHY-701", gradeSecured: "B", gradePoints: 6, results: "P", credits: "3.0", section: "B" },
-    { studentId: "208251", studentName: "William Shakespeare", subjectCode: "PHY-703", gradeSecured: "A", gradePoints: 6, results: "P", credits: "3.0", section: "A" },
-    { studentId: "208252", studentName: "Penelope Cruz", subjectCode: "PHY-701", gradeSecured: "B+", gradePoints: 6, results: "P", credits: "3.0", section: "B" },
-    { studentId: "208253", studentName: "Gabriel Garcia", subjectCode: "PHY-702", gradeSecured: "A+", gradePoints: 6, results: "P", credits: "3.0", section: "A" },
-  ];
+  useEffect(() => {
+    if (!collegeId || !collegeEducationId) {
+      setLoading(false);
+      return;
+    }
+
+    async function loadData() {
+      setLoading(true);
+      try {
+        // Resolve college name
+        if (collegeId) {
+          const { data: colData } = await supabase
+            .from("colleges")
+            .select("collegeName")
+            .eq("collegeId", collegeId)
+            .maybeSingle();
+          if (colData?.collegeName) {
+            setCollegeName(colData.collegeName);
+          }
+        }
+        const sectionId = searchParams.get("sectionId");
+        const academicYearId = searchParams.get("academicYearId");
+        const semesterIdNum = Number(searchParams.get("semesterId") || 1);
+        const subjectName = searchParams.get("subject") || "";
+        const scheduleIdParam = searchParams.get("collegeExamScheduleId");
+        const scheduleId = scheduleIdParam ? Number(scheduleIdParam) : null;
+
+        // 1. Resolve subject details (id, code, credits)
+        let targetSubjectId = facultySections.find(s => s.faculty_subject?.subjectName === subjectName)?.collegeSubjectId;
+        let subjectCode = "";
+        let credits = 3.0;
+
+        if (targetSubjectId) {
+          const { data: subData } = await supabase
+            .from("college_subjects")
+            .select("subjectCode, credits")
+            .eq("collegeSubjectId", targetSubjectId)
+            .is("deletedAt", null)
+            .maybeSingle();
+          if (subData) {
+            subjectCode = subData.subjectCode || "";
+            credits = Number(subData.credits) || 3.0;
+          }
+        } else if (collegeBranchId) {
+          const { data: subData } = await supabase
+            .from("college_subjects")
+            .select("collegeSubjectId, subjectCode, credits")
+            .eq("subjectName", subjectName)
+            .eq("collegeBranchId", collegeBranchId)
+            .is("deletedAt", null)
+            .maybeSingle();
+          if (subData) {
+            targetSubjectId = subData.collegeSubjectId;
+            subjectCode = subData.subjectCode || "";
+            credits = Number(subData.credits) || 3.0;
+          }
+        }
+
+        // 2. Fetch students for this section & year
+        let students: any[] = [];
+        if (sectionId && academicYearId && collegeId) {
+          students = await fetchStudentsWithProfile(collegeId, {
+            sectionId: Number(sectionId),
+            yearId: Number(academicYearId),
+          });
+        }
+
+        const studentIds = students.map(s => s.id);
+        const pinMap = new Map<number, string>();
+        const resultsMap = new Map<number, any>();
+
+        if (studentIds.length > 0) {
+          // 3. Fetch student pins
+          const { data: pinRows, error: pinError } = await supabase
+            .from("student_pins")
+            .select("studentId, pinNumber")
+            .in("studentId", studentIds)
+            .eq("collegeId", collegeId)
+            .eq("isActive", true)
+            .is("deletedAt", null);
+
+          if (!pinError && pinRows) {
+            pinRows.forEach(p => {
+              if (p.pinNumber) {
+                pinMap.set(p.studentId, p.pinNumber.trim());
+              }
+            });
+          }
+
+          // 4. Fetch results
+          if (targetSubjectId) {
+            let query = supabase
+              .from("results")
+              .select("*")
+              .in("studentId", studentIds)
+              .eq("subjectId", targetSubjectId)
+              .is("deletedAt", null);
+
+            if (scheduleId) {
+              query = query.eq("collegeExamScheduleId", scheduleId);
+            } else {
+              query = query.eq("collegeSemesterId", semesterIdNum);
+            }
+
+            const { data: resultsRows, error: resultsError } = await query;
+
+            if (!resultsError && resultsRows) {
+              resultsRows.forEach(r => {
+                resultsMap.set(r.studentId, r);
+              });
+            }
+          }
+        }
+
+        // 5. Build section map
+        const sectionMap = new Map<number, string>();
+        facultySections.forEach(fs => {
+          if (fs.collegeSectionsId && fs.college_sections?.collegeSections) {
+            sectionMap.set(fs.collegeSectionsId, fs.college_sections.collegeSections);
+          }
+        });
+
+        // 6. Map students to StudentGradeRow
+        const getGradePoints = (grade: string): number => {
+          const g = grade.toUpperCase().trim();
+          switch (g) {
+            case "A+": return 10;
+            case "A": return 9;
+            case "B+": return 8;
+            case "B": return 7;
+            case "F": return 2;
+            default: return 0;
+          }
+        };
+
+        const isPass = (grade: string): "P" | "F" | "-" => {
+          const g = grade.toUpperCase().trim();
+          if (!g || g === "N/A") return "-";
+          return g === "F" ? "F" : "P";
+        };
+
+        const mappedGrades: StudentGradeRow[] = students.map(s => {
+          const pin = pinMap.get(s.id) || `STU-${s.id}`;
+          const res = resultsMap.get(s.id);
+          const historyRow = s.student_academic_history?.[0] || s.student_academic_history;
+          const secIdNum = historyRow?.collegeSectionsId;
+          const sectionName = secIdNum ? (sectionMap.get(secIdNum) || "") : "";
+
+          const grade = res?.grade || "N/A";
+          const gradePoints = getGradePoints(grade);
+          const passFail = isPass(grade);
+
+          return {
+            studentId: pin,
+            studentName: s.name,
+            subjectCode: subjectCode || subjectName,
+            gradeSecured: grade,
+            gradePoints,
+            results: passFail,
+            credits: credits.toFixed(1),
+            section: sectionName,
+          };
+        });
+
+        setGradesList(mappedGrades);
+      } catch (err) {
+        console.error("Error loading grades:", err);
+        toast.error("Failed to load grades");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, [collegeId, collegeEducationId, collegeBranchId, searchParams, facultySections]);
 
   const filteredGrades = useMemo(() => {
-    let data = staticGrades;
+    let data = gradesList;
     if (selectedSection !== "all") {
       data = data.filter((item) => item.section === selectedSection);
     }
     return data;
-  }, [selectedSection]);
+  }, [gradesList, selectedSection]);
 
   const paginatedGrades = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -100,7 +295,7 @@ export default function MemorandumOfGrades() {
         gradeColor = "text-[#43C17A] font-bold";
       } else if (row.gradeSecured === "F") {
         gradeColor = "text-[#FF3B30] font-bold";
-      } else {
+      } else if (row.gradeSecured !== "N/A") {
         gradeColor = "text-blue-700 font-bold";
       }
 
@@ -109,9 +304,13 @@ export default function MemorandumOfGrades() {
           <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-[#E6FBEA] text-[#43C17A]">
             P
           </span>
-        ) : (
+        ) : row.results === "F" ? (
           <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-[#FFE0E0] text-[#FF3B30]">
             F
+          </span>
+        ) : (
+          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-500">
+            -
           </span>
         );
 
@@ -167,14 +366,14 @@ export default function MemorandumOfGrades() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent flex items-center p-6 md:p-8">
           <div className="flex items-center gap-4">
             <div className="border-[4px] border-[#43C17A] rounded-[18px] bg-black/30 w-16 h-16 flex items-center justify-center text-white font-extrabold text-xl shrink-0">
-              SX
+              {collegeAbbreviation}
             </div>
             <div className="text-white">
               <h2 className="text-lg md:text-2xl font-extrabold tracking-wide leading-tight">
-                St. Xavier's College of Excellence
+                {collegeName}
               </h2>
               <p className="text-xs md:text-sm text-green-300 font-medium mt-1">
-                Faculty of Science • Department of Applied Physics
+                Faculty of {subjectParam} • Branch of {branchParam}
               </p>
             </div>
           </div>
@@ -194,12 +393,12 @@ export default function MemorandumOfGrades() {
               Memorandum of Grades
             </h2>
             <p className="text-xs md:text-sm text-gray-500 mt-0.5">
-              Previewing parsed data for {semester} - Autumn 2024
+              {subtitleText}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-2">
           <button
             onClick={() => toast.success("Edit mode enabled. You can now edit grades.")}
             className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#43C17A] hover:bg-[#E6FBEA] text-xs md:text-sm font-bold text-[#43C17A] rounded-lg transition-colors bg-white shadow-sm cursor-pointer"
@@ -221,25 +420,25 @@ export default function MemorandumOfGrades() {
             <PaperPlaneRight size={16} weight="fill" />
             <span>Publish Results</span>
           </button>
-        </div>
+        </div> */}
       </div>
 
       <div className="bg-white border border-gray-150 rounded-2xl shadow-sm overflow-hidden flex flex-col">
         <div className="p-4 border-b border-gray-150 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center justify-between sm:justify-start gap-4 w-full sm:w-auto">
-            <ResultsDropdown
+            {/* <ResultsDropdown
               options={sectionOptions}
               selectedValue={selectedSection}
               onChange={handleSectionFilterChange}
               align="left"
               icon={<FunnelSimple size={16} />}
-            />
+            /> */}
             <span className="text-xs md:text-sm font-bold text-gray-700">
               Showing {filteredGrades.length} Students
             </span>
           </div>
 
-          <button
+          {/* <button
             onClick={() => {
               downloadSamplePDF();
               toast.success("Exporting grades report as PDF...");
@@ -248,15 +447,22 @@ export default function MemorandumOfGrades() {
           >
             <DownloadSimple size={16} weight="bold" />
             <span>Export as PDF</span>
-          </button>
+          </button> */}
         </div>
 
-        <div className="px-4">
-          <TableComponent
-            columns={tableColumns}
-            tableData={tableDataFormatted}
-            stickyHeader={true}
-          />
+        <div className="px-4 pb-5">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center gap-2 text-gray-500 py-16">
+              <SpinnerGap size={36} className="animate-spin text-[#43C17A]" />
+              <p className="text-sm font-semibold">Loading memorandum of grades...</p>
+            </div>
+          ) : (
+            <TableComponent
+              columns={tableColumns}
+              tableData={tableDataFormatted}
+              stickyHeader={true}
+            />
+          )}
         </div>
 
         <Pagination
