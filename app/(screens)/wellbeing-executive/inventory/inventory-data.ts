@@ -23,6 +23,16 @@ export const defaultItems: EquipmentItem[] = [
   { id: "SP026", name: "Dumbbell Set (5kg)", category: "Sports", totalQty: 10, available: 1, lastUpdated: "15 May 2025", image: equipmentImage("5KG", "#111827", "#94A3B8") },
 ];
 
+export const safetyItems: EquipmentItem[] = [
+  { id: "SP0012", name: "Walkie Talkie (Motorola)", category: "Safety and Security", totalQty: 6, available: 0, lastUpdated: "15 May 2025", image: equipmentImage("WT", "#1F2937", "#D6A354") },
+  { id: "SP0021", name: "Metal Detector", category: "Safety and Security", totalQty: 30, available: 12, lastUpdated: "15 May 2025", image: equipmentImage("MD", "#7C2D12", "#F97316") },
+  { id: "SP0022", name: "Reflective Safety Jackets", category: "Safety and Security", totalQty: 15, available: 3, lastUpdated: "15 May 2025", image: equipmentImage("JKT", "#9A3412", "#FB923C") },
+  { id: "SP0023", name: "Flashlights", category: "Safety and Security", totalQty: 12, available: 8, lastUpdated: "15 May 2025", image: equipmentImage("LGT", "#1E3A8A", "#FBBF24") },
+  { id: "SP0024", name: "Security Barricades", category: "Safety and Security", totalQty: 20, available: 7, lastUpdated: "15 May 2025", image: equipmentImage("BAR", "#334155", "#CBD5E1") },
+  { id: "SP0025", name: "Body Camera", category: "Safety and Security", totalQty: 10, available: 6, lastUpdated: "15 May 2025", image: equipmentImage("CAM", "#0F766E", "#67E8F9") },
+  { id: "SP0026", name: "Emergency First Aid Kit", category: "Safety and Security", totalQty: 8, available: 2, lastUpdated: "15 May 2025", image: equipmentImage("AID", "#991B1B", "#FCA5A5") },
+];
+
 export const emptyForm: EquipmentFormState = {
   name: "",
   quantity: "",
