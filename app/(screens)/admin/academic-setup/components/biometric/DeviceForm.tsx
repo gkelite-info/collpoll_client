@@ -12,7 +12,7 @@ export type DeviceFormState = {
   deviceUsername: string;
   devicePassword: string;
   deviceType: DeviceType;
-  deviceCategory: DeviceCategory;
+  deviceCategory: DeviceCategory | "";
   gateDirection: GateDirection | "";
   deviceModel: string;
   firmwareVersion: string;
@@ -200,6 +200,7 @@ export default function DeviceForm({
               options={deviceCategories}
               onChange={onChange}
               required
+              placeholder="Select category"
             />
             {form.deviceCategory === "gate" && (
               <CustomSelect

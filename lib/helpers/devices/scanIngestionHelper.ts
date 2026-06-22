@@ -24,6 +24,7 @@ export interface DeviceRow {
   deviceIp: string;
   isActive: boolean;
   is_deleted: boolean;
+  gateDirection: "In" | "Out" | "Standalone" | null;
 }
 
 export interface CredentialLookupResult {
@@ -64,7 +65,7 @@ export async function validateAndLookupDevice(
   const { data, error } = await adminSupabase
     .from("biometric_devices")
     .select(
-      "deviceId, collegeId, deviceCategory, deviceSerialNumber, deviceIp, isActive, is_deleted",
+      "deviceId, collegeId, deviceCategory, deviceSerialNumber, deviceIp, isActive, is_deleted, gateDirection",
     )
     .eq("deviceSerialNumber", deviceSerialNumber)
     .maybeSingle();
@@ -87,7 +88,7 @@ export async function validateAndLookupDeviceById(
   const { data, error } = await adminSupabase
     .from("biometric_devices")
     .select(
-      "deviceId, collegeId, deviceCategory, deviceSerialNumber, deviceIp, isActive, is_deleted",
+      "deviceId, collegeId, deviceCategory, deviceSerialNumber, deviceIp, isActive, is_deleted, gateDirection",
     )
     .eq("deviceId", deviceId)
     .maybeSingle();
@@ -110,7 +111,7 @@ export async function validateAndLookupDeviceByIp(
   const { data, error } = await adminSupabase
     .from("biometric_devices")
     .select(
-      "deviceId, collegeId, deviceCategory, deviceSerialNumber, deviceIp, isActive, is_deleted",
+      "deviceId, collegeId, deviceCategory, deviceSerialNumber, deviceIp, isActive, is_deleted, gateDirection",
     )
     .or(`deviceIp.eq.${deviceIp},deviceIp.eq.http://${deviceIp},deviceIp.eq.https://${deviceIp}`)
     .maybeSingle();
