@@ -241,7 +241,7 @@ export const deleteAcademicSubject = async (collegeSubjectId: number) => {
   try {
     const { error } = await supabase
       .from("college_subjects")
-      .update({ deletedAt: new Date().toISOString() })
+      .update({ deletedAt: new Date().toISOString(), isActive: false })
       .eq("collegeSubjectId", collegeSubjectId);
 
     if (error) throw error;

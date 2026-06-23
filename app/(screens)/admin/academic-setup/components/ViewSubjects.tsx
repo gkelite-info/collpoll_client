@@ -124,8 +124,10 @@ export default function ViewSubjects({
       setIsDeleting(true);
       const res = await deleteAcademicSubject(selectedSubjectId);
       if (res.success) {
-        toast.success("Subject deleted successfully!");
+        setOpenDeleteModal(false);
+        setSelectedSubjectId(null);
         loadSubjects();
+        toast.success("Subject deleted successfully!");
       } else {
         toast.error("Failed to delete subject.");
         setIsDeleting(false);
