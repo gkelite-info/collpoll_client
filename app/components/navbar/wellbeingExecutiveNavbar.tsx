@@ -60,6 +60,9 @@ const isSafetyAndSecurityCategory = (categoryName: string | null | undefined) =>
 const isSportsCategory = (categoryName: string | null | undefined) =>
   normalizeCategoryName(categoryName) === "sports";
 
+const isInfrastructureCategory = (categoryName: string | null | undefined) =>
+  normalizeCategoryName(categoryName) === "infrastructure";
+
 const isAdministrationCategory = (categoryName: string | null | undefined) => {
   const category = normalizeCategoryName(categoryName);
   return category === "administration" || category === "admin";
@@ -87,17 +90,20 @@ export default function WellbeingExecutiveNavbar({
     wellBeingCategoryNames,
   } = useUser();
   const [newIssuesCount, setNewIssuesCount] = useState(0);
-  const canViewStaffAttendance = [wellBeingCategoryName, ...wellBeingCategoryNames].some(
+  const executiveCategories = [wellBeingCategoryName, ...wellBeingCategoryNames];
+  const canViewSafetyFeatures = executiveCategories.some(
     isSafetyAndSecurityCategory,
   );
-  const executiveCategories = [wellBeingCategoryName, ...wellBeingCategoryNames];
+  const canViewInfrastructureFeatures = executiveCategories.some(isInfrastructureCategory);
+  const canViewStaffAttendance = canViewSafetyFeatures || canViewInfrastructureFeatures;
   const canViewSportsFeatures = executiveCategories.some(isSportsCategory);
   const canViewAdministrationFeatures = executiveCategories.some(isAdministrationCategory);
   const canViewInventory = executiveCategories.some(
     (category) =>
       isSportsCategory(category) ||
       isSafetyAndSecurityCategory(category) ||
-      isAdministrationCategory(category),
+      isAdministrationCategory(category) ||
+      isInfrastructureCategory(category),
   );
 
   const loadNewIssueCount = useCallback(async () => {
@@ -287,7 +293,7 @@ export default function WellbeingExecutiveNavbar({
         hidden:
           !canViewAdministrationFeatures ||
           canViewSportsFeatures ||
-          canViewStaffAttendance,
+          canViewSafetyFeatures,
       },
       {
         icon: (isActive) => (
@@ -314,7 +320,7 @@ export default function WellbeingExecutiveNavbar({
         label: "Visitors Log",
         path: `${base}/visitors-log`,
         hidden:
-          !canViewStaffAttendance ||
+          !canViewSafetyFeatures ||
           canViewSportsFeatures ||
           (base !== "/wellbeing-executive" && !showStaffAttendance),
       },
@@ -325,7 +331,7 @@ export default function WellbeingExecutiveNavbar({
         label: "Vehicle Log",
         path: `${base}/vehicle-log`,
         hidden:
-          !canViewStaffAttendance ||
+          !canViewSafetyFeatures ||
           canViewSportsFeatures ||
           (base !== "/wellbeing-executive" && !showStaffAttendance),
       },
@@ -339,7 +345,7 @@ export default function WellbeingExecutiveNavbar({
     ];
 
     return navItems.filter((item) => !item.hidden);
-  }, [base, canViewAdministrationFeatures, canViewInventory, canViewSportsFeatures, canViewStaffAttendance, newIssuesCount, showLeaveRequest, showStaffAttendance]);
+  }, [base, canViewAdministrationFeatures, canViewInventory, canViewSafetyFeatures, canViewSportsFeatures, canViewStaffAttendance, newIssuesCount, showLeaveRequest, showStaffAttendance]);
 
   const prefetchRoute = useCallback(
     (path: string) => {
