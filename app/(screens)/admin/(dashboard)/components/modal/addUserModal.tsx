@@ -1651,11 +1651,14 @@ const AddUserModal: React.FC<{
                   </div>
                 </div>
 
-                {/* Dynamic subject blocks */}
                 {subjectBlocks.map((block, index) => {
-                  const blockFilteredYears = dbData.years.filter(
-                    (y) => y.collegeBranchId == selectedBranchId,
-                  );
+                  const blockFilteredYears = dbData.years
+                    .filter((y) => y.collegeBranchId == selectedBranchId)
+                    .sort((a, b) => {
+                      const numA = parseInt(a.collegeAcademicYear) || 0;
+                      const numB = parseInt(b.collegeAcademicYear) || 0;
+                      return numA - numB;
+                    });
                   const blockFilteredSubjects = dbData.subjects.filter(
                     (s) => s.collegeAcademicYearId == block.yearId,
                   );

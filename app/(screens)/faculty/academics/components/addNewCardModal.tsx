@@ -389,7 +389,7 @@ export default function AddNewCardModal({
             }));
           }
         }
-      } catch (err) {}
+      } catch (err) { }
     };
 
     loadAcademics();
@@ -786,7 +786,7 @@ export default function AddNewCardModal({
             </div>
             <div>
               <label className="text-sm font-semibold text-[#282828]">
-                Section
+                Section <span className="text-red-400">*</span>
               </label>
 
               <div className="w-full border border-gray-300 rounded-lg px-4 py-2.5 bg-white min-h-[42px] flex flex-wrap gap-2">
@@ -854,7 +854,7 @@ export default function AddNewCardModal({
             </div>
             <div>
               <label className="text-sm font-semibold text-[#282828]">
-                Unit Name
+                Unit Name <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
@@ -915,7 +915,7 @@ export default function AddNewCardModal({
                     } catch (err: any) {
                       setTopicsError(
                         err?.message ||
-                          "Failed to generate topics. Please try again.",
+                        "Failed to generate topics. Please try again.",
                       );
                       setAvailableTopics([]);
                     } finally {
@@ -1100,11 +1100,10 @@ export default function AddNewCardModal({
                             <div
                               key={topic}
                               className={`flex items-center gap-2 border rounded-full px-3 py-1 text-xs
-        ${
-          isInvalidMessage
-            ? "bg-yellow-50 border-yellow-300 text-yellow-700"
-            : "bg-white border-[#D1FAE5] text-[#065F46]"
-        }`}
+        ${isInvalidMessage
+                                  ? "bg-yellow-50 border-yellow-300 text-yellow-700"
+                                  : "bg-white border-[#D1FAE5] text-[#065F46]"
+                                }`}
                             >
                               <span>{topic}</span>
 
@@ -1189,11 +1188,10 @@ export default function AddNewCardModal({
               onClick={handleSave}
               disabled={isSaving}
               className={`flex-1 font-semibold py-1.5 rounded-sm transition
-    ${
-      isSaving
-        ? "bg-[#43C17A] opacity-60 cursor-not-allowed text-white"
-        : "bg-[#43C17A] hover:bg-[#3bad6d] text-white cursor-pointer"
-    }`}
+    ${isSaving
+                  ? "bg-[#43C17A] opacity-60 cursor-not-allowed text-white"
+                  : "bg-[#43C17A] hover:bg-[#3bad6d] text-white cursor-pointer"
+                }`}
             >
               {isSaving ? "Saving..." : "Save"}
             </button>

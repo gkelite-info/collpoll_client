@@ -14,6 +14,7 @@ type StudentJoin = {
 
     college_branch: {
         collegeBranchCode: string;
+        collegeBranchType: string;
     };
 };
 
@@ -50,7 +51,8 @@ export async function fetchStudentContext(userId: number) {
       ),
 
       college_branch:collegeBranchId!inner (
-        collegeBranchCode
+        collegeBranchCode,
+        collegeBranchType
       )
     `)
         .eq("userId", userId)
@@ -99,6 +101,9 @@ export async function fetchStudentContext(userId: number) {
 
         collegeBranchCode:
             student.college_branch?.collegeBranchCode ?? null,
+
+        collegeBranchType:
+            student.college_branch?.collegeBranchType ?? null,
 
         collegeAcademicYearId: academic?.collegeAcademicYearId ?? null,
         collegeSemesterId: academic?.collegeSemesterId ?? null,

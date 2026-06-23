@@ -59,10 +59,16 @@ export const fetchSubjectOptions = async (
         label: b.collegeBranchCode,
       })) ?? [],
     years:
-      yearData?.map((y) => ({
-        id: y.collegeAcademicYearId,
-        label: y.collegeAcademicYear,
-      })) ?? [],
+      yearData
+        ?.map((y) => ({
+          id: y.collegeAcademicYearId,
+          label: y.collegeAcademicYear,
+        }))
+        .sort((a, b) => {
+          const numA = parseInt(a.label) || 0;
+          const numB = parseInt(b.label) || 0;
+          return numA - numB;
+        }) ?? [],
     semesters:
       semData?.map((s) => ({
         id: s.collegeSemesterId,
