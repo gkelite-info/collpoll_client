@@ -16,13 +16,25 @@ const safetyHistory = [
   { type: "Lost Asset", quantity: "-2", date: "08 May 2025 • 02:45 PM", note: "Reported missing after event security duty.", added: false },
 ];
 
+const administrationHistory = [
+  { type: "Stock Added", quantity: "+8", date: "16 May 2025 • 10:30 AM", note: "Received new printers for the administration office.", added: true },
+  { type: "Damaged Equipment", quantity: "-1", date: "14 May 2025 • 04:20 PM", note: "Printer reported damaged during routine office use.", added: false },
+  { type: "Stock Added", quantity: "+12", date: "10 May 2025 • 11:15 AM", note: "Purchased new biometric devices and scanners.", added: true },
+  { type: "Equipment Retired", quantity: "-2", date: "08 May 2025 • 02:45 PM", note: "Old desktop systems removed from active inventory.", added: false },
+];
+
 type StockHistoryModalProps = {
   onClose: () => void;
-  variant?: "sports" | "safety";
+  variant?: "sports" | "safety" | "administration";
 };
 
 export function StockHistoryModal({ onClose, variant = "sports" }: StockHistoryModalProps) {
-  const history = variant === "safety" ? safetyHistory : sportsHistory;
+  const history =
+    variant === "administration"
+      ? administrationHistory
+      : variant === "safety"
+        ? safetyHistory
+        : sportsHistory;
 
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-end bg-black/55 p-2">
@@ -57,3 +69,4 @@ export function StockHistoryModal({ onClose, variant = "sports" }: StockHistoryM
     </div>
   );
 }
+

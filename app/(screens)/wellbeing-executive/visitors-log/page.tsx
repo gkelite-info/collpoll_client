@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
-import { EquipmentUsageHistory, SafetyVisitorsLogDashboard, VisitorsLogDashboard } from "./components";
+import { CampusVisitorsLogDashboard, EquipmentUsageHistory, SafetyVisitorsLogDashboard, VisitorsLogDashboard } from "./components";
 import { NewVisitorEntryModal } from "./modals";
 import type { VisitorEntry } from "./types";
 import { visitorEntries } from "./visitor-data";
@@ -15,6 +15,11 @@ const isSafetyCategory = (categoryName: string | null | undefined) => {
   return category === "safetyandsecurity" || category === "safetysecurity";
 };
 
+const isAdministrationCategory = (categoryName: string | null | undefined) => {
+  const category = categoryName?.toLowerCase().replace(/[^a-z]/g, "");
+  return category === "administration" || category === "admin";
+};
+
 export default function VisitorsLogPage() {
   const { loading, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
   const [search, setSearch] = useState("");
@@ -23,7 +28,8 @@ export default function VisitorsLogPage() {
   const categories = [wellBeingCategoryName, ...wellBeingCategoryNames];
   const isSports = categories.some(isSportsCategory);
   const isSafety = categories.some(isSafetyCategory);
-  const canViewVisitorsLog = isSports || isSafety;
+  const isAdministration = categories.some(isAdministrationCategory);
+  const canViewVisitorsLog = isSports || isSafety || isAdministration;
 
   const filteredEntries = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -45,7 +51,7 @@ export default function VisitorsLogPage() {
         <section className="rounded-xl bg-white p-8 text-center shadow-sm">
           <h1 className="text-[22px] font-extrabold text-[#16284F]">Visitors Log</h1>
           <p className="mt-2 text-[14px] font-semibold text-[#64748B]">
-            Visitors Log is available only for Sports and Safety &amp; Security wellbeing executives.
+            Visitors Log is available only for Sports, Safety &amp; Security, and Administration wellbeing executives.
           </p>
         </section>
       </main>
@@ -54,7 +60,9 @@ export default function VisitorsLogPage() {
 
   return (
     <main className="min-h-screen bg-[#F4F4F4] p-2">
-      {isSafety ? (
+      {isAdministration ? (
+        <CampusVisitorsLogDashboard variant="administration" />
+      ) : isSafety ? (
         <SafetyVisitorsLogDashboard />
       ) : selectedVisitor ? (
         <EquipmentUsageHistory visitor={selectedVisitor} onBack={() => setSelectedVisitor(null)} />
