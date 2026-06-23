@@ -19,12 +19,12 @@ export default function AttendanceFilters({
   return (
     <>
       {/* Role filter pills */}
-      <div className="flex gap-1 flex-wrap mb-2">
+      <div className="flex w-full min-w-0 gap-1 overflow-x-auto flex-nowrap mb-2 hide-scrollbar">
         {ROLE_FILTERS.map((r) => (
           <button
             key={r}
             onClick={() => onRoleChange(activeRole === r ? null : r)}
-            className={`text-xs font-medium px-3 py-1 rounded-full border cursor-pointer transition-colors
+            className={`shrink-0 whitespace-nowrap text-xs font-medium px-3 py-1 rounded-full border cursor-pointer transition-colors
               ${
                 activeRole === r
                   ? "bg-[#E8F8EF] text-[#22C55E] border-[#22C55E]"

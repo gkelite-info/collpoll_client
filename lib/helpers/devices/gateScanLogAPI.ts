@@ -199,6 +199,7 @@ export const processGateScan = async (payload: GateScanPayload) => {
             event: "new_daily_attendance",
             payload: {
               userId: payload.userId,
+              collegeId: payload.collegeId,
               attendanceDate: payload.scanDate,
               scanType: payload.scanType,
               scanTime: payload.scanTime,
