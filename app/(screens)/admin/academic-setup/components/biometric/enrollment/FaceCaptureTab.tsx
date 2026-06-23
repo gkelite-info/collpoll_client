@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Camera, CheckCircle, WarningCircle, UploadSimple, X, VideoCamera } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { getCredentialsForUser, upsertUserCredential, uploadFaceCredentialImage } from "@/lib/helpers/devices/userDeviceCredentialAPI";
+import { upsertUserDeviceSync } from "@/lib/helpers/devices/userDeviceSyncAPI";
 import { BiometricDeviceRow } from "@/lib/helpers/devices/biometricDeviceAPI";
 import { registerUserOnDevice, registerFaceOnDevice } from "@/lib/helpers/devices/hikvisionAPI";
 import { UserSearchResult } from "./types";
@@ -59,7 +60,7 @@ export default function FaceCaptureTab({
       streamRef.current = stream;
       setIsCameraOpen(true);
     } catch (err) {
-      toast.error("Unable to access camera. Please check browser permissions.");
+      toast.error("Unable to access camera. Please check browser permissions.", { id: "camera-error" });
     }
   };
 
@@ -97,13 +98,13 @@ export default function FaceCaptureTab({
     if (!file) return;
 
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      toast.error("Please upload only JPG, PNG or WEBP images.");
+      toast.error("Please upload only JPG, PNG or WEBP images.", { id: "img-format-err" });
       e.target.value = "";
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be less than 5MB.");
+      toast.error("Image must be less than 5MB.", { id: "img-size-err" });
       e.target.value = "";
       return;
     }
@@ -133,7 +134,7 @@ export default function FaceCaptureTab({
     }
 
     if (fileToUpload.size > 1 * 1024 * 1024) {
-      toast.error("Image could not be compressed enough. Please use a smaller file.");
+      toast.error("Image could not be compressed enough. Please use a smaller file.", { id: "img-compress-err" });
       return;
     }
 
@@ -155,6 +156,45 @@ export default function FaceCaptureTab({
     setDeviceEnrollStatuses(initialStatuses);
 
     try {
+      let imageUrl: string | null = null;
+      const uploadRes = await uploadFaceCredentialImage(selectedUser.userId, faceImage);
+      if (uploadRes.success && uploadRes.imageUrl) {
+        imageUrl = uploadRes.imageUrl;
+      } else {
+        throw new Error(uploadRes.error || "Failed to upload face image to storage.");
+      }
+
+      const existingCredentials = await getCredentialsForUser(selectedUser.userId, collegeId);
+      const existingFaceCredential = existingCredentials.success
+        ? existingCredentials.data.find((c) => c.credentialType === "FaceTemplate")
+        : undefined;
+
+      const saveRes = await upsertUserCredential({
+        userDeviceCredentialId: existingFaceCredential?.userDeviceCredentialId,
+        userId: selectedUser.userId,
+        collegeId,
+        credentialType: "FaceTemplate",
+        credentialIdentifier: `FACE-${selectedUser.userId}`,
+        enrolledBy: adminId,
+        imageUrl,
+      });
+
+      if (!saveRes.success || !saveRes.data) {
+        throw new Error(saveRes.error || "Failed to save credential to database.");
+      }
+
+      const credentialId = saveRes.data.userDeviceCredentialId;
+
+      await Promise.all(
+        selectedDevices.map((device) =>
+          upsertUserDeviceSync({
+            userDeviceCredentialId: credentialId,
+            deviceId: device.deviceId,
+            syncStatus: "Pending",
+          })
+        )
+      );
+
       const results = await Promise.all(
         selectedDevices.map(async (device) => {
           try {
@@ -168,26 +208,19 @@ export default function FaceCaptureTab({
                 endTime
               );
             } catch (e: unknown) {
-              const subStatusCode =
-                typeof e === "object" && e !== null && "subStatusCode" in e
-                  ? (e as { subStatusCode?: string }).subStatusCode
-                  : undefined;
-              if (subStatusCode === "employeeNoAlreadyExist") {
-              } else {
-                throw e;
-              }
+              const subStatusCode = typeof e === "object" && e !== null && "subStatusCode" in e ? (e as any).subStatusCode : undefined;
+              if (subStatusCode !== "employeeNoAlreadyExist") throw e;
             }
 
-            await registerFaceOnDevice(
-              device.deviceId,
-              selectedUser.userId,
-              faceImage,
-            );
+            await registerFaceOnDevice(device.deviceId, selectedUser.userId, faceImage);
 
-            setDeviceEnrollStatuses((prev) => ({
-              ...prev,
-              [device.deviceId]: { status: "success" },
-            }));
+            await upsertUserDeviceSync({
+              userDeviceCredentialId: credentialId,
+              deviceId: device.deviceId,
+              syncStatus: "Success",
+            });
+
+            setDeviceEnrollStatuses((prev) => ({ ...prev, [device.deviceId]: { status: "success" } }));
             return { deviceId: device.deviceId, success: true };
           } catch (e: unknown) {
             let msg = e instanceof Error ? e.message : "Face enrollment failed";
@@ -205,10 +238,14 @@ export default function FaceCaptureTab({
               msg = "This user already has a face registered on this device.";
             }
 
-            setDeviceEnrollStatuses((prev) => ({
-              ...prev,
-              [device.deviceId]: { status: "failed", error: msg },
-            }));
+            await upsertUserDeviceSync({
+              userDeviceCredentialId: credentialId,
+              deviceId: device.deviceId,
+              syncStatus: "Failed",
+              failureReason: msg,
+            });
+
+            setDeviceEnrollStatuses((prev) => ({ ...prev, [device.deviceId]: { status: "failed", error: msg } }));
             return { deviceId: device.deviceId, success: false, error: `${device.deviceName}: ${msg}` };
           }
         })
@@ -217,61 +254,23 @@ export default function FaceCaptureTab({
       const successCount = results.filter((r) => r.success).length;
       const errors = results.filter((r) => !r.success).map((r) => r.error).filter(Boolean) as string[];
 
-      if (successCount > 0) {
-        let imageUrl: string | null = null;
-        
-        const uploadRes = await uploadFaceCredentialImage(selectedUser.userId, faceImage);
-        if (uploadRes.success && uploadRes.imageUrl) {
-          imageUrl = uploadRes.imageUrl;
-        } else {
-          throw new Error(uploadRes.error || "Face registered on device, but failed to save image to cloud storage.");
-        }
-
-        const existingCredentials = await getCredentialsForUser(selectedUser.userId, collegeId);
-        const existingFaceCredential = existingCredentials.success
-          ? existingCredentials.data.find((credential) => credential.credentialType === "FaceTemplate")
-          : undefined;
-
-        const saveRes = await upsertUserCredential({
-          userDeviceCredentialId: existingFaceCredential?.userDeviceCredentialId,
-          userId: selectedUser.userId,
-          collegeId,
-          credentialType: "FaceTemplate",
-          credentialIdentifier: `FACE-${selectedUser.userId}`,
-          enrolledBy: adminId,
-          imageUrl,
+      if (successCount === selectedDevices.length) {
+        setEnrollResult({ success: true, message: `Face registered successfully on all ${selectedDevices.length} devices!` });
+        toast.success("Face enrolled on all devices!", { id: "enroll-success" });
+      } else if (successCount > 0) {
+        setEnrollResult({
+          success: true,
+          message: `Face saved to database and registered on ${successCount}/${selectedDevices.length} devices. Offline devices will sync automatically.`,
         });
-        if (!saveRes.success) {
-          throw new Error(saveRes.error || "Face registered on device, but failed to save credential.");
-        }
-
-        if (successCount === selectedDevices.length) {
-          setEnrollResult({ success: true, message: `Face registered successfully on all ${selectedDevices.length} devices!` });
-          toast.success("Face enrolled on all devices!");
-        } else {
-          setEnrollResult({
-            success: true,
-            message: `Face registered on ${successCount}/${selectedDevices.length} devices. (${selectedDevices.length - successCount} failed)`,
-          });
-          toast.success(`Face enrolled on ${successCount}/${selectedDevices.length} devices.`);
-        }
-        onSuccess();
+        toast.success(`Face enrolled on ${successCount}/${selectedDevices.length} devices.`, { id: "enroll-partial" });
       } else {
         setEnrollResult({
           success: false,
-          message: `Face enrollment failed on all devices. Details: ${errors.join(", ")}`,
+          message: `Face saved to database but physical sync failed on all devices. Details: ${errors.join(", ")}`,
         });
-        
-        if (errors.length > 0) {
-          if (errors[0].includes("already has a face registered")) {
-            toast.error("This user already has a face registered on the device.");
-          } else {
-            toast.error(errors[0]);
-          }
-        } else {
-          toast.error("Face enrollment failed on all devices.");
-        }
+        toast.error("Physical enrollment failed, but credential is saved and will retry later.", { id: "enroll-fail" });
       }
+      onSuccess();
     } catch (e: unknown) {
       let msg = e instanceof Error ? e.message : "Face enrollment failed";
       
@@ -287,7 +286,7 @@ export default function FaceCaptureTab({
       }
 
       setEnrollResult({ success: false, message: msg });
-      toast.error(msg);
+      toast.error(msg, { id: "enroll-error" });
     } finally {
       setIsEnrolling(false);
     }
