@@ -60,6 +60,11 @@ const isSafetyAndSecurityCategory = (categoryName: string | null | undefined) =>
 const isSportsCategory = (categoryName: string | null | undefined) =>
   normalizeCategoryName(categoryName) === "sports";
 
+const isAdministrationCategory = (categoryName: string | null | undefined) => {
+  const category = normalizeCategoryName(categoryName);
+  return category === "administration" || category === "admin";
+};
+
 export default function WellbeingExecutiveNavbar({
   onClose,
   basePath = "/wellbeing-executive",
@@ -87,8 +92,12 @@ export default function WellbeingExecutiveNavbar({
   );
   const executiveCategories = [wellBeingCategoryName, ...wellBeingCategoryNames];
   const canViewSportsFeatures = executiveCategories.some(isSportsCategory);
+  const canViewAdministrationFeatures = executiveCategories.some(isAdministrationCategory);
   const canViewInventory = executiveCategories.some(
-    (category) => isSportsCategory(category) || isSafetyAndSecurityCategory(category),
+    (category) =>
+      isSportsCategory(category) ||
+      isSafetyAndSecurityCategory(category) ||
+      isAdministrationCategory(category),
   );
 
   const loadNewIssueCount = useCallback(async () => {
@@ -275,6 +284,17 @@ export default function WellbeingExecutiveNavbar({
         ),
         label: "Visitors Log",
         path: `${base}/visitors-log`,
+        hidden:
+          !canViewAdministrationFeatures ||
+          canViewSportsFeatures ||
+          canViewStaffAttendance,
+      },
+      {
+        icon: (isActive) => (
+          <Book size={iconSize} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: "Visitors Log",
+        path: `${base}/visitors-log`,
         hidden: !canViewSportsFeatures,
       },
       {
@@ -319,7 +339,7 @@ export default function WellbeingExecutiveNavbar({
     ];
 
     return navItems.filter((item) => !item.hidden);
-  }, [base, canViewInventory, canViewSportsFeatures, canViewStaffAttendance, newIssuesCount, showLeaveRequest, showStaffAttendance]);
+  }, [base, canViewAdministrationFeatures, canViewInventory, canViewSportsFeatures, canViewStaffAttendance, newIssuesCount, showLeaveRequest, showStaffAttendance]);
 
   const prefetchRoute = useCallback(
     (path: string) => {

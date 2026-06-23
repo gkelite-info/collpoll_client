@@ -33,6 +33,16 @@ export const safetyItems: EquipmentItem[] = [
   { id: "SP0026", name: "Emergency First Aid Kit", category: "Safety and Security", totalQty: 8, available: 2, lastUpdated: "15 May 2025", image: equipmentImage("AID", "#991B1B", "#FCA5A5") },
 ];
 
+export const administrationItems: EquipmentItem[] = [
+  { id: "AD0012", name: "Printers", category: "Administration", totalQty: 6, available: 0, lastUpdated: "15 May 2025", image: equipmentImage("PRN", "#1F2937", "#94A3B8") },
+  { id: "AD0021", name: "Desktop Computers", category: "Administration", totalQty: 30, available: 12, lastUpdated: "15 May 2025", image: equipmentImage("PC", "#1E3A8A", "#60A5FA") },
+  { id: "AD0022", name: "Document Scanners", category: "Administration", totalQty: 15, available: 3, lastUpdated: "15 May 2025", image: equipmentImage("SCN", "#334155", "#CBD5E1") },
+  { id: "AD0023", name: "Office Projectors", category: "Administration", totalQty: 12, available: 8, lastUpdated: "15 May 2025", image: equipmentImage("PRJ", "#7C2D12", "#FB923C") },
+  { id: "AD0024", name: "Biometric Devices", category: "Administration", totalQty: 20, available: 7, lastUpdated: "15 May 2025", image: equipmentImage("BIO", "#0F766E", "#5EEAD4") },
+  { id: "AD0025", name: "UPS Systems", category: "Administration", totalQty: 25, available: 18, lastUpdated: "15 May 2025", image: equipmentImage("UPS", "#312E81", "#A5B4FC") },
+  { id: "AD0026", name: "Public Address Systems", category: "Administration", totalQty: 10, available: 1, lastUpdated: "15 May 2025", image: equipmentImage("PA", "#111827", "#FBBF24") },
+];
+
 export const emptyForm: EquipmentFormState = {
   name: "",
   quantity: "",
