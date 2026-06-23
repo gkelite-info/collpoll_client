@@ -13,9 +13,6 @@ const err = (e: unknown) => {
   }
   return "Something went wrong. Please try again.";
 };
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
 
 export type CredentialType = "Fingerprint" | "FaceTemplate" | "Card" | "QRCode";
 
@@ -44,13 +41,9 @@ export interface UserCredentialRow {
   createdAt: string;
   updatedAt?: string;
   imageUrl: string | null;
-  // Joined
   user?: { fullName: string; email: string; role: string } | null;
 }
 
-/* ------------------------------------------------------------------ */
-/*  GET — list by college, with user info                              */
-/* ------------------------------------------------------------------ */
 
 export const getUserDeviceCredentials = async (
   collegeId: number,
@@ -81,7 +74,6 @@ export const getUserDeviceCredentials = async (
     if (filters?.search?.trim()) {
       const s = filters.search.trim();
       
-      // Workaround for cross-table OR search in Supabase
       const { data: matchedUsers } = await supabase
         .from("users")
         .select("userId")
@@ -122,9 +114,6 @@ export const getUserDeviceCredentials = async (
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  GET — single user credentials                                      */
-/* ------------------------------------------------------------------ */
 
 export const getCredentialsForUser = async (userId: number, collegeId: number) => {
   try {
@@ -156,9 +145,6 @@ export const getCredentialsForUser = async (userId: number, collegeId: number) =
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  UPSERT                                                             */
-/* ------------------------------------------------------------------ */
 
 export const upsertUserCredential = async (payload: UserCredentialPayload) => {
   try {
@@ -175,7 +161,6 @@ export const upsertUserCredential = async (payload: UserCredentialPayload) => {
       updatedAt: now,
     };
 
-    // Uniqueness: userId + credentialType + credentialIdentifier (include soft-deleted)
     let uq = supabase
       .from("user_device_credentials")
       .select("userDeviceCredentialId, deletedAt")
@@ -192,10 +177,8 @@ export const upsertUserCredential = async (payload: UserCredentialPayload) => {
 
     if (existing) {
       if (!existing.deletedAt) {
-        // It's actively in use
         return { success: false as const, error: "This credential already exists for the user." };
       } else {
-        // It was soft-deleted. Restore it!
         const { data, error } = await supabase
           .from("user_device_credentials")
           .update({ ...base, deletedAt: null })
@@ -230,9 +213,6 @@ export const upsertUserCredential = async (payload: UserCredentialPayload) => {
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  DELETE (soft)                                                       */
-/* ------------------------------------------------------------------ */
 
 export const deleteUserCredential = async (credentialId: number) => {
   try {
@@ -248,9 +228,6 @@ export const deleteUserCredential = async (credentialId: number) => {
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  SEARCH users for enrollment (students + staff)                     */
-/* ------------------------------------------------------------------ */
 
 export const searchUsersForEnrollment = async (collegeId: number, search: string) => {
   try {
@@ -269,7 +246,6 @@ export const searchUsersForEnrollment = async (collegeId: number, search: string
     
     let results: any[] = data ?? [];
     
-    // Fetch education types for students
     const studentUserIds = results.filter((u: any) => u.role === "Student").map((u: any) => u.userId);
     if (studentUserIds.length > 0) {
       const { data: studentData } = await supabase
@@ -291,15 +267,28 @@ export const searchUsersForEnrollment = async (collegeId: number, search: string
       }
     }
 
+    const financeUserIds = results.filter((u: any) => u.role === "Finance").map((u: any) => u.userId);
+    if (financeUserIds.length > 0) {
+      const { data: financeData } = await supabase
+        .from("finance_manager")
+        .select("userId, type")
+        .in("userId", financeUserIds);
+        
+      if (financeData) {
+        results = results.map((u: any) => {
+          if (u.role !== "Finance") return u;
+          const fin = financeData.find((f: any) => f.userId === u.userId);
+          return { ...u, financeManagerType: fin?.type };
+        });
+      }
+    }
+
     return { success: true as const, data: results };
   } catch (e) {
     return { success: false as const, data: [], error: err(e) };
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  UPLOAD IMAGE                                                        */
-/* ------------------------------------------------------------------ */
 
 export const uploadFaceCredentialImage = async (userId: number, file: File): Promise<{ success: boolean; imageUrl?: string; error?: string }> => {
   try {

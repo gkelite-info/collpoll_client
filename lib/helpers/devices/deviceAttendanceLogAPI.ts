@@ -14,9 +14,6 @@ const err = (e: unknown) => {
   return "Something went wrong. Please try again.";
 };
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
 
 export interface DeviceAttendanceLogRow {
   deviceAttendanceLogId: number;
@@ -34,15 +31,12 @@ export interface DeviceAttendanceLogRow {
   processedStatus: string;
   rejectionReason: string | null;
   createdAt: string;
-  user?: { fullName: string; role: string } | null;
+  user?: { fullName: string; role: string; financeManagerType?: string; educationType?: string } | null;
   device?: { deviceName: string } | null;
   checkIn?: string | null;
   checkOut?: string | null;
 }
 
-/* ------------------------------------------------------------------ */
-/*  GET — paginated                                                    */
-/* ------------------------------------------------------------------ */
 
 export const getDeviceAttendanceLogs = async (
   collegeId: number,
@@ -99,7 +93,6 @@ export const getDeviceAttendanceLogs = async (
     if (error) throw error;
     if (!data || data.length === 0) return { success: true as const, data: [], total: 0 };
 
-    // Enrich with user info
     const userIds = [...new Set(data.map((d: any) => d.userId))];
     const { data: users } = await supabase
       .from("users")
@@ -108,7 +101,41 @@ export const getDeviceAttendanceLogs = async (
     const userMap: Record<number, any> = {};
     (users ?? []).forEach((u: any) => { userMap[u.userId] = u; });
 
-    // Enrich with device info
+    const financeUserIds = (users ?? []).filter((u: any) => u.role === "Finance").map((u: any) => u.userId);
+    if (financeUserIds.length > 0) {
+      const { data: financeData } = await supabase
+        .from("finance_manager")
+        .select("userId, type")
+        .in("userId", financeUserIds);
+      if (financeData) {
+        financeData.forEach((f: any) => {
+          if (userMap[f.userId]) {
+            userMap[f.userId].financeManagerType = f.type;
+          }
+        });
+      }
+    }
+
+    const studentUserIds = (users ?? []).filter((u: any) => u.role === "Student").map((u: any) => u.userId);
+    if (studentUserIds.length > 0) {
+      const { data: studentData } = await supabase
+        .from("students")
+        .select(`
+          userId,
+          college_education:collegeEducationId ( collegeEducationType )
+        `)
+        .in("userId", studentUserIds);
+      if (studentData) {
+        studentData.forEach((s: any) => {
+          if (userMap[s.userId]) {
+            const eduRelation = s.college_education;
+            const eduType = Array.isArray(eduRelation) ? eduRelation[0]?.collegeEducationType : (eduRelation as any)?.collegeEducationType;
+            userMap[s.userId].educationType = eduType;
+          }
+        });
+      }
+    }
+
     const deviceIds = [...new Set(data.map((d: any) => d.deviceId))];
     const { data: devices } = await supabase
       .from("biometric_devices")
@@ -117,7 +144,6 @@ export const getDeviceAttendanceLogs = async (
     const deviceMap: Record<number, any> = {};
     (devices ?? []).forEach((d: any) => { deviceMap[d.deviceId] = d; });
 
-    // Fetch daily attendance for staff
     const attendanceDailyIds = [...new Set(data.map((d: any) => d.attendanceDailyId).filter(Boolean))];
     const { data: attendanceDailies } = attendanceDailyIds.length > 0 
       ? await supabase.from("attendance_daily").select("attendanceDailyId, checkIn, checkOut").in("attendanceDailyId", attendanceDailyIds)
@@ -125,15 +151,14 @@ export const getDeviceAttendanceLogs = async (
     const attendanceDailyMap: Record<number, any> = {};
     (attendanceDailies ?? []).forEach((a: any) => { attendanceDailyMap[a.attendanceDailyId] = a; });
 
-    // Fetch gate logs for students
     const studentLogs = data.filter((d: any) => d.gateScanLogId && !d.attendanceDailyId);
-    const studentUserIds = [...new Set(studentLogs.map((d: any) => d.userId))];
+    const gateStudentUserIds = [...new Set(studentLogs.map((d: any) => d.userId))];
     const studentDates = [...new Set(studentLogs.map((d: any) => d.scanTimestamp.split("T")[0]))];
-    const { data: studentGateLogs } = studentUserIds.length > 0 && studentDates.length > 0
+    const { data: studentGateLogs } = gateStudentUserIds.length > 0 && studentDates.length > 0
       ? await supabase
           .from("gate_scan_logs")
           .select("userId, scanDate, scanType, scanTime")
-          .in("userId", studentUserIds)
+          .in("userId", gateStudentUserIds)
           .in("scanDate", studentDates)
           .order("scanTime", { ascending: true })
       : { data: [] };
@@ -164,15 +189,35 @@ export const getDeviceAttendanceLogs = async (
       }
     });
 
+    const gateScanLogIds = [...new Set(data.map((d: any) => d.gateScanLogId).filter(Boolean))];
+    const { data: exactGateLogs } = gateScanLogIds.length > 0
+      ? await supabase.from("gate_scan_logs").select("gateScanLogId, scanType").in("gateScanLogId", gateScanLogIds)
+      : { data: [] };
+    const exactGateMap: Record<number, string> = {};
+    (exactGateLogs ?? []).forEach((g: any) => { exactGateMap[g.gateScanLogId] = g.scanType; });
+
     const enriched: DeviceAttendanceLogRow[] = data.map((d: any) => {
       let checkIn = null;
       let checkOut = null;
+      let actualLogType = d.logType;
 
       if (d.attendanceDailyId) {
         const ad = attendanceDailyMap[d.attendanceDailyId];
         if (ad) {
           checkIn = ad.checkIn;
           checkOut = ad.checkOut;
+
+          try {
+            const scanDateObj = new Date(d.scanTimestamp);
+            const scanHHMM = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(scanDateObj);
+            const scanTimeStr = d.scanTimestamp.split("T")[1]?.slice(0, 5);
+            
+            if (ad.checkIn && (ad.checkIn.startsWith(scanTimeStr) || ad.checkIn === scanHHMM)) {
+              actualLogType = "GateEntry";
+            } else if (ad.checkOut && (ad.checkOut.startsWith(scanTimeStr) || ad.checkOut === scanHHMM)) {
+              actualLogType = "GateExit";
+            }
+          } catch (e) {}
         }
       } else if (d.gateScanLogId) {
         const dateStr = d.scanTimestamp.split("T")[0];
@@ -182,10 +227,15 @@ export const getDeviceAttendanceLogs = async (
           checkIn = sg.checkIn;
           checkOut = sg.checkOut;
         }
+
+        if (exactGateMap[d.gateScanLogId]) {
+          actualLogType = exactGateMap[d.gateScanLogId] === "Entry" ? "GateEntry" : "GateExit";
+        }
       }
 
       return {
         ...d,
+        logType: actualLogType,
         user: userMap[d.userId] || null,
         device: deviceMap[d.deviceId] || null,
         checkIn,
@@ -199,9 +249,6 @@ export const getDeviceAttendanceLogs = async (
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  INSERT                                                             */
-/* ------------------------------------------------------------------ */
 
 export const createDeviceAttendanceLog = async (payload: {
   deviceId: number;
@@ -234,9 +281,6 @@ export const createDeviceAttendanceLog = async (payload: {
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  Process classroom scan → attendance_record                         */
-/* ------------------------------------------------------------------ */
 
 export const processClassroomScan = async (payload: {
   deviceId: number;
@@ -252,7 +296,6 @@ export const processClassroomScan = async (payload: {
       .toTimeString()
       .slice(0, 5); // HH:MM
 
-    // 1. Find active device_class_session for this device + current time
     const { data: sessions, error: sessErr } = await supabase
       .from("device_class_sessions")
       .select(
@@ -265,7 +308,6 @@ export const processClassroomScan = async (payload: {
 
     if (sessErr) throw sessErr;
 
-    // Find the session that covers the scan time (including buffer)
     const activeSession = (sessions ?? []).find((s: any) => {
       const from =
         timeToMin(s.fromTime) - (s.bufferMinutes || 15);
@@ -281,7 +323,6 @@ export const processClassroomScan = async (payload: {
       };
     }
 
-    // 2. Get studentId from users → students
     const { data: student, error: stuErr } = await supabase
       .from("students")
       .select("studentId")
@@ -296,7 +337,6 @@ export const processClassroomScan = async (payload: {
       };
     }
 
-    // 3. Check if attendance_record already exists (duplicate scan guard)
     const { data: existing } = await supabase
       .from("attendance_record")
       .select("attendanceRecordId, status")
@@ -308,10 +348,8 @@ export const processClassroomScan = async (payload: {
     let attendanceRecordId: number | null = null;
 
     if (existing) {
-      // Already marked — update login time if earlier
       attendanceRecordId = existing.attendanceRecordId;
     } else {
-      // 4. Create attendance_record
       const { data: newRecord, error: recErr } = await supabase
         .from("attendance_record")
         .insert({
@@ -330,7 +368,6 @@ export const processClassroomScan = async (payload: {
       attendanceRecordId = newRecord.attendanceRecordId;
     }
 
-    // 5. Create device_attendance_log linking everything
     const { data: log, error: logErr } = await supabase
       .from("device_attendance_logs")
       .insert({
@@ -357,7 +394,6 @@ export const processClassroomScan = async (payload: {
   }
 };
 
-/** Convert "HH:MM" to minutes from midnight */
 function timeToMin(time: string): number {
   const [h, m] = time.split(":").map(Number);
   return h * 60 + m;

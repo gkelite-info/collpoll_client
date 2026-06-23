@@ -8,4 +8,5 @@ export type UserSearchResult = {
   mobile: string;
   role: string;
   educationType?: string;
+  financeManagerType?: string;
 };

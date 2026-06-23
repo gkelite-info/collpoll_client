@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { ArrowLeft } from "@phosphor-icons/react";
 import { BiometricDeviceRow } from "@/lib/helpers/devices/biometricDeviceAPI";
 
@@ -22,9 +23,73 @@ export default function EnrollmentWizard({
   onClose,
   onSuccess,
 }: EnrollmentWizardProps) {
-  const [enrollStep, setEnrollStep] = useState<EnrollStep>("search");
-  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
-  const [selectedDevices, setSelectedDevices] = useState<BiometricDeviceRow[]>([]);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const initialStep = (searchParams.get("enrollStep") as EnrollStep) || "search";
+  const [enrollStep, setEnrollStep] = useState<EnrollStep>(initialStep);
+  
+  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("biometric_enroll_user");
+        return saved ? JSON.parse(saved) : null;
+      } catch { return null; }
+    }
+    return null;
+  });
+
+  const [selectedDevices, setSelectedDevices] = useState<BiometricDeviceRow[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("biometric_enroll_devices");
+        return saved ? JSON.parse(saved) : [];
+      } catch { return []; }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (selectedUser) sessionStorage.setItem("biometric_enroll_user", JSON.stringify(selectedUser));
+      else sessionStorage.removeItem("biometric_enroll_user");
+    }
+  }, [selectedUser]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (selectedDevices.length > 0) sessionStorage.setItem("biometric_enroll_devices", JSON.stringify(selectedDevices));
+      else sessionStorage.removeItem("biometric_enroll_devices");
+    }
+  }, [selectedDevices]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (enrollStep !== "search") {
+      params.set("enrollStep", enrollStep);
+    } else {
+      params.delete("enrollStep");
+    }
+    const newUrl = `${pathname}?${params.toString()}`;
+    if (newUrl !== `${pathname}?${searchParams.toString()}`) {
+      router.replace(newUrl, { scroll: false });
+    }
+  }, [enrollStep, pathname, router, searchParams]);
+
+  useEffect(() => {
+    if (enrollStep !== "search" && !selectedUser) {
+      setEnrollStep("search");
+    }
+  }, [enrollStep, selectedUser]);
+
+  const handleClose = () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("biometric_enroll_user");
+      sessionStorage.removeItem("biometric_enroll_devices");
+    }
+    onClose();
+  };
 
   const handleSelectUser = (user: UserSearchResult) => {
     setSelectedUser(user);
@@ -40,7 +105,7 @@ export default function EnrollmentWizard({
     <div className="w-full flex flex-col">
       <div className="flex items-center gap-3 mb-6">
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 cursor-pointer border-none bg-transparent outline-none"
         >
           <ArrowLeft size={20} weight="bold" />
@@ -120,7 +185,10 @@ export default function EnrollmentWizard({
           adminId={adminId}
           selectedUser={selectedUser}
           selectedDevices={selectedDevices}
-          onSuccess={onSuccess}
+          onSuccess={() => {
+            handleClose();
+            onSuccess();
+          }}
         />
       )}
     </div>

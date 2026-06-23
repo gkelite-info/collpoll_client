@@ -14,9 +14,6 @@ const err = (e: unknown) => {
   return "Something went wrong. Please try again.";
 };
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
 
 export type RoomType =
   | "classroom"
@@ -48,7 +45,6 @@ export interface RoomViewData {
   capacity: number | null;
   isActive: boolean;
   createdAt: string;
-  // Joined device info
   device: {
     deviceId: number;
     deviceName: string;
@@ -60,9 +56,6 @@ export interface RoomViewData {
   } | null;
 }
 
-/* ------------------------------------------------------------------ */
-/*  GET — paginated                                                    */
-/* ------------------------------------------------------------------ */
 
 export const getCollegeRooms = async (
   collegeId: number,
@@ -98,7 +91,6 @@ export const getCollegeRooms = async (
 
     const roomIds = roomsData.map((r: any) => r.collegeRoomId);
 
-    // Fetch active room-device links
     let deviceMap: Record<number, RoomViewData["device"]> = {};
     try {
       const { data: links } = await supabase
@@ -148,9 +140,6 @@ export const getCollegeRooms = async (
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  UPSERT room (without device creation)                              */
-/* ------------------------------------------------------------------ */
 
 export const upsertCollegeRoom = async (payload: RoomDBPayload) => {
   try {
@@ -167,7 +156,6 @@ export const upsertCollegeRoom = async (payload: RoomDBPayload) => {
       updatedAt: now,
     };
 
-    // Unique check: roomNo per college
     let q = supabase
       .from("college_rooms")
       .select("collegeRoomId")
@@ -202,9 +190,6 @@ export const upsertCollegeRoom = async (payload: RoomDBPayload) => {
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  Assign / Unassign device to room                                   */
-/* ------------------------------------------------------------------ */
 
 export const assignDeviceToRoom = async (collegeRoomId: number, deviceId: number) => {
   try {
@@ -274,15 +259,11 @@ export const unassignDeviceFromRoom = async (collegeRoomId: number) => {
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  DELETE room (soft)                                                  */
-/* ------------------------------------------------------------------ */
 
 export const deleteCollegeRoom = async (collegeRoomId: number) => {
   try {
     const now = new Date().toISOString();
 
-    // Deactivate device links
     await supabase
       .from("room_devices")
       .update({ isActive: false, deletedAt: now, updatedAt: now })
