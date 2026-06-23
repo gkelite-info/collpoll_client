@@ -9,14 +9,15 @@ import {
   UserCircle,
   MagnifyingGlass,
   Camera,
-  PencilSimple,
+  CheckCircle,
+  WarningCircle,
 } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
 import {
   getUserDeviceCredentials,
   deleteUserCredential,
-  upsertUserCredential,
   CredentialType,
   UserCredentialRow,
 } from "@/lib/helpers/devices/userDeviceCredentialAPI";
@@ -27,8 +28,8 @@ import {
   deleteFaceFromDevice,
   deleteCardFromDevice,
   deleteFingerprintFromDevice,
-  registerCardOnDevice,
 } from "@/lib/helpers/devices/hikvisionAPI";
+import { subscribeToSyncStatuses } from "@/lib/helpers/devices/userDeviceSyncAPI";
 import { Pagination } from "../pagination";
 import ConfirmDeleteModal from "../../../calendar/components/ConfirmDeleteModal";
 import TableComponent from "@/app/utils/table/table";
@@ -69,22 +70,48 @@ const columns = [
   { title: "Role", key: "role" },
   { title: "Credential Type", key: "credentialType" },
   { title: "Identifier", key: "identifier" },
-  { title: "Status", key: "status" },
+  { title: "Sync Status", key: "syncStatus" },
   { title: "Enrolled At", key: "enrolledAt" },
   { title: "Actions", key: "actions" },
 ];
 
 export default function CredentialsTab() {
   const { collegeId, adminId, loading } = useUser();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  // List view
   const [credentials, setCredentials] = useState<UserCredentialRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [filterType, setFilterType] = useState<CredentialType | "">("");
+  
+  const initialFilter = (searchParams.get("credFilter") as CredentialType | "") || "";
+  const [filterType, setFilterType] = useState<CredentialType | "">(initialFilter);
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+  const initialEnroll = searchParams.get("enroll") === "true";
+  const [showEnroll, setShowEnroll] = useState(initialEnroll);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (filterType !== "") {
+      params.set("credFilter", filterType);
+    } else {
+      params.delete("credFilter");
+    }
+    if (showEnroll) {
+      params.set("enroll", "true");
+    } else {
+      params.delete("enroll");
+    }
+    const newUrl = `${pathname}?${params.toString()}`;
+    if (newUrl !== `${pathname}?${searchParams.toString()}`) {
+      router.replace(newUrl, { scroll: false });
+    }
+  }, [filterType, showEnroll, pathname, router, searchParams]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -97,23 +124,11 @@ export default function CredentialsTab() {
     setCurrentPage(1);
   }, [debouncedSearchQuery]);
 
-  // Enrollment toggle
-  const [showEnroll, setShowEnroll] = useState(false);
 
-  // Delete
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteCredentialId, setDeleteCredentialId] = useState<number | null>(null);
   const [deleteCredential, setDeleteCredential] = useState<UserCredentialRow | null>(null);
-
-  // Edit
-  const [openEditModal, setOpenEditModal] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editCredential, setEditCredential] = useState<UserCredentialRow | null>(null);
-  const [editIsActive, setEditIsActive] = useState(true);
-  const [editCardId, setEditCardId] = useState("");
-
-  /* ---------- Load credentials ---------- */
 
   const loadCredentials = useCallback(
     async (page: number) => {
@@ -125,7 +140,7 @@ export default function CredentialsTab() {
           search: debouncedSearchQuery || undefined,
         });
         if (!res.success) {
-          toast.error(res.error || "Unable to load credentials.");
+          toast.error(res.error || "Unable to load credentials.", { id: "load-cred-err" });
           setCredentials([]);
           setTotalItems(0);
           return;
@@ -133,7 +148,7 @@ export default function CredentialsTab() {
         setCredentials(res.data);
         setTotalItems(res.total);
       } catch {
-        toast.error("Something went wrong.");
+        toast.error("Something went wrong. Please try again.", { id: "load-cred-err-catch" });
       } finally {
         setIsLoading(false);
       }
@@ -142,11 +157,21 @@ export default function CredentialsTab() {
   );
 
   useEffect(() => {
+    if (credentials.length === 0) return;
+    const ids = credentials.map((c) => c.userDeviceCredentialId);
+    
+    const sub = subscribeToSyncStatuses(ids, () => {
+      loadCredentials(currentPage);
+    });
+
+    return () => sub.unsubscribe();
+  }, [credentials, currentPage, loadCredentials]);
+
+  useEffect(() => {
     if (!collegeId) return;
     loadCredentials(currentPage);
   }, [collegeId, currentPage, loadCredentials]);
 
-  /* ---------- Delete ---------- */
 
   const handleDeleteClick = (cred: UserCredentialRow) => {
     setDeleteCredentialId(cred.userDeviceCredentialId);
@@ -159,7 +184,6 @@ export default function CredentialsTab() {
     try {
       setIsDeleting(true);
 
-      // Ensure device deletion succeeds before removing from database
       try {
         const deviceRes = await getBiometricDevices(collegeId!, 1, 50);
         const activeDevices = deviceRes.data.filter(d => d.isActive);
@@ -180,26 +204,25 @@ export default function CredentialsTab() {
                   );
                 }
               } catch (e: any) {
-                // We let it throw to prevent DB deletion if the physical deletion failed on any active device
                 throw new Error(e.message || "Device rejected deletion");
               }
             })
           );
         }
       } catch (deviceError: any) {
-        toast.error(deviceError?.message || "Failed to remove credential from the scanner. Please make sure the device is online before deleting.");
+        toast.error(deviceError?.message || "Failed to remove credential from the scanner. Please make sure the device is online before deleting.", { id: "del-cred-dev-err" });
         return;
       }
 
       const res = await deleteUserCredential(deleteCredentialId);
       if (res.success) {
-        toast.success("Credential deleted!");
+        toast.success("Credential deleted!", { id: "del-cred-success" });
         loadCredentials(currentPage);
       } else {
-        toast.error(res.error || "Failed to delete.");
+        toast.error(res.error || "Failed to delete.", { id: "del-cred-err" });
       }
     } catch {
-      toast.error("An unexpected error occurred.");
+      toast.error("An unexpected error occurred.", { id: "del-cred-catch" });
     } finally {
       setIsDeleting(false);
       setOpenDeleteModal(false);
@@ -208,47 +231,6 @@ export default function CredentialsTab() {
     }
   };
 
-  /* ---------- Edit ---------- */
-
-  const handleEditClick = (cred: UserCredentialRow) => {
-    setEditCredential(cred);
-    setEditIsActive(cred.isActive ?? true);
-    setEditCardId(cred.credentialIdentifier);
-    setOpenEditModal(true);
-  };
-
-  const confirmEdit = async () => {
-    if (!editCredential) return;
-
-    try {
-      setIsEditing(true);
-
-      const res = await upsertUserCredential({
-        userDeviceCredentialId: editCredential.userDeviceCredentialId,
-        userId: editCredential.userId,
-        collegeId: editCredential.collegeId,
-        credentialType: editCredential.credentialType,
-        credentialIdentifier: editCredential.credentialIdentifier,
-        fingerIndex: editCredential.fingerIndex,
-        enrolledBy: editCredential.enrolledBy,
-        isActive: editIsActive,
-      });
-      if (res.success) {
-        toast.success("Credential updated!");
-        loadCredentials(currentPage);
-      } else {
-        toast.error(res.error || "Failed to update.");
-      }
-    } catch {
-      toast.error("An unexpected error occurred.");
-    } finally {
-      setIsEditing(false);
-      setOpenEditModal(false);
-      setEditCredential(null);
-    }
-  };
-
-  /* ---------- Helpers ---------- */
 
   const credTypeIcon = (type: CredentialType) => {
     switch (type) {
@@ -263,7 +245,6 @@ export default function CredentialsTab() {
     }
   };
 
-  /* ---------- Table data ---------- */
 
   const tableData = credentials.map((c) => ({
     user: (
@@ -282,7 +263,10 @@ export default function CredentialsTab() {
             : "bg-violet-50 text-violet-700"
         }`}
       >
-        {c.user?.role || "—"}
+        {c.user?.role === "Finance" && c.user.financeManagerType
+          ? `Finance${c.user.financeManagerType.charAt(0).toUpperCase() + c.user.financeManagerType.slice(1)}`
+          : c.user?.role || "—"}
+        {c.user?.role === "Student" && c.user.educationType && ` • ${c.user.educationType}`}
       </span>
     ),
     credentialType: (
@@ -305,16 +289,57 @@ export default function CredentialsTab() {
           : c.credentialIdentifier}
       </span>
     ),
-    status: c.isActive ? (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#E6F4EA] text-[#1E8E3E]">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#1E8E3E]" />
-        Active
-      </span>
-    ) : (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500">
-        Inactive
-      </span>
+    syncStatus: (
+      <div className="flex flex-col items-center">
+        {!c.user_device_sync || c.user_device_sync.length === 0 ? (
+          <span className="text-[10px] text-gray-400 font-medium">No Devices</span>
+        ) : (
+          (() => {
+            const total = c.user_device_sync.length;
+            const successCount = c.user_device_sync.filter((s) => s.syncStatus === "Success").length;
+            const pendingCount = c.user_device_sync.filter((s) => s.syncStatus === "Pending").length;
+            const failedCount = c.user_device_sync.filter((s) => s.syncStatus === "Failed").length;
+
+            if (successCount === total) {
+              return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E6F4EA] text-[#1E8E3E]">
+                  <CheckCircle size={12} weight="fill" /> Synced All ({total})
+                </span>
+              );
+            }
+            
+            if (failedCount > 0) {
+              const failedNames = c.user_device_sync
+                .filter((s) => s.syncStatus === "Failed")
+                .map((s) => s.biometric_devices?.deviceName || "Device")
+                .join(", ");
+              return (
+                <div className="flex flex-col items-center group relative cursor-help">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-600">
+                    <WarningCircle size={12} weight="fill" /> Failed {failedCount}/{total}
+                  </span>
+                  <div className="absolute bottom-full mb-1 hidden group-hover:block w-max max-w-[200px] bg-gray-800 text-white text-[10px] p-2 rounded shadow-lg z-50 text-center">
+                    Failed on: {failedNames}
+                  </div>
+                </div>
+              );
+            }
+            
+            if (pendingCount > 0) {
+              return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600">
+                  <div className="w-2.5 h-2.5 border border-amber-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                  Syncing {successCount}/{total}
+                </span>
+              );
+            }
+
+            return <span className="text-[10px] text-gray-400">Unknown</span>;
+          })()
+        )}
+      </div>
     ),
+
     enrolledAt: (
       <span className="text-xs text-gray-500">
         {c.updatedAt || c.createdAt
@@ -341,7 +366,6 @@ export default function CredentialsTab() {
     ),
   }));
 
-  /* ---------- Render ---------- */
 
   if (showEnroll && collegeId && adminId) {
     return (
@@ -356,7 +380,6 @@ export default function CredentialsTab() {
 
   return (
     <div className="w-full flex flex-col">
-      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4">
         <h2 className="text-xl font-bold text-[#16284F]">User Credentials</h2>
         <button
@@ -368,7 +391,6 @@ export default function CredentialsTab() {
         </button>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div className="flex flex-wrap gap-2">
           {CRED_TYPES.map((ct) => (
@@ -447,54 +469,6 @@ export default function CredentialsTab() {
         }
       />
 
-      {openEditModal && editCredential && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm animate-in fade-in zoom-in-95 duration-200 p-6">
-            <h3 className="text-lg font-bold text-[#16284F] mb-4">Edit Credential</h3>
-            <div className="space-y-4 mb-6">
-              <div className="flex items-center gap-2 mb-2 bg-gray-50 p-2 rounded-lg">
-                <div className="text-[#43C17A] bg-white p-1.5 rounded shadow-sm">
-                  {credTypeIcon(editCredential.credentialType)}
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-gray-700">{editCredential.user?.fullName}</span>
-                  <span className="text-[10px] text-gray-500">{editCredential.credentialType !== "Card" && editCredential.credentialIdentifier}</span>
-                </div>
-              </div>
-
-
-
-              <label className="flex items-center gap-3 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={editIsActive}
-                  onChange={(e) => setEditIsActive(e.target.checked)}
-                  className="w-4 h-4 text-[#43C17A] accent-[#43C17A] rounded cursor-pointer"
-                />
-                <span className="text-sm font-medium text-gray-700">Credential is Active</span>
-              </label>
-              <p className="text-xs text-gray-500">
-                If unchecked, the user will temporarily not be able to use this credential to access devices.
-              </p>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setOpenEditModal(false)}
-                className="px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmEdit}
-                disabled={isEditing}
-                className="px-4 py-2 text-sm font-semibold text-white bg-[#43C17A] rounded-lg hover:bg-[#3ab06e] transition-colors cursor-pointer disabled:opacity-60 flex items-center gap-2"
-              >
-                {isEditing ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

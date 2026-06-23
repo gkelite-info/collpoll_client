@@ -229,6 +229,7 @@ function InventoryPageContent() {
     normalizeCategoryName,
   );
   const isSports = categories.includes("sports");
+  const isInfrastructure = categories.includes("infrastructure");
   const isSafety = categories.some(
     (category) => category === "safetyandsecurity" || category === "safetysecurity",
   );
@@ -240,13 +241,13 @@ function InventoryPageContent() {
     return <main className="min-h-screen bg-[#F4F4F4] p-2" />;
   }
 
-  if (!isSports && !isSafety && !isAdministration) {
+  if (!isSports && !isInfrastructure && !isSafety && !isAdministration) {
     return (
       <main className="min-h-screen p-2">
         <section className="rounded-xl bg-white p-8 text-center shadow-sm">
           <h1 className="text-[22px] font-extrabold text-[#16284F]">Inventory</h1>
           <p className="mt-2 text-[14px] font-semibold text-[#64748B]">
-            Inventory is available only for Sports, Safety &amp; Security, and Administration wellbeing executives.
+            Inventory is available only for Sports, Infrastructure, Safety &amp; Security, and Administration wellbeing executives.
           </p>
         </section>
       </main>

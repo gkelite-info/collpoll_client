@@ -14,9 +14,6 @@ const err = (e: unknown) => {
   return "Something went wrong. Please try again.";
 };
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
 
 export interface DeviceClassSessionPayload {
   deviceClassSessionId?: number;
@@ -50,9 +47,6 @@ export interface DeviceClassSessionRow {
   createdAt: string;
 }
 
-/* ------------------------------------------------------------------ */
-/*  GET                                                                */
-/* ------------------------------------------------------------------ */
 
 export const getDeviceClassSessions = async (
   collegeId: number,
@@ -91,15 +85,11 @@ export const getDeviceClassSessions = async (
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  CREATE                                                             */
-/* ------------------------------------------------------------------ */
 
 export const createDeviceClassSession = async (payload: DeviceClassSessionPayload) => {
   try {
     const now = new Date().toISOString();
 
-    // Uniqueness: calendarEventId + deviceId
     const { data: dup } = await supabase
       .from("device_class_sessions")
       .select("deviceClassSessionId")
@@ -129,9 +119,6 @@ export const createDeviceClassSession = async (payload: DeviceClassSessionPayloa
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  DEACTIVATE                                                         */
-/* ------------------------------------------------------------------ */
 
 export const deactivateDeviceClassSession = async (
   sessionId: number,

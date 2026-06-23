@@ -53,7 +53,6 @@ export default function Step2SelectDevice({
 
   const activeDevices = devices.filter((d) => d.isActive);
 
-  // Filter devices by search query (name, IP, type)
   const filteredDevices = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return devices;
@@ -105,7 +104,6 @@ export default function Step2SelectDevice({
         )}
       </div>
 
-      {/* Search input — same style as Step1 user search */}
       {!isFetchingDevices && devices.length > 0 && (
         <div className="relative mb-3">
           <MagnifyingGlass
@@ -141,7 +139,6 @@ export default function Step2SelectDevice({
         </div>
       ) : (
         <>
-          {/* Selection count */}
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-gray-400 font-medium">
               {selectedDevices.length} of {activeDevices.length} active device{activeDevices.length !== 1 ? "s" : ""} selected
@@ -151,7 +148,6 @@ export default function Step2SelectDevice({
             </span>
           </div>
 
-          {/* Device list — consistent min-height and scrollable */}
           <div className="space-y-2 min-h-[200px] max-h-80 overflow-y-auto custom-scrollbar mb-4 pr-0.5">
             {filteredDevices.map((d) => {
               const isChecked = selectedDevices.some((sd) => sd.deviceId === d.deviceId);

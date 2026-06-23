@@ -15,9 +15,6 @@ const err = (e: unknown) => {
   return "Something went wrong. Please try again.";
 };
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
 
 export interface GateScanPayload {
   userId: number;
@@ -45,9 +42,6 @@ export interface GateScanRow {
   user?: { fullName: string; role: string } | null;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Default shift config                                               */
-/* ------------------------------------------------------------------ */
 
 const SHIFT_START = "09:00";
 const SHIFT_END = "17:00";
@@ -62,9 +56,6 @@ function minutesBetween(t1: string, t2: string): number {
   return Math.abs(timeToMinutes(t2) - timeToMinutes(t1));
 }
 
-/* ------------------------------------------------------------------ */
-/*  GET — paginated                                                    */
-/* ------------------------------------------------------------------ */
 
 export const getGateScanLogs = async (
   collegeId: number,
@@ -96,7 +87,6 @@ export const getGateScanLogs = async (
     if (error) throw error;
     if (!data || data.length === 0) return { success: true as const, data: [], total: 0 };
 
-    // Enrich with user info
     const userIds = [...new Set(data.map((d: any) => d.userId))];
     const { data: users } = await supabase
       .from("users")
@@ -116,15 +106,11 @@ export const getGateScanLogs = async (
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  Process gate scan                                                  */
-/* ------------------------------------------------------------------ */
 
 export const processGateScan = async (payload: GateScanPayload) => {
   try {
     const now = new Date().toISOString();
 
-    // 1. Determine if user is staff (non-Student role)
     const { data: userData, error: userErr } = await adminSupabase
       .from("users")
       .select("userId, role")
@@ -136,7 +122,6 @@ export const processGateScan = async (payload: GateScanPayload) => {
     const normalizedRole = (userData.role || "").toLowerCase().replace(/[-_\s]/g, "");
     const isStaff = !excludedRoles.includes(normalizedRole);
 
-    // 2. Resolve Standalone scanType & 60-second Debounce
     let resolvedScanType: "Entry" | "Exit" = payload.scanType === "Exit" ? "Exit" : "Entry";
 
     const { data: lastScan } = await adminSupabase
@@ -152,8 +137,6 @@ export const processGateScan = async (payload: GateScanPayload) => {
       const lastTime = new Date(lastScan.scanTime).getTime();
       const currTime = new Date(payload.scanTime).getTime();
       
-      // If the scan is within 60 seconds of the last gate scan for this user, 
-      // swallow it to prevent accidental double-scans and erroneous toggles.
       if (currTime - lastTime < 60000 && currTime >= lastTime) {
         return { success: true as const, data: null };
       }
@@ -163,10 +146,8 @@ export const processGateScan = async (payload: GateScanPayload) => {
       resolvedScanType = lastScan?.scanType === "Entry" ? "Exit" : "Entry";
     }
     
-    // Mutate payload so downstream logic uses explicit Entry/Exit
     payload.scanType = resolvedScanType;
 
-    // 3. Create gate_scan_logs entry
     const { data: scanLog, error: scanErr } = await adminSupabase
       .from("gate_scan_logs")
       .insert({
@@ -185,12 +166,10 @@ export const processGateScan = async (payload: GateScanPayload) => {
       .single();
     if (scanErr) throw scanErr;
 
-    // 4. For staff: process attendance_daily
     let attendanceDailyId: number | null = null;
     if (isStaff) {
       attendanceDailyId = await processStaffAttendance(payload, scanLog.gateScanLogId);
 
-      // Broadcast HR realtime update
       try {
         await adminSupabase
           .channel(`public:attendance_daily:hr`)
@@ -209,7 +188,6 @@ export const processGateScan = async (payload: GateScanPayload) => {
       }
     }
 
-    // 5. Update scan log with processed status
     await adminSupabase
       .from("gate_scan_logs")
       .update({
@@ -226,9 +204,6 @@ export const processGateScan = async (payload: GateScanPayload) => {
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  Staff attendance processing                                        */
-/* ------------------------------------------------------------------ */
 
 async function processStaffAttendance(
   payload: GateScanPayload,
@@ -236,7 +211,6 @@ async function processStaffAttendance(
 ): Promise<number | null> {
   const now = new Date().toISOString();
 
-  // 1. Fetch all gate scans for this user today, ordered chronologically
   const { data: allScans, error: scansErr } = await adminSupabase
     .from("gate_scan_logs")
     .select("scanType, scanTime")
@@ -249,7 +223,6 @@ async function processStaffAttendance(
   const scans = allScans || [];
   if (scans.length === 0) return null;
 
-  // 2. Compute exact minutes and find bounds
   let totalMinutes = 0;
   let inTimeStr: string | null = null;
   let firstCheckInStr: string | null = null;
@@ -259,8 +232,6 @@ async function processStaffAttendance(
     let timeStr = "00:00";
     const st = scan.scanTime;
     
-    // Check if timezone info is explicitly present.
-    // If missing, JS Date assumes UTC in Node and local in browser. To be safe, extract exactly what the device sent.
     if (!st.includes("Z") && !st.match(/[+-]\d{2}:\d{2}$/)) {
       const match = st.match(/T(\d{2}:\d{2})/);
       if (match) timeStr = match[1];
@@ -290,7 +261,6 @@ async function processStaffAttendance(
     }
   }
 
-  // 3. Calculate delays and status
   let lateBy = 0;
   let earlyOut = 0;
   let status = "Present";
@@ -304,7 +274,6 @@ async function processStaffAttendance(
     earlyOut = Math.max(0, timeToMinutes(SHIFT_END) - timeToMinutes(lastCheckOutStr));
   }
 
-  // Re-evaluate status based on total accumulated hours
   const shiftDuration = minutesBetween(SHIFT_START, SHIFT_END);
   if (totalMinutes > 0 && totalMinutes < shiftDuration / 2) {
     status = "HalfDay";
@@ -312,7 +281,6 @@ async function processStaffAttendance(
     status = "Absent";
   }
 
-  // 4. Update or Insert into attendance_daily
   const { data: existing } = await adminSupabase
     .from("attendance_daily")
     .select("attendanceDailyId")

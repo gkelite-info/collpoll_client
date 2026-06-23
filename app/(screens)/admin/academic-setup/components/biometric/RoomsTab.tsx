@@ -92,7 +92,6 @@ export default function RoomsTab() {
     setCurrentPage(1);
   }, [debouncedSearchQuery]);
 
-  // Form state
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editRoomId, setEditRoomId] = useState<number | null>(null);
@@ -104,7 +103,6 @@ export default function RoomsTab() {
     }
   }, [actionParam]);
 
-  // Device assignment
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignRoomId, setAssignRoomId] = useState<number | null>(null);
   const [unassignedDevices, setUnassignedDevices] = useState<UnassignedDevice[]>([]);
@@ -117,12 +115,10 @@ export default function RoomsTab() {
   const [hasMoreUnassigned, setHasMoreUnassigned] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
 
-  // Unassign Modal state
   const [openUnassignModal, setOpenUnassignModal] = useState(false);
   const [unassignRoomId, setUnassignRoomId] = useState<number | null>(null);
   const [isUnassigning, setIsUnassigning] = useState(false);
 
-  // Delete
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
@@ -159,7 +155,6 @@ export default function RoomsTab() {
     setSearchQuery(e.target.value);
   };
 
-  /* ---------- Form handlers ---------- */
 
   const handleOpenForm = (room?: RoomViewData) => {
     if (room) {
@@ -230,7 +225,6 @@ export default function RoomsTab() {
     }
   };
 
-  /* ---------- Device assignment ---------- */
 
   const fetchUnassignedDevices = async (
     page: number,
@@ -341,7 +335,6 @@ export default function RoomsTab() {
     }
   };
 
-  /* ---------- Delete ---------- */
 
   const handleDeleteClick = (roomId: number) => {
     setSelectedRoomId(roomId);
@@ -368,7 +361,6 @@ export default function RoomsTab() {
     }
   };
 
-  /* ---------- Table data ---------- */
 
   const tableData = rooms.map((room) => ({
     roomNo: (
@@ -433,7 +425,6 @@ export default function RoomsTab() {
     ),
   }));
 
-  /* ---------- Render ---------- */
 
   const selectedUnassignRoom = rooms.find((r) => r.collegeRoomId === unassignRoomId);
   const selectedDeleteRoom = rooms.find((r) => r.collegeRoomId === selectedRoomId);
@@ -502,7 +493,6 @@ export default function RoomsTab() {
 
           <form onSubmit={handleSave} className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Room No / Name */}
               <div className="space-y-1">
                 <label className="text-sm font-medium text-[#16284F]">
                   Room No / Name <span className="text-red-500">*</span>
@@ -518,7 +508,6 @@ export default function RoomsTab() {
                 />
               </div>
 
-              {/* Room Type */}
               <CustomSelect
                 label="Room Type"
                 name="roomType"
@@ -528,7 +517,6 @@ export default function RoomsTab() {
                 required
               />
 
-              {/* Building */}
               <div className="space-y-1">
                 <label className="text-sm font-medium text-[#16284F]">Building</label>
                 <input
@@ -541,7 +529,6 @@ export default function RoomsTab() {
                 />
               </div>
 
-              {/* Floor */}
               <div className="space-y-1">
                 <label className="text-sm font-medium text-[#16284F]">Floor</label>
                 <input
@@ -554,7 +541,6 @@ export default function RoomsTab() {
                 />
               </div>
 
-              {/* Capacity */}
               <div className="space-y-1 md:col-span-2">
                 <label className="text-sm font-medium text-[#16284F]">Capacity</label>
                 <input
@@ -596,7 +582,6 @@ export default function RoomsTab() {
         </div>
       )}
 
-      {/* Assign Device Modal */}
       {showAssignModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-200">

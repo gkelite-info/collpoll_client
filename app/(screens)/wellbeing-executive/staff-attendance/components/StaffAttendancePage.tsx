@@ -23,13 +23,17 @@ const isSafetyAndSecurityCategory = (categoryName: string | null | undefined) =>
   return normalizedCategory === "safetyandsecurity" || normalizedCategory === "safetysecurity";
 };
 
+const isStaffAttendanceCategory = (categoryName: string | null | undefined) =>
+  isSafetyAndSecurityCategory(categoryName) ||
+  normalizeCategoryName(categoryName) === "infrastructure";
+
 export default function StaffAttendancePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { loading, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
   const [records, setRecords] = useState<StaffAttendanceRecord[]>(staffAttendanceRecords);
   const canViewStaffAttendance = [wellBeingCategoryName, ...wellBeingCategoryNames].some(
-    isSafetyAndSecurityCategory,
+    isStaffAttendanceCategory,
   );
 
   useEffect(() => {

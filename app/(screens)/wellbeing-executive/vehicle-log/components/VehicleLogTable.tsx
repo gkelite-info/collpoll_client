@@ -1,6 +1,6 @@
 "use client";
 
-import { PencilSimple } from "@phosphor-icons/react";
+import { Eye, PencilSimple, Trash } from "@phosphor-icons/react";
 import TableComponent from "@/app/utils/table/table";
 import type { VehicleLogEntry, VehicleLogStatus } from "../types";
 import { VehicleStatusDropdown } from "./VehicleStatusDropdown";
@@ -8,9 +8,12 @@ import { VehicleStatusDropdown } from "./VehicleStatusDropdown";
 type VehicleLogTableProps = {
   entries: VehicleLogEntry[];
   onStatusChange: (vehicleNumber: string, status: VehicleLogStatus) => void;
+  onView: (entry: VehicleLogEntry) => void;
+  onEdit: (entry: VehicleLogEntry) => void;
+  onDelete: (vehicleNumber: string) => void;
 };
 
-export function VehicleLogTable({ entries, onStatusChange }: VehicleLogTableProps) {
+export function VehicleLogTable({ entries, onStatusChange, onView, onEdit, onDelete }: VehicleLogTableProps) {
   const columns = [
     { title: "VEHICLE NUMBER", key: "vehicleNumber" },
     { title: "VEHICLE TYPE", key: "vehicleType" },
@@ -25,7 +28,7 @@ export function VehicleLogTable({ entries, onStatusChange }: VehicleLogTableProp
     watchman: entry.watchman,
     entryTime: <span className="font-bold">{entry.entryTime}</span>,
     status: <VehicleStatusDropdown status={entry.status} onChange={(status) => onStatusChange(entry.vehicleNumber, status)} />,
-    actions: <button type="button" title="Edit vehicle log" className="cursor-pointer text-[#475569] hover:text-[#16284F]"><PencilSimple size={18} weight="bold" /></button>,
+    actions: <div className="flex items-center justify-center gap-3"><button type="button" onClick={() => onView(entry)} title="View vehicle details" className="cursor-pointer text-[#475569] hover:text-[#22A965]"><Eye size={18} weight="bold" /></button><button type="button" onClick={() => onEdit(entry)} title="Edit vehicle log" className="cursor-pointer text-[#475569] hover:text-[#16284F]"><PencilSimple size={18} weight="bold" /></button><button type="button" onClick={() => onDelete(entry.vehicleNumber)} title="Delete vehicle log" className="cursor-pointer text-[#475569] hover:text-red-500"><Trash size={18} weight="bold" /></button></div>,
   }));
 
   return (

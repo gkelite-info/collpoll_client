@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Fingerprint, CaretDown, Check, CheckCircle, WarningCircle } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { upsertUserCredential } from "@/lib/helpers/devices/userDeviceCredentialAPI";
+import { upsertUserDeviceSync } from "@/lib/helpers/devices/userDeviceSyncAPI";
 import { BiometricDeviceRow } from "@/lib/helpers/devices/biometricDeviceAPI";
 import { registerUserOnDevice, registerFingerprintOnDevice, captureFingerprint } from "@/lib/helpers/devices/hikvisionAPI";
 import { UserSearchResult } from "./types";
@@ -68,7 +69,7 @@ export default function FingerprintCaptureTab({
 
   const handleCaptureFingerprint = async () => {
     if (!captureDevice) {
-      toast.error("No capture device selected.");
+      toast.error("No capture device selected.", { id: "no-capture-device" });
       return;
     }
     setIsCapturing(true);
@@ -91,14 +92,13 @@ export default function FingerprintCaptureTab({
 
       if (extractedData) {
         setCapturedData(extractedData);
-        toast.success("Fingerprint captured! Click Register to save.");
+        toast.success("Fingerprint captured! Click Register to save.", { id: "fp-capture-success" });
       } else {
-        toast.error("No fingerprint data received. Please try again.");
+        toast.error("No fingerprint data received. Please try again.", { id: "fp-capture-empty" });
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Capture failed";
-      toast.error(msg);
-    } finally {
+      toast.error(msg, { id: "fp-capture-error" });
       setIsCapturing(false);
     }
   };
@@ -115,6 +115,31 @@ export default function FingerprintCaptureTab({
     setDeviceEnrollStatuses(initialStatuses);
 
     try {
+      const saveRes = await upsertUserCredential({
+        userId: selectedUser.userId,
+        collegeId,
+        credentialType: "Fingerprint",
+        credentialIdentifier: `FP-${selectedUser.userId}-${fingerIndex}`,
+        fingerIndex,
+        enrolledBy: adminId,
+      });
+
+      if (!saveRes.success || !saveRes.data) {
+        throw new Error(saveRes.error || "Failed to save credential to database.");
+      }
+
+      const credentialId = saveRes.data.userDeviceCredentialId;
+
+      await Promise.all(
+        selectedDevices.map((device) =>
+          upsertUserDeviceSync({
+            userDeviceCredentialId: credentialId,
+            deviceId: device.deviceId,
+            syncStatus: "Pending",
+          })
+        )
+      );
+
       const results = await Promise.all(
         selectedDevices.map(async (device) => {
           try {
@@ -129,13 +154,7 @@ export default function FingerprintCaptureTab({
               );
             } catch (e: any) {
               const subStatusCode = e?.subStatusCode || "";
-              // User already exists on device — safe to proceed with credential enrollment
-              if (subStatusCode === "employeeNoAlreadyExist") {
-                // Already handled by registerUserOnDevice's internal modify fallback
-              } else {
-                // Network failure, device offline, or unexpected error — must fail this device
-                throw e;
-              }
+              if (subStatusCode !== "employeeNoAlreadyExist") throw e;
             }
 
             await registerFingerprintOnDevice(
@@ -144,6 +163,12 @@ export default function FingerprintCaptureTab({
               fingerIndex,
               capturedData,
             );
+
+            await upsertUserDeviceSync({
+              userDeviceCredentialId: credentialId,
+              deviceId: device.deviceId,
+              syncStatus: "Success",
+            });
 
             setDeviceEnrollStatuses((prev) => ({
               ...prev,
@@ -166,6 +191,13 @@ export default function FingerprintCaptureTab({
               msg = "This fingerprint is already registered on this device.";
             }
 
+            await upsertUserDeviceSync({
+              userDeviceCredentialId: credentialId,
+              deviceId: device.deviceId,
+              syncStatus: "Failed",
+              failureReason: msg,
+            });
+
             setDeviceEnrollStatuses((prev) => ({
               ...prev,
               [device.deviceId]: { status: "failed", error: msg },
@@ -178,47 +210,26 @@ export default function FingerprintCaptureTab({
       const successCount = results.filter((r) => r.success).length;
       const errors = results.filter((r) => !r.success).map((r) => r.error).filter(Boolean) as string[];
 
-      if (successCount > 0) {
-        await upsertUserCredential({
-          userId: selectedUser.userId,
-          collegeId,
-          credentialType: "Fingerprint",
-          credentialIdentifier: `FP-${selectedUser.userId}-${fingerIndex}`,
-          fingerIndex,
-          enrolledBy: adminId,
+      if (successCount === selectedDevices.length) {
+        setEnrollResult({ success: true, message: `Fingerprint registered successfully on all ${selectedDevices.length} devices!` });
+        toast.success("Fingerprint enrolled on all devices!", { id: "fp-enroll-success" });
+      } else if (successCount > 0) {
+        setEnrollResult({
+          success: true,
+          message: `Fingerprint saved to database and registered on ${successCount}/${selectedDevices.length} devices. Offline devices will sync automatically.`,
         });
-
-        if (successCount === selectedDevices.length) {
-          setEnrollResult({ success: true, message: `Fingerprint registered successfully on all ${selectedDevices.length} devices!` });
-          toast.success("Fingerprint enrolled on all devices!");
-        } else {
-          setEnrollResult({
-            success: true,
-            message: `Fingerprint registered on ${successCount}/${selectedDevices.length} devices. (${selectedDevices.length - successCount} failed)`,
-          });
-          toast.success(`Fingerprint enrolled on ${successCount}/${selectedDevices.length} devices.`);
-        }
-        onSuccess();
+        toast.success(`Fingerprint enrolled on ${successCount}/${selectedDevices.length} devices.`, { id: "fp-enroll-partial" });
       } else {
         setEnrollResult({
           success: false,
-          message: `Fingerprint enrollment failed on all devices. Details: ${errors.join(", ")}`,
+          message: `Fingerprint saved to database but physical sync failed on all devices. Details: ${errors.join(", ")}`,
         });
-
-        if (errors.length > 0) {
-          if (errors[0].includes("already registered on this device")) {
-            toast.error("This fingerprint is already registered on the device.");
-          } else {
-            toast.error(errors[0]);
-          }
-        } else {
-          toast.error("Fingerprint enrollment failed on all devices.");
-        }
+        toast.error("Physical enrollment failed, but credential is saved and will retry later.", { id: "fp-enroll-fail" });
       }
+      onSuccess();
     } catch (e: unknown) {
       let msg = e instanceof Error ? e.message : "Fingerprint enrollment failed";
 
-      // Intercept DB constraint errors (e.g. duplicate key, unique constraint)
       if (
         msg.includes("duplicate key") || 
         msg.includes("Unique constraint") || 
@@ -231,7 +242,7 @@ export default function FingerprintCaptureTab({
       }
 
       setEnrollResult({ success: false, message: msg });
-      toast.error(msg);
+      toast.error(msg, { id: "fp-enroll-error" });
     } finally {
       setIsEnrolling(false);
     }
