@@ -48,7 +48,7 @@ export const emptyForm: EquipmentFormState = {
   quantity: "",
   available: "",
   image: null,
-};
+}; 
 
 export const normalizeCategoryName = (categoryName: string | null | undefined) =>
   categoryName?.toLowerCase().replace(/[^a-z]/g, "") ?? "";

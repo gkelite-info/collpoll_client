@@ -6,8 +6,11 @@ export const HR_ROLE_PILLS = [
   { label: "Admin", value: "Admin" },
   { label: "Faculty", value: "Faculty" },
   { label: "Finance Executive", value: "Finance" },
+  { label: "Finance Manager", value: "FinanceManager" },
   { label: "HR Manager", value: "CollegeHr" },
   { label: "Placement", value: "Placement" },
+  { label: "Wellbeing Executive", value: "WellbeingExecutive" },
+  { label: "Wellbeing Manager", value: "WellbeingManager" },
 ];
 
 export const DEFAULT_ROLE = "All";
@@ -112,7 +115,6 @@ async function getUsersForRole(collegeId: number, role: string) {
 
 function getDbRolesForDashboardRole(role: string) {
   if (role === "All") return [];
-  if (role === "Finance") return ["Finance", "FinanceManager"];
   if (role === "Placement") return ["Placement", "PlacementOfficer"];
   return [role];
 }

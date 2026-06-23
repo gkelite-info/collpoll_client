@@ -43,6 +43,36 @@ const typeIcons: Record<string, string> = {
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
+const formatRealtimeTime = (time: string | null) => {
+  if (!time) return null;
+  if (time.includes("T")) {
+    const parsed = new Date(time);
+    if (!Number.isNaN(parsed.getTime())) {
+      return new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }).format(parsed);
+    }
+  }
+  const [hourPart, minutePart] = time.split(":");
+  let hour = Number(hourPart);
+  if (!Number.isFinite(hour) || !minutePart) return time;
+  const meridiem = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12 || 12;
+  return `${String(hour).padStart(2, "0")}:${minutePart.padStart(2, "0")} ${meridiem}`;
+};
+
+const formatRealtimeMinutes = (minutes: number | null) => {
+  if (!minutes || minutes <= 0) return "-";
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return hours > 0
+    ? `${hours}h ${String(remainingMinutes).padStart(2, "0")}m`
+    : `${remainingMinutes}m`;
+};
+
 const DashboardShimmer = () => (
   <div className="p-2 w-full h-full flex flex-col animate-pulse">
     <div className="flex justify-between items-start mb-6">
@@ -112,7 +142,7 @@ function FacultyAttendanceDashboard() {
   const [totalCount, setTotalCount] = useState(0);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const itemsPerPage = 10;
   const [stats, setStats] = useState<AttendanceStatsResult>({ total: 0, present: 0, absent: 0, late: 0, leave: 0 });
 
   // States to manage loading and UI feel
@@ -129,6 +159,7 @@ function FacultyAttendanceDashboard() {
   const [filterDate, setFilterDate] = useState<string | null>(null);
   const filterDateRef = useRef<string | null>(null);
   const searchMounted = useRef(false);
+  const realtimeRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     filterDateRef.current = filterDate;
@@ -204,13 +235,96 @@ function FacultyAttendanceDashboard() {
 
   // Realtime HR Attendance Updates
   useHrAttendanceRealtime((payload) => {
-    // We do a silent fetch so we don't flash loading states
-    if (payload.new && payload.new.userId) {
-      fetchStats(searchQuery, filterDateRef.current, activeRole);
-      fetchStaffSilent(searchQuery, filterDateRef.current, currentPage, localTab);
+    const updatedAttendance = payload.new;
+    if (updatedAttendance?.userId) {
+      const isCurrentCollege = updatedAttendance.collegeId !== undefined
+        ? Number(updatedAttendance.collegeId) === Number(collegeId)
+        : staffList.some((staff) => staff.userId === updatedAttendance.userId);
+      const viewedDate = filterDateRef.current;
+      const isViewedDate = !viewedDate || !updatedAttendance.attendanceDate
+        || updatedAttendance.attendanceDate === viewedDate;
+
+      if (!isCurrentCollege || !isViewedDate) return;
+
+      // Apply the realtime row immediately; the silent refresh below remains the
+      // source of truth for adjustments, totals, filters, and pagination.
+      setStaffList((currentStaff) =>
+        currentStaff.map((staff) => {
+          if (staff.userId !== updatedAttendance.userId) return staff;
+
+          const broadcastCheckIn =
+            updatedAttendance.scanType === "Entry"
+              ? updatedAttendance.scanTime
+              : undefined;
+          const broadcastCheckOut =
+            updatedAttendance.scanType === "Exit"
+              ? updatedAttendance.scanTime
+              : undefined;
+          const nextCheckIn = updatedAttendance.checkIn !== undefined
+            ? updatedAttendance.checkIn
+            : broadcastCheckIn;
+          const nextCheckOut = updatedAttendance.checkOut !== undefined
+            ? updatedAttendance.checkOut
+            : broadcastCheckOut;
+
+          return {
+            ...staff,
+            attendanceDailyId:
+              updatedAttendance.attendanceDailyId ?? staff.attendanceDailyId,
+            checkIn:
+              nextCheckIn !== undefined
+                ? formatRealtimeTime(nextCheckIn)
+                : staff.checkIn,
+            checkOut:
+              nextCheckOut !== undefined
+                ? formatRealtimeTime(nextCheckOut)
+                : staff.checkOut,
+            rawCheckIn:
+              nextCheckIn !== undefined ? nextCheckIn : staff.rawCheckIn,
+            rawCheckOut:
+              nextCheckOut !== undefined ? nextCheckOut : staff.rawCheckOut,
+            totalHours:
+              updatedAttendance.totalMinutes !== undefined
+                ? formatRealtimeMinutes(updatedAttendance.totalMinutes)
+                : staff.totalHours,
+            status: updatedAttendance.status
+              ? formatRole(updatedAttendance.status.toLowerCase())
+              : staff.status,
+            lateByMinutes:
+              updatedAttendance.lateByMinutes ?? staff.lateByMinutes,
+            earlyOutMinutes:
+              updatedAttendance.earlyOutMinutes ?? staff.earlyOutMinutes,
+          };
+        }),
+      );
+
       toast.success("Attendance updated successfully", { id: "hr-realtime-toast" });
+
+      // A biometric scan can emit both a database change and a broadcast. Merge
+      // that burst into one background refresh instead of running duplicate queries.
+      if (realtimeRefreshTimerRef.current) {
+        clearTimeout(realtimeRefreshTimerRef.current);
+      }
+      realtimeRefreshTimerRef.current = setTimeout(() => {
+        fetchStats(searchQuery, filterDateRef.current, activeRole);
+        fetchStaffSilent(
+          searchQuery,
+          filterDateRef.current,
+          activeRole,
+          currentPage,
+          localTab,
+        );
+      }, 150);
     }
   });
+
+  useEffect(() => {
+    return () => {
+      if (realtimeRefreshTimerRef.current) {
+        clearTimeout(realtimeRefreshTimerRef.current);
+      }
+    };
+  }, []);
 
   // Table Shimmer on localTab Change (Optimistic UI)
   useEffect(() => {
@@ -221,7 +335,13 @@ function FacultyAttendanceDashboard() {
   }, [localTab]);
 
   const fetchStaffSilent = useCallback(
-    async (search = "", date?: string | null, pageNum = 1, tab = "total") => {
+    async (
+      search = "",
+      date?: string | null,
+      rFilter?: string | null,
+      pageNum = 1,
+      tab = "total",
+    ) => {
       if (!collegeId) return;
       try {
         const result = await getAttendanceStaff({
@@ -230,6 +350,7 @@ function FacultyAttendanceDashboard() {
           page: pageNum,
           limit: itemsPerPage,
           date: date ?? undefined,
+          role: rFilter ?? undefined,
           tabStatus: tab,
         });
         setStaffList(result.staff);
@@ -459,7 +580,13 @@ function FacultyAttendanceDashboard() {
               onCancel={handleCancel}
               onRefresh={() => {
                 fetchStats(searchQuery, filterDateRef.current, activeRole);
-                fetchStaffSilent(searchQuery, filterDateRef.current, currentPage, localTab);
+                fetchStaffSilent(
+                  searchQuery,
+                  filterDateRef.current,
+                  activeRole,
+                  currentPage,
+                  localTab,
+                );
               }}
             />
             <div className={`${isEditMode ? "mt-1" : "-mt-4"} mb-3`}>

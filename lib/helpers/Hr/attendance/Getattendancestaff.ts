@@ -6,11 +6,17 @@ const ROLE_DISPLAY_MAP: Record<string, string> = {
   Admin: "Admin",
   Faculty: "Faculty",
   Finance: "Finance Executive",
+  FinanceManager: "Finance Manager",
   CollegeHr: "HR Manager",
   Placement: "Placement",
+  PlacementOfficer: "Placement",
+  WellbeingExecutive: "Wellbeing Executive",
+  WellbeingManager: "Wellbeing Manager",
+  GroundStaff: "Ground Staff",
+  SuperAdmin: "Super Admin",
 };
 
-const EXCLUDED_ROLES = ["Student", "Parent", "SuperAdmin"];
+const EXCLUDED_ROLES = ["Student", "Parent"];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -164,11 +170,18 @@ export async function getAttendanceStaff(
       Admin: "Admin",
       Faculty: "Faculty",
       "Finance Executive": "Finance",
+      "Finance Manager": "FinanceManager",
       "HR Manager": "CollegeHr",
-      Placement: "Placement",
+      Placement: "PlacementOfficer",
+      "Wellbeing Executive": "WellbeingExecutive",
+      "Wellbeing Manager": "WellbeingManager",
+      "Ground Staff": "GroundStaff",
+      "Super Admin": "SuperAdmin",
     };
     const dbRole = reverseRoleMap[role] || role;
-    usersQuery = usersQuery.eq("role", dbRole);
+    usersQuery = role === "Placement"
+      ? usersQuery.in("role", ["Placement", "PlacementOfficer"])
+      : usersQuery.eq("role", dbRole);
   }
 
   const { data: users, error: usersError, count } = await usersQuery;
@@ -403,11 +416,18 @@ export async function getAttendanceStaffStats(
       Admin: "Admin",
       Faculty: "Faculty",
       "Finance Executive": "Finance",
+      "Finance Manager": "FinanceManager",
       "HR Manager": "CollegeHr",
-      Placement: "Placement",
+      Placement: "PlacementOfficer",
+      "Wellbeing Executive": "WellbeingExecutive",
+      "Wellbeing Manager": "WellbeingManager",
+      "Ground Staff": "GroundStaff",
+      "Super Admin": "SuperAdmin",
     };
     const dbRole = reverseRoleMap[role] || role;
-    usersQuery = usersQuery.eq("role", dbRole);
+    usersQuery = role === "Placement"
+      ? usersQuery.in("role", ["Placement", "PlacementOfficer"])
+      : usersQuery.eq("role", dbRole);
   }
 
   const { data: users, error: usersError } = await usersQuery;
