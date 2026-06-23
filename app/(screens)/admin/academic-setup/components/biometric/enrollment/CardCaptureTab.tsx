@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { IdentificationCard, CaretDown, CheckCircle, WarningCircle } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { upsertUserCredential } from "@/lib/helpers/devices/userDeviceCredentialAPI";
+import { upsertUserDeviceSync } from "@/lib/helpers/devices/userDeviceSyncAPI";
 import { BiometricDeviceRow } from "@/lib/helpers/devices/biometricDeviceAPI";
 import { registerUserOnDevice, registerCardOnDevice, captureCard } from "@/lib/helpers/devices/hikvisionAPI";
 import { UserSearchResult } from "./types";
@@ -54,7 +55,7 @@ export default function CardCaptureTab({
 
   const handleCaptureCard = async () => {
     if (!captureDevice) {
-      toast.error("Please select a capture device first.");
+      toast.error("Please select a capture device first.", { id: "card-no-device" });
       return;
     }
     setIsCapturingCard(true);
@@ -66,12 +67,12 @@ export default function CardCaptureTab({
       
       if (cardNo) {
         setCardNumber(String(cardNo));
-        toast.success("Card read successfully!");
+        toast.success("Card read successfully!", { id: "card-read-success" });
       } else {
-        toast.error("No card detected. Please try tapping the card again.");
+        toast.error("No card detected. Please try tapping the card again.", { id: "card-read-empty" });
       }
     } catch (e: any) {
-      toast.error(e.message || "Failed to read card. Please check the device connection.");
+      toast.error(e.message || "Failed to read card. Please check the device connection.", { id: "card-read-error" });
     } finally {
       setIsCapturingCard(false);
     }
@@ -82,7 +83,7 @@ export default function CardCaptureTab({
     if (!selectedUser || selectedDevices.length === 0 || !cardVal) return;
 
     if (!/^[A-Za-z0-9]+$/.test(cardVal)) {
-      toast.error("Invalid card format. Please use only alphanumeric characters.");
+      toast.error("Invalid card format. Please use only alphanumeric characters.", { id: "card-format-err" });
       return;
     }
 
@@ -96,6 +97,30 @@ export default function CardCaptureTab({
     setDeviceEnrollStatuses(initialStatuses);
 
     try {
+      const saveRes = await upsertUserCredential({
+        userId: selectedUser.userId,
+        collegeId,
+        credentialType: "Card",
+        credentialIdentifier: cardVal,
+        enrolledBy: adminId,
+      });
+
+      if (!saveRes.success || !saveRes.data) {
+        throw new Error(saveRes.error || "Failed to save credential to database.");
+      }
+
+      const credentialId = saveRes.data.userDeviceCredentialId;
+
+      await Promise.all(
+        selectedDevices.map((device) =>
+          upsertUserDeviceSync({
+            userDeviceCredentialId: credentialId,
+            deviceId: device.deviceId,
+            syncStatus: "Pending",
+          })
+        )
+      );
+
       const results = await Promise.all(
         selectedDevices.map(async (device) => {
           try {
@@ -110,10 +135,7 @@ export default function CardCaptureTab({
               );
             } catch (e: any) {
               const subStatusCode = e?.subStatusCode || "";
-              if (subStatusCode === "employeeNoAlreadyExist") {
-              } else {
-                throw e;
-              }
+              if (subStatusCode !== "employeeNoAlreadyExist") throw e;
             }
 
             await registerCardOnDevice(
@@ -121,6 +143,12 @@ export default function CardCaptureTab({
               selectedUser.userId,
               cardVal,
             );
+
+            await upsertUserDeviceSync({
+              userDeviceCredentialId: credentialId,
+              deviceId: device.deviceId,
+              syncStatus: "Success",
+            });
 
             setDeviceEnrollStatuses((prev) => ({
               ...prev,
@@ -141,6 +169,13 @@ export default function CardCaptureTab({
               msg = "This card number is already registered on this device.";
             }
 
+            await upsertUserDeviceSync({
+              userDeviceCredentialId: credentialId,
+              deviceId: device.deviceId,
+              syncStatus: "Failed",
+              failureReason: msg,
+            });
+
             setDeviceEnrollStatuses((prev) => ({
               ...prev,
               [device.deviceId]: { status: "failed", error: msg },
@@ -153,42 +188,23 @@ export default function CardCaptureTab({
       const successCount = results.filter((r) => r.success).length;
       const errors = results.filter((r) => !r.success).map((r) => r.error).filter(Boolean) as string[];
 
-      if (successCount > 0) {
-        await upsertUserCredential({
-          userId: selectedUser.userId,
-          collegeId,
-          credentialType: "Card",
-          credentialIdentifier: cardVal,
-          enrolledBy: adminId,
+      if (successCount === selectedDevices.length) {
+        setEnrollResult({ success: true, message: `Card registered successfully on all ${selectedDevices.length} devices!` });
+        toast.success("Card enrolled on all devices!", { id: "card-enroll-success" });
+      } else if (successCount > 0) {
+        setEnrollResult({
+          success: true,
+          message: `Card saved to database and registered on ${successCount}/${selectedDevices.length} devices. Offline devices will sync automatically.`,
         });
-
-        if (successCount === selectedDevices.length) {
-          setEnrollResult({ success: true, message: `Card registered successfully on all ${selectedDevices.length} devices!` });
-          toast.success("Card enrolled on all devices!");
-        } else {
-          setEnrollResult({
-            success: true,
-            message: `Card registered on ${successCount}/${selectedDevices.length} devices. (${selectedDevices.length - successCount} failed)`,
-          });
-          toast.success(`Card enrolled on ${successCount}/${selectedDevices.length} devices.`);
-        }
-        onSuccess();
+        toast.success(`Card enrolled on ${successCount}/${selectedDevices.length} devices.`, { id: "card-enroll-partial" });
       } else {
         setEnrollResult({
           success: false,
-          message: `Card enrollment failed on all devices. Details: ${errors.join(", ")}`,
+          message: `Card saved to database but physical sync failed on all devices. Details: ${errors.join(", ")}`,
         });
-
-        if (errors.length > 0) {
-          if (errors[0].includes("already registered on this device")) {
-            toast.error("This card number is already registered on the device.");
-          } else {
-            toast.error(errors[0]);
-          }
-        } else {
-          toast.error("Card enrollment failed on all devices.");
-        }
+        toast.error("Physical enrollment failed, but credential is saved and will retry later.", { id: "card-enroll-fail" });
       }
+      onSuccess();
     } catch (e: unknown) {
       let msg = e instanceof Error ? e.message : "Card enrollment failed";
 
@@ -204,7 +220,7 @@ export default function CardCaptureTab({
       }
 
       setEnrollResult({ success: false, message: msg });
-      toast.error(msg);
+      toast.error(msg, { id: "card-enroll-error" });
     } finally {
       setIsEnrolling(false);
     }

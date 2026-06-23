@@ -202,6 +202,14 @@ export default function LogsTab() {
     const isSuccess = log.processedStatus.toLowerCase() === "accepted";
     const isError = log.processedStatus.toLowerCase() === "rejected" || log.processedStatus.toLowerCase() === "error";
 
+    const scanTimeStr = new Date(log.scanTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const checkOutStr = formatHHMM(log.checkOut);
+    
+    let displayLogType = formatLogType(log.logType);
+    if (log.logType.toLowerCase().includes("gate") && log.checkOut && scanTimeStr === checkOutStr) {
+      displayLogType = "Gate Exit";
+    }
+
     return {
       user: (
         <div className="flex flex-col">
@@ -218,7 +226,7 @@ export default function LogsTab() {
       logType: (
         <div className="flex flex-col">
           <span className="font-medium text-gray-700 capitalize">
-            {formatLogType(log.logType)}
+            {displayLogType}
           </span>
           <span className="text-xs text-gray-400 capitalize">Method: {log.authMethod}</span>
         </div>

@@ -41,7 +41,8 @@ export interface UserCredentialRow {
   createdAt: string;
   updatedAt?: string;
   imageUrl: string | null;
-  user?: { fullName: string; email: string; role: string } | null;
+  user?: { fullName: string; email: string; role: string; educationType?: string; financeManagerType?: string } | null;
+  user_device_sync?: { syncStatus: string; failureReason: string | null; biometric_devices?: { deviceName: string } }[];
 }
 
 
@@ -61,6 +62,7 @@ export const getUserDeviceCredentials = async (
     } else {
       selectStr += ",user:users(fullName, email, role)";
     }
+    selectStr += ",user_device_sync(syncStatus, failureReason, biometric_devices(deviceName))";
 
     let query = supabase
       .from("user_device_credentials")
@@ -103,10 +105,46 @@ export const getUserDeviceCredentials = async (
       return t as CredentialType;
     };
 
-    const mappedData = (data as any[] ?? []).map((row: any) => ({
+    let mappedData = (data as any[] ?? []).map((row: any) => ({
       ...row,
       credentialType: mapFromDB(row.credentialType),
     }));
+
+    const studentUserIds = mappedData.filter(r => r.user?.role === "Student").map(r => r.userId);
+    if (studentUserIds.length > 0) {
+      const { data: studentData } = await supabase
+        .from("students")
+        .select(`userId, college_education:collegeEducationId ( collegeEducationType )`)
+        .in("userId", studentUserIds);
+        
+      if (studentData) {
+        mappedData = mappedData.map(r => {
+          if (r.user?.role !== "Student") return r;
+          const stu = studentData.find(s => s.userId === r.userId);
+          const eduRelation = stu?.college_education;
+          const eduType = Array.isArray(eduRelation) ? eduRelation[0]?.collegeEducationType : (eduRelation as any)?.collegeEducationType;
+          if (eduType) r.user = { ...r.user, educationType: eduType };
+          return r;
+        });
+      }
+    }
+
+    const financeUserIds = mappedData.filter(r => r.user?.role === "Finance").map(r => r.userId);
+    if (financeUserIds.length > 0) {
+      const { data: financeData } = await supabase
+        .from("finance_manager")
+        .select("userId, type")
+        .in("userId", financeUserIds);
+        
+      if (financeData) {
+        mappedData = mappedData.map(r => {
+          if (r.user?.role !== "Finance") return r;
+          const fin = financeData.find(f => f.userId === r.userId);
+          if (fin?.type) r.user = { ...r.user, financeManagerType: fin.type };
+          return r;
+        });
+      }
+    }
 
     return { success: true as const, data: mappedData as UserCredentialRow[], total: count ?? 0 };
   } catch (e) {
