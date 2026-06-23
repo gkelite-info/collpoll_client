@@ -1,7 +1,19 @@
 import { supabase } from "@/lib/supabaseClient";
 import { adminSupabase } from "@/lib/helpers/devices/scanIngestionHelper";
 
-const err = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
+const err = (e: unknown) => {
+  if (e instanceof Error) {
+    const msg = e.message;
+    if (msg.includes("duplicate key value violates unique constraint")) {
+      return "This record already exists.";
+    }
+    if (msg.includes("violates foreign key constraint")) {
+      return "Invalid reference provided.";
+    }
+    return msg;
+  }
+  return "Something went wrong. Please try again.";
+};
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -11,10 +23,11 @@ export interface GateScanPayload {
   userId: number;
   collegeId: number;
   deviceId: number;
-  scanType: "Entry" | "Exit";
+  scanType: "Entry" | "Exit" | "Standalone";
   scanTime: string; // ISO
   scanDate: string; // YYYY-MM-DD
   authMethod: "Fingerprint" | "FaceRecognition" | "Card" | "QRCode";
+  deviceAttendanceLogId?: number;
 }
 
 export interface GateScanRow {
@@ -119,9 +132,41 @@ export const processGateScan = async (payload: GateScanPayload) => {
       .single();
     if (userErr) throw userErr;
 
-    const isStaff = userData.role !== "Student";
+    const excludedRoles = ["superadmin", "student", "parent"];
+    const normalizedRole = (userData.role || "").toLowerCase().replace(/[-_\s]/g, "");
+    const isStaff = !excludedRoles.includes(normalizedRole);
 
-    // 2. Create gate_scan_logs entry
+    // 2. Resolve Standalone scanType & 60-second Debounce
+    let resolvedScanType: "Entry" | "Exit" = payload.scanType === "Exit" ? "Exit" : "Entry";
+
+    const { data: lastScan } = await adminSupabase
+      .from("gate_scan_logs")
+      .select("scanType, scanTime")
+      .eq("userId", payload.userId)
+      .eq("scanDate", payload.scanDate)
+      .order("scanTime", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (lastScan) {
+      const lastTime = new Date(lastScan.scanTime).getTime();
+      const currTime = new Date(payload.scanTime).getTime();
+      
+      // If the scan is within 60 seconds of the last gate scan for this user, 
+      // swallow it to prevent accidental double-scans and erroneous toggles.
+      if (currTime - lastTime < 60000 && currTime >= lastTime) {
+        return { success: true as const, data: null };
+      }
+    }
+
+    if (payload.scanType === "Standalone") {
+      resolvedScanType = lastScan?.scanType === "Entry" ? "Exit" : "Entry";
+    }
+    
+    // Mutate payload so downstream logic uses explicit Entry/Exit
+    payload.scanType = resolvedScanType;
+
+    // 3. Create gate_scan_logs entry
     const { data: scanLog, error: scanErr } = await adminSupabase
       .from("gate_scan_logs")
       .insert({
@@ -140,30 +185,28 @@ export const processGateScan = async (payload: GateScanPayload) => {
       .single();
     if (scanErr) throw scanErr;
 
-    // 3. Create device_attendance_logs entry
-    const logType = payload.scanType === "Entry" ? "GateEntry" : "GateExit";
-    const { data: attLog, error: attErr } = await adminSupabase
-      .from("device_attendance_logs")
-      .insert({
-        deviceId: payload.deviceId,
-        userId: payload.userId,
-        collegeId: payload.collegeId,
-        logType,
-        authMethod: payload.authMethod,
-        scanTimestamp: payload.scanTime,
-        processedStatus: "Pending",
-        gateScanLogId: scanLog.gateScanLogId,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .select()
-      .single();
-    if (attErr) throw attErr;
-
     // 4. For staff: process attendance_daily
     let attendanceDailyId: number | null = null;
     if (isStaff) {
       attendanceDailyId = await processStaffAttendance(payload, scanLog.gateScanLogId);
+
+      // Broadcast HR realtime update
+      try {
+        await adminSupabase
+          .channel(`public:attendance_daily:hr`)
+          .send({
+            type: "broadcast",
+            event: "new_daily_attendance",
+            payload: {
+              userId: payload.userId,
+              collegeId: payload.collegeId,
+              attendanceDate: payload.scanDate,
+              scanType: payload.scanType,
+              scanTime: payload.scanTime,
+            },
+          });
+      } catch (broadcastErr) {
+      }
     }
 
     // 5. Update scan log with processed status
@@ -172,22 +215,12 @@ export const processGateScan = async (payload: GateScanPayload) => {
       .update({
         isProcessed: true,
         attendanceDailyId,
-        deviceAttendanceLogId: attLog.deviceAttendanceLogId,
+        deviceAttendanceLogId: payload.deviceAttendanceLogId ?? null,
         updatedAt: now,
       })
       .eq("gateScanLogId", scanLog.gateScanLogId);
 
-    // 6. Update device attendance log
-    await adminSupabase
-      .from("device_attendance_logs")
-      .update({
-        processedStatus: "Accepted",
-        attendanceDailyId,
-        updatedAt: now,
-      })
-      .eq("deviceAttendanceLogId", attLog.deviceAttendanceLogId);
-
-    return { success: true as const, data: scanLog };
+    return { success: true as const, data: { ...scanLog, attendanceDailyId } };
   } catch (e) {
     return { success: false as const, error: err(e) };
   }
@@ -202,73 +235,125 @@ async function processStaffAttendance(
   _gateScanLogId: number,
 ): Promise<number | null> {
   const now = new Date().toISOString();
-  const scanTimeStr = new Date(payload.scanTime).toTimeString().slice(0, 5); // HH:MM
 
-  // Check if attendance_daily record exists for this user + date
+  // 1. Fetch all gate scans for this user today, ordered chronologically
+  const { data: allScans, error: scansErr } = await adminSupabase
+    .from("gate_scan_logs")
+    .select("scanType, scanTime")
+    .eq("userId", payload.userId)
+    .eq("scanDate", payload.scanDate)
+    .order("scanTime", { ascending: true });
+
+  if (scansErr) throw scansErr;
+
+  const scans = allScans || [];
+  if (scans.length === 0) return null;
+
+  // 2. Compute exact minutes and find bounds
+  let totalMinutes = 0;
+  let inTimeStr: string | null = null;
+  let firstCheckInStr: string | null = null;
+  let lastCheckOutStr: string | null = null;
+
+  for (const scan of scans) {
+    let timeStr = "00:00";
+    const st = scan.scanTime;
+    
+    // Check if timezone info is explicitly present.
+    // If missing, JS Date assumes UTC in Node and local in browser. To be safe, extract exactly what the device sent.
+    if (!st.includes("Z") && !st.match(/[+-]\d{2}:\d{2}$/)) {
+      const match = st.match(/T(\d{2}:\d{2})/);
+      if (match) timeStr = match[1];
+    } else {
+      try {
+        timeStr = new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Asia/Kolkata",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(new Date(st));
+      } catch {
+        const match = st.match(/T(\d{2}:\d{2})/);
+        if (match) timeStr = match[1];
+      }
+    }
+
+    if (scan.scanType === "Entry") {
+      if (!firstCheckInStr) firstCheckInStr = timeStr;
+      if (!inTimeStr) inTimeStr = timeStr; // Start a new work segment if not already in one
+    } else if (scan.scanType === "Exit") {
+      lastCheckOutStr = timeStr; // Always update to latest exit
+      if (inTimeStr) {
+        totalMinutes += minutesBetween(inTimeStr, timeStr);
+        inTimeStr = null; // Close the segment
+      }
+    }
+  }
+
+  // 3. Calculate delays and status
+  let lateBy = 0;
+  let earlyOut = 0;
+  let status = "Present";
+
+  if (firstCheckInStr) {
+    lateBy = Math.max(0, timeToMinutes(firstCheckInStr) - timeToMinutes(SHIFT_START) - LATE_THRESHOLD_MIN);
+    if (lateBy > 0) status = "Late";
+  }
+
+  if (lastCheckOutStr) {
+    earlyOut = Math.max(0, timeToMinutes(SHIFT_END) - timeToMinutes(lastCheckOutStr));
+  }
+
+  // Re-evaluate status based on total accumulated hours
+  const shiftDuration = minutesBetween(SHIFT_START, SHIFT_END);
+  if (totalMinutes > 0 && totalMinutes < shiftDuration / 2) {
+    status = "HalfDay";
+  } else if (totalMinutes === 0 && !firstCheckInStr) {
+    status = "Absent";
+  }
+
+  // 4. Update or Insert into attendance_daily
   const { data: existing } = await adminSupabase
     .from("attendance_daily")
-    .select("attendanceDailyId, checkIn, checkOut")
+    .select("attendanceDailyId")
     .eq("userId", payload.userId)
     .eq("attendanceDate", payload.scanDate)
     .maybeSingle();
 
   if (existing) {
-    const updates: Record<string, unknown> = { updatedAt: now };
+    const { error: updErr } = await adminSupabase
+      .from("attendance_daily")
+      .update({
+        checkIn: firstCheckInStr,
+        checkOut: lastCheckOutStr,
+        totalMinutes,
+        lateByMinutes: lateBy,
+        earlyOutMinutes: earlyOut,
+        status,
+        updatedAt: now,
+      })
+      .eq("attendanceDailyId", existing.attendanceDailyId);
 
-    if (payload.scanType === "Entry" && !existing.checkIn) {
-      // First entry scan
-      updates.checkIn = scanTimeStr;
-      const lateBy = Math.max(0, timeToMinutes(scanTimeStr) - timeToMinutes(SHIFT_START) - LATE_THRESHOLD_MIN);
-      updates.lateByMinutes = lateBy;
-      updates.status = lateBy > 0 ? "Late" : "Present";
-    } else if (payload.scanType === "Exit") {
-      // Last exit scan (always update)
-      updates.checkOut = scanTimeStr;
-      if (existing.checkIn) {
-        const totalMin = minutesBetween(existing.checkIn, scanTimeStr);
-        updates.totalMinutes = totalMin;
-        const earlyOut = Math.max(0, timeToMinutes(SHIFT_END) - timeToMinutes(scanTimeStr));
-        updates.earlyOutMinutes = earlyOut;
-        // Determine status
-        const shiftDuration = minutesBetween(SHIFT_START, SHIFT_END);
-        if (totalMin < shiftDuration / 2) {
-          updates.status = "HalfDay";
-        }
-      }
-    }
-
-    if (Object.keys(updates).length > 1) {
-      await adminSupabase
-        .from("attendance_daily")
-        .update(updates)
-        .eq("attendanceDailyId", existing.attendanceDailyId);
-    }
-
+    if (updErr) throw updErr;
     return existing.attendanceDailyId;
   }
-
-  // Create new attendance_daily record
-  const isEntry = payload.scanType === "Entry";
-  const lateBy = isEntry
-    ? Math.max(0, timeToMinutes(scanTimeStr) - timeToMinutes(SHIFT_START) - LATE_THRESHOLD_MIN)
-    : 0;
 
   const { data: newRecord, error: insErr } = await adminSupabase
     .from("attendance_daily")
     .insert({
       userId: payload.userId,
       attendanceDate: payload.scanDate,
-      checkIn: isEntry ? scanTimeStr : null,
-      checkOut: !isEntry ? scanTimeStr : null,
-      totalMinutes: 0,
-      status: isEntry ? (lateBy > 0 ? "Late" : "Present") : "Present",
+      checkIn: firstCheckInStr,
+      checkOut: lastCheckOutStr,
+      totalMinutes,
+      status,
       lateByMinutes: lateBy,
-      earlyOutMinutes: 0,
+      earlyOutMinutes: earlyOut,
       isManual: false,
       createdAt: now,
       updatedAt: now,
     })
-    .select()
+    .select("attendanceDailyId")
     .single();
 
   if (insErr) throw insErr;

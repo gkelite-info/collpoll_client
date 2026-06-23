@@ -49,7 +49,7 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
             .select("collegeSemesterId, collegeAcademicYearId")
             .eq("studentId", studentId)
             .eq("isCurrent", true)
-            .single();
+            .maybeSingle();
 
         if (historyError) {
             return [{ subject: `HISTORY_ERR: ${historyError.message}`, value: 0, full: 100 }];
@@ -61,7 +61,7 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
             .eq("collegeBranchId", student.collegeBranchId)
             .is("deletedAt", null);
 
-        if (history.collegeSemesterId !== null) {
+        if (history?.collegeSemesterId) {
             subjectsQuery = subjectsQuery.or(`collegeSemesterId.eq.${history.collegeSemesterId},collegeSemesterId.is.null`);
         } else {
             subjectsQuery = subjectsQuery.is("collegeSemesterId", null);

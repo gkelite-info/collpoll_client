@@ -73,11 +73,17 @@ function DatePill({ label }: { label: string }) {
 }
 
 function WelcomePanel() {
-  const { fullName, gender, loading, wellBeingCategoryName } = useUser();
+  const { fullName, gender, loading, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
   const displayName = fullName || "Navegam";
   const avatarImage = gender === "Female" ? "/w-e-f.png" : "/w-e-m.png";
   const bgBanner = "/dashboard-banner-bg.png";
-  const categoryLabel = wellBeingCategoryName?.trim();
+  const categoryLabel = Array.from(
+    new Set(
+      [wellBeingCategoryName, ...wellBeingCategoryNames]
+        .map((category) => category?.trim())
+        .filter((category): category is string => Boolean(category)),
+    ),
+  ).join(", ");
 
   return (
     <div

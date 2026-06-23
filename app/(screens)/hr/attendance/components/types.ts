@@ -9,8 +9,11 @@ export const ROLE_FILTERS = [
   "Admin",
   "Faculty",
   "Finance Executive",
+  "Finance Manager",
   "HR Manager",
   "Placement",
+  "Wellbeing Executive",
+  "Wellbeing Manager",
 ];
 
 export const MARK_BUTTONS = [

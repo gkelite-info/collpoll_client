@@ -23,6 +23,7 @@ import toast from "react-hot-toast";
 import StudentAttendanceDetailsPage from "../../attendance/components/stuSubjectWise";
 import CardComponent from "@/app/utils/card";
 import AttendanceTable from "../../attendance/tables/attendanceTable";
+import { useAdminAttendanceRealtime } from "@/lib/helpers/faculty/attendance/liveAttendanceAPI";
 interface SubjectWiseAttendanceProps {
   onBack: () => void;
 }
@@ -141,6 +142,14 @@ export const SubjectWiseAttendance = ({
       .then(setSubjects)
       .catch(() => toast.error("Unable to load subjects"));
   }, [collegeAcademicYearId, collegeBranchId]);
+
+  // Listen to realtime attendance updates globally and refresh table
+  useAdminAttendanceRealtime((payload) => {
+    if (payload.new && payload.new.studentId) {
+      // Re-fetch the current page to reflect changes instantly
+      loadStudents();
+    }
+  });
 
   const closeStudentOverlay = () => {
     const params = new URLSearchParams(searchParams);

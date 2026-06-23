@@ -9,6 +9,7 @@
 /* ------------------------------------------------------------------ */
 /*  Core proxy call                                                    */
 /* ------------------------------------------------------------------ */
+import { getBiometricValidity } from "@/lib/helpers/biometric/biometricValidity";
 
 interface ProxyRequest {
   deviceId: number;
@@ -86,9 +87,18 @@ export const registerUserOnDevice = async (
   deviceId: number,
   userId: number,
   fullName: string,
-  validFrom = "2026-01-01T00:00:00",
-  validTo = "2030-12-31T23:59:59",
+  validFrom?: string,
+  validTo?: string,
 ) => {
+  let beginTime = validFrom;
+  let endTime = validTo;
+
+  if (!beginTime || !endTime) {
+    const defaultValidity = getBiometricValidity();
+    beginTime = beginTime || defaultValidity.beginTime;
+    endTime = endTime || defaultValidity.endTime;
+  }
+
   try {
     return await callDeviceProxy({
       deviceId,
@@ -98,7 +108,14 @@ export const registerUserOnDevice = async (
           employeeNo: String(userId),
           name: fullName,
           userType: "normal",
-          Valid: { enable: true, beginTime: validFrom, endTime: validTo },
+          Valid: { enable: true, beginTime, endTime },
+          doorRight: "1",
+          RightPlan: [
+            {
+              doorNo: 1,
+              planTemplateNo: "1"
+            }
+          ]
         },
       },
     });
@@ -113,7 +130,14 @@ export const registerUserOnDevice = async (
             employeeNo: String(userId),
             name: fullName,
             userType: "normal",
-            Valid: { enable: true, beginTime: validFrom, endTime: validTo },
+            Valid: { enable: true, beginTime, endTime },
+            doorRight: "1",
+            RightPlan: [
+              {
+                doorNo: 1,
+                planTemplateNo: "1"
+              }
+            ]
           },
         },
       });
@@ -766,12 +790,13 @@ export const getDeviceInfo = async (deviceId: number) => {
   });
 
   let deviceName = "Unknown Device";
-  if (typeof result === "string") {
-    // If device ignored format=json and returned XML
-    const match = result.match(/<deviceName>(.*?)<\/deviceName>/);
+  const rawXml = typeof result === "string" ? result : (result?.rawXml || "");
+  
+  if (rawXml) {
+    const match = rawXml.match(/<[Dd]eviceName>(.*?)<\/[Dd]eviceName>/);
     if (match && match[1]) deviceName = match[1];
-  } else if (result?.DeviceInfo?.deviceName) {
-    deviceName = result.DeviceInfo.deviceName;
+  } else if (result?.DeviceInfo) {
+    deviceName = result.DeviceInfo.deviceName || result.DeviceInfo.DeviceName || "Unknown Device";
   }
 
   return { deviceName, raw: result };

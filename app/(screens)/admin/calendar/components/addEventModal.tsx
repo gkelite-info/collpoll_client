@@ -9,6 +9,8 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import RoomSelectDropdown from "@/app/components/calendar/RoomSelectDropdown";
+import { useRouter } from "next/navigation";
+import { Plus } from "@phosphor-icons/react";
 
 type DegreeOption = {
   collegeDegreeId: number;
@@ -57,6 +59,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [endMinute, setEndMinute] = useState("00");
   const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("AM");
   const closedByUserRef = useRef(false);
+  const router = useRouter();
   const [roomNo, setRoomNo] = useState("");
   const [collegeRoomId, setCollegeRoomId] = useState<number | null>(null);
   const [year, setYear] = useState<string>("");
@@ -235,49 +238,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       ? String(y)
       : "";
 
-  useEffect(() => {
-    if (!isOpen || !value) return;
-    setRoomNo(value.roomNo || "");
-    setCollegeRoomId(value.collegeRoomId ?? null);
-    setDegree(value.degree || "");
-    setSelectedSections(value.sections || []);
-    setYear(normalizeYear(value.year));
-    setSelectedType(value.type || "class");
-    setDate(value.date || getTodayDateString());
-    if (typeof value.subjectId === "number") {
-      setSubjectId(value.subjectId);
-    }
-    if (typeof value.topicId === "number") {
-      setTopicId(value.topicId);
-    }
-    if (isEditMode && typeof value.semester === "number") {
-      setSemester(value.semester);
-    }
-
-    setMeetingTitle(value.title ?? "");
-    setMeetingLink(value.meetingLink ?? "");
-    setMeetingId(value.meetingId ?? "");
-    setMeetingPassword(value.meetingPassword ?? "");
-
-    if (value.meetingId) setMeetingPlatform("zoom");
-    else if (value.meetingLink?.includes("meet.google"))
-      setMeetingPlatform("meet");
-    else setMeetingPlatform("others");
-
-    if (value.startTime && value.endTime) {
-      const start = parse24HourTo12Hour(value.startTime);
-      const end = parse24HourTo12Hour(value.endTime);
-      setStartHour(start.hour);
-      setStartMinute(start.minute);
-      setStartPeriod(start.period);
-      setEndHour(end.hour);
-      setEndMinute(end.minute);
-      setEndPeriod(end.period);
-    }
-  }, [isOpen, value]);
+  const hasInitializedRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen) {
+      hasInitializedRef.current = false;
       setRoomNo("");
       setDegree("");
       setSelectedSections([]);
@@ -301,8 +266,52 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       setMeetingId("");
       setMeetingPassword("");
       setMeetingPlatform("meet");
+      return;
     }
-  }, [isOpen]);
+
+    if (isOpen && value && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      setRoomNo(value.roomNo || "");
+      setCollegeRoomId(value.collegeRoomId ?? null);
+      setDegree(value.degree || "");
+      setSelectedSections(value.sections || []);
+      setYear(normalizeYear(value.year));
+      setSelectedType(value.type || "class");
+      setDate(value.date || getTodayDateString());
+      if (typeof value.subjectId === "number") {
+        setSubjectId(value.subjectId);
+      }
+      if (typeof value.topicId === "number") {
+        setTopicId(value.topicId);
+      }
+      if (isEditMode && typeof value.semester === "number") {
+        setSemester(value.semester);
+      }
+
+      setMeetingTitle(value.title ?? "");
+      setMeetingLink(value.meetingLink ?? "");
+      setMeetingId(value.meetingId ?? "");
+      setMeetingPassword(value.meetingPassword ?? "");
+
+      if (value.meetingId) setMeetingPlatform("zoom");
+      else if (value.meetingLink?.includes("meet.google"))
+        setMeetingPlatform("meet");
+      else setMeetingPlatform("others");
+
+      if (value.startTime && value.endTime) {
+        const start = parse24HourTo12Hour(value.startTime);
+        const end = parse24HourTo12Hour(value.endTime);
+        setStartHour(start.hour);
+        setStartMinute(start.minute);
+        setStartPeriod(start.period);
+        setEndHour(end.hour);
+        setEndMinute(end.minute);
+        setEndPeriod(end.period);
+      }
+    }
+  }, [isOpen, value, isEditMode]);
+
+
 
   useEffect(() => {
     if (!isEditMode) return;
@@ -414,7 +423,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       return;
     }
 
-    if (!roomNo.trim()) {
+    if (selectedType === "class" && !roomNo.trim()) {
       toast.error("Please select a Room No.");
       return;
     }
@@ -569,11 +578,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 <button
                   key={type}
                   onClick={() => setSelectedType(type)}
-                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${
-                    selectedType === type
+                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${selectedType === type
                       ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
                       : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   {formatLabel(type)}
                 </button>
@@ -637,9 +645,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 <CaretDown
                   size={16}
                   weight="bold"
-                  className={`transition-transform duration-200 ${
-                    isTopicFocused ? "rotate-180" : "rotate-0"
-                  }`}
+                  className={`transition-transform duration-200 ${isTopicFocused ? "rotate-180" : "rotate-0"
+                    }`}
                 />
               </div>
             </div>
@@ -760,9 +767,18 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 />
               </div>
               <div className="flex-1 w-full min-w-0">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Room No. <span className="text-red-600">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Room No. {selectedType === "class" && <span className="text-red-600">*</span>}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/admin/academic-setup?tab=biometric-structure&biotab=rooms&action=add-room")}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded shadow-sm transition-all cursor-pointer"
+                  >
+                    <Plus size={10} weight="bold" /> Add New
+                  </button>
+                </div>
                 <RoomSelectDropdown
                   value={roomNo}
                   onChange={(rNo, rId) => { setRoomNo(rNo); setCollegeRoomId(rId); }}
@@ -914,9 +930,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 <CaretDown
                   size={16}
                   weight="bold"
-                  className={`text-gray-400 transition-transform duration-200 ${
-                    isSectionOpen ? "rotate-180" : "rotate-0"
-                  }`}
+                  className={`text-gray-400 transition-transform duration-200 ${isSectionOpen ? "rotate-180" : "rotate-0"
+                    }`}
                 />
               </button>
               {isSectionOpen && (

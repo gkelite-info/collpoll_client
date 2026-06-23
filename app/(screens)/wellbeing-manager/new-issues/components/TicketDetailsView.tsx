@@ -10,8 +10,8 @@ import {
   Warning,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { MdPictureAsPdf } from "react-icons/md";
+import { Avatar } from "@/app/utils/Avatar";
 import ReassignTicketModal from "../../components/ReassignTicketModal";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
@@ -24,11 +24,11 @@ type IssueDetailsRow = {
   description: string;
   categoryId: number;
   priority: "high" | "medium" | "low";
-  issueRaisedRole: string;
   appliesTo: string;
   createdAt: string | null;
   createdBy: number;
   profileUrl?: string | null;
+  requesterRole?: string | null;
   categoryName?: string | null;
 };
 
@@ -65,6 +65,30 @@ const formatDateTime = (value: string | null) => {
 const getAttachmentName = (path: string) =>
   path.split("/").pop()?.replace(/^\d+_\d+_/, "") || "Attachment";
 
+const formatRequesterRole = (role?: string | null) => {
+  const normalizedRole = role?.trim();
+  const roleLabels: Record<string, string> = {
+    Student: "Student",
+    SuperAdmin: "Super Admin",
+    "Super-Admin": "Super Admin",
+    CollegeAdmin: "College Admin",
+    "College-Admin": "College Admin",
+    Admin: "Admin",
+    Faculty: "Faculty",
+    Finance: "Finance",
+    CollegeHr: "College HR",
+    HR: "College HR",
+    PlacementOfficer: "Placement Officer",
+    Placement: "Placement Officer",
+    WellbeingExecutive: "Wellbeing Executive",
+    WellbeingManager: "Wellbeing Manager",
+    FinanceManager: "Finance Manager",
+    GroundStaff: "Ground Staff",
+  };
+
+  return normalizedRole ? roleLabels[normalizedRole] ?? normalizedRole : "Requester";
+};
+
 export default function TicketDetailsView({ ticketId, onBack }: TicketDetailsViewProps) {
   const { collegeId } = useUser();
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
@@ -96,7 +120,6 @@ export default function TicketDetailsView({ ticketId, onBack }: TicketDetailsVie
           description,
           categoryId,
           priority,
-          issueRaisedRole,
           appliesTo,
           createdAt,
           createdBy
@@ -111,12 +134,20 @@ export default function TicketDetailsView({ ticketId, onBack }: TicketDetailsVie
 
       const issueData = data as IssueDetailsRow | null;
       if (issueData) {
-        const [profileResult, categoryResult] = await Promise.all([
+        const [profileResult, userResult, categoryResult] = await Promise.all([
           supabase
             .from("user_profile")
             .select("profileUrl")
             .eq("userId", issueData.createdBy)
             .eq("is_deleted", false)
+            .is("deletedAt", null)
+            .order("createdAt", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from("users")
+            .select("role")
+            .eq("userId", issueData.createdBy)
             .maybeSingle(),
           supabase
             .from("wellbeing_categories")
@@ -131,6 +162,7 @@ export default function TicketDetailsView({ ticketId, onBack }: TicketDetailsVie
         setIssue({
           ...issueData,
           profileUrl: profileResult.data?.profileUrl ?? null,
+          requesterRole: formatRequesterRole(userResult.data?.role),
           categoryName: categoryResult.data?.categoryName ?? null,
         });
       } else {
@@ -163,8 +195,33 @@ export default function TicketDetailsView({ ticketId, onBack }: TicketDetailsVie
 
   if (isLoading) {
     return (
-      <main className="flex min-h-screen w-full items-center justify-center p-8 text-sm font-bold text-[#16284F]">
-        Loading ticket...
+      <main className="flex min-h-screen w-full flex-col gap-4 p-4">
+        <div className="h-10 w-32 animate-pulse rounded-lg bg-gray-200" />
+        <div className="rounded-2xl bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 animate-pulse rounded-full bg-gray-200" />
+            <div className="flex flex-1 flex-col gap-3">
+              <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
+              <div className="h-4 w-72 animate-pulse rounded bg-gray-100" />
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="rounded-2xl bg-white p-5 shadow-sm">
+              <div className="h-4 w-28 animate-pulse rounded bg-gray-200" />
+              <div className="mt-4 h-10 w-full animate-pulse rounded bg-gray-100" />
+            </div>
+          ))}
+        </div>
+        <div className="rounded-2xl bg-white p-5 shadow-sm">
+          <div className="h-5 w-40 animate-pulse rounded bg-gray-200" />
+          <div className="mt-5 space-y-3">
+            <div className="h-4 w-full animate-pulse rounded bg-gray-100" />
+            <div className="h-4 w-11/12 animate-pulse rounded bg-gray-100" />
+            <div className="h-4 w-8/12 animate-pulse rounded bg-gray-100" />
+          </div>
+        </div>
       </main>
     );
   }
@@ -241,20 +298,11 @@ export default function TicketDetailsView({ ticketId, onBack }: TicketDetailsVie
         </div>
         <div className="rounded-2xl bg-white p-5 shadow-sm md:p-7">
           <div className="flex flex-col gap-5 md:flex-row md:items-start">
-            {issue.profileUrl ? (
-              <Image
-                src={issue.profileUrl}
-                alt={issue.fullName}
-                width={112}
-                height={112}
-                unoptimized
-                className="h-28 w-28 shrink-0 rounded-2xl object-cover"
-              />
-            ) : null}
+            <Avatar src={issue.profileUrl} alt={issue.fullName} size={112} />
           <div className="grid w-full grid-cols-2 gap-x-4 gap-y-5 px-2 md:grid-cols-3 md:px-0">
             <InfoItem label="Full Name" value={issue.fullName} />
             <InfoItem label="Email" value={issue.email} />
-            <InfoItem label="Role" value={issue.issueRaisedRole} />
+            <InfoItem label="Role" value={issue.requesterRole || "Requester"} />
             <InfoItem label="Applies To" value={issue.appliesTo} />
             <InfoItem label="Requester ID" value={String(issue.createdBy)} />
             <InfoItem label="Priority" value={formatPriority(issue.priority)} />

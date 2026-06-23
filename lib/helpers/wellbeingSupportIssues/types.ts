@@ -23,6 +23,18 @@ export type WellbeingIssueRaisedRole =
   | "WellbeingManager"
   | "FinanceManager";
 
+export type GroundStaffIssueRecipient = {
+  groundStaffId: number;
+  userId: number;
+  categoryId: number;
+  subCategoryId: number;
+  registrationType: "college" | "hostel" | "both";
+  hostelType?: "boys" | "girls" | "both" | null;
+  fullName?: string | null;
+  email?: string | null;
+  mobile?: string | null;
+};
+
 export type CreateWellbeingSupportIssuePayload = {
   fullName: string;
   email: string;
@@ -75,6 +87,17 @@ export type StudentWellbeingIssueListItem = {
     name: string;
     size: string;
   }[];
+};
+
+export type GroundStaffWellbeingIssueCounts = {
+  assigned: number;
+  pending: number;
+  resolved: number;
+  rejected: number;
+};
+
+export type GroundStaffWellbeingIssueListItem = StudentWellbeingIssueListItem & {
+  groundStaffId: number;
 };
 
 export type StudentWellbeingIssueTab =

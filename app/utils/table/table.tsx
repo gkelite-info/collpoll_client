@@ -45,6 +45,7 @@ type TableComponentProps = {
   stickyHeader?: boolean;
   fillHeight?: boolean;
   tableClassName?: string;
+  emptyStateMessage?: string;
 };
 
 export default function TableComponent({
@@ -55,6 +56,7 @@ export default function TableComponent({
   stickyHeader = true,
   fillHeight = false,
   tableClassName = "",
+  emptyStateMessage = "No data available.",
 }: TableComponentProps) {
   return (
     <div className="mt-2 w-full">
@@ -82,8 +84,8 @@ export default function TableComponent({
         </div>
         {!isLoading && tableData.length === 0 && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 top-11 flex items-center justify-center px-4 text-center text-gray-400">
-            <span className="text-base font-medium italic">
-              No data available.
+            <span className="text-sm font-medium italic max-w-lg">
+              {emptyStateMessage}
             </span>
           </div>
         )}

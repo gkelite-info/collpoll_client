@@ -4,7 +4,7 @@ export async function fetchUpcomingClassesForStudent(filters: {
   collegeEducationId: number;
   collegeBranchId: number;
   collegeAcademicYearId: number;
-  collegeSemesterId: number;
+  collegeSemesterId: number | null;
   collegeSectionId: number;
 }) {
   const today = new Date().toISOString().split("T")[0];

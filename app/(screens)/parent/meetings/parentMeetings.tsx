@@ -91,9 +91,9 @@ export default function ParentMeetingsPage() {
       try {
         const student = await fetchStudentContext(childUserId);
         setChildDetails({
-          collegeBranchId: student.collegeBranchId,
-          collegeSectionsId: student.collegeSectionsId,
-          collegeAcademicYearId: student.collegeAcademicYearId,
+          collegeBranchId: student!.collegeBranchId,
+          collegeSectionsId: student!.collegeSectionsId,
+          collegeAcademicYearId: student!.collegeAcademicYearId,
         });
       } catch (err) {
         console.error("Failed to fetch child student details", err);
@@ -162,9 +162,8 @@ export default function ParentMeetingsPage() {
                   <button
                     key={tab.id}
                     onClick={() => updateFilter("type", tab.id)}
-                    className={`relative z-10 cursor-pointer px-5 py-2 rounded-full text-sm font-medium transition-colors ${
-                      isActive ? "text-[#E9E9E9]" : "text-[#414141]"
-                    }`}
+                    className={`relative z-10 cursor-pointer px-5 py-2 rounded-full text-sm font-medium transition-colors ${isActive ? "text-[#E9E9E9]" : "text-[#414141]"
+                      }`}
                   >
                     {tab.label}
                     {isActive && (
@@ -215,11 +214,10 @@ export default function ParentMeetingsPage() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className={`p-2 rounded-md ${
-                    page === 1
-                      ? "bg-gray-100 text-gray-400"
-                      : "bg-gray-200 hover:bg-gray-300"
-                  }`}
+                  className={`p-2 rounded-md ${page === 1
+                    ? "bg-gray-100 text-gray-400"
+                    : "bg-gray-200 hover:bg-gray-300"
+                    }`}
                 >
                   <CaretLeft size={16} weight="bold" />
                 </button>
@@ -229,11 +227,10 @@ export default function ParentMeetingsPage() {
                     <button
                       key={p}
                       onClick={() => setPage(p)}
-                      className={`px-3 py-1 rounded-md text-sm font-medium ${
-                        page === p
-                          ? "bg-[#16284F] text-white"
-                          : "bg-gray-200 hover:bg-gray-300"
-                      }`}
+                      className={`px-3 py-1 rounded-md text-sm font-medium ${page === p
+                        ? "bg-[#16284F] text-white"
+                        : "bg-gray-200 hover:bg-gray-300"
+                        }`}
                     >
                       {p}
                     </button>
@@ -243,11 +240,10 @@ export default function ParentMeetingsPage() {
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className={`p-2 rounded-md ${
-                    page === totalPages
-                      ? "bg-gray-100 text-gray-400"
-                      : "bg-gray-200 hover:bg-gray-300"
-                  }`}
+                  className={`p-2 rounded-md ${page === totalPages
+                    ? "bg-gray-100 text-gray-400"
+                    : "bg-gray-200 hover:bg-gray-300"
+                    }`}
                 >
                   <CaretRight size={16} weight="bold" />
                 </button>

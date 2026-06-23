@@ -7,6 +7,7 @@ import { upsertUserCredential } from "@/lib/helpers/devices/userDeviceCredential
 import { BiometricDeviceRow } from "@/lib/helpers/devices/biometricDeviceAPI";
 import { registerUserOnDevice, registerCardOnDevice, captureCard } from "@/lib/helpers/devices/hikvisionAPI";
 import { UserSearchResult } from "./types";
+import { getBiometricValidity } from "@/lib/helpers/biometric/biometricValidity";
 
 interface CardCaptureTabProps {
   collegeId: number;
@@ -99,14 +100,22 @@ export default function CardCaptureTab({
         selectedDevices.map(async (device) => {
           try {
             try {
+              const { beginTime, endTime } = getBiometricValidity(selectedUser.role, selectedUser.educationType);
               await registerUserOnDevice(
                 device.deviceId,
                 selectedUser.userId,
                 selectedUser.fullName,
+                beginTime,
+                endTime
               );
             } catch (e: any) {
-              if (e?.subStatusCode !== "employeeNoAlreadyExist") {
-                console.warn(`Device ${device.deviceId} user registration warning:`, e);
+              const subStatusCode = e?.subStatusCode || "";
+              // User already exists on device — safe to proceed with credential enrollment
+              if (subStatusCode === "employeeNoAlreadyExist") {
+                // Already handled by registerUserOnDevice's internal modify fallback
+              } else {
+                // Network failure, device offline, or unexpected error — must fail this device
+                throw e;
               }
             }
 

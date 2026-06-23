@@ -4,8 +4,11 @@ import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarCheck,
   CalendarDots,
+  Car,
   ChartBarHorizontal,
   CheckCircle,
+  Book,
+  Cube,
   FolderOpen,
   Gear,
   Headset,
@@ -46,6 +49,22 @@ type WellbeingExecutiveNavbarProps = {
   newIssueCountMode?: "executive" | "manager";
 };
 
+const normalizeCategoryName = (categoryName: string | null | undefined) =>
+  categoryName?.toLowerCase().replace(/[^a-z]/g, "") ?? "";
+
+const isSafetyAndSecurityCategory = (categoryName: string | null | undefined) => {
+  const normalizedCategory = normalizeCategoryName(categoryName);
+  return normalizedCategory === "safetyandsecurity" || normalizedCategory === "safetysecurity";
+};
+
+const isSportsCategory = (categoryName: string | null | undefined) =>
+  normalizeCategoryName(categoryName) === "sports";
+
+const isAdministrationCategory = (categoryName: string | null | undefined) => {
+  const category = normalizeCategoryName(categoryName);
+  return category === "administration" || category === "admin";
+};
+
 export default function WellbeingExecutiveNavbar({
   onClose,
   basePath = "/wellbeing-executive",
@@ -60,8 +79,26 @@ export default function WellbeingExecutiveNavbar({
   const iconSize = 18;
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { collegeId, wellBeingCategoryId } = useUser();
+  const {
+    collegeId,
+    wellBeingCategoryId,
+    wellBeingCategoryIds,
+    wellBeingCategoryName,
+    wellBeingCategoryNames,
+  } = useUser();
   const [newIssuesCount, setNewIssuesCount] = useState(0);
+  const canViewStaffAttendance = [wellBeingCategoryName, ...wellBeingCategoryNames].some(
+    isSafetyAndSecurityCategory,
+  );
+  const executiveCategories = [wellBeingCategoryName, ...wellBeingCategoryNames];
+  const canViewSportsFeatures = executiveCategories.some(isSportsCategory);
+  const canViewAdministrationFeatures = executiveCategories.some(isAdministrationCategory);
+  const canViewInventory = executiveCategories.some(
+    (category) =>
+      isSportsCategory(category) ||
+      isSafetyAndSecurityCategory(category) ||
+      isAdministrationCategory(category),
+  );
 
   const loadNewIssueCount = useCallback(async () => {
     if (!collegeId) return;
@@ -75,16 +112,38 @@ export default function WellbeingExecutiveNavbar({
 
       const counts = await fetchWellbeingExecutiveNewIssueCounts(
         collegeId,
-        wellBeingCategoryId,
+        wellBeingCategoryIds.length ? wellBeingCategoryIds : wellBeingCategoryId,
       );
       setNewIssuesCount(counts.my);
     } catch {
       setNewIssuesCount(0);
     }
-  }, [collegeId, newIssueCountMode, wellBeingCategoryId]);
+  }, [collegeId, newIssueCountMode, wellBeingCategoryId, wellBeingCategoryIds]);
 
   useEffect(() => {
     loadNewIssueCount();
+  }, [loadNewIssueCount]);
+
+  useEffect(() => {
+    const refreshNewIssueCount = () => {
+      loadNewIssueCount();
+    };
+
+    const refreshNewIssueCountOnFocus = () => {
+      if (document.visibilityState === "visible") {
+        loadNewIssueCount();
+      }
+    };
+
+    window.addEventListener("wellbeing-issue-created", refreshNewIssueCount);
+    window.addEventListener("focus", refreshNewIssueCount);
+    document.addEventListener("visibilitychange", refreshNewIssueCountOnFocus);
+
+    return () => {
+      window.removeEventListener("wellbeing-issue-created", refreshNewIssueCount);
+      window.removeEventListener("focus", refreshNewIssueCount);
+      document.removeEventListener("visibilitychange", refreshNewIssueCountOnFocus);
+    };
   }, [loadNewIssueCount]);
 
   useEffect(() => {
@@ -213,11 +272,62 @@ export default function WellbeingExecutiveNavbar({
       },
       {
         icon: (isActive) => (
+          <Cube size={iconSize} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: "Inventory",
+        path: `${base}/inventory`,
+        hidden: !canViewInventory,
+      },
+      {
+        icon: (isActive) => (
+          <Book size={iconSize} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: "Visitors Log",
+        path: `${base}/visitors-log`,
+        hidden:
+          !canViewAdministrationFeatures ||
+          canViewSportsFeatures ||
+          canViewStaffAttendance,
+      },
+      {
+        icon: (isActive) => (
+          <Book size={iconSize} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: "Visitors Log",
+        path: `${base}/visitors-log`,
+        hidden: !canViewSportsFeatures,
+      },
+      {
+        icon: (isActive) => (
           <CheckCircle size={iconSize} weight={isActive ? "fill" : "regular"} />
         ),
         label: "Staff Attendance",
         path: `${base}/staff-attendance`,
-        hidden: !showStaffAttendance,
+        hidden:
+          !canViewStaffAttendance ||
+          (base !== "/wellbeing-executive" && !showStaffAttendance),
+      },
+      {
+        icon: (isActive) => (
+          <Book size={iconSize} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: "Visitors Log",
+        path: `${base}/visitors-log`,
+        hidden:
+          !canViewStaffAttendance ||
+          canViewSportsFeatures ||
+          (base !== "/wellbeing-executive" && !showStaffAttendance),
+      },
+      {
+        icon: (isActive) => (
+          <Car size={iconSize} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: "Vehicle Log",
+        path: `${base}/vehicle-log`,
+        hidden:
+          !canViewStaffAttendance ||
+          canViewSportsFeatures ||
+          (base !== "/wellbeing-executive" && !showStaffAttendance),
       },
       {
         icon: (isActive) => (
@@ -229,7 +339,7 @@ export default function WellbeingExecutiveNavbar({
     ];
 
     return navItems.filter((item) => !item.hidden);
-  }, [base, newIssuesCount, showLeaveRequest, showStaffAttendance]);
+  }, [base, canViewAdministrationFeatures, canViewInventory, canViewSportsFeatures, canViewStaffAttendance, newIssuesCount, showLeaveRequest, showStaffAttendance]);
 
   const prefetchRoute = useCallback(
     (path: string) => {
@@ -299,18 +409,18 @@ export default function WellbeingExecutiveNavbar({
                 onFocus={() => prefetchRoute(item.path)}
                 onMouseEnter={() => prefetchRoute(item.path)}
                 onTouchStart={() => prefetchRoute(item.path)}
-                className={`group relative flex w-full cursor-pointer items-center gap-3 rounded-l-full py-2 pl-4 text-sm font-medium transition-all duration-300 before:transition-all before:duration-300 after:transition-all after:duration-300 sm:text-sm md:text-base lg:text-sm ${active
+                className={`group relative grid w-full grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 rounded-l-full py-2 pl-4 text-sm font-medium transition-colors duration-300 sm:text-sm md:text-base lg:text-sm ${active
                     ? "activeNav bg-[#F4F4F4] text-[#43C17A] focus:outline-none"
                     : "text-white hover:bg-white/10"
                   }`}
               >
                 <span
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center ${active ? "text-[#43C17A]" : "text-white"
+                  className={`flex h-5 w-5 items-center justify-center ${active ? "text-[#43C17A]" : "text-white"
                     }`}
                 >
                   {item.icon(active)}
                 </span>
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                <span className="min-w-0 truncate">{item.label}</span>
                 {item.badge ? (
                   <span className="mr-4 flex h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
                     {item.badge}

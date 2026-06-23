@@ -10,6 +10,8 @@ import {
   X,
 } from "@phosphor-icons/react";
 import Image from "next/image";
+import CardComponent from "@/app/utils/card";
+import TableComponent from "@/app/utils/table/table";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
 import { securityDirectoryRows, type StaffAttendanceRecord } from "../../data";
@@ -93,6 +95,33 @@ export default function GroundStaffMembersScreen({
       return a.name.localeCompare(b.name);
     });
   }, [designationFilter, directoryRows, sortFilter, statusFilter]);
+  const columns = [
+    { title: "STAFF NAME", key: "image" },
+    { title: "EMPLOYEE ID", key: "employeeId" },
+    { title: "DESIGNATION", key: "designation" },
+    { title: "STATUS", key: "status" },
+    { title: "CONTACT NUMBER", key: "contact" },
+    { title: "JOINING DATE", key: "joiningDate" },
+    { title: "ACTIONS", key: "actions" },
+  ];
+  const tableData = filteredRows.map((record) => ({
+    image: (
+      <div className="flex min-w-[170px] items-center gap-3 text-left">
+        <Image src={`https://i.pravatar.cc/80?img=${record.imageSeed}`} alt={record.name} width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
+        <span className="font-extrabold text-[#08244A]">{record.name}</span>
+      </div>
+    ),
+    employeeId: <span className="font-semibold">{record.staffId}</span>,
+    designation: record.designation,
+    status: <StatusBadge status={record.status} />,
+    contact: record.phone.replace(/\d(?=\d{2})/g, "X"),
+    joiningDate: record.joiningDate,
+    actions: (
+      <button type="button" onClick={() => onViewProfile(record)} title="View profile" className="cursor-pointer text-[#64748B] transition-colors hover:text-[#0B66C3]">
+        <Eye size={18} weight="bold" />
+      </button>
+    ),
+  }));
 
   const updateFilter = (key: "designation" | "status" | "sortBy", value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -112,8 +141,8 @@ export default function GroundStaffMembersScreen({
   };
 
   return (
-    <main className="min-h-screen w-full bg-white p-5">
-      <section className="mx-auto max-w-[1280px] rounded-2xl bg-white p-5 shadow-sm">
+    <main className="m-2 mb-7 rounded-2xl bg-white p-8 shadow-sm md:mb-0 md:mt-4 lg:mb-5 lg:mt-0">
+      <section className="mx-auto max-w-[1280px]">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="flex items-start gap-4">
             <button
@@ -173,57 +202,8 @@ export default function GroundStaffMembersScreen({
             />
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] border-collapse text-left">
-              <thead className="bg-[#F3F6FA] text-[10px] uppercase tracking-wide text-[#34425E]">
-                <tr>
-                  <th className="px-5 py-4">Staff Name</th>
-                  <th className="px-5 py-4">Employee ID</th>
-                  <th className="px-5 py-4">Designation</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Contact Number</th>
-                  <th className="px-5 py-4">Joining Date</th>
-                  <th className="px-5 py-4 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E4E9F1]">
-                {filteredRows.map((record) => (
-                  <tr key={`${record.staffId}-${record.id}`} className="text-[12px] text-[#34425E]">
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <Image
-                          src={`https://i.pravatar.cc/80?img=${record.imageSeed}`}
-                          alt={record.name}
-                          width={32}
-                          height={32}
-                          className="h-8 w-8 rounded-full object-cover"
-                        />
-                        <span className="font-extrabold text-[#08244A]">{record.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 font-semibold">{record.staffId}</td>
-                    <td className="px-5 py-4">{record.designation}</td>
-                    <td className="px-5 py-4">
-                      <StatusBadge status={record.status} />
-                    </td>
-                    <td className="px-5 py-4">{record.phone.replace(/\d(?=\d{2})/g, "X")}</td>
-                    <td className="px-5 py-4">{record.joiningDate}</td>
-                    <td className="px-5 py-4">
-                      <div className="flex justify-center text-[#64748B]">
-                        <button
-                          type="button"
-                          onClick={() => onViewProfile(record)}
-                          title="View profile"
-                          className="cursor-pointer transition-colors hover:text-[#0B66C3]"
-                        >
-                          <Eye size={18} weight="bold" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="[&>div]:mt-0 [&>div>div]:rounded-none [&>div>div]:shadow-none [&_th]:bg-[#F3F6FA] [&_th]:py-4 [&_th]:text-[10px] [&_th]:font-extrabold [&_th]:uppercase [&_th]:text-[#34425E] [&_td]:py-4 [&_td]:text-[12px]">
+            <TableComponent columns={columns} tableData={tableData} tableClassName="min-w-[980px]" height="none" stickyHeader={false} />
           </div>
 
           <div className="flex items-center justify-between border-t border-[#E4E9F1] px-5 py-4 text-[11px] text-[#6B7280]">
@@ -343,14 +323,13 @@ function DirectoryStat({
   }[tone];
 
   return (
-    <div className="flex min-h-[78px] items-center gap-4 rounded-lg border border-[#D7DFEC] bg-white p-4">
-      <span className={`grid h-10 w-10 place-items-center rounded-md ${toneClass}`}>
-        {icon}
-      </span>
-      <span>
-        <span className="block text-[10px] font-bold uppercase text-[#6B7280]">{title}</span>
-        <span className="mt-1 block text-[21px] font-extrabold text-[#08244A]">{value}</span>
-      </span>
-    </div>
+    <CardComponent
+      icon={<span className={`grid h-10 w-10 place-items-center rounded-md ${toneClass}`}>{icon}</span>}
+      value={<span className="text-[10px] font-bold uppercase text-[#6B7280]">{title}</span>}
+      label={<span className="text-[21px] font-extrabold text-[#08244A]">{value}</span>}
+      style="min-h-[112px] !h-[112px] border border-[#D7DFEC] bg-white px-4 py-3 shadow-sm"
+      iconBgColor="transparent"
+      iconColor="inherit"
+    />
   );
 }

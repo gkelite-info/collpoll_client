@@ -119,6 +119,10 @@ export async function buildStudentAttendanceSummary(
 ): Promise<StudentAttendanceSummary> {
   const todayDate = getTodayDateString();
   const ctx = await fetchStudentContext(userId);
+  if (!ctx) {
+    throw new Error("Student context not found");
+  }
+
   const {
     studentId,
     collegeId,
@@ -129,6 +133,45 @@ export async function buildStudentAttendanceSummary(
     collegeSectionsId,
     collegeEducationType,
   } = ctx;
+
+  if (collegeAcademicYearId === null || collegeSectionsId === null) {
+    const weekStart = getWeekStart(todayDate);
+    const dayWiseAttendance: StudentAttendanceSummary["dayWiseAttendance"] = [];
+    for (let index = 0; index < 7; index += 1) {
+      const current = new Date(weekStart);
+      current.setDate(weekStart.getDate() + index);
+      const currentDate = formatDate(current);
+      dayWiseAttendance.push({
+        date: currentDate,
+        day: current.toLocaleDateString("en-US", { weekday: "short" }),
+        total: 0,
+        attended: 0,
+        percentage: 0,
+      });
+    }
+    return {
+      selectedDate,
+      todayStats: {
+        attended: 0,
+        total: 0,
+      },
+      cards: {
+        attended: 0,
+        totalClasses: 0,
+        percentage: 0,
+      },
+      semesterStats: {
+        present: 0,
+        absent: 0,
+        leave: 0,
+      },
+      tableData: [],
+      totalCount: 0,
+      subjectWiseAttendance: [],
+      weeklyData: [0, 0, 0, 0, 0, 0, 0],
+      dayWiseAttendance,
+    };
+  }
 
   const isInter =
     typeof isInterOverride === "boolean"

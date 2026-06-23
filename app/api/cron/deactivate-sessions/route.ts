@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
  * =================================================================================
  * CRON: Deactivate Expired Device Class Sessions
  * =================================================================================
- * Runs every 5 minutes. Marks device_class_sessions as inactive once the class
+ * Runs every 1 minute. Marks device_class_sessions as inactive once the class
  * time window (toTime + bufferMinutes) has passed.
  *
  * Schedule this in Supabase SQL Editor:
@@ -15,7 +15,7 @@ import { createClient } from "@supabase/supabase-js";
  * 
  * SELECT cron.schedule(
  *   'deactivate-sessions-cron',
- *   '* /5 * * * *',  -- every 5 minutes (remove space before /5)
+ *   '* * * * *',  -- every 1 minute
  *   $$
  *     SELECT net.http_get(
  *       url:='https://yourdomain.com/api/cron/deactivate-sessions',

@@ -6,17 +6,32 @@ import { ProfileCard } from "./profileCard";
 import { AssignmentsSummaryTable } from "./assignmentsSummaryTable";
 import { AttendanceList } from "./attendanceBySubjectCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { List, X, CaretRight, User, ArrowLeft } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { List, X, CaretRight, User, ArrowLeft, SpinnerGap } from "@phosphor-icons/react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { getStudentProgressData } from "@/lib/helpers/student/studentProgress/getStudentProgressData";
 import { StudentProgressSkeleton } from "./shimmer/studentProgressSkeleton";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import MidExams from "../stu_dashboard/midExams";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import html2canvas from "html2canvas-pro";
 import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabaseClient";
+
+const getGradePoints = (grade: string): number => {
+  const g = grade.toUpperCase().trim();
+  switch (g) {
+    case "A+": return 10;
+    case "A": return 9;
+    case "B+": return 8;
+    case "B": return 7;
+    case "F": return 2;
+    default: return 0;
+  }
+};
 
 const Page = () => {
   const [open, setOpen] = useState(false);
@@ -26,7 +41,46 @@ const Page = () => {
     ReturnType<typeof getStudentProgressData>
   > | null>(null);
   const [activeTab, setActiveTab] = useState<"progress" | "exams" | "results">("progress");
-  const [selectedMemo, setSelectedMemo] = useState<string | null>(null);
+  const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
+  const [studentResults, setStudentResults] = useState<any[]>([]);
+  const [resultsLoading, setResultsLoading] = useState(true);
+  const [collegeName, setCollegeName] = useState("St. Xavier's College of Excellence");
+  const printRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        const parentWidth = containerRef.current.clientWidth;
+        const targetWidth = 794;
+        if (parentWidth < targetWidth) {
+          setScale(parentWidth / targetWidth);
+        } else {
+          setScale(1);
+        }
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    const timer = setTimeout(handleResize, 100);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      clearTimeout(timer);
+    };
+  }, [selectedScheduleId]);
+
+  const collegeAbbreviation = useMemo(() => {
+    if (!collegeName) return "CO";
+    return collegeName
+      .split(/\s+/)
+      .map(w => w[0])
+      .join("")
+      .substring(0, 2)
+      .toUpperCase();
+  }, [collegeName]);
 
   const tabs = [
     { id: "progress", label: "Student Progress" },
@@ -42,11 +96,14 @@ const Page = () => {
   } = useUser();
   const {
     loading: studentLoading,
+    collegeId,
+    collegeBranchId,
     collegeEducationType,
     collegeBranchCode,
     collegeAcademicYear,
     college_sections,
     collegeSemester,
+    collegeBranchType
   } = useStudent();
 
   const semesterLabel = collegeSemester
@@ -54,93 +111,267 @@ const Page = () => {
     : "Semester N/A";
   const isLoading = userLoading || studentLoading || progressLoading;
 
-  const downloadGradesPdf = () => {
-    const doc = new jsPDF();
+  // Query student results from Database
+  useEffect(() => {
+    if (!studentId) return;
+    setResultsLoading(true);
+    supabase
+      .from("results")
+      .select(`
+        *,
+        college_subjects (
+          subjectName,
+          subjectCode,
+          credits
+        ),
+        college_exam_schedules (
+          scheduleTitle,
+          examType,
+          fromDate,
+          toDate
+        )
+      `)
+      .eq("studentId", studentId)
+      .is("deletedAt", null)
+      .then(({ data, error }) => {
+        if (!error && data) {
+          setStudentResults(data);
+        }
+        setResultsLoading(false);
+      });
+  }, [studentId]);
 
-    // Top border line
-    doc.setFillColor(67, 193, 122); // #43C17A
-    doc.rect(0, 0, 210, 6, "F");
+  // Resolve college name
+  useEffect(() => {
+    if (!collegeId) return;
+    supabase
+      .from("colleges")
+      .select("collegeName")
+      .eq("collegeId", collegeId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.collegeName) {
+          setCollegeName(data.collegeName);
+        }
+      });
+  }, [collegeId]);
 
-    // Title
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(26);
-    doc.setTextColor(22, 40, 79); // #16284F
-    doc.text("RESULTS", 105, 30, { align: "center" });
+  // Group and compute GPAs for the exam schedules list
+  const schedulesWithResults = useMemo(() => {
+    const schedMap = new Map<number, {
+      scheduleId: number;
+      scheduleTitle: string;
+      semesterNum: number;
+      date: string;
+      sgpa: string;
+      rawSemester: number;
+    }>();
 
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("MEMORANDUM OF GRADES", 105, 42, { align: "center" });
+    studentResults.forEach(r => {
+      const schedId = r.collegeExamScheduleId;
+      if (schedId === null || schedId === undefined) return;
 
-    // Student Specs
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.setFont("helvetica", "normal");
+      let title = r.college_exam_schedules?.scheduleTitle || `Exam Schedule #${schedId}`;
+      if (
+        title === "Degree_Mid_English_–_I_results.xlsx" ||
+        title === "Degree_Mid_English_-_I_results.xlsx" ||
+        title.includes("Degree_Mid_English")
+      ) {
+        title = "Results.xlsx";
+      }
 
-    doc.text(`Student ID : ${identifierId ?? "26228975"}`, 14, 55);
-    doc.text(`Examination : B.Tech | ${selectedMemo} Semester`, 140, 55);
+      const semNum = r.collegeSemesterId || 0;
 
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(22, 40, 79);
-    doc.text(fullName ?? "Shravani Reddy", 14, 63);
+      if (!schedMap.has(schedId)) {
+        const resultDate = r.updatedAt ? new Date(r.updatedAt) : new Date();
+        const dateStr = `${resultDate.toLocaleString('default', { month: 'short' })} ${resultDate.getDate()}, ${resultDate.getFullYear()}`;
 
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80);
-    doc.text(collegeBranchCode ?? "COMPUTER SCIENCE AND ENGINEERING (CSE)", 14, 70);
-
-    // Table mapping
-    const tableHeaders = ["S.No", "SUBJECT CODE", "SUBJECT TITLE", "Grade Secured", "Grade Point (G)", "Result", "Credits (C)"];
-    const rows = [
-      ["01", "1577BB", "CRYPTOGRAPHY & NETWORK SECURITY", "B", "6", "P", "3.0"],
-      ["02", "1577BB", "DATA MINING", "B", "6", "P", "3.0"],
-      ["03", "1577BB", "CLOUD COMPUTING", "B", "6", "P", "3.0"],
-      ["04", "1577BB", "SOFTWARE PROCESS & PROJECT MANAGEMENT", "B", "6", "P", "3.0"],
-      ["05", "1577BB", "REMOTE SENSING & GIS", "B", "6", "P", "3.0"],
-      ["06", "1577BB", "CRYPTOGRAPHY & NETWORK SECURITY LAB", "B", "6", "P", "3.0"],
-      ["07", "1577BB", "INDUSTRIAL ORIENTED MINI PROJECT / SUMMER INTERNSHIP", "B", "6", "P", "3.0"],
-      ["08", "1577BB", "SEMINAR", "B", "6", "P", "3.0"],
-      ["09", "1577BB", "PROJECT STAGE", "B", "6", "P", "3.0"]
-    ];
-
-    autoTable(doc, {
-      startY: 78,
-      head: [tableHeaders],
-      body: rows,
-      theme: "grid",
-      headStyles: { fillColor: [22, 40, 79] }, // #16284F
-      styles: { fontSize: 9, cellPadding: 3 },
-      columnStyles: {
-        0: { halign: "center", cellWidth: 12 },
-        1: { halign: "center", cellWidth: 28 },
-        2: { halign: "left" },
-        3: { halign: "center", cellWidth: 24 },
-        4: { halign: "center", cellWidth: 28 },
-        5: { halign: "center", cellWidth: 20 },
-        6: { halign: "center", cellWidth: 20 }
+        schedMap.set(schedId, {
+          scheduleId: schedId,
+          scheduleTitle: title,
+          semesterNum: semNum,
+          date: dateStr,
+          sgpa: "0.00",
+          rawSemester: semNum
+        });
+      } else {
+        const existing = schedMap.get(schedId)!;
+        const currentUpdated = r.updatedAt ? new Date(r.updatedAt) : new Date();
+        const existingDate = new Date(existing.date);
+        if (currentUpdated > existingDate) {
+          const dateStr = `${currentUpdated.toLocaleString('default', { month: 'short' })} ${currentUpdated.getDate()}, ${currentUpdated.getFullYear()}`;
+          existing.date = dateStr;
+        }
       }
     });
 
-    // @ts-ignore
-    const finalY = doc.lastAutoTable.finalY + 10;
+    const list = Array.from(schedMap.values());
+    list.forEach(item => {
+      const schedId = item.scheduleId;
+      const schedResults = studentResults.filter(r => r.collegeExamScheduleId === schedId);
+      let totalPoints = 0;
+      let totalCredits = 0;
+      schedResults.forEach(r => {
+        const grade = r.grade || "";
+        const credits = Number(r.college_subjects?.credits) || 3.0;
+        totalPoints += getGradePoints(grade) * credits;
+        totalCredits += credits;
+      });
+      item.sgpa = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : "0.00";
+    });
 
-    // Footer Table Data / Summary
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0);
-    doc.text("SUBJECTS REGISTERED: 09     APPEARED: 09     PASSED: 09     TOTAL CREDITS: 21.0", 14, finalY);
+    list.sort((a, b) => {
+      if (a.rawSemester !== b.rawSemester) {
+        return a.rawSemester - b.rawSemester;
+      }
+      return a.scheduleId - b.scheduleId;
+    });
+    return list;
+  }, [studentResults]);
 
-    // SGPA Card
-    doc.setFillColor(244, 245, 246);
-    doc.rect(14, finalY + 6, 182, 10, "F");
-    doc.setDrawColor(200, 200, 200);
-    doc.rect(14, finalY + 6, 182, 10, "D");
-    doc.setTextColor(50);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("Semester Grade Point Average(SGPA) = 7.0", 18, finalY + 12);
+  const selectedScheduleTitle = useMemo(() => {
+    if (selectedScheduleId === null) return "";
+    const found = schedulesWithResults.find(s => s.scheduleId === selectedScheduleId);
+    return found ? found.scheduleTitle : `Exam Schedule #${selectedScheduleId}`;
+  }, [schedulesWithResults, selectedScheduleId]);
 
-    doc.save(`Memorandum_Of_Grades_${selectedMemo}.pdf`);
+  const selectedScheduleSemesterNum = useMemo(() => {
+    if (selectedScheduleId === null) return null;
+    const found = schedulesWithResults.find(s => s.scheduleId === selectedScheduleId);
+    return found ? found.semesterNum : null;
+  }, [schedulesWithResults, selectedScheduleId]);
+
+  // Subject rows for the detailed Memo view
+  const memoRows = useMemo(() => {
+    if (selectedScheduleId === null) return [];
+
+    return studentResults
+      .filter((r) => r.collegeExamScheduleId === selectedScheduleId)
+      .map((r, index) => {
+        const code = r.college_subjects?.subjectCode || "N/A";
+        const title = r.college_subjects?.subjectName || "N/A";
+        const internal = r.internalMarks !== null && r.internalMarks !== undefined ? r.internalMarks : "-";
+        const external = r.externalMarks !== null && r.externalMarks !== undefined ? r.externalMarks : "-";
+        const total = r.total !== null && r.total !== undefined ? r.total : "-";
+        const grade = r.grade || "N/A";
+        const res = grade.toUpperCase().trim() === "F" ? "F" : "P";
+        const cred = r.college_subjects?.credits !== null && r.college_subjects?.credits !== undefined
+          ? Number(r.college_subjects.credits).toFixed(1)
+          : "3.0";
+
+        return {
+          sNo: String(index + 1).padStart(2, "0"),
+          code,
+          title,
+          internal,
+          external,
+          total,
+          grade,
+          res,
+          cred
+        };
+      });
+  }, [studentResults, selectedScheduleId]);
+
+  // Memo totals and stats
+  const memoSummary = useMemo(() => {
+    if (memoRows.length === 0) {
+      return { registered: 0, appeared: 0, passed: 0, totalCredits: "0.0", sgpa: "0.00" };
+    }
+    const registered = memoRows.length;
+    const appeared = memoRows.length;
+    const passed = memoRows.filter((r) => r.res === "P").length;
+    const totalCreditsVal = memoRows.reduce((acc, r) => acc + Number(r.cred), 0);
+
+    let totalPoints = 0;
+    memoRows.forEach(r => {
+      totalPoints += getGradePoints(r.grade) * Number(r.cred);
+    });
+    const sgpaVal = totalCreditsVal > 0 ? (totalPoints / totalCreditsVal).toFixed(2) : "0.00";
+
+    return {
+      registered,
+      appeared,
+      passed,
+      totalCredits: totalCreditsVal.toFixed(1),
+      sgpa: sgpaVal
+    };
+  }, [memoRows]);
+
+  // Dynamic Performance Trend Chart Data
+  const trendBars = useMemo(() => {
+    const colors = ["#CBE5DB", "#9BC1B0", "#669D85", "#34805C", "#045B37"];
+    return schedulesWithResults.map((item, idx) => {
+      const gpa = Number(item.sgpa);
+      const height = `${(gpa / 10) * 200}px`;
+      return {
+        sem: item.scheduleTitle,
+        cgpa: item.sgpa,
+        height,
+        color: colors[idx % colors.length]
+      };
+    });
+  }, [schedulesWithResults]);
+
+  const downloadGradesPdf = async () => {
+    try {
+      const element = printRef.current;
+      if (!element) return;
+
+      // Clone the element to render in background without responsive zoom/overflow issues
+      const clone = element.cloneNode(true) as HTMLDivElement;
+      
+      const wrapper = document.createElement("div");
+      wrapper.style.position = "fixed";
+      wrapper.style.top = "0";
+      wrapper.style.left = "0";
+      wrapper.style.width = "794px";
+      wrapper.style.height = "1123px";
+      wrapper.style.zIndex = "-9999";
+      wrapper.style.overflow = "hidden";
+      wrapper.style.pointerEvents = "none";
+      
+      // Ensure the clone has static dimensions matching the target A4 size
+      clone.style.width = "794px";
+      clone.style.height = "1123px";
+      clone.style.transform = "none";
+      clone.style.margin = "0";
+      clone.style.padding = "0";
+      
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
+
+      // Small delay to ensure the browser updates layout/rendering context of clone
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const canvas = await html2canvas(clone, {
+        scale: 2, // High resolution capture
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        width: 794,
+        height: 1123,
+        scrollX: 0,
+        scrollY: 0,
+      });
+
+      // Cleanup cloned wrapper
+      document.body.removeChild(wrapper);
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+      pdf.save(`Memorandum_Of_Grades_${selectedScheduleTitle.replace(/\s+/g, "_")}.pdf`);
+      toast.success("PDF downloaded successfully!");
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      toast.error("Failed to generate PDF: " + (error instanceof Error ? error.message : String(error)));
+    }
   };
 
   useEffect(() => {
@@ -308,7 +539,7 @@ const Page = () => {
                   />
                 </section>
 
-                <section className="bg-white rounded-2xl lg:col-span-4">
+                <section className="bg-white rounded-2xl lg:col-span-4 shadow-md">
                   <AttendanceList data={progressData?.subjectAttendance || []} />
                 </section>
               </article>
@@ -360,145 +591,391 @@ const Page = () => {
         )}
 
         {activeTab === "results" && (
-          selectedMemo ? (
+          selectedScheduleId !== null ? (
             <div className="max-w-4xl mx-auto w-full flex flex-col pb-10">
-              {/* Back Button */}
-              <button
-                onClick={() => setSelectedMemo(null)}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-semibold mb-4 cursor-pointer self-start transition-colors"
+              {/* Back Button and Download PDF Row */}
+              <div className="flex items-center justify-between mb-4 w-full px-2">
+                <button
+                  onClick={() => setSelectedScheduleId(null)}
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-semibold cursor-pointer transition-colors"
+                >
+                  <ArrowLeft size={20} weight="bold" />
+                  <span>Back to Results</span>
+                </button>
+                <button
+                  onClick={downloadGradesPdf}
+                  className="bg-[#43C17A] text-white px-5 py-2 rounded-lg font-semibold hover:bg-[#35a868] transition-colors shadow-sm cursor-pointer"
+                >
+                  Download PDF
+                </button>
+              </div>
+
+              {/* Wrapper container that scales the A4 page container */}
+              <div
+                ref={containerRef}
+                className="w-full flex justify-center overflow-hidden py-6 bg-gray-150/40 rounded-2xl border border-gray-200/50"
               >
-                <ArrowLeft size={20} weight="bold" />
-                <span>Back to Results</span>
-              </button>
-
-              {/* Memorandum Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-10 flex flex-col gap-6 w-full relative overflow-hidden">
-                {/* Decorative border line */}
-                <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#43C17A]"></div>
-
-                {/* Top Header Row */}
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-[#16284F] text-white flex items-center justify-center font-bold text-lg">
-                      C
-                    </div>
-                  </div>
-                  <h1 className="text-3xl font-extrabold text-[#16284F] tracking-widest">
-                    RESULTS
-                  </h1>
-                  <button
-                    onClick={downloadGradesPdf}
-                    className="bg-[#43C17A] text-white px-5 py-2 rounded-lg font-semibold hover:bg-[#35a868] transition-colors shadow-sm cursor-pointer"
+                <div
+                  style={{
+                    width: "794px",
+                    height: "1123px",
+                    transform: `scale(${scale})`,
+                    transformOrigin: "top center",
+                    marginBottom: `${(scale - 1) * 1123}px`
+                  }}
+                  className="shrink-0 transition-transform duration-200"
+                >
+                  {/* Memorandum Card */}
+                  <div
+                    ref={printRef}
+                    style={{
+                      width: "794px",
+                      height: "1123px",
+                      backgroundColor: "#ffffff",
+                      display: "flex",
+                      flexDirection: "column",
+                      boxSizing: "border-box",
+                      position: "relative",
+                      overflow: "hidden"
+                    }}
+                    className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.08)] border border-gray-200 relative overflow-hidden flex flex-col gap-6 box-border"
                   >
-                    Download PDF
-                  </button>
-                </div>
+                    {/* Banner */}
+                    <div
+                      style={{
+                        backgroundImage: "url('/college_banner.png')",
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        width: "100%",
+                        height: "224px",
+                        position: "relative",
+                        flexShrink: 0
+                      }}
+                      className="w-full h-56 shrink-0 relative"
+                    >
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: "linear-gradient(to right, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.5) 50%, transparent 100%)",
+                          display: "flex",
+                          alignItems: "center",
+                          padding: "24px"
+                        }}
+                        className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent flex items-center p-6 md:p-8"
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "16px"
+                          }}
+                          className="flex items-center gap-4"
+                        >
+                          <div
+                            style={{
+                              border: "4px solid #43C17A",
+                              borderRadius: "18px",
+                              backgroundColor: "rgba(0, 0, 0, 0.3)",
+                              width: "64px",
+                              height: "64px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#ffffff",
+                              fontWeight: 800,
+                              fontSize: "20px",
+                              flexShrink: 0
+                            }}
+                            className="border-[4px] border-[#43C17A] rounded-[18px] bg-black/30 w-16 h-16 flex items-center justify-center text-white font-extrabold text-xl shrink-0"
+                          >
+                            {collegeAbbreviation}
+                          </div>
+                          <div
+                            style={{
+                              color: "#ffffff"
+                            }}
+                            className="text-white"
+                          >
+                            <h2
+                              style={{
+                                fontSize: "24px",
+                                fontWeight: 800,
+                                letterSpacing: "0.025em",
+                                lineHeight: 1.25
+                              }}
+                              className="text-lg md:text-2xl font-extrabold tracking-wide leading-tight"
+                            >
+                              {collegeName}
+                            </h2>
+                            <p
+                              style={{
+                                fontSize: "14px",
+                                color: "#86efac",
+                                fontWeight: 500,
+                                marginTop: "4px"
+                              }}
+                              className="text-xs md:text-sm text-green-300 font-medium mt-1"
+                            >
+                              Branch of {collegeBranchType ?? "BSC"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                <hr className="border-gray-200 my-2" />
+                    {/* Card Body */}
+                    <div
+                      style={{
+                        paddingLeft: "10mm",
+                        paddingRight: "10mm",
+                        paddingBottom: "15mm",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "24px",
+                        width: "100%",
+                        flex: 1
+                      }}
+                      className="px-[10mm] pb-[15mm] flex flex-col gap-6 w-full flex-1"
+                    >
+                      {/* Results Text */}
+                      <h1
+                        style={{
+                          fontSize: "30px",
+                          fontWeight: 800,
+                          color: "#16284F",
+                          letterSpacing: "0.1em",
+                          textAlign: "center"
+                        }}
+                        className="text-3xl font-extrabold text-[#16284F] tracking-widest text-center"
+                      >
+                        RESULTS
+                      </h1>
 
-                {/* Student Info Card */}
-                <div className="flex flex-col md:flex-row gap-6 items-start">
-                  {/* User Icon Avatar Placeholder */}
-                  <div className="w-28 h-28 sm:w-32 sm:h-32 bg-gray-100 border border-gray-200 flex items-center justify-center rounded-xl text-gray-400 shrink-0 shadow-inner">
-                    <User size={56} weight="light" />
+                      {/* Student Info Card */}
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "row",
+                          gap: "24px",
+                          alignItems: "flex-start"
+                        }}
+                        className="flex flex-col md:flex-row gap-6 items-start"
+                      >
+                        {/* User Icon Avatar Placeholder */}
+                        <div
+                          style={{
+                            width: "112px",
+                            height: "112px",
+                            backgroundColor: "#f3f4f6",
+                            border: "1px solid #e5e7eb",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: "12px",
+                            color: "#9ca3af",
+                            flexShrink: 0,
+                            overflow: "hidden"
+                          }}
+                          className="w-28 h-28 bg-gray-100 border border-gray-200 flex items-center justify-center rounded-xl text-gray-400 shrink-0 shadow-inner overflow-hidden"
+                        >
+                          {profilePhoto ? (
+                            <img
+                              src={profilePhoto}
+                              alt="Student Avatar"
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover"
+                              }}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <User size={56} weight="light" />
+                          )}
+                        </div>
+
+                        {/* Student Specs */}
+                        <div
+                          style={{
+                            flex: 1,
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            rowGap: "8px",
+                            columnGap: "16px",
+                            fontSize: "14px"
+                          }}
+                          className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm"
+                        >
+                          <div>
+                            <span style={{ color: "#6b7280", fontWeight: 500 }} className="text-gray-500 font-medium">Student ID :</span>{" "}
+                            <span style={{ color: "#1f2937", fontWeight: 600 }} className="text-gray-800 font-semibold">{identifierId ?? "26228975"}</span>
+                          </div>
+                          <div>
+                            <span style={{ color: "#6b7280", fontWeight: 500 }} className="text-gray-500 font-medium">Examination :</span>{" "}
+                            <span style={{ color: "#1f2937", fontWeight: 600 }} className="text-gray-800 font-semibold">
+                              {collegeEducationType ?? "Degree"}{" "}
+                              {selectedScheduleSemesterNum ? `| ${selectedScheduleTitle} (Sem ${selectedScheduleSemesterNum})` : `| ${selectedScheduleTitle}`}
+                            </span>
+                          </div>
+                          <div style={{ gridColumn: "span 2", marginTop: "4px" }} className="sm:col-span-2 mt-1">
+                            <span style={{ fontSize: "20px", fontWeight: 700, color: "#16284F" }} className="text-xl font-bold text-[#16284F]">{fullName ?? "Shravani Reddy"}</span>
+                          </div>
+                          <div style={{ gridColumn: "span 2", marginTop: "4px", color: "#4b5563", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.025em" }} className="sm:col-span-2 mt-1 text-gray-600 font-medium uppercase tracking-wide">
+                            {collegeBranchCode ?? "COMPUTER SCIENCE AND ENGINEERING (CSE)"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Memo Title */}
+                      <h3
+                        style={{
+                          textAlign: "center",
+                          fontSize: "18px",
+                          fontWeight: 700,
+                          color: "#16284F",
+                          textDecorationLine: "underline",
+                          letterSpacing: "0.1em",
+                          marginTop: "16px"
+                        }}
+                        className="text-center text-lg sm:text-xl font-bold text-[#16284F] underline tracking-widest mt-4"
+                      >
+                        MEMORANDUM OF GRADES
+                      </h3>
+                      {/* Table */}
+                      <div
+                        style={{
+                          marginTop: "8px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "8px",
+                          overflow: "hidden"
+                        }}
+                        className="overflow-x-auto mt-2 border border-gray-300 rounded-lg"
+                      >
+                        <table
+                          style={{
+                            width: "100%",
+                            textAlign: "left",
+                            borderCollapse: "collapse",
+                            fontSize: "12px"
+                          }}
+                          className="w-full text-left border-collapse text-xs sm:text-sm"
+                        >
+                          <thead>
+                            <tr
+                              style={{
+                                backgroundColor: "#f9fafb",
+                                color: "#374151",
+                                fontWeight: 600,
+                                borderBottom: "1px solid #d1d5db"
+                              }}
+                              className="bg-gray-50 text-gray-700 font-semibold border-b border-gray-300"
+                            >
+                              <th style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", width: "40px" }} className="py-2.5 px-3 border-r border-gray-300 text-center w-10">S.No</th>
+                              <th style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", width: "112px" }} className="py-2.5 px-3 border-r border-gray-300 text-center w-28">SUBJECT CODE</th>
+                              <th style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db" }} className="py-2.5 px-3 border-r border-gray-300">SUBJECT TITLE</th>
+                              <th style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", width: "80px" }} className="py-2.5 px-3 border-r border-gray-300 text-center w-20">INTERNAL</th>
+                              <th style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", width: "80px" }} className="py-2.5 px-3 border-r border-gray-300 text-center w-20">EXTERNAL</th>
+                              <th style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", width: "80px" }} className="py-2.5 px-3 border-r border-gray-300 text-center w-20">TOTAL</th>
+                              <th style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", width: "96px" }} className="py-2.5 px-3 border-r border-gray-300 text-center w-24">Grade Secured</th>
+                              <th style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", width: "80px" }} className="py-2.5 px-3 border-r border-gray-300 text-center w-20">Result</th>
+                              <th style={{ padding: "10px 12px", textAlign: "center", width: "80px" }} className="py-2.5 px-3 text-center w-20">Credits (C)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {memoRows.map((item, index) => (
+                              <tr
+                                key={index}
+                                style={{
+                                  borderBottom: "1px solid #d1d5db",
+                                  backgroundColor: index % 2 === 0 ? "#ffffff" : "#f9fafb"
+                                }}
+                                className="border-b border-gray-300 last:border-b-0 hover:bg-gray-50/50"
+                              >
+                                <td style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", fontFamily: "monospace", color: "#374151" }} className="py-2.5 px-3 border-r border-gray-300 text-center font-mono text-gray-700">
+                                  {item.sNo}
+                                </td>
+                                <td style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", fontFamily: "monospace", color: "#4b5563" }} className="py-2.5 px-3 border-r border-gray-300 text-center font-mono text-gray-600">
+                                  {item.code}
+                                </td>
+                                <td style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", fontWeight: 600, color: "#1f2937" }} className="py-2.5 px-3 border-r border-gray-300 font-semibold text-gray-800">
+                                  {item.title}
+                                </td>
+                                <td style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", fontFamily: "monospace", color: "#374151" }} className="py-2.5 px-3 border-r border-gray-300 text-center font-mono text-gray-700">
+                                  {item.internal}
+                                </td>
+                                <td style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", fontFamily: "monospace", color: "#374151" }} className="py-2.5 px-3 border-r border-gray-300 text-center font-mono text-gray-700">
+                                  {item.external}
+                                </td>
+                                <td style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", fontFamily: "monospace", color: "#374151" }} className="py-2.5 px-3 border-r border-gray-300 text-center font-mono text-gray-700">
+                                  {item.total}
+                                </td>
+                                <td style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", fontWeight: 700, color: "#374151" }} className="py-2.5 px-3 border-r border-gray-300 text-center font-bold text-gray-700">
+                                  {item.grade}
+                                </td>
+                                <td style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", fontWeight: 700, color: item.res === "P" ? "#16a34a" : "#dc2626" }} className={`py-2.5 px-3 border-r border-gray-300 text-center font-bold ${item.res === "P" ? "text-green-600" : "text-red-600"}`}>
+                                  {item.res}
+                                </td>
+                                <td style={{ padding: "10px 12px", textAlign: "center", fontFamily: "monospace", color: "#374151" }} className="py-2.5 px-3 text-center font-mono text-gray-700">
+                                  {item.cred}
+                                </td>
+                              </tr>
+                            ))}
+                            <tr
+                              style={{
+                                backgroundColor: "#f9fafb",
+                                fontWeight: 600,
+                                borderTop: "1px solid #d1d5db"
+                              }}
+                              className="bg-gray-50 font-semibold border-t border-gray-300"
+                            >
+                              <td colSpan={3} style={{ padding: "12px 16px", borderRight: "1px solid #d1d5db", fontSize: "12px", color: "#374151" }} className="py-3 px-4 border-r border-gray-300 text-xs text-gray-700">
+                                <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "12px", fontWeight: "bold" }}>
+                                  <div>SUBJECTS REGISTERED : {String(memoSummary.registered).padStart(2, '0')}</div>
+                                  <div>APPEARED : {String(memoSummary.appeared).padStart(2, '0')}</div>
+                                  <div>PASSED : {String(memoSummary.passed).padStart(2, '0')}</div>
+                                </div>
+                              </td>
+                              <td style={{ borderRight: "1px solid #d1d5db" }} className="border-r border-gray-300"></td>
+                              <td style={{ borderRight: "1px solid #d1d5db" }} className="border-r border-gray-300"></td>
+                              <td style={{ borderRight: "1px solid #d1d5db" }} className="border-r border-gray-300"></td>
+                              <td style={{ borderRight: "1px solid #d1d5db" }} className="border-r border-gray-300"></td>
+                              <td style={{ borderRight: "1px solid #d1d5db", textAlign: "right", paddingRight: "8px", fontSize: "12px", fontWeight: "bold", color: "#6b7280" }} className="border-r border-gray-300 text-right pr-2 text-xs font-bold text-gray-500">
+                                TOTAL CREDITS:
+                              </td>
+                              <td style={{ padding: "10px 12px", textAlign: "center", fontFamily: "monospace", fontWeight: "bold", color: "#374151" }} className="py-2.5 px-3 text-center font-mono font-bold text-gray-700">
+                                {memoSummary.totalCredits}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* SGPA Summary Block */}
+                      <div
+                        style={{
+                          border: "1px solid #d1d5db",
+                          borderRadius: "8px",
+                          padding: "12px",
+                          backgroundColor: "#f9fafb",
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          color: "#374151",
+                          marginTop: "8px"
+                        }}
+                        className="border border-gray-300 rounded-lg p-3 bg-gray-50 text-xs sm:text-sm font-semibold text-gray-700 mt-2"
+                      >
+                        Semester Grade Point Average(SGPA) = {memoSummary.sgpa}
+                      </div>
+                    </div>
                   </div>
-
-                  {/* Student Specs */}
-                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-sm">
-                    <div>
-                      <span className="text-gray-500 font-medium">Student ID :</span>{" "}
-                      <span className="text-gray-800 font-semibold">{identifierId ?? "26228975"}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 font-medium">Examination :</span>{" "}
-                      <span className="text-gray-800 font-semibold">B.Tech | {selectedMemo} Semester</span>
-                    </div>
-                    <div className="sm:col-span-2 mt-1">
-                      <span className="text-xl font-bold text-[#16284F]">{fullName ?? "Shravani Reddy"}</span>
-                    </div>
-                    <div className="sm:col-span-2 mt-1 text-gray-600 font-medium uppercase tracking-wide">
-                      {collegeBranchCode ?? "COMPUTER SCIENCE AND ENGINEERING (CSE)"}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Memo Title */}
-                <h3 className="text-center text-lg sm:text-xl font-bold text-[#16284F] underline tracking-widest mt-4">
-                  MEMORANDUM OF GRADES
-                </h3>
-
-                {/* Table */}
-                <div className="overflow-x-auto mt-2 border border-gray-300 rounded-lg">
-                  <table className="w-full text-left border-collapse text-xs sm:text-sm">
-                    <thead>
-                      <tr className="bg-gray-50 text-gray-700 font-semibold border-b border-gray-300">
-                        <th className="py-2.5 px-3 border-r border-gray-300 text-center w-12">S.No</th>
-                        <th className="py-2.5 px-3 border-r border-gray-300 text-center w-28">SUBJECT CODE</th>
-                        <th className="py-2.5 px-3 border-r border-gray-300">SUBJECT TITLE</th>
-                        <th className="py-2.5 px-3 border-r border-gray-300 text-center w-24">Grade Secured</th>
-                        <th className="py-2.5 px-3 border-r border-gray-300 text-center w-28">Grade Point (G)</th>
-                        <th className="py-2.5 px-3 border-r border-gray-300 text-center w-20">Result</th>
-                        <th className="py-2.5 px-3 text-center w-20">Credits (C)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        { code: "1577BB", title: "CRYPTOGRAPHY & NETWORK SECURITY", grade: "B", pt: "6", res: "P", cred: "3.0" },
-                        { code: "1577BB", title: "DATA MINING", grade: "B", pt: "6", res: "P", cred: "3.0" },
-                        { code: "1577BB", title: "CLOUD COMPUTING", grade: "B", pt: "6", res: "P", cred: "3.0" },
-                        { code: "1577BB", title: "SOFTWARE PROCESS & PROJECT MANAGEMENT", grade: "B", pt: "6", res: "P", cred: "3.0" },
-                        { code: "1577BB", title: "REMOTE SENSING & GIS", grade: "B", pt: "6", res: "P", cred: "3.0" },
-                        { code: "1577BB", title: "CRYPTOGRAPHY & NETWORK SECURITY LAB", grade: "B", pt: "6", res: "P", cred: "3.0" },
-                        { code: "1577BB", title: "INDUSTRIAL ORIENTED MINI PROJECT / SUMMER INTERNSHIP", grade: "B", pt: "6", res: "P", cred: "3.0" },
-                        { code: "1577BB", title: "SEMINAR", grade: "B", pt: "6", res: "P", cred: "3.0" },
-                        { code: "1577BB", title: "PROJECT STAGE", grade: "B", pt: "6", res: "P", cred: "3.0" },
-                      ].map((item, index) => (
-                        <tr key={index} className="border-b border-gray-300 last:border-b-0 hover:bg-gray-50/50">
-                          <td className="py-2.5 px-3 border-r border-gray-300 text-center font-mono text-gray-700">
-                            {String(index + 1).padStart(2, "0")}
-                          </td>
-                          <td className="py-2.5 px-3 border-r border-gray-300 text-center font-mono text-gray-600">
-                            {item.code}
-                          </td>
-                          <td className="py-2.5 px-3 border-r border-gray-300 font-semibold text-gray-800">
-                            {item.title}
-                          </td>
-                          <td className="py-2.5 px-3 border-r border-gray-300 text-center font-bold text-gray-700">
-                            {item.grade}
-                          </td>
-                          <td className="py-2.5 px-3 border-r border-gray-300 text-center font-mono text-gray-700">
-                            {item.pt}
-                          </td>
-                          <td className="py-2.5 px-3 border-r border-gray-300 text-center font-bold text-green-600">
-                            {item.res}
-                          </td>
-                          <td className="py-2.5 px-3 text-center font-mono text-gray-700">
-                            {item.cred}
-                          </td>
-                        </tr>
-                      ))}
-                      <tr className="bg-gray-50 font-semibold border-t border-gray-300">
-                        <td colSpan={3} className="py-2.5 px-4 border-r border-gray-300 text-xs text-gray-700">
-                          <span className="mr-4">SUBJECTS REGISTERED : 09</span>
-                          <span className="mr-4">APPEARED : 09</span>
-                          <span className="mr-4">PASSED : 09</span>
-                          <span>TOTAL</span>
-                        </td>
-                        <td className="border-r border-gray-300"></td>
-                        <td className="border-r border-gray-300"></td>
-                        <td className="border-r border-gray-300"></td>
-                        <td className="py-2.5 px-3 text-center font-mono text-gray-700">21.0</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* SGPA Summary Block */}
-                <div className="border border-gray-300 rounded-lg p-3 bg-gray-50 text-xs sm:text-sm font-semibold text-gray-700 mt-2">
-                  Semester Grade Point Average(SGPA) = 7.0
                 </div>
               </div>
             </div>
+
           ) : (
             <div className="max-w-5xl mx-auto w-full flex flex-col gap-8 pb-10">
               {/* Header */}
@@ -515,77 +992,89 @@ const Page = () => {
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 sm:p-6">
                 {/* Table Header */}
                 <div className="grid grid-cols-4 items-center text-center py-3 border-b border-gray-100 text-[10px] sm:text-xs font-bold text-gray-400 tracking-wider">
-                  <div className="text-left pl-4 sm:pl-8">SEMESTER</div>
+                  <div className="text-left pl-4 sm:pl-8">EXAM SCHEDULE</div>
                   <div>RELEASE DATE</div>
-                  <div>CGPA</div>
+                  <div>SGPA</div>
                   <div className="text-right pr-4 sm:pr-8">ACTION</div>
                 </div>
 
                 {/* Table Rows */}
-                {[
-                  { sem: "SEM 1", date: "Jan 14, 2026", cgpa: "8.92" },
-                  { sem: "SEM 2", date: "Jan 14, 2026", cgpa: "8.92" },
-                  { sem: "SEM 3", date: "Jan 14, 2026", cgpa: "8.92" },
-                  { sem: "SEM 4", date: "Jan 14, 2026", cgpa: "8.92" },
-                  { sem: "SEM 5", date: "Jan 14, 2026", cgpa: "8.92" },
-                ].map((row, idx) => (
-                  <div
-                    key={idx}
-                    className="grid grid-cols-4 items-center text-center py-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors"
-                  >
-                    <div className="text-left pl-4 sm:pl-8 text-sm font-bold text-[#007a4b]">
-                      {row.sem}
-                    </div>
-                    <div className="text-sm text-gray-700">
-                      {row.date}
-                    </div>
-                    <div className="flex justify-center">
-                      <span className="bg-[#F4F5F6] border border-gray-200 px-2.5 py-0.5 rounded text-xs font-semibold text-gray-600">
-                        {row.cgpa}
-                      </span>
-                    </div>
-                    <div className="text-right pr-4 sm:pr-8">
-                      <button
-                        onClick={() => setSelectedMemo(row.sem)}
-                        className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-[#007a4b] hover:text-[#005f3a] transition-colors cursor-pointer"
-                      >
-                        <span>View Marks Memo</span>
-                        <CaretRight size={14} weight="bold" />
-                      </button>
-                    </div>
+                {resultsLoading ? (
+                  <div className="flex flex-col items-center justify-center gap-2 text-gray-500 py-10">
+                    <SpinnerGap size={24} className="animate-spin text-[#007a4b]" />
+                    <p className="text-xs font-semibold">Loading results...</p>
                   </div>
-                ))}
+                ) : schedulesWithResults.length > 0 ? (
+                  schedulesWithResults.map((row, idx) => (
+                    <div
+                      key={idx}
+                      className="grid grid-cols-4 items-center text-center py-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors"
+                    >
+                      <div className="text-left pl-4 sm:pl-8 flex flex-col items-start min-w-0">
+                        <span className="text-sm font-bold text-[#007a4b] break-words line-clamp-2 max-w-full">
+                          {row.scheduleTitle}
+                        </span>
+                        {row.semesterNum > 0 && (
+                          <span className="text-[10px] text-gray-400 font-semibold mt-0.5">
+                            Semester {row.semesterNum}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-700">
+                        {row.date}
+                      </div>
+                      <div className="flex justify-center">
+                        <span className="bg-[#F4F5F6] border border-gray-200 px-2.5 py-0.5 rounded text-xs font-semibold text-gray-600">
+                          {row.sgpa}
+                        </span>
+                      </div>
+                      <div className="text-right pr-4 sm:pr-8">
+                        <button
+                          onClick={() => setSelectedScheduleId(row.scheduleId)}
+                          className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-[#007a4b] hover:text-[#005f3a] transition-colors cursor-pointer"
+                        >
+                          <span>View Marks Memo</span>
+                          <CaretRight size={14} weight="bold" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-gray-500 py-10 text-xs sm:text-sm">
+                    No results have been uploaded yet.
+                  </div>
+                )}
               </div>
 
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 flex flex-col gap-6">
                 <h3 className="text-xl font-bold text-[#282828]">
-                  CGPA Performance Trend
+                  SGPA Performance Trend
                 </h3>
 
                 <div className="flex items-end justify-around h-72 border-b border-gray-100 pb-2 w-full max-w-3xl mx-auto px-4">
-                  {[
-                    { sem: "SEM I", cgpa: "8.2", height: "180px", color: "#CBE5DB" },
-                    { sem: "SEM II", cgpa: "8.4", height: "185px", color: "#9BC1B0" },
-                    { sem: "SEM III", cgpa: "8.5", height: "187px", color: "#669D85" },
-                    { sem: "SEM IV", cgpa: "9.1", height: "200px", color: "#34805C" },
-                    { sem: "SEM V", cgpa: "8.9", height: "196px", color: "#045B37" },
-                  ].map((bar, idx) => (
-                    <div key={idx} className="flex flex-col items-center justify-end h-full w-16 sm:w-20">
-                      <span className="text-xs sm:text-sm font-mono text-gray-400 mb-2">
-                        {bar.cgpa}
-                      </span>
-                      <div
-                        className="w-10 sm:w-14 rounded-t-lg transition-all duration-300 shadow-sm hover:shadow"
-                        style={{
-                          height: bar.height,
-                          backgroundColor: bar.color,
-                        }}
-                      />
-                      <span className="text-[10px] sm:text-xs font-bold text-gray-400 mt-4 tracking-wider">
-                        {bar.sem}
-                      </span>
+                  {trendBars.length > 0 ? (
+                    trendBars.map((bar, idx) => (
+                      <div key={idx} className="flex flex-col items-center justify-end h-full w-16 sm:w-20">
+                        <span className="text-xs sm:text-sm font-mono text-gray-400 mb-2">
+                          {bar.cgpa}
+                        </span>
+                        <div
+                          className="w-10 sm:w-14 rounded-t-lg transition-all duration-300 shadow-sm hover:shadow"
+                          style={{
+                            height: bar.height,
+                            backgroundColor: bar.color,
+                          }}
+                        />
+                        <span className="text-[10px] sm:text-xs font-bold text-gray-400 mt-4 text-center truncate max-w-full" title={bar.sem}>
+                          {bar.sem}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-400 py-20 text-xs sm:text-sm">
+                      No performance data available.
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>

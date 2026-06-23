@@ -45,8 +45,9 @@ const DEVICE_CATEGORIES: { value: DeviceCategory; label: string }[] = [
 ];
 
 const GATE_DIRECTIONS: { value: GateDirection; label: string }[] = [
-  { value: "In", label: "Inside (Entry)" },
-  { value: "Out", label: "Outside (Exit)" },
+  { value: "Standalone", label: "Standalone (Entry & Exit)" },
+  { value: "In", label: "Inside (Entry Only)" },
+  { value: "Out", label: "Outside (Exit Only)" },
 ];
 
 const FILTER_CHIPS: { label: string; filters: DeviceFilters }[] = [
@@ -75,7 +76,7 @@ const emptyForm: DeviceFormState = {
   deviceUsername: "admin",
   devicePassword: "",
   deviceType: "multi",
-  deviceCategory: "classroom",
+  deviceCategory: "",
   gateDirection: "",
   deviceModel: "",
   firmwareVersion: "",
@@ -248,8 +249,9 @@ export default function DevicesTab() {
     if (!form.devicePort.trim()) return toast.error("Device port is required.");
     if (!form.devicePassword.trim()) return toast.error("Device password is required.");
     if (form.devicePassword.length < 4) return toast.error("Password must be at least 4 characters.");
+    if (!form.deviceCategory) return toast.error("Please select a device category.");
     if (form.deviceCategory === "gate" && !form.gateDirection)
-      return toast.error("Gate direction is required for gate devices.");
+      return toast.error("Please select a gate direction.");
 
     // IP validation
     const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
@@ -268,7 +270,7 @@ export default function DevicesTab() {
         deviceUsername: form.deviceUsername,
         devicePassword: form.devicePassword || "unchanged_placeholder",
         deviceType: form.deviceType,
-        deviceCategory: form.deviceCategory,
+        deviceCategory: form.deviceCategory as DeviceCategory,
         gateDirection: form.deviceCategory === "gate" ? (form.gateDirection as GateDirection) : null,
         deviceModel: form.deviceModel || null,
         firmwareVersion: form.firmwareVersion || null,

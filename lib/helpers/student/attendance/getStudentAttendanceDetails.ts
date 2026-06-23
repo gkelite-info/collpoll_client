@@ -61,6 +61,9 @@ export async function getStudentAttendanceDetails({
   limit?: number;
 }) {
   const ctx = await fetchStudentContext(userId);
+  if (!ctx) {
+    return emptyResult();
+  }
   const { studentId } = ctx;
 
   const from = (page - 1) * limit;
@@ -182,7 +185,12 @@ export async function getStudentAttendanceDetails({
 
   const attendancePolicyInsight = await buildStudentAttendancePolicyInsight({
     userId,
-    context: ctx,
+    context: {
+      collegeEducationId: ctx.collegeEducationId,
+      collegeBranchId: ctx.collegeBranchId,
+      collegeAcademicYearId: ctx.collegeAcademicYearId as number,
+      collegeSemesterId: ctx.collegeSemesterId,
+    },
     attendedClasses: overallAttendedSet.size,
     totalClasses: overallConductedSet.size,
   });

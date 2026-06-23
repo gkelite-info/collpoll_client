@@ -1,7 +1,19 @@
 import { supabase } from "@/lib/supabaseClient";
 import { encryptPassword } from "./encryptionUtils";
 
-const err = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong");
+const err = (e: unknown) => {
+  if (e instanceof Error) {
+    const msg = e.message;
+    if (msg.includes("duplicate key value violates unique constraint")) {
+      return "This record already exists.";
+    }
+    if (msg.includes("violates foreign key constraint")) {
+      return "Invalid reference provided.";
+    }
+    return msg;
+  }
+  return "Something went wrong. Please try again.";
+};
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -9,7 +21,7 @@ const err = (e: unknown) => (e instanceof Error ? e.message : "Something went wr
 
 export type DeviceCategory = "classroom" | "gate";
 export type DeviceType = "fingerprint" | "facerecognition" | "card" | "multi";
-export type GateDirection = "In" | "Out";
+export type GateDirection = "In" | "Out" | "Standalone";
 
 export interface BiometricDevicePayload {
   deviceId?: number;

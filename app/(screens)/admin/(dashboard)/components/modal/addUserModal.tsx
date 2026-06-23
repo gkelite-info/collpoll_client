@@ -1061,7 +1061,11 @@ const AddUserModal: React.FC<{
         }
 
         try {
-          await registerUserToHikvision(targetUserId, basicData.fullName);
+          let eduTypeToPass = null;
+          if (basicData.role === "Student" && studentSelectedEducation) {
+            eduTypeToPass = studentSelectedEducation.collegeEducationType;
+          }
+          await registerUserToHikvision(targetUserId, basicData.fullName, basicData.collegeIntId, basicData.role, eduTypeToPass);
         } catch (hivErr) {
           console.warn("Hikvision registration failed (non-blocking):", hivErr);
         }
@@ -1647,11 +1651,14 @@ const AddUserModal: React.FC<{
                   </div>
                 </div>
 
-                {/* Dynamic subject blocks */}
                 {subjectBlocks.map((block, index) => {
-                  const blockFilteredYears = dbData.years.filter(
-                    (y) => y.collegeBranchId == selectedBranchId,
-                  );
+                  const blockFilteredYears = dbData.years
+                    .filter((y) => y.collegeBranchId == selectedBranchId)
+                    .sort((a, b) => {
+                      const numA = parseInt(a.collegeAcademicYear) || 0;
+                      const numB = parseInt(b.collegeAcademicYear) || 0;
+                      return numA - numB;
+                    });
                   const blockFilteredSubjects = dbData.subjects.filter(
                     (s) => s.collegeAcademicYearId == block.yearId,
                   );

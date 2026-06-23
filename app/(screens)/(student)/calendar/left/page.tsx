@@ -23,7 +23,7 @@ function getWeekDays(locale: string) {
     date.setDate(monday.getDate() + i);
     days.push({
       dayName: date.toLocaleDateString(
-        locale === "te" ? "te-IN" : locale === "hi" ? "hi-IN" : "en-US",
+        locale === "te" ? "te-IN" : locale === "hi" ? "hi-IN" : locale === "ur" ? "ur-IN" : "en-US",
         { weekday: "short" },
       ),
       dateNum: date.getDate(),
@@ -91,7 +91,26 @@ export default function CalendarLeft({
         if (!userResult.success || !userResult.userId) return;
 
         const studentContext = await fetchStudentContext(userResult.userId);
-        if (!studentContext) return;
+        if (
+          !studentContext ||
+          studentContext.collegeEducationId === null ||
+          studentContext.collegeBranchId === null ||
+          studentContext.collegeAcademicYearId === null ||
+          studentContext.collegeSectionsId === null ||
+          studentContext.collegeId === null
+        ) {
+          setLoading(false);
+          return;
+        }
+
+        const {
+          collegeId,
+          collegeEducationId,
+          collegeBranchId,
+          collegeAcademicYearId,
+          collegeSectionsId,
+          collegeSemesterId,
+        } = studentContext;
 
         const resultsMap: Record<string, DayData> = {};
 
@@ -99,17 +118,17 @@ export default function CalendarLeft({
           const [classes, quizRes, discRes, facultyTasks] = await Promise.all([
             fetchStudentTimetableByDate({
               date: day.fullDate,
-              collegeEducationId: studentContext.collegeEducationId,
-              collegeBranchId: studentContext.collegeBranchId,
-              collegeAcademicYearId: studentContext.collegeAcademicYearId,
-              collegeSemesterId: studentContext.collegeSemesterId,
-              collegeSectionId: studentContext.collegeSectionsId,
+              collegeEducationId,
+              collegeBranchId,
+              collegeAcademicYearId,
+              collegeSemesterId,
+              collegeSectionId: collegeSectionsId,
               isInter: collegeEducationType === "Inter",
             }),
             supabase
               .from("quizzes")
               .select("*")
-              .eq("collegeSectionsId", studentContext.collegeSectionsId)
+              .eq("collegeSectionsId", collegeSectionsId)
               .eq("isActive", true)
               .gte("startDate", `${day.fullDate}T00:00:00`)
               .lte("startDate", `${day.fullDate}T23:59:59`),
@@ -118,16 +137,16 @@ export default function CalendarLeft({
               .select(
                 "discussionSectionId, discussion_forum!inner(deadline, title)",
               )
-              .eq("collegeSectionsId", studentContext.collegeSectionsId)
+              .eq("collegeSectionsId", collegeSectionsId)
               .eq("is_deleted", false)
               .gte("discussion_forum.deadline", `${day.fullDate}T00:00:00`)
               .lte("discussion_forum.deadline", `${day.fullDate}T23:59:59`),
             fetchFacultyTasksForStudent({
               date: day.fullDate,
-              collegeId: studentContext.collegeId,
-              collegeBranchId: studentContext.collegeBranchId,
-              collegeAcademicYearId: studentContext.collegeAcademicYearId,
-              collegeSemesterId: studentContext.collegeSemesterId,
+              collegeId,
+              collegeBranchId,
+              collegeAcademicYearId,
+              collegeSemesterId,
             }),
           ]);
 

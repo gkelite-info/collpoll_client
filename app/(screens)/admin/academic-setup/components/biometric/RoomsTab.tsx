@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Plus, X, PencilSimple, Trash, LinkSimple, LinkBreak, MagnifyingGlass, CaretDown, Check } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -70,6 +71,8 @@ type UnassignedDevice = {
 
 export default function RoomsTab() {
   const { collegeId, adminId, loading } = useUser();
+  const searchParams = useSearchParams();
+  const actionParam = searchParams.get("action");
 
   const [rooms, setRooms] = useState<RoomViewData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -94,6 +97,12 @@ export default function RoomsTab() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editRoomId, setEditRoomId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
+
+  useEffect(() => {
+    if (actionParam === "add-room") {
+      setShowForm(true);
+    }
+  }, [actionParam]);
 
   // Device assignment
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -376,9 +385,8 @@ export default function RoomsTab() {
     device: room.device ? (
       <div className="flex items-center justify-center gap-2">
         <span
-          className={`inline-block w-2 h-2 rounded-full ${
-            room.device.isOnline ? "bg-green-500 animate-pulse" : "bg-red-400"
-          }`}
+          className={`inline-block w-2 h-2 rounded-full ${room.device.isOnline ? "bg-green-500 animate-pulse" : "bg-red-400"
+            }`}
         />
         <div className="flex flex-col text-left">
           <span className="text-xs font-semibold text-[#16284F] leading-tight">
@@ -635,11 +643,10 @@ export default function RoomsTab() {
                 {unassignedDevices.map((d) => (
                   <label
                     key={d.deviceId}
-                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                      selectedDeviceId === d.deviceId
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${selectedDeviceId === d.deviceId
                         ? "border-[#43C17A] bg-[#E6F4EA]"
                         : "border-gray-200 hover:border-gray-300"
-                    }`}
+                      }`}
                   >
                     <input
                       type="radio"
@@ -793,9 +800,8 @@ function CustomSelect<T extends string>({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full border ${
-            isOpen ? "border-[#43C17A] ring-1 ring-[#43C17A]" : "border-gray-300"
-          } rounded-lg px-4 py-2 pr-10 outline-none text-[#2D3748] bg-white cursor-pointer flex justify-between items-center text-left transition-all min-h-[42px] relative`}
+          className={`w-full border ${isOpen ? "border-[#43C17A] ring-1 ring-[#43C17A]" : "border-gray-300"
+            } rounded-lg px-4 py-2 pr-10 outline-none text-[#2D3748] bg-white cursor-pointer flex justify-between items-center text-left transition-all min-h-[42px] relative`}
         >
           <span className="truncate">
             {selectedOption ? selectedOption.label : placeholder || "Select option"}
@@ -816,11 +822,10 @@ function CustomSelect<T extends string>({
                 key={opt.value}
                 type="button"
                 onClick={() => handleSelect(opt.value)}
-                className={`w-full text-left px-4 py-2.5 text-sm transition-colors cursor-pointer hover:bg-gray-50 flex items-center justify-between ${
-                  opt.value === value
+                className={`w-full text-left px-4 py-2.5 text-sm transition-colors cursor-pointer hover:bg-gray-50 flex items-center justify-between ${opt.value === value
                     ? "bg-[#D6F1E2] text-[#43C17A] font-semibold"
                     : "text-[#2D3748]"
-                }`}
+                  }`}
               >
                 <span>{opt.label}</span>
                 {opt.value === value && <Check size={14} weight="bold" className="text-[#43C17A]" />}

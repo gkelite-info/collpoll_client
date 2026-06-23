@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   ArrowLeft,
@@ -10,16 +10,21 @@ import {
   Clock,
   CheckCircle,
   WarningCircle,
+  UploadSimple,
 } from "@phosphor-icons/react";
 import ResultsDropdown from "./resultsDropdown";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { downloadSamplePDF } from "../utils/downloadHelper";
 import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabaseClient";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { fetchStudentsWithProfile } from "@/lib/helpers/faculty/fetchStudents";
 
 interface UploadHistoryRow {
   id: string;
   examType: string;
   semester: string;
+  semesterId: number;
   uploadedOn: string;
   students: number;
   status: "Published" | "Draft";
@@ -33,6 +38,8 @@ export default function ClassResultDetails() {
   const year = searchParams.get("year") || "3rd Year";
   const section = searchParams.get("section") || "A";
   const totalStudents = Number(searchParams.get("students")) || 62;
+  const branch = searchParams.get("branch") || "CSE";
+  const subject = searchParams.get("subject") || "DBMS";
 
   const [selectedSemester, setSelectedSemester] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,33 +47,142 @@ export default function ClassResultDetails() {
 
   const semesterOptions = [
     { label: "All Semesters", value: "all" },
-    { label: "I Semester", value: "I Semester" },
-    { label: "II Semester", value: "II Semester" },
-    { label: "III Semester", value: "III Semester" },
-    { label: "IV Semester", value: "IV Semester" },
+    { label: "I Semester", value: "Semester 1" },
+    { label: "II Semester", value: "Semester 2" },
+    { label: "III Semester", value: "Semester 3" },
+    { label: "IV Semester", value: "Semester 4" },
   ];
 
-  const staticHistory: UploadHistoryRow[] = [
-    { id: "1", examType: "Mid Term", semester: "I Semester", uploadedOn: "12May2025", students: totalStudents, status: "Published" },
-    { id: "2", examType: "End Semester", semester: "I Semester", uploadedOn: "02May2025", students: totalStudents, status: "Draft" },
-    { id: "3", examType: "Quiz 1", semester: "II Semester", uploadedOn: "10Nov2025", students: totalStudents, status: "Published" },
-    { id: "4", examType: "Mid Term", semester: "II Semester", uploadedOn: "22Nov2025", students: totalStudents, status: "Published" },
-    { id: "5", examType: "End Semester", semester: "II Semester", uploadedOn: "15Dec2025", students: totalStudents, status: "Published" },
-    { id: "6", examType: "Quiz 2", semester: "III Semester", uploadedOn: "05Feb2026", students: totalStudents, status: "Published" },
-    { id: "7", examType: "Lab Exam", semester: "III Semester", uploadedOn: "20Feb2026", students: totalStudents, status: "Published" },
-    { id: "8", examType: "End Semester", semester: "III Semester", uploadedOn: "10Mar2026", students: totalStudents, status: "Draft" },
-    { id: "9", examType: "Mid Term", semester: "IV Semester", uploadedOn: "18Apr2026", students: totalStudents, status: "Published" },
-    { id: "10", examType: "Quiz 1", semester: "IV Semester", uploadedOn: "30Apr2026", students: totalStudents, status: "Published" },
-    { id: "11", examType: "End Semester", semester: "IV Semester", uploadedOn: "15May2026", students: totalStudents, status: "Draft" },
-  ];
+  const { sections: facultySections, collegeId, collegeEducationId, collegeBranchId } = useFaculty();
+  const [examHistory, setExamHistory] = useState<UploadHistoryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!collegeId || !collegeEducationId) {
+      setLoading(false);
+      return;
+    }
+
+    async function loadExamSchedules() {
+      setLoading(true);
+      try {
+        const sectionId = searchParams.get("sectionId");
+        const academicYearId = searchParams.get("academicYearId");
+
+        // 1. Fetch exam schedules for college
+        const { data: schedules, error: scheduleError } = await supabase
+          .from("college_exam_schedules")
+          .select("*")
+          .eq("collegeId", collegeId)
+          .eq("collegeEducationId", collegeEducationId)
+          .eq("isActive", true)
+          .is("deletedAt", null);
+
+        if (scheduleError) throw scheduleError;
+
+        // 2. Fetch students for this section to count them
+        let students: any[] = [];
+        if (sectionId && academicYearId && collegeId) {
+          students = await fetchStudentsWithProfile(collegeId, {
+            sectionId: Number(sectionId),
+            yearId: Number(academicYearId),
+          });
+        }
+
+        const studentIds = students.map((s: any) => s.studentId);
+
+        // 3. Resolve subjectId
+        const subjectName = searchParams.get("subject") || "";
+        let targetSubjectId = facultySections.find(s => s.faculty_subject?.subjectName === subjectName)?.collegeSubjectId;
+        if (!targetSubjectId && collegeBranchId) {
+          const { data: subData } = await supabase
+            .from("college_subjects")
+            .select("collegeSubjectId")
+            .eq("subjectName", subjectName)
+            .eq("collegeBranchId", collegeBranchId)
+            .is("deletedAt", null)
+            .maybeSingle();
+          targetSubjectId = subData?.collegeSubjectId;
+        }
+
+        // 4. Map schedules to history rows
+        const mappedHistory: UploadHistoryRow[] = [];
+
+        for (const s of (schedules || [])) {
+          const isSpecificMatch =
+            s.collegeBranchId === collegeBranchId &&
+            s.academicYear === year &&
+            s.collegeSectionsId === Number(sectionId);
+
+          const isGeneralMatch =
+            (!s.collegeBranchId) &&
+            (!s.academicYear || s.academicYear === "") &&
+            (!s.collegeSectionsId);
+
+          if (!isSpecificMatch && !isGeneralMatch) continue;
+
+          const semId = s.collegeSemesterId || Number(searchParams.get("semesterId") || 1);
+          let isUploaded = false;
+
+          if (studentIds.length > 0 && targetSubjectId) {
+            const { data: results } = await supabase
+              .from("results")
+              .select("studentId")
+              .in("studentId", studentIds)
+              .eq("subjectId", targetSubjectId)
+              .eq("collegeExamScheduleId", s.collegeExamScheduleId)
+              .limit(1);
+            isUploaded = !!(results && results.length > 0);
+          }
+
+          if (!isUploaded) continue; // Only display uploaded ones!
+
+          let uploadedOn = "-";
+          if (studentIds.length > 0 && targetSubjectId) {
+            const { data: results } = await supabase
+              .from("results")
+              .select("createdAt")
+              .in("studentId", studentIds)
+              .eq("subjectId", targetSubjectId)
+              .eq("collegeExamScheduleId", s.collegeExamScheduleId)
+              .order("createdAt", { ascending: false })
+              .limit(1);
+            if (results && results.length > 0 && results[0].createdAt) {
+              const d = new Date(results[0].createdAt);
+              uploadedOn = `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })} ${d.getFullYear()}`;
+            }
+          }
+
+          mappedHistory.push({
+            id: s.collegeExamScheduleId.toString(),
+            examType: s.scheduleTitle || s.examType || "Exam",
+            semester: s.collegeSemesterId ? `Semester ${s.collegeSemesterId}` : "General",
+            semesterId: semId,
+            uploadedOn,
+            students: students.length || totalStudents,
+            status: "Published"
+          });
+        }
+
+
+        setExamHistory(mappedHistory);
+      } catch (error) {
+        console.error("Failed to load exam history:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadExamSchedules();
+  }, [collegeId, collegeEducationId, collegeBranchId, year, searchParams, facultySections]);
 
   const filteredHistory = useMemo(() => {
-    let data = staticHistory;
+    let data = examHistory;
     if (selectedSemester !== "all") {
       data = data.filter((item) => item.semester === selectedSemester);
     }
     return data;
-  }, [selectedSemester, totalStudents]);
+  }, [examHistory, selectedSemester]);
 
   const paginatedHistory = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -84,15 +200,27 @@ export default function ClassResultDetails() {
     params.delete("year");
     params.delete("section");
     params.delete("students");
+    params.delete("branch");
+    params.delete("subject");
+    params.delete("sectionId");
+    params.delete("academicYearId");
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const handleUploadResults = (row: UploadHistoryRow) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("view", "upload");
+    params.set("semesterId", String(row.semesterId));
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   const handleViewResult = (row: UploadHistoryRow) => {
-    toast.success(`Opening result details for ${row.examType}...`);
     const params = new URLSearchParams(searchParams.toString());
     params.set("view", "grades");
     params.set("examType", row.examType);
     params.set("semester", row.semester);
+    params.set("semesterId", String(row.semesterId));
+    params.set("collegeExamScheduleId", row.id);
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -120,14 +248,14 @@ export default function ClassResultDetails() {
 
         <div className="flex-1 space-y-4">
           <h2 className="text-lg font-bold text-gray-800">Class Information</h2>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 pt-1">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Subject</p>
-              <p className="text-sm font-bold text-gray-800 mt-1">DBMS</p>
+              <p className="text-sm font-bold text-gray-800 mt-1">{subject}</p>
             </div>
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Branch</p>
-              <p className="text-sm font-bold text-gray-800 mt-1">CSE</p>
+              <p className="text-sm font-bold text-gray-800 mt-1">{branch}</p>
             </div>
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Year</p>
@@ -136,10 +264,6 @@ export default function ClassResultDetails() {
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Section</p>
               <p className="text-sm font-bold text-gray-800 mt-1">{section}</p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Semester</p>
-              <p className="text-sm font-bold text-gray-800 mt-1">IV</p>
             </div>
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Total Students</p>
@@ -153,15 +277,14 @@ export default function ClassResultDetails() {
         <h2 className="text-lg font-bold text-[#43C17A]">
           Previous Uploads History
         </h2>
-        <ResultsDropdown
+        {/* <ResultsDropdown
           options={semesterOptions}
           selectedValue={selectedSemester}
           onChange={handleSemesterFilterChange}
-        />
+        /> */}
       </div>
 
       <div className="bg-white border border-gray-150 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-
         <div className="w-full overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-[#F8F9FA]">
@@ -232,7 +355,7 @@ export default function ClassResultDetails() {
                             <Eye size={14} />
                             <span>View Result</span>
                           </button>
-                          <button
+                          {/* <button
                             onClick={() => {
                               downloadSamplePDF();
                               toast.success("Downloading PDF document...");
@@ -241,7 +364,7 @@ export default function ClassResultDetails() {
                           >
                             <DownloadSimple size={14} />
                             <span>Download PDF</span>
-                          </button>
+                          </button> */}
                         </div>
                       </td>
                     </tr>

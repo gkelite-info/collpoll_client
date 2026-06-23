@@ -57,6 +57,10 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     collegeHrId,
     placementEmployeeId,
     wellBeingId,
+    wellBeingCategoryId,
+    wellBeingCategoryIds,
+    wellBeingCategoryName,
+    wellBeingCategoryNames,
   } = useUser();
   const { college_branch, faculty_edu_type } = useFaculty();
   const [loading, setLoading] = useState(false);
@@ -101,6 +105,19 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
 
   const displayRole = role ? (displayRoleMap[role] ?? role) : "";
   const displayId = identifierId || (role ? roleIdMap[role] : null) || userId;
+  const wellbeingCategoryOptions = Array.from(
+    new Map(
+      (wellBeingCategoryIds.length || !wellBeingCategoryId
+        ? wellBeingCategoryIds
+        : [wellBeingCategoryId]
+      ).map((categoryId, index) => [
+        categoryId,
+        wellBeingCategoryNames[index]?.trim() ||
+          (categoryId === wellBeingCategoryId ? wellBeingCategoryName?.trim() : null) ||
+          `Category ${categoryId}`,
+      ]),
+    ),
+  );
   const profileOptions: ProfileOptions[] = [
     {
       id: "terms",
@@ -327,6 +344,26 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                 {displayRole || role}
               </p>
             )}
+            {role === "WellbeingExecutive" && wellbeingCategoryOptions.length ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {wellbeingCategoryOptions.map(([categoryId, categoryName]) => (
+                  <button
+                    key={categoryId}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onClose();
+                      router.push(
+                        `/wellbeing-executive/new-issues?issueView=all&categoryId=${categoryId}`,
+                      );
+                    }}
+                    className="rounded-md bg-[#43C17A] px-3 py-1 text-[11px] font-bold text-white hover:bg-[#34A362]"
+                  >
+                    {categoryName}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             {role === "SuperAdmin" && (
               <p className="text-xs text-[#282828] font-medium">Super Admin</p>
             )}

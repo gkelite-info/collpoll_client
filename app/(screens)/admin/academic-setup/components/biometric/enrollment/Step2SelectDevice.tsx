@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   getBiometricDevices,
   BiometricDeviceRow,
 } from "@/lib/helpers/devices/biometricDeviceAPI";
+import { MagnifyingGlass, WifiSlash } from "@phosphor-icons/react";
 import DeviceListShimmer from "../shimmers/DeviceListShimmer";
 import { UserSearchResult } from "./types";
 
@@ -22,12 +23,13 @@ export default function Step2SelectDevice({
   const [devices, setDevices] = useState<BiometricDeviceRow[]>([]);
   const [selectedDevices, setSelectedDevices] = useState<BiometricDeviceRow[]>([]);
   const [isFetchingDevices, setIsFetchingDevices] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     let isMounted = true;
     const fetchDevices = async () => {
       setIsFetchingDevices(true);
-      const res = await getBiometricDevices(collegeId, 1, 50);
+      const res = await getBiometricDevices(collegeId, 1, 100);
       if (res.success && isMounted) {
         setDevices(res.data);
         const activeDevices = res.data.filter((d) => d.isActive);
@@ -50,7 +52,23 @@ export default function Step2SelectDevice({
   };
 
   const activeDevices = devices.filter((d) => d.isActive);
-  const allSelected = activeDevices.length > 0 && selectedDevices.length === activeDevices.length;
+
+  // Filter devices by search query (name, IP, type)
+  const filteredDevices = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return devices;
+    return devices.filter(
+      (d) =>
+        d.deviceName.toLowerCase().includes(query) ||
+        d.deviceIp.toLowerCase().includes(query) ||
+        d.deviceType.toLowerCase().includes(query) ||
+        d.deviceCategory.toLowerCase().includes(query),
+    );
+  }, [devices, searchQuery]);
+
+  const allActiveFiltered = filteredDevices.filter((d) => d.isActive);
+  const allSelected =
+    activeDevices.length > 0 && selectedDevices.length === activeDevices.length;
 
   const toggleSelectAll = () => {
     if (allSelected) {
@@ -87,16 +105,55 @@ export default function Step2SelectDevice({
         )}
       </div>
 
+      {/* Search input — same style as Step1 user search */}
+      {!isFetchingDevices && devices.length > 0 && (
+        <div className="relative mb-3">
+          <MagnifyingGlass
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          />
+          <input
+            type="text"
+            placeholder="Search devices by name, IP, type..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#43C17A] focus:ring-1 focus:ring-[#43C17A] transition-all text-[#2D3748] placeholder-gray-400"
+          />
+        </div>
+      )}
+
       {isFetchingDevices ? (
         <DeviceListShimmer />
       ) : devices.length === 0 ? (
-        <p className="text-gray-400 text-sm text-center py-8">
-          No devices available. Add a device first.
-        </p>
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <WifiSlash size={40} className="text-gray-300 mb-3" />
+          <p className="text-sm font-medium text-gray-500 mb-1">No Devices Available</p>
+          <p className="text-xs text-gray-400">
+            Add a biometric device in the Devices tab to start enrolling users.
+          </p>
+        </div>
+      ) : filteredDevices.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <MagnifyingGlass size={32} className="text-gray-300 mb-2" />
+          <p className="text-sm text-gray-400">
+            No devices match &quot;{searchQuery}&quot;
+          </p>
+        </div>
       ) : (
         <>
-          <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar mb-4">
-            {devices.map((d) => {
+          {/* Selection count */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-gray-400 font-medium">
+              {selectedDevices.length} of {activeDevices.length} active device{activeDevices.length !== 1 ? "s" : ""} selected
+            </span>
+            <span className="text-xs text-gray-400">
+              {filteredDevices.length} device{filteredDevices.length !== 1 ? "s" : ""} shown
+            </span>
+          </div>
+
+          {/* Device list — consistent min-height and scrollable */}
+          <div className="space-y-2 min-h-[200px] max-h-80 overflow-y-auto custom-scrollbar mb-4 pr-0.5">
+            {filteredDevices.map((d) => {
               const isChecked = selectedDevices.some((sd) => sd.deviceId === d.deviceId);
               return (
                 <div

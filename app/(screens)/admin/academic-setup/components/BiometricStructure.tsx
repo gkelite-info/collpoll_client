@@ -6,14 +6,16 @@ import { Toaster } from "react-hot-toast";
 import RoomsTab from "./biometric/RoomsTab";
 import DevicesTab from "./biometric/DevicesTab";
 import CredentialsTab from "./biometric/CredentialsTab";
+import LogsTab from "./biometric/LogsTab";
 
 
-type BiometricTab = "rooms" | "devices" | "credentials";
+type BiometricTab = "rooms" | "devices" | "credentials" | "logs";
 
 const tabs: { id: BiometricTab; label: string }[] = [
   { id: "rooms", label: "Rooms" },
   { id: "devices", label: "Devices" },
   { id: "credentials", label: "Credentials" },
+  { id: "logs", label: "Logs" },
 ];
 
 export default function BiometricStructure() {
@@ -22,7 +24,7 @@ export default function BiometricStructure() {
   const pathname = usePathname();
 
   const queryBiotab = searchParams.get("biotab") as BiometricTab | null;
-  const activeTab: BiometricTab = (queryBiotab === "rooms" || queryBiotab === "devices" || queryBiotab === "credentials")
+  const activeTab: BiometricTab = (queryBiotab === "rooms" || queryBiotab === "devices" || queryBiotab === "credentials" || queryBiotab === "logs")
     ? queryBiotab
     : "rooms";
 
@@ -71,6 +73,7 @@ export default function BiometricStructure() {
         {activeTab === "rooms" && <RoomsTab />}
         {activeTab === "devices" && <DevicesTab />}
         {activeTab === "credentials" && <CredentialsTab />}
+        {activeTab === "logs" && <LogsTab />}
       </div>
     </div>
   );

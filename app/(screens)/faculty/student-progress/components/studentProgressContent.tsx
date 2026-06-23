@@ -6,6 +6,7 @@ import StudentProgressOverview from "./studentProgressOverview";
 import ResultsManagement from "./resultsManagement";
 import ClassResultDetails from "./classResultDetails";
 import MemorandumOfGrades from "./memorandumOfGrades";
+import UploadResults from "./uploadResults";
 
 export default function StudentProgressContent() {
   const router = useRouter();
@@ -32,6 +33,8 @@ export default function StudentProgressContent() {
         return <ClassResultDetails />;
       case "grades":
         return <MemorandumOfGrades />;
+      case "upload":
+        return <UploadResults />;
       default:
         return <ResultsManagement />;
     }

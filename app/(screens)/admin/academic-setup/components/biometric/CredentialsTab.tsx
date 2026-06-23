@@ -180,7 +180,6 @@ export default function CredentialsTab() {
                   );
                 }
               } catch (e: any) {
-                console.warn(`Failed to delete from device ${device.deviceId}`, e);
                 // We let it throw to prevent DB deletion if the physical deletion failed on any active device
                 throw new Error(e.message || "Device rejected deletion");
               }

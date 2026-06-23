@@ -279,6 +279,7 @@ export default function Page() {
             sectionId: sectionId,
 
             rawFormData: {
+              subjectId: row.subject,
               topicId: row.eventTopic,
               topicTitle: safelyExtractedTopic, // 🟢 Passed perfectly down to Details Modal
               roomNo: row.college_rooms?.roomNo ?? "",
@@ -362,7 +363,6 @@ export default function Page() {
     if (conflict) {
       setPendingEvent(payload);
       setShowConflictModal(true);
-      setIsModalOpen(false);
       return { success: false };
     }
 
@@ -433,7 +433,6 @@ export default function Page() {
   const handleConflictCancel = () => {
     setPendingEvent(null);
     setShowConflictModal(false);
-    setIsModalOpen(true);
   };
 
   const confirmAddEvent = async () => {
@@ -571,6 +570,7 @@ export default function Page() {
 
     setEventForm({
       title: event.title ?? "",
+      subjectId: event.rawFormData?.subjectId ?? null,
       topicId: event.rawFormData?.topicId ?? null,
       roomNo: event.rawFormData?.roomNo ?? "",
       collegeRoomId: event.rawFormData?.collegeRoomId ?? null,
