@@ -12,7 +12,6 @@ const ENV_KEY =
 
 const DEFAULT_KEY = "collpoll-biometric-enc-key-0032!";
 
-/** Create a clean ArrayBuffer from Uint8Array (avoids TS SharedArrayBuffer issues) */
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   const buf = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(buf).set(bytes);

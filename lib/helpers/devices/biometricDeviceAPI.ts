@@ -15,9 +15,6 @@ const err = (e: unknown) => {
   return "Something went wrong. Please try again.";
 };
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
 
 export type DeviceCategory = "classroom" | "gate";
 export type DeviceType = "fingerprint" | "facerecognition" | "card" | "multi";
@@ -31,7 +28,6 @@ export interface BiometricDevicePayload {
   deviceIp: string;
   devicePort: number;
   deviceUsername: string;
-  /** Plain‑text — encrypted before insert/update */
   devicePassword: string;
   deviceType: DeviceType;
   deviceCategory: DeviceCategory;
@@ -68,9 +64,6 @@ export interface DeviceFilters {
   search?: string;
 }
 
-/* ------------------------------------------------------------------ */
-/*  GET — paginated list                                               */
-/* ------------------------------------------------------------------ */
 
 export const getBiometricDevices = async (
   collegeId: number,
@@ -112,9 +105,6 @@ export const getBiometricDevices = async (
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  GET — single                                                       */
-/* ------------------------------------------------------------------ */
 
 export const getBiometricDeviceById = async (deviceId: number) => {
   try {
@@ -131,9 +121,6 @@ export const getBiometricDeviceById = async (deviceId: number) => {
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  GET — unassigned devices (not linked to any room)                  */
-/* ------------------------------------------------------------------ */
 
 export const getUnassignedDevices = async (
   collegeId: number,
@@ -184,9 +171,6 @@ export const getUnassignedDevices = async (
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  UPSERT                                                             */
-/* ------------------------------------------------------------------ */
 
 export const upsertBiometricDevice = async (payload: BiometricDevicePayload) => {
   try {
@@ -274,15 +258,11 @@ export const upsertBiometricDevice = async (payload: BiometricDevicePayload) => 
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  DELETE (soft)                                                       */
-/* ------------------------------------------------------------------ */
 
 export const deleteBiometricDevice = async (deviceId: number) => {
   try {
     const now = new Date().toISOString();
 
-    // Also deactivate any room link
     await supabase
       .from("room_devices")
       .update({ isActive: false, deletedAt: now, updatedAt: now })
@@ -301,9 +281,6 @@ export const deleteBiometricDevice = async (deviceId: number) => {
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  Heartbeat update                                                   */
-/* ------------------------------------------------------------------ */
 
 export const updateDeviceHeartbeat = async (deviceId: number, isOnline: boolean) => {
   try {
@@ -322,9 +299,6 @@ export const updateDeviceHeartbeat = async (deviceId: number, isOnline: boolean)
   }
 };
 
-/* ------------------------------------------------------------------ */
-/*  Realtime Subscription                                             */
-/* ------------------------------------------------------------------ */
 
 export const subscribeToDeviceStatusUpdates = (
   collegeId: number,

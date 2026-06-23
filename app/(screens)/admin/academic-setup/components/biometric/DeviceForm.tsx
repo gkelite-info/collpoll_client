@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { X, Eye, EyeSlash, CaretDown, Check } from "@phosphor-icons/react";
+import { useState } from "react";
+import { X, Eye, EyeSlash } from "@phosphor-icons/react";
 import { BiometricDevicePayload, DeviceCategory, DeviceType, GateDirection } from "@/lib/helpers/devices/biometricDeviceAPI";
+import CustomSelect from "./ui/CustomSelect";
 
 export type DeviceFormState = {
   deviceName: string;
@@ -58,7 +59,6 @@ export default function DeviceForm({
       </div>
 
       <form onSubmit={onSave} className="space-y-5">
-        {/* Basic Info */}
         <div>
           <h3 className="text-sm font-semibold text-[#16284F] mb-3 flex items-center gap-2">
             <span className="w-5 h-5 rounded-full bg-[#43C17A] text-white text-[10px] inline-flex items-center justify-center font-bold leading-none">
@@ -97,7 +97,6 @@ export default function DeviceForm({
           </div>
         </div>
 
-        {/* Network */}
         <div>
           <h3 className="text-sm font-semibold text-[#16284F] mb-3 flex items-center gap-2">
             <span className="w-5 h-5 rounded-full bg-[#43C17A] text-white text-[10px] inline-flex items-center justify-center font-bold leading-none">
@@ -176,7 +175,6 @@ export default function DeviceForm({
           </div>
         </div>
 
-        {/* Classification */}
         <div>
           <h3 className="text-sm font-semibold text-[#16284F] mb-3 flex items-center gap-2">
             <span className="w-5 h-5 rounded-full bg-[#43C17A] text-white text-[10px] inline-flex items-center justify-center font-bold leading-none">
@@ -190,7 +188,7 @@ export default function DeviceForm({
               name="deviceType"
               value={form.deviceType}
               options={deviceTypes}
-              onChange={onChange}
+              onChange={(val, name) => onChange({ target: { name, value: val } } as any)}
               required
             />
             <CustomSelect
@@ -198,7 +196,7 @@ export default function DeviceForm({
               name="deviceCategory"
               value={form.deviceCategory}
               options={deviceCategories}
-              onChange={onChange}
+              onChange={(val, name) => onChange({ target: { name, value: val } } as any)}
               required
               placeholder="Select category"
             />
@@ -208,7 +206,7 @@ export default function DeviceForm({
                 name="gateDirection"
                 value={form.gateDirection}
                 options={gateDirections}
-                onChange={onChange}
+                onChange={(val, name) => onChange({ target: { name, value: val } } as any)}
                 required
                 placeholder="Select direction"
               />
@@ -216,7 +214,6 @@ export default function DeviceForm({
           </div>
         </div>
 
-        {/* Optional Info */}
         <div>
           <h3 className="text-sm font-semibold text-[#16284F] mb-3 flex items-center gap-2">
             <span className="w-5 h-5 rounded-full bg-gray-300 text-white text-[10px] inline-flex items-center justify-center font-bold leading-none">
@@ -250,7 +247,6 @@ export default function DeviceForm({
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-gray-100">
           <button
             type="button"
@@ -282,96 +278,4 @@ export default function DeviceForm({
   );
 }
 
-interface CustomSelectProps {
-  label: string;
-  name: string;
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  required?: boolean;
-  placeholder?: string;
-}
 
-function CustomSelect({
-  label,
-  name,
-  value,
-  options,
-  onChange,
-  required = false,
-  placeholder,
-}: CustomSelectProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const selectedOption = options.find((o) => o.value === value);
-
-  const handleSelect = (val: string) => {
-    const event = {
-      target: {
-        name,
-        value: val,
-      },
-    } as unknown as React.ChangeEvent<HTMLSelectElement>;
-    onChange(event);
-    setIsOpen(false);
-  };
-
-  return (
-    <div className="space-y-1 w-full" ref={containerRef}>
-      <label className="text-sm font-medium text-[#16284F]">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className={`w-full border ${
-            isOpen ? "border-[#43C17A] ring-1 ring-[#43C17A]" : "border-gray-300"
-          } rounded-lg px-4 py-2 pr-10 outline-none text-[#2D3748] bg-white cursor-pointer flex justify-between items-center text-left transition-all min-h-[42px] relative`}
-        >
-          <span className="truncate">
-            {selectedOption ? selectedOption.label : placeholder || "Select option"}
-          </span>
-          <CaretDown
-            size={14}
-            className="absolute right-3 top-1/2 text-gray-400 pointer-events-none transition-transform duration-200"
-            style={{
-              transform: `translateY(-50%) ${isOpen ? "rotate(180deg)" : "rotate(0deg)"}`,
-            }}
-          />
-        </button>
-
-        {isOpen && (
-          <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-lg shadow-xl max-h-48 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-150">
-            {options.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => handleSelect(opt.value)}
-                className={`w-full text-left px-4 py-2.5 text-sm transition-colors cursor-pointer hover:bg-gray-50 flex items-center justify-between ${
-                  opt.value === value
-                    ? "bg-[#D6F1E2] text-[#43C17A] font-semibold"
-                    : "text-[#2D3748]"
-                }`}
-              >
-                <span>{opt.label}</span>
-                {opt.value === value && <Check size={14} weight="bold" className="text-[#43C17A]" />}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}

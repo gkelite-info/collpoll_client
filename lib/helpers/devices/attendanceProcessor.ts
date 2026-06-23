@@ -1,8 +1,5 @@
 import { adminSupabase } from "./scanIngestionHelper";
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                               */
-/* ------------------------------------------------------------------ */
 
 export type ProcessRejectionReason =
   | "NoActiveSession"
@@ -23,9 +20,6 @@ export interface ProcessResult {
   error?: string;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                             */
-/* ------------------------------------------------------------------ */
 
 function timeToMin(hhmmss: string): number {
   const parts = hhmmss.split(":");
@@ -33,20 +27,14 @@ function timeToMin(hhmmss: string): number {
 }
 
 function isoToScanDate(iso: string): string {
-  // Returns YYYY-MM-DD in UTC
   return iso.split("T")[0];
 }
 
 function isoToScanTime(iso: string): string {
-  // Returns exactly HH:MM extracted from the device's provided string to ignore server timezone
   const match = iso.match(/T(\d{2}:\d{2})/);
   return match ? match[1] : "00:00";
 }
 
-/* ------------------------------------------------------------------ */
-/*  findActiveClassSessions                                             */
-/*  Finds all device_class_sessions active at the time of scan.         */
-/* ------------------------------------------------------------------ */
 
 async function findActiveClassSessions(
   deviceId: number,
@@ -74,19 +62,15 @@ async function findActiveClassSessions(
 
   const scanMin = timeToMin(scanTime);
 
-  // 1. Filter sessions where the scan time falls strictly within the [fromTime, toTime] window.
-  // The user requested NO buffer time.
   const validSessions = sessions.filter((s: any) => {
     const from = timeToMin(s.fromTime);
     const to = timeToMin(s.toTime);
     
-    // Strict window, no buffer allowed
     return scanMin >= from && scanMin <= to;
   });
 
   if (validSessions.length === 0) return [];
 
-  // 2. Sort overlaps to prioritize the class starting closest to the scan time
   validSessions.sort((a: any, b: any) => {
     const diffA = Math.abs(scanMin - timeToMin(a.fromTime));
     const diffB = Math.abs(scanMin - timeToMin(b.fromTime));
@@ -96,16 +80,11 @@ async function findActiveClassSessions(
   return validSessions;
 }
 
-/* ------------------------------------------------------------------ */
-/*  verifyStudentEnrollment                                             */
-/*  Confirms the student is enrolled in the class section.             */
-/* ------------------------------------------------------------------ */
 
 async function verifyStudentEnrollment(
   studentId: number,
   calendarEventId: number,
 ): Promise<boolean> {
-  // Get sections linked to this calendar event
   const { data: eventSections, error: secErr } = await adminSupabase
     .from("calendar_event_section")
     .select("collegeSectionId")
@@ -115,7 +94,6 @@ async function verifyStudentEnrollment(
 
   const sectionIds = eventSections.map((s: any) => s.collegeSectionId);
 
-  // Check student_academic_history for current enrollment in one of these sections
   const { data: history, error: histErr } = await adminSupabase
     .from("student_academic_history")
     .select("studentId")
@@ -128,11 +106,6 @@ async function verifyStudentEnrollment(
   return !!history;
 }
 
-/* ------------------------------------------------------------------ */
-/*  processClassroomAttendance                                          */
-/*  Main Phase 3 function: scan → attendance_record.                   */
-/*  All edge cases handled, fully idempotent via ON CONFLICT.          */
-/* ------------------------------------------------------------------ */
 
 export async function processClassroomAttendance(params: {
   deviceId: number;
@@ -148,7 +121,6 @@ export async function processClassroomAttendance(params: {
     const scanDate = isoToScanDate(scanTimestamp);
     const scanTime = isoToScanTime(scanTimestamp);
 
-    // 1. Verify this user is a Student (not staff — staff use gate devices)
     const { data: userData, error: userErr } = await adminSupabase
       .from("users")
       .select("role")
@@ -163,7 +135,6 @@ export async function processClassroomAttendance(params: {
       };
     }
 
-    // 2. Get studentId from students table (via userId)
     const { data: student, error: stuErr } = await adminSupabase
       .from("students")
       .select("studentId")
@@ -179,7 +150,6 @@ export async function processClassroomAttendance(params: {
     }
     const { studentId } = student;
 
-    // 2.5 Debounce check (60 seconds)
     const { data: lastScanLogs } = await adminSupabase
       .from("device_attendance_logs")
       .select("scanTimestamp")
@@ -198,7 +168,6 @@ export async function processClassroomAttendance(params: {
       }
     }
 
-    // 3. Find active class sessions for this device + time
     const sessions = await findActiveClassSessions(deviceId, scanDate, scanTime);
 
     if (!sessions || sessions.length === 0) {
@@ -208,7 +177,6 @@ export async function processClassroomAttendance(params: {
       };
     }
 
-    // 4. Verify student is enrolled in one of the active matching classes
     let matchedSession = null;
     for (const session of sessions) {
       const isEnrolled = await verifyStudentEnrollment(studentId, session.calendarEventId);
@@ -227,7 +195,6 @@ export async function processClassroomAttendance(params: {
 
     const { deviceClassSessionId, calendarEventId } = matchedSession;
 
-    // 5. Check for existing attendance_record (idempotency)
     const { data: existing, error: existErr } = await adminSupabase
       .from("attendance_record")
       .select("attendanceRecordId, studentLoginTime")
@@ -241,7 +208,6 @@ export async function processClassroomAttendance(params: {
     const now = new Date().toISOString();
 
     if (existing) {
-      // Already marked — optionally update loginTime if this scan is earlier
       const existingMin = existing.studentLoginTime
         ? timeToMin(existing.studentLoginTime)
         : Infinity;
@@ -282,7 +248,6 @@ export async function processClassroomAttendance(params: {
       };
     }
 
-    // 6. Insert attendance_record (ON CONFLICT: studentId + calendarEventId)
     const { data: newRecord, error: insertErr } = await adminSupabase
       .from("attendance_record")
       .upsert(
@@ -302,7 +267,6 @@ export async function processClassroomAttendance(params: {
 
     if (insertErr) throw new Error(insertErr.message);
 
-    // 7. Broadcast realtime update
     const payload = {
       attendanceRecordId: newRecord.attendanceRecordId,
       studentId,
@@ -313,7 +277,6 @@ export async function processClassroomAttendance(params: {
     };
 
     try {
-      // Broadcast to specific class channel (for faculty)
       await adminSupabase
         .channel(`public:attendance_record:eventId=${calendarEventId}`)
         .send({
@@ -322,7 +285,6 @@ export async function processClassroomAttendance(params: {
           payload,
         });
 
-      // Broadcast to global admin channel
       await adminSupabase
         .channel(`public:attendance_record:admin`)
         .send({
@@ -348,11 +310,6 @@ export async function processClassroomAttendance(params: {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/*  getDeviceClassSessionStatus                                         */
-/*  Returns whether a device currently has an active class session.    */
-/*  Used by admin dashboard to show device live status.                */
-/* ------------------------------------------------------------------ */
 
 export async function getDeviceClassSessionStatus(deviceId: number): Promise<{
   isActive: boolean;

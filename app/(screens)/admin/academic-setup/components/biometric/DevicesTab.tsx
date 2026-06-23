@@ -10,6 +10,7 @@ import {
   MagnifyingGlass,
 } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
 import {
   getBiometricDevices,
@@ -84,14 +85,33 @@ const emptyForm: DeviceFormState = {
 
 export default function DevicesTab() {
   const { collegeId, adminId, loading } = useUser();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [devices, setDevices] = useState<BiometricDeviceRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [activeFilter, setActiveFilter] = useState(0);
+  
+  const initialFilter = parseInt(searchParams.get("deviceFilter") || "0", 10);
+  const [activeFilter, setActiveFilter] = useState(initialFilter);
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (activeFilter !== 0) {
+      params.set("deviceFilter", activeFilter.toString());
+    } else {
+      params.delete("deviceFilter");
+    }
+    const newUrl = `${pathname}?${params.toString()}`;
+    if (newUrl !== `${pathname}?${searchParams.toString()}`) {
+      router.replace(newUrl, { scroll: false });
+    }
+  }, [activeFilter, pathname, router, searchParams]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -104,13 +124,11 @@ export default function DevicesTab() {
     setCurrentPage(1);
   }, [debouncedSearchQuery]);
 
-  // Form
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editDeviceId, setEditDeviceId] = useState<number | null>(null);
   const [form, setForm] = useState<DeviceFormState>(emptyForm);
 
-  // Delete
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
@@ -148,7 +166,6 @@ export default function DevicesTab() {
     loadDevices(currentPage);
   }, [collegeId, currentPage, loadDevices]);
 
-  // --- Realtime Subscription ---
   useEffect(() => {
     if (!collegeId) return;
 
@@ -172,7 +189,6 @@ export default function DevicesTab() {
     return unsubscribe;
   }, [collegeId]);
 
-  /* ---------- Filter ---------- */
 
   const handleFilterChange = (index: number) => {
     setActiveFilter(index);
@@ -183,7 +199,6 @@ export default function DevicesTab() {
     setSearchQuery(e.target.value);
   };
 
-  /* ---------- Form ---------- */
 
   const handleOpenForm = async (device?: BiometricDeviceRow) => {
     if (device) {
@@ -242,7 +257,6 @@ export default function DevicesTab() {
       return;
     }
 
-    // Validations
     if (!form.deviceName.trim()) return toast.error("Device name is required.");
     if (!form.deviceSerialNumber.trim()) return toast.error("Serial number is required.");
     if (!form.deviceIp.trim()) return toast.error("Device IP is required.");
@@ -253,7 +267,6 @@ export default function DevicesTab() {
     if (form.deviceCategory === "gate" && !form.gateDirection)
       return toast.error("Please select a gate direction.");
 
-    // IP validation
     const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
     if (!ipRegex.test(form.deviceIp.trim()))
       return toast.error("Please enter a valid IP address (e.g. 192.168.1.100).");
@@ -279,7 +292,6 @@ export default function DevicesTab() {
 
       const res = await upsertBiometricDevice(payload);
       if (res.success && res.data) {
-        // Automatically sync and configure device webhook via SaaS endpoint
         toast.promise(
           fetch("/api/biometric/device/sync", {
             method: "POST",
@@ -309,7 +321,6 @@ export default function DevicesTab() {
     }
   };
 
-  /* ---------- Delete ---------- */
 
   const handleDeleteClick = (id: number) => {
     setSelectedDeviceId(id);
@@ -336,7 +347,6 @@ export default function DevicesTab() {
     }
   };
 
-  /* ---------- Table ---------- */
 
   const tableData = devices.map((d) => ({
     device: (
@@ -412,7 +422,6 @@ export default function DevicesTab() {
     ),
   }));
 
-  /* ---------- Render ---------- */
 
   const selectedDeleteDevice = devices.find((d) => d.deviceId === selectedDeviceId);
 
@@ -420,7 +429,6 @@ export default function DevicesTab() {
     <div className="w-full flex flex-col">
       {!showForm ? (
         <>
-          {/* Header */}
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4">
             <h2 className="text-xl font-bold text-[#16284F]">Biometric Devices</h2>
             <button
@@ -432,7 +440,6 @@ export default function DevicesTab() {
             </button>
           </div>
 
-          {/* Filter + Search */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
             <div className="flex flex-wrap gap-2">
               {FILTER_CHIPS.map((chip, i) => (

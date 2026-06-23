@@ -6,25 +6,19 @@
  * Digest authentication.
  */
 
-/* ------------------------------------------------------------------ */
-/*  Core proxy call                                                    */
-/* ------------------------------------------------------------------ */
 import { getBiometricValidity } from "@/lib/helpers/biometric/biometricValidity";
 
 interface ProxyRequest {
   deviceId: number;
-  /** ISAPI endpoint path (after /ISAPI/) e.g. "AccessControl/UserInfo/Record" */
   endpoint: string;
   method?: "POST" | "PUT" | "DELETE" | "GET";
   body?: Record<string, unknown> | string;
-  /** For multipart (face image upload) */
   formData?: FormData;
 }
 
 async function callDeviceProxy(req: ProxyRequest) {
   const isFormData = !!req.formData;
   
-  // Use absolute URL if running on the server
   const baseUrl = typeof window !== "undefined" ? "" : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
 
   const res = await fetch(`${baseUrl}/api/biometric/device-proxy`, {
@@ -78,11 +72,7 @@ async function callDeviceProxy(req: ProxyRequest) {
   return data;
 }
 
-/* ------------------------------------------------------------------ */
-/*  User Management                                                    */
-/* ------------------------------------------------------------------ */
 
-/** Register / update a user on a Hikvision device */
 export const registerUserOnDevice = async (
   deviceId: number,
   userId: number,
@@ -146,7 +136,6 @@ export const registerUserOnDevice = async (
   }
 };
 
-/** Search a specific user on a device */
 export const searchUserOnDevice = async (deviceId: number, userId: number) => {
   return callDeviceProxy({
     deviceId,
@@ -162,7 +151,6 @@ export const searchUserOnDevice = async (deviceId: number, userId: number) => {
   });
 };
 
-/** Search all persons on a device */
 export const searchAllUsersOnDevice = async (
   deviceId: number,
   position = 0,
@@ -181,7 +169,6 @@ export const searchAllUsersOnDevice = async (
   });
 };
 
-/** Delete a user from a device */
 export const deleteUserFromDevice = async (deviceId: number, userId: number) => {
   return callDeviceProxy({
     deviceId,
@@ -195,16 +182,11 @@ export const deleteUserFromDevice = async (deviceId: number, userId: number) => 
   });
 };
 
-/* ------------------------------------------------------------------ */
-/*  Face                                                               */
-/* ------------------------------------------------------------------ */
 
-/** Get a valid UUID for the FaceDataRecord devIndex request parameter */
 export const getDeviceFaceLibIndex = async (): Promise<string> => {
   return crypto.randomUUID().toUpperCase();
 };
 
-/** Register a face template on a device (image upload) */
 export const registerFaceOnDevice = async (
   deviceId: number,
   userId: number,
@@ -241,7 +223,6 @@ export const registerFaceOnDevice = async (
       throw new Error("The device rejected the payload format. Firmware might be incompatible.");
     }
     
-    // Provide a generic user-friendly fallback if the error message is too technical
     if (e?.message && (e.message.includes("proxy error") || e.message.includes("face"))) {
       throw e;
     } else {
@@ -250,7 +231,6 @@ export const registerFaceOnDevice = async (
   }
 };
 
-/** Register face using base64 data (for programmatic use) */
 export const registerFaceBase64OnDevice = async (
   deviceId: number,
   userId: number,
@@ -269,7 +249,6 @@ export const registerFaceBase64OnDevice = async (
     })
   );
 
-  // Convert base64 to File
   const byteString = atob(faceDataBase64.includes(",") ? faceDataBase64.split(',')[1] : faceDataBase64);
   const ab = new ArrayBuffer(byteString.length);
   const ia = new Uint8Array(ab);
@@ -305,7 +284,6 @@ export const registerFaceBase64OnDevice = async (
   }
 };
 
-/** Fetch the dynamic true FPID of a user's face record */
 const getFacePictureId = async (deviceId: number, userId: number): Promise<string | null> => {
   try {
     const res = await callDeviceProxy({
@@ -328,7 +306,6 @@ const getFacePictureId = async (deviceId: number, userId: number): Promise<strin
     const match = res?.MatchList?.[0] || res?.FaceMatchList?.[0];
     return match?.FPID || null;
   } catch (e: any) {
-    // Critical: Do not swallow network errors. If device is offline, we must halt!
     if (e?.message?.toLowerCase().includes("fetch failed") || e?.message?.toLowerCase().includes("device proxy error")) {
       throw new Error(`Device offline or unreachable: ${e.message}`);
     }
@@ -336,7 +313,6 @@ const getFacePictureId = async (deviceId: number, userId: number): Promise<strin
   }
 };
 
-/** Delete face data from a device */
 export const deleteFaceFromDevice = async (deviceId: number, userId: number) => {
   const attemptDelete = async (endpoint: string, method: string, payload?: any) => {
     return callDeviceProxy({
@@ -354,8 +330,6 @@ export const deleteFaceFromDevice = async (deviceId: number, userId: number) => 
     }
   };
 
-  // Strategy 1: DS-K1T320EFWX specifically requires XML for this endpoint
-  // Logs showed JSON returned `badXmlFormat`, so we supply a raw XML payload here.
   try {
     const xmlPayload = `
 <DelFaceParamCfg version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">
@@ -373,7 +347,6 @@ export const deleteFaceFromDevice = async (deviceId: number, userId: number) => 
     lastError = e;
   }
 
-  // Strategy 2: Standard AccessControl FaceInfo Delete (Matches Card/Fingerprint)
   try {
     return await attemptDelete(
       "AccessControl/FaceInfo/Delete?format=json",
@@ -389,7 +362,6 @@ export const deleteFaceFromDevice = async (deviceId: number, userId: number) => 
     lastError = e;
   }
 
-  // Strategy 3: Standard AccessControl FaceData Delete
   try {
     return await attemptDelete(
       "AccessControl/FaceData/Delete?format=json",
@@ -405,7 +377,6 @@ export const deleteFaceFromDevice = async (deviceId: number, userId: number) => 
     lastError = e;
   }
 
-  // Strategy 4: User's exact payload format for FDLib
   try {
     return await attemptDelete(
       "Intelligent/FDLib/FDSearch/Delete?format=json",
@@ -421,7 +392,6 @@ export const deleteFaceFromDevice = async (deviceId: number, userId: number) => 
     lastError = e;
   }
 
-  // Strategy 5: Include faceLibType and FDID (Fixes 'faceLibraryIDError')
   try {
     return await attemptDelete(
       "Intelligent/FDLib/FDSearch/Delete?format=json",
@@ -439,7 +409,6 @@ export const deleteFaceFromDevice = async (deviceId: number, userId: number) => 
     lastError = e;
   }
 
-  // Strategy 6: Target by FPID explicitly (Fixes 'FPID' badJsonContent error)
   try {
     return await attemptDelete(
       "Intelligent/FDLib/FDSearch/Delete?format=json",
@@ -468,26 +437,19 @@ export const deleteFaceFromDevice = async (deviceId: number, userId: number) => 
   throw err;
 };
 
-/* ------------------------------------------------------------------ */
-/*  Card                                                               */
-/* ------------------------------------------------------------------ */
-/** Capture a card from the device reader */
 export const captureCard = async (deviceId: number) => {
   const attemptCapture = async (endpoint: string, method: "PUT" | "POST" | "DELETE" | "GET", body?: any) => {
     const options: any = { deviceId, endpoint, method };
-    // GET requests cannot have a body in the proxy
     if (method !== "GET" && body !== undefined) {
       options.body = body;
     }
     return callDeviceProxy(options);
   };
 
-  // Hikvision expects ISO time WITHOUT milliseconds (e.g. YYYY-MM-DDThh:mm:ssZ)
   const formatHikTime = (date: Date) => date.toISOString().split('.')[0] + '+00:00';
 
   let lastError: any;
 
-  // Strategy 1: Standard Capture endpoint
   try {
     return await attemptCapture(
       "AccessControl/CardInfo/Capture?format=json",
@@ -503,7 +465,6 @@ export const captureCard = async (deviceId: number) => {
     lastError = e;
   }
 
-  // Strategy 2: CaptureCardInfo GET
   try {
     return await attemptCapture(
       "AccessControl/CaptureCardInfo?format=json",
@@ -513,9 +474,7 @@ export const captureCard = async (deviceId: number) => {
     lastError = e;
   }
 
-  // Strategy 3: Poll recent AcsEvents (Bulletproof fallback for Face Recognition Terminals)
   try {
-    // Attempt to get exact device time to avoid severe out-of-sync issues causing NO MATCH
     let devStartTimeStr = formatHikTime(new Date(Date.now() - 5000));
     try {
       const timeRes = await attemptCapture("System/time?format=json", "GET");
@@ -524,7 +483,6 @@ export const captureCard = async (deviceId: number) => {
         devStartTimeStr = formatHikTime(new Date(devDate.getTime() - 5000));
       }
     } catch (e) {
-      // ignore and use local server time if device blocks time fetching
     }
 
     const endTimeStr = formatHikTime(new Date(Date.now() + 86400000)); // 1 day in future
@@ -547,14 +505,12 @@ export const captureCard = async (deviceId: number) => {
       );
 
       const events = res?.AcsEvent?.InfoList || res?.AcsEventSearch?.InfoList || [];
-      // Find latest valid card swipe
       const cardEvent = events.find((ev: any) => ev.cardNo && ev.cardNo.trim() !== "" && ev.cardNo !== "0000000000");
 
       if (cardEvent) {
         return { cardNo: cardEvent.cardNo };
       }
 
-      // Wait 1.5 seconds before next poll
       await new Promise((resolve) => setTimeout(resolve, 1500));
     }
 
@@ -566,7 +522,6 @@ export const captureCard = async (deviceId: number) => {
   throw lastError;
 };
 
-/** Register a card on a device */
 export const registerCardOnDevice = async (
   deviceId: number,
   userId: number,
@@ -585,7 +540,6 @@ export const registerCardOnDevice = async (
   });
 };
 
-/** Delete a card from a device */
 export const deleteCardFromDevice = async (deviceId: number, cardNo: string) => {
   return callDeviceProxy({
     deviceId,
@@ -599,11 +553,7 @@ export const deleteCardFromDevice = async (deviceId: number, cardNo: string) => 
   });
 };
 
-/* ------------------------------------------------------------------ */
-/*  Fingerprint                                                        */
-/* ------------------------------------------------------------------ */
 
-/** Capture fingerprint from device (device enters capture mode) */
 export const captureFingerprint = async (deviceId: number, fingerNo: number) => {
   const attemptCapture = async (payload: any, isXml: boolean = false) => {
     return callDeviceProxy({
@@ -615,13 +565,11 @@ export const captureFingerprint = async (deviceId: number, fingerNo: number) => 
   };
 
   const isRetryable = (e: any) => {
-    // Retry if it's a bad request, invalid operation, or XML format issue
     return e?.subStatusCode === "invalidOperation" || e?.subStatusCode === "badRequest" || e?.message?.includes("400") || e?.message?.includes("415");
   };
 
   let lastError: any;
 
-  // Strategy 1: Standard ISAPI XML (Current)
   try {
     return await attemptCapture(`
 <CaptureFingerPrintCond version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">
@@ -633,7 +581,6 @@ export const captureFingerprint = async (deviceId: number, fingerNo: number) => 
     if (!isRetryable(e)) throw e;
   }
 
-  // Strategy 2: JSON payload
   try {
     return await attemptCapture({
       CaptureFingerPrintCond: { fingerNo },
@@ -643,7 +590,6 @@ export const captureFingerprint = async (deviceId: number, fingerNo: number) => 
     if (!isRetryable(e)) throw e;
   }
 
-  // Strategy 3: Hikvision Namespace XML
   try {
     return await attemptCapture(`
 <CaptureFingerPrintCond version="2.0" xmlns="http://www.hikvision.com/ver20/XMLSchema">
@@ -655,7 +601,6 @@ export const captureFingerprint = async (deviceId: number, fingerNo: number) => 
     if (!isRetryable(e)) throw e;
   }
 
-  // Strategy 4: Fallback to fingerNo=1 (some devices only accept 1 for the capture command itself)
   if (fingerNo !== 1) {
     try {
       return await attemptCapture(`
@@ -669,7 +614,6 @@ export const captureFingerprint = async (deviceId: number, fingerNo: number) => 
     }
   }
 
-  // If all strategies fail, enhance the error message if it's invalidOperation
   if (lastError?.subStatusCode === "invalidOperation") {
     const errorMsg = "Device rejected capture. The fingerprint scanner might be disconnected, currently busy, or requires a device restart.";
     const enhancedError = new Error(errorMsg) as any;
@@ -680,7 +624,6 @@ export const captureFingerprint = async (deviceId: number, fingerNo: number) => 
   throw lastError;
 };
 
-/** Register fingerprint data on a device */
 export const registerFingerprintOnDevice = async (
   deviceId: number,
   userId: number,
@@ -703,7 +646,6 @@ export const registerFingerprintOnDevice = async (
   });
 };
 
-/** Delete fingerprint(s) from a device */
 export const deleteFingerprintFromDevice = async (
   deviceId: number,
   userId: number,
@@ -720,7 +662,6 @@ export const deleteFingerprintFromDevice = async (
 
   let lastError: any;
 
-  // Strategy 1: Standard ISAPI FingerPrintDeleteCond
   try {
     return await attemptDelete({
       FingerPrintDeleteCond: {
@@ -736,7 +677,6 @@ export const deleteFingerprintFromDevice = async (
     lastError = e;
   }
 
-  // Strategy 2: Legacy mode "byEmployeeNo" (Current implementation, often fails silently or errors)
   try {
     return await attemptDelete({
       FingerPrintDelete: {
@@ -751,7 +691,6 @@ export const deleteFingerprintFromDevice = async (
     lastError = e;
   }
 
-  // Strategy 3: XML format with FingerPrintDeleteCond
   try {
     const xmlPayload = `
 <FingerPrintDeleteCond version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">
@@ -777,11 +716,7 @@ export const deleteFingerprintFromDevice = async (
   throw lastError;
 };
 
-/* ------------------------------------------------------------------ */
-/*  Webhook Configuration                                              */
-/* ------------------------------------------------------------------ */
 
-/** Get physical device info (to test connection and retrieve hardware name) */
 export const getDeviceInfo = async (deviceId: number) => {
   const result = await callDeviceProxy({
     deviceId,
@@ -821,7 +756,6 @@ export const configureDeviceWebhook = async (
   const portNo = urlObj.port ? parseInt(urlObj.port) : (isHttps ? 443 : 80);
   const host = urlObj.hostname;
   
-  // Check if host is an IPv4 address
   const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
   const addressingType = isIp ? "ipaddress" : "hostname";
   const hostNode = isIp ? `<ipAddress>${host}</ipAddress>` : `<hostName>${host}</hostName>`;

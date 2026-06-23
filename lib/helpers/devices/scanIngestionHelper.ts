@@ -1,9 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 
-/* ------------------------------------------------------------------ */
-/*  Supabase service-role client (server-side only)                    */
-/*  All writes in this helper MUST use service_role to bypass RLS.    */
-/* ------------------------------------------------------------------ */
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey =
@@ -12,9 +8,6 @@ const supabaseServiceKey =
 
 export const adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                               */
-/* ------------------------------------------------------------------ */
 
 export interface DeviceRow {
   deviceId: number;
@@ -54,10 +47,6 @@ export interface LogUpdatePayload {
   attendanceDailyId?: number | null;
 }
 
-/* ------------------------------------------------------------------ */
-/*  validateAndLookupDevice                                             */
-/*  Validates device serial number and returns device info.            */
-/* ------------------------------------------------------------------ */
 
 export async function validateAndLookupDevice(
   deviceSerialNumber: string,
@@ -77,10 +66,6 @@ export async function validateAndLookupDevice(
   return data as DeviceRow;
 }
 
-/* ------------------------------------------------------------------ */
-/*  validateAndLookupDeviceById                                         */
-/*  Validates device by ID and returns device info.                     */
-/* ------------------------------------------------------------------ */
 
 export async function validateAndLookupDeviceById(
   deviceId: number,
@@ -100,10 +85,6 @@ export async function validateAndLookupDeviceById(
   return data as DeviceRow;
 }
 
-/* ------------------------------------------------------------------ */
-/*  validateAndLookupDeviceByIp                                         */
-/*  Validates device by IP address and returns device info.             */
-/* ------------------------------------------------------------------ */
 
 export async function validateAndLookupDeviceByIp(
   deviceIp: string,
@@ -123,10 +104,6 @@ export async function validateAndLookupDeviceByIp(
   return data as DeviceRow;
 }
 
-/* ------------------------------------------------------------------ */
-/*  updateDeviceIp                                                      */
-/*  Updates the dynamic IP of the device.                               */
-/* ------------------------------------------------------------------ */
 
 export async function updateDeviceIp(
   deviceId: number,
@@ -141,10 +118,6 @@ export async function updateDeviceIp(
   }
 }
 
-/* ------------------------------------------------------------------ */
-/*  lookupUserByEmployeeNo                                              */
-/*  Finds userId from employeeNo (which IS the userId).                */
-/* ------------------------------------------------------------------ */
 
 export async function lookupUserByEmployeeNo(
   employeeNo: string,
@@ -172,11 +145,6 @@ export async function lookupUserByEmployeeNo(
   };
 }
 
-/* ------------------------------------------------------------------ */
-/*  lookupUserByCredential                                              */
-/*  Finds userId from a credential identifier (face hash / card UID). */
-/*  Tries multiple credential types since identifier format differs.   */
-/* ------------------------------------------------------------------ */
 
 export async function lookupUserByCredential(
   credentialIdentifier: string,
@@ -198,11 +166,6 @@ export async function lookupUserByCredential(
   return data as CredentialLookupResult;
 }
 
-/* ------------------------------------------------------------------ */
-/*  insertPendingLog                                                    */
-/*  Creates an initial device_attendance_logs row with Pending status. */
-/*  Returns the generated ID so it can be updated after processing.   */
-/* ------------------------------------------------------------------ */
 
 export async function insertPendingLog(
   payload: PendingLogPayload,
@@ -232,10 +195,6 @@ export async function insertPendingLog(
   return data.deviceAttendanceLogId;
 }
 
-/* ------------------------------------------------------------------ */
-/*  updateLogStatus                                                     */
-/*  Finalises the device_attendance_logs row with processing result.   */
-/* ------------------------------------------------------------------ */
 
 export async function updateLogStatus(
   update: LogUpdatePayload,
@@ -264,10 +223,6 @@ export async function updateLogStatus(
     .eq("deviceAttendanceLogId", deviceAttendanceLogId);
 }
 
-/* ------------------------------------------------------------------ */
-/*  getUserRole                                                         */
-/*  Returns the role of the user — used to route classroom vs gate.    */
-/* ------------------------------------------------------------------ */
 
 export async function getUserRole(
   userId: number,
@@ -282,11 +237,6 @@ export async function getUserRole(
   return data.role;
 }
 
-/* ------------------------------------------------------------------ */
-/*  insertRetryQueue                                                    */
-/*  Adds a failed raw scan payload to the retry queue for background    */
-/*  processing.                                                         */
-/* ------------------------------------------------------------------ */
 
 export async function insertRetryQueue(
   collegeId: number,

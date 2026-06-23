@@ -4,9 +4,6 @@ import { adminSupabase } from "@/lib/helpers/devices/scanIngestionHelper";
 const e = (err: unknown) =>
   err instanceof Error ? err.message : "Unknown error";
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                               */
-/* ------------------------------------------------------------------ */
 
 export interface ActivationResult {
   success: boolean;
@@ -16,17 +13,11 @@ export interface ActivationResult {
   error?: string;
 }
 
-/* ------------------------------------------------------------------ */
-/*  resolveCollegeRoomId                                               */
-/*  Finds the collegeRoomId for a calendar event, using the            */
-/*  FK column if populated, falling back to roomNo string match.       */
-/* ------------------------------------------------------------------ */
 
 async function resolveCollegeRoomId(
   calendarEventId: number,
   collegeId: number,
 ): Promise<number | null> {
-  // 1. Primary: direct FK column (populated for new events after migration)
   const { data: evt, error: evtErr } = await adminSupabase
     .from("calendar_event")
     .select("collegeRoomId")
@@ -39,10 +30,6 @@ async function resolveCollegeRoomId(
   return evt.collegeRoomId as number;
 }
 
-/* ------------------------------------------------------------------ */
-/*  resolveDeviceForRoom                                               */
-/*  Returns the active biometric device assigned to the given room.    */
-/* ------------------------------------------------------------------ */
 
 async function resolveDeviceForRoom(collegeRoomId: number): Promise<{
   deviceId: number;
@@ -61,7 +48,6 @@ async function resolveDeviceForRoom(collegeRoomId: number): Promise<{
   if (error) throw new Error(`Room-device lookup failed: ${error.message}`);
   if (!data) return null;
 
-  // Validate the linked device is active and not deleted
   const dev = Array.isArray(data.biometric_devices)
     ? data.biometric_devices[0]
     : data.biometric_devices;
@@ -74,10 +60,6 @@ async function resolveDeviceForRoom(collegeRoomId: number): Promise<{
   };
 }
 
-/* ------------------------------------------------------------------ */
-/*  upsertDeviceClassSession                                           */
-/*  Idempotent — ON CONFLICT calendarEventId+deviceId does nothing.    */
-/* ------------------------------------------------------------------ */
 
 async function upsertDeviceClassSession(payload: {
   facultyClassSessionsId: number;
@@ -92,7 +74,6 @@ async function upsertDeviceClassSession(payload: {
 }): Promise<number> {
   const now = new Date().toISOString();
 
-  // Check for existing (covers duplicate accept clicks)
   const { data: existing } = await adminSupabase
     .from("device_class_sessions")
     .select("deviceClassSessionId")
@@ -127,11 +108,6 @@ async function upsertDeviceClassSession(payload: {
   return data.deviceClassSessionId;
 }
 
-/* ------------------------------------------------------------------ */
-/*  activateDeviceSessionForClass                                      */
-/*  Main entry point — called after faculty accepts a class.           */
-/*  Non-blocking: returns gracefully on skip/warn cases.              */
-/* ------------------------------------------------------------------ */
 
 export async function activateDeviceSessionForClass(params: {
   calendarEventId: number;
@@ -141,7 +117,6 @@ export async function activateDeviceSessionForClass(params: {
   try {
     const { calendarEventId, facultyClassSessionsId, collegeId } = params;
 
-    // 1. Get event details (date, times, type)
     const { data: evt, error: evtErr } = await adminSupabase
       .from("calendar_event")
       .select("type, date, fromTime, toTime, collegeRoomId")
@@ -153,7 +128,6 @@ export async function activateDeviceSessionForClass(params: {
       return { success: true, skipped: true, skipReason: "EventNotFound" };
     }
 
-    // 2. Only activate for "class" type events
     if (evt.type !== "class") {
       return {
         success: true,
@@ -162,7 +136,6 @@ export async function activateDeviceSessionForClass(params: {
       };
     }
 
-    // 3. Resolve the room
     const collegeRoomId = await resolveCollegeRoomId(calendarEventId, collegeId);
     if (!collegeRoomId) {
       return {
@@ -172,7 +145,6 @@ export async function activateDeviceSessionForClass(params: {
       };
     }
 
-    // 4. Find active device for this room
     const device = await resolveDeviceForRoom(collegeRoomId);
     if (!device) {
       return {
@@ -182,7 +154,6 @@ export async function activateDeviceSessionForClass(params: {
       };
     }
 
-    // 5. Create the device_class_session (idempotent)
     const deviceClassSessionId = await upsertDeviceClassSession({
       facultyClassSessionsId,
       calendarEventId,
@@ -197,15 +168,10 @@ export async function activateDeviceSessionForClass(params: {
 
     return { success: true, deviceClassSessionId };
   } catch (err) {
-    // Non-blocking — failure here must NOT break the accept flow
     return { success: false, error: e(err) };
   }
 }
 
-/* ------------------------------------------------------------------ */
-/*  deactivateSessionsForEvent                                         */
-/*  Called when a class is cancelled. Deactivates device sessions.    */
-/* ------------------------------------------------------------------ */
 
 export async function deactivateSessionsForEvent(
   calendarEventId: number,
@@ -231,10 +197,6 @@ export async function deactivateSessionsForEvent(
   }
 }
 
-/* ------------------------------------------------------------------ */
-/*  updateDeviceSessionForEvent                                        */
-/*  Updates active device sessions when event timings change.          */
-/* ------------------------------------------------------------------ */
 
 export async function updateDeviceSessionForEvent(params: {
   calendarEventId: number;

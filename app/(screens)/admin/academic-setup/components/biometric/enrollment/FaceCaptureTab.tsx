@@ -29,7 +29,6 @@ export default function FaceCaptureTab({
   const [facePreview, setFacePreview] = useState<string>("");
   const [isEnrolling, setIsEnrolling] = useState(false);
   
-  // Camera state
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -42,14 +41,12 @@ export default function FaceCaptureTab({
     Record<number, { status: "idle" | "enrolling" | "success" | "failed"; error?: string }>
   >({});
 
-  // Cleanup camera on unmount
   useEffect(() => {
     return () => {
       stopCamera();
     };
   }, []);
 
-  // Bind stream to video element when it mounts
   useEffect(() => {
     if (isCameraOpen && videoRef.current && streamRef.current) {
       videoRef.current.srcObject = streamRef.current;
@@ -82,7 +79,6 @@ export default function FaceCaptureTab({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     
-    // Draw mirrored if using front camera (optional, but standard UX)
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(videoRef.current, 0, 0);
@@ -177,7 +173,6 @@ export default function FaceCaptureTab({
                   ? (e as { subStatusCode?: string }).subStatusCode
                   : undefined;
               if (subStatusCode === "employeeNoAlreadyExist") {
-                // Already handled
               } else {
                 throw e;
               }

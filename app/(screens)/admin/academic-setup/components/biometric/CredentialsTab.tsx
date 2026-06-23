@@ -12,6 +12,7 @@ import {
   PencilSimple,
 } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
 import {
   getUserDeviceCredentials,
@@ -76,15 +77,41 @@ const columns = [
 
 export default function CredentialsTab() {
   const { collegeId, adminId, loading } = useUser();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  // List view
   const [credentials, setCredentials] = useState<UserCredentialRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [filterType, setFilterType] = useState<CredentialType | "">("");
+  
+  const initialFilter = (searchParams.get("credFilter") as CredentialType | "") || "";
+  const [filterType, setFilterType] = useState<CredentialType | "">(initialFilter);
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+  const initialEnroll = searchParams.get("enroll") === "true";
+  const [showEnroll, setShowEnroll] = useState(initialEnroll);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (filterType !== "") {
+      params.set("credFilter", filterType);
+    } else {
+      params.delete("credFilter");
+    }
+    if (showEnroll) {
+      params.set("enroll", "true");
+    } else {
+      params.delete("enroll");
+    }
+    const newUrl = `${pathname}?${params.toString()}`;
+    if (newUrl !== `${pathname}?${searchParams.toString()}`) {
+      router.replace(newUrl, { scroll: false });
+    }
+  }, [filterType, showEnroll, pathname, router, searchParams]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -97,23 +124,18 @@ export default function CredentialsTab() {
     setCurrentPage(1);
   }, [debouncedSearchQuery]);
 
-  // Enrollment toggle
-  const [showEnroll, setShowEnroll] = useState(false);
 
-  // Delete
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteCredentialId, setDeleteCredentialId] = useState<number | null>(null);
   const [deleteCredential, setDeleteCredential] = useState<UserCredentialRow | null>(null);
 
-  // Edit
   const [openEditModal, setOpenEditModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editCredential, setEditCredential] = useState<UserCredentialRow | null>(null);
   const [editIsActive, setEditIsActive] = useState(true);
   const [editCardId, setEditCardId] = useState("");
 
-  /* ---------- Load credentials ---------- */
 
   const loadCredentials = useCallback(
     async (page: number) => {
@@ -146,7 +168,6 @@ export default function CredentialsTab() {
     loadCredentials(currentPage);
   }, [collegeId, currentPage, loadCredentials]);
 
-  /* ---------- Delete ---------- */
 
   const handleDeleteClick = (cred: UserCredentialRow) => {
     setDeleteCredentialId(cred.userDeviceCredentialId);
@@ -159,7 +180,6 @@ export default function CredentialsTab() {
     try {
       setIsDeleting(true);
 
-      // Ensure device deletion succeeds before removing from database
       try {
         const deviceRes = await getBiometricDevices(collegeId!, 1, 50);
         const activeDevices = deviceRes.data.filter(d => d.isActive);
@@ -180,7 +200,6 @@ export default function CredentialsTab() {
                   );
                 }
               } catch (e: any) {
-                // We let it throw to prevent DB deletion if the physical deletion failed on any active device
                 throw new Error(e.message || "Device rejected deletion");
               }
             })
@@ -208,7 +227,6 @@ export default function CredentialsTab() {
     }
   };
 
-  /* ---------- Edit ---------- */
 
   const handleEditClick = (cred: UserCredentialRow) => {
     setEditCredential(cred);
@@ -248,7 +266,6 @@ export default function CredentialsTab() {
     }
   };
 
-  /* ---------- Helpers ---------- */
 
   const credTypeIcon = (type: CredentialType) => {
     switch (type) {
@@ -263,7 +280,6 @@ export default function CredentialsTab() {
     }
   };
 
-  /* ---------- Table data ---------- */
 
   const tableData = credentials.map((c) => ({
     user: (
@@ -341,7 +357,6 @@ export default function CredentialsTab() {
     ),
   }));
 
-  /* ---------- Render ---------- */
 
   if (showEnroll && collegeId && adminId) {
     return (
@@ -356,7 +371,6 @@ export default function CredentialsTab() {
 
   return (
     <div className="w-full flex flex-col">
-      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4">
         <h2 className="text-xl font-bold text-[#16284F]">User Credentials</h2>
         <button
@@ -368,7 +382,6 @@ export default function CredentialsTab() {
         </button>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <div className="flex flex-wrap gap-2">
           {CRED_TYPES.map((ct) => (

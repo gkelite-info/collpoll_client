@@ -80,7 +80,10 @@ export default function Step1SearchUser({
                       : "bg-violet-50 text-violet-700"
                   }`}
                 >
-                  {u.role}
+                  {u.role === "Finance" && u.financeManagerType
+                    ? `Finance${u.financeManagerType.charAt(0).toUpperCase() + u.financeManagerType.slice(1)}`
+                    : u.role}
+                  {u.role === "Student" && u.educationType && ` • ${u.educationType}`}
                 </span>
               </div>
             </button>

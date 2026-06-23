@@ -129,11 +129,8 @@ export default function FingerprintCaptureTab({
               );
             } catch (e: any) {
               const subStatusCode = e?.subStatusCode || "";
-              // User already exists on device — safe to proceed with credential enrollment
               if (subStatusCode === "employeeNoAlreadyExist") {
-                // Already handled by registerUserOnDevice's internal modify fallback
               } else {
-                // Network failure, device offline, or unexpected error — must fail this device
                 throw e;
               }
             }
@@ -218,7 +215,6 @@ export default function FingerprintCaptureTab({
     } catch (e: unknown) {
       let msg = e instanceof Error ? e.message : "Fingerprint enrollment failed";
 
-      // Intercept DB constraint errors (e.g. duplicate key, unique constraint)
       if (
         msg.includes("duplicate key") || 
         msg.includes("Unique constraint") || 
