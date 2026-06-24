@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import TableShimmer from "@/app/utils/table/tableShimmer";
 import {
   ClockCounterClockwise,
   CircleNotch,
@@ -16,7 +18,6 @@ import { EquipmentThumb } from "./EquipmentThumb";
 import { StatCard } from "./StatCard";
 
 type InventoryOverviewProps = {
-  items: EquipmentItem[];
   filteredItems: EquipmentItem[];
   overview: { total: number; inStock: number; lowStock: number; outOfStock: number };
   search: string;
@@ -31,13 +32,12 @@ type InventoryOverviewProps = {
   description?: string;
   addButtonLabel?: string;
   itemColumnLabel?: string;
-  isOpeningAdd?: boolean;
   historyLoadingId?: string | null;
   deletingId?: string | null;
+  isLoading?: boolean;
 };
 
 export function InventoryOverview({
-  items,
   filteredItems,
   overview,
   search,
@@ -52,12 +52,14 @@ export function InventoryOverview({
   description = "Track and manage all sports equipment and assets.",
   addButtonLabel = "Add New Equipment",
   itemColumnLabel = "Item Name",
-  isOpeningAdd = false,
   historyLoadingId = null,
   deletingId = null,
+  isLoading = false,
 }: InventoryOverviewProps) {
+  const itemsPerPage = 10;
   const [availableSort, setAvailableSort] = useState<"none" | "asc" | "desc">("none");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const sortedItems = useMemo(() => {
     if (availableSort === "none") return filteredItems;
     return [...filteredItems].sort((first, second) =>
@@ -66,6 +68,10 @@ export function InventoryOverview({
         : second.available - first.available,
     );
   }, [availableSort, filteredItems]);
+  const totalPages = Math.max(1, Math.ceil(sortedItems.length / itemsPerPage));
+  const visiblePage = Math.min(currentPage, totalPages);
+  const pageStart = (visiblePage - 1) * itemsPerPage;
+  const paginatedItems = sortedItems.slice(pageStart, pageStart + itemsPerPage);
 
   return (
     <section className="mx-auto max-w-[1180px] rounded-xl bg-white p-5 shadow-sm md:p-8">
@@ -85,9 +91,9 @@ export function InventoryOverview({
         <div className="flex flex-col gap-3 border-b border-[#E8EEF5] bg-white p-4 lg:flex-row lg:items-center">
           <label className="relative min-w-0 flex-1">
             <MagnifyingGlass size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
-            <input value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder="Search equipment..." className="h-10 w-full rounded border border-[#E2E8F0] pl-10 pr-3 text-[13px] font-medium text-[#16284F] outline-none focus:border-[#43C17A]" />
+            <input value={search} onChange={(event) => { setCurrentPage(1); onSearchChange(event.target.value); }} placeholder="Search equipment..." className="h-10 w-full rounded border border-[#E2E8F0] pl-10 pr-3 text-[13px] font-medium text-[#16284F] outline-none focus:border-[#43C17A]" />
           </label>
-          <select value={statusFilter} onChange={(event) => onStatusFilterChange(event.target.value as "all" | EquipmentStatus)} className="h-10 cursor-pointer rounded border border-[#E2E8F0] bg-white px-4 text-[13px] font-semibold text-[#16284F] outline-none">
+          <select value={statusFilter} onChange={(event) => { setCurrentPage(1); onStatusFilterChange(event.target.value as "all" | EquipmentStatus); }} className="h-10 cursor-pointer rounded border border-[#E2E8F0] bg-white px-4 text-[13px] font-semibold text-[#16284F] outline-none">
             <option value="all">All Status</option>
             <option value="In Stock">In Stock</option>
             <option value="Low Stock">Low Stock</option>
@@ -105,19 +111,19 @@ export function InventoryOverview({
                   { value: "asc" as const, label: "Ascending (Low to High)" },
                   { value: "desc" as const, label: "Descending (High to Low)" },
                 ]).map((option) => (
-                  <button key={option.value} type="button" onClick={() => { setAvailableSort(option.value); setFiltersOpen(false); }} className={`block w-full cursor-pointer px-4 py-2.5 text-left text-[12px] font-semibold hover:bg-[#F8FAFC] ${availableSort === option.value ? "bg-[#EAF3FF] text-[#2563EB]" : "text-[#16284F]"}`}>
+                  <button key={option.value} type="button" onClick={() => { setAvailableSort(option.value); setCurrentPage(1); setFiltersOpen(false); }} className={`block w-full cursor-pointer px-4 py-2.5 text-left text-[12px] font-semibold hover:bg-[#F8FAFC] ${availableSort === option.value ? "bg-[#EAF3FF] text-[#2563EB]" : "text-[#16284F]"}`}>
                     {option.label}
                   </button>
                 ))}
                 {availableSort !== "none" ? (
-                  <button type="button" onClick={() => { setAvailableSort("none"); setFiltersOpen(false); }} className="block w-full cursor-pointer border-t border-[#E2E8F0] px-4 py-2.5 text-left text-[12px] font-semibold text-[#64748B] hover:bg-[#F8FAFC]">Clear sorting</button>
+                  <button type="button" onClick={() => { setAvailableSort("none"); setCurrentPage(1); setFiltersOpen(false); }} className="block w-full cursor-pointer border-t border-[#E2E8F0] px-4 py-2.5 text-left text-[12px] font-semibold text-[#64748B] hover:bg-[#F8FAFC]">Clear sorting</button>
                 ) : null}
               </div>
             ) : null}
           </div>
-          <button type="button" onClick={onAdd} disabled={isOpeningAdd} className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded bg-[#0F8A4B] px-5 text-[13px] font-bold text-white hover:bg-[#0B743F] disabled:cursor-not-allowed disabled:opacity-60">
-            {!isOpeningAdd ? <Plus size={16} weight="bold" /> : null}
-            {isOpeningAdd ? "Opening..." : addButtonLabel}
+          <button type="button" onClick={onAdd} className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded bg-[#0F8A4B] px-5 text-[13px] font-bold text-white hover:bg-[#0B743F]">
+            <Plus size={16} weight="bold" />
+            {addButtonLabel}
           </button>
         </div>
 
@@ -129,11 +135,11 @@ export function InventoryOverview({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EEF2F7]">
-              {sortedItems.map((item) => {
+              {isLoading ? <TableShimmer columnCount={6} rowCount={5} /> : paginatedItems.map((item) => {
                 const status = getStatus(item);
                 return (
                   <tr key={item.id} className="h-[74px] bg-white">
-                    <td className="px-5 py-3"><div className="flex items-center gap-3"><EquipmentThumb image={item.image} name={item.name} /><div className="min-w-0"><p className="max-w-[190px] text-[13px] font-extrabold leading-4 text-[#16284F]">{item.name}</p><p className="mt-1 text-[10px] font-semibold text-[#94A3B8]">ID: {item.id}</p></div></div></td>
+                    <td className="px-5 py-3"><div className="flex items-center gap-3"><EquipmentThumb image={item.image} name={item.name} /><div className="min-w-0"><p className="max-w-[190px] text-[13px] font-extrabold leading-4 text-[#16284F]">{item.name}</p></div></div></td>
                     <td className="px-5 py-3 text-[13px] font-bold text-[#16284F]">{item.totalQty}</td>
                     <td className="px-5 py-3 text-[13px] font-bold text-[#16284F]">{item.available}</td>
                     <td className={`px-5 py-3 text-[12px] font-extrabold leading-4 ${statusClasses[status]}`}><span className="inline-flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-current" /><span className="max-w-[72px] whitespace-normal">{status}</span></span></td>
@@ -154,16 +160,9 @@ export function InventoryOverview({
           </table>
         </div>
 
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center p-5 text-[12px] font-semibold text-[#64748B]">
-          <span>Showing 1 to {filteredItems.length} of {items.length} items</span>
-          <div className="flex items-center justify-center gap-4">
-            <button className="flex h-8 min-w-8 cursor-pointer items-center justify-center rounded-md bg-[#0F8A4B] px-3 text-[12px] font-extrabold text-white">1</button>
-            {[2, 3].map((page) => <button key={page} className="flex h-8 min-w-8 cursor-pointer items-center justify-center rounded-md text-[#64748B] hover:bg-[#F1F5F9]">{page}</button>)}
-            <span>...</span><button className="flex h-8 min-w-8 cursor-pointer items-center justify-center rounded-md text-[#64748B] hover:bg-[#F1F5F9]">18</button>
-            <button className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC]">&gt;</button>
-          </div>
-          <span className="justify-self-end">Items per page: <span className="ml-2 inline-flex h-8 min-w-11 items-center justify-center rounded-md border border-[#E2E8F0] bg-white px-3 text-[#64748B]">10</span></span>
-        </div>
+        {!isLoading ? (
+          <Pagination currentPage={visiblePage} totalItems={sortedItems.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
+        ) : null}
       </div>
     </section>
   );

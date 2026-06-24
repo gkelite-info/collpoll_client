@@ -14,7 +14,6 @@ type EquipmentFormProps = {
   compact?: boolean;
   itemLabel?: string;
   isSaving?: boolean;
-  isCancelling?: boolean;
 };
 
 export function EquipmentForm({
@@ -28,9 +27,7 @@ export function EquipmentForm({
   compact = false,
   itemLabel = "Equipment",
   isSaving = false,
-  isCancelling = false,
 }: EquipmentFormProps) {
-  const isBusy = isSaving || isCancelling;
   const isFormValid = form.name.trim().length > 0 && Number(form.quantity) > 0;
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -69,7 +66,10 @@ export function EquipmentForm({
             </span>
             <input
               value={form.name}
-              onChange={(event) => onChange({ ...form, name: event.target.value })}
+              onChange={(event) => onChange({
+                ...form,
+                name: event.target.value.replace(/[^\p{L}\p{N} -]/gu, ""),
+              })}
               placeholder={`Enter ${itemLabel.toLowerCase()} name`}
               className={`${compact ? "h-9" : "h-12"} mt-2 w-full rounded-sm border border-[#CBD5E1] bg-[#F8FAFC] px-4 text-[13px] font-semibold text-[#16284F] outline-none focus:border-[#43C17A]`}
             />
@@ -126,10 +126,10 @@ export function EquipmentForm({
           </label>
 
           <div className={`${compact ? "pt-6" : "pt-7"} flex justify-end gap-4 border-t border-[#CBD5E1]`}>
-            <button type="button" onClick={onCancel} disabled={isBusy} className={`${compact ? "h-9 px-7" : "h-11 px-8"} inline-flex cursor-pointer items-center gap-2 rounded-sm border border-[#16284F] text-[12px] font-bold text-[#16284F] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60`}>
-              {isCancelling ? "Cancelling..." : "Cancel"}
+            <button type="button" onClick={onCancel} disabled={isSaving} className={`${compact ? "h-9 px-7" : "h-11 px-8"} inline-flex cursor-pointer items-center gap-2 rounded-sm border border-[#16284F] text-[12px] font-bold text-[#16284F] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60`}>
+              Cancel
             </button>
-            <button type="button" onClick={onSubmit} disabled={isBusy || !isFormValid} className={`${compact ? "h-9 px-7" : "h-11 px-8"} inline-flex cursor-pointer items-center gap-2 rounded-sm bg-[#16284F] text-[12px] font-bold text-white hover:bg-[#0F1E3A] disabled:cursor-not-allowed disabled:opacity-60`}>
+            <button type="button" onClick={onSubmit} disabled={isSaving || !isFormValid} className={`${compact ? "h-9 px-7" : "h-11 px-8"} inline-flex cursor-pointer items-center gap-2 rounded-sm bg-[#16284F] text-[12px] font-bold text-white hover:bg-[#0F1E3A] disabled:cursor-not-allowed disabled:opacity-60`}>
               {!isSaving ? <FloppyDisk size={16} weight="bold" /> : null}
               {isSaving ? "Saving..." : submitText}
             </button>

@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import {
   deleteInventoryAsset,
   fetchInventoryAssets,
@@ -16,7 +17,7 @@ import {
   saveInventoryStockHistory,
   type InventoryStockHistoryRow,
 } from "@/lib/helpers/inventory/inventoryStockHistoryAPI";
-import { EquipmentForm, InventoryOverview } from "./components";
+import { EquipmentForm, InventoryOverview, InventoryPageShimmer } from "./components";
 import {
   administrationItems,
   defaultItems,
@@ -120,7 +121,10 @@ function InventoryWorkspace({
   const config = inventoryConfig[variant];
   const view = searchParams.get("view") === "add" ? "add" : "list";
   const [items, setItems] = useState<EquipmentItem[]>(() => config.items);
+  const [searchedItems, setSearchedItems] = useState<EquipmentItem[] | null>(null);
   const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | EquipmentStatus>("all");
   const [form, setForm] = useState<EquipmentFormState>(emptyForm);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -128,11 +132,11 @@ function InventoryWorkspace({
   const [inventoryAssets, setInventoryAssets] = useState<InventoryAssetRow[]>([]);
   const [stockUpdate, setStockUpdate] = useState<StockUpdateState>(createStockUpdate);
   const [isSavingNew, setIsSavingNew] = useState(false);
-  const [isCancellingNew, setIsCancellingNew] = useState(false);
-  const [isOpeningAdd, setIsOpeningAdd] = useState(false);
   const [isUpdatingStock, setIsUpdatingStock] = useState(false);
   const [historyLoadingId, setHistoryLoadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteItem, setDeleteItem] = useState<EquipmentItem | null>(null);
+  const [isInventoryLoading, setIsInventoryLoading] = useState(Boolean(sportsContext));
   const stockId = searchParams.get("stockId");
   const stockActionType: StockUpdateState["actionType"] =
     searchParams.get("stockAction") === "reduce" ? "remove" : "add";
@@ -152,21 +156,58 @@ function InventoryWorkspace({
         setInventoryAssets(assets);
         setItems(assets.map((asset) => mapAssetToEquipmentItem(asset, config.category)));
       })
-      .catch((error) => toast.error(error instanceof Error ? error.message : "Failed to load inventory."));
+      .catch((error) => {
+        if (active) toast.error(error instanceof Error ? error.message : "Failed to load inventory.");
+      })
+      .finally(() => {
+        if (active) setIsInventoryLoading(false);
+      });
     return () => { active = false; };
   }, [sportsCollegeId, sportsCategoryId, config.category]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setAppliedSearch(search);
+      if (!sportsCollegeId || !sportsCategoryId) setIsSearchLoading(false);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [search, sportsCollegeId, sportsCategoryId]);
+
+  useEffect(() => {
+    if (!sportsCollegeId || !sportsCategoryId || !appliedSearch.trim()) return;
+    let active = true;
+    fetchInventoryAssets(sportsCollegeId, sportsCategoryId, appliedSearch)
+      .then((assets) => {
+        if (active) setSearchedItems(assets.map((asset) => mapAssetToEquipmentItem(asset, config.category)));
+      })
+      .catch((error) => {
+        if (active) toast.error(error instanceof Error ? error.message : "Failed to search inventory.");
+      })
+      .finally(() => {
+        if (active) setIsSearchLoading(false);
+      });
+    return () => { active = false; };
+  }, [appliedSearch, sportsCollegeId, sportsCategoryId, config.category]);
+
   const filteredItems = useMemo(
     () =>
-      items.filter((item) => {
+      (sportsContext && appliedSearch.trim() ? searchedItems ?? [] : items).filter((item) => {
         const matchesSearch =
-          item.name.toLowerCase().includes(search.toLowerCase()) ||
-          item.id.toLowerCase().includes(search.toLowerCase());
+          sportsContext || item.name.toLowerCase().includes(appliedSearch.toLowerCase());
         const status = getStatus(item);
         return matchesSearch && (statusFilter === "all" || status === statusFilter);
       }),
-    [items, search, statusFilter],
+    [items, searchedItems, appliedSearch, sportsContext, statusFilter],
   );
+
+  const changeSearch = (value: string) => {
+    setSearch(value);
+    setIsSearchLoading(Boolean(value.trim()));
+    if (!value.trim()) {
+      setAppliedSearch("");
+      setSearchedItems(null);
+    }
+  };
 
   const overview = useMemo(() => {
     const lowStock = items.filter((item) => getStatus(item) === "Low Stock").length;
@@ -207,7 +248,6 @@ function InventoryWorkspace({
         setItems((current) => [mapAssetToEquipmentItem(asset, config.category), ...current]);
         toast.success("Equipment added successfully.");
         setForm(emptyForm);
-        setIsOpeningAdd(false);
         router.replace(pathname);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to add equipment.");
@@ -234,7 +274,6 @@ function InventoryWorkspace({
       ...current,
     ]);
     setForm(emptyForm);
-    setIsOpeningAdd(false);
     router.replace(pathname);
     setIsSavingNew(false);
   };
@@ -278,6 +317,10 @@ function InventoryWorkspace({
       toast.error(`Only ${stockItem.available} item${stockItem.available === 1 ? " is" : "s are"} available to reduce.`);
       return;
     }
+    if (stockActionType === "add" && quantity > stockItem.totalQty) {
+      toast.error(`You can add a maximum of ${stockItem.totalQty} items at a time.`);
+      return;
+    }
     setIsUpdatingStock(true);
 
     if (sportsContext && stockItem.inventoryAssetId) {
@@ -294,6 +337,7 @@ function InventoryWorkspace({
         });
         setInventoryAssets((current) => current.map((row) => row.inventoryAssetId === updated.inventoryAssetId ? updated : row));
         setItems((current) => current.map((row) => row.inventoryAssetId === updated.inventoryAssetId ? mapAssetToEquipmentItem(updated, config.category) : row));
+        setSearchedItems((current) => current?.map((row) => row.inventoryAssetId === updated.inventoryAssetId ? mapAssetToEquipmentItem(updated, config.category) : row) ?? null);
         closeStockModal();
         toast.success("Stock updated successfully.");
       } catch (error) {
@@ -349,17 +393,21 @@ function InventoryWorkspace({
     if (!sportsContext || !item.inventoryAssetId) {
       setItems((current) => current.filter((row) => row.id !== item.id));
       setDeletingId(null);
+      setDeleteItem(null);
       return;
     }
     const asset = inventoryAssets.find((row) => row.inventoryAssetId === item.inventoryAssetId);
     if (!asset) {
       setDeletingId(null);
+      setDeleteItem(null);
       return;
     }
     try {
       await deleteInventoryAsset(asset);
       setInventoryAssets((current) => current.filter((row) => row.inventoryAssetId !== asset.inventoryAssetId));
       setItems((current) => current.filter((row) => row.inventoryAssetId !== asset.inventoryAssetId));
+      setSearchedItems((current) => current?.filter((row) => row.inventoryAssetId !== asset.inventoryAssetId) ?? null);
+      setDeleteItem(null);
       toast.success("Equipment deleted successfully.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete equipment.");
@@ -369,16 +417,16 @@ function InventoryWorkspace({
   };
 
   const openAddForm = () => {
-    setIsCancellingNew(false);
-    setIsOpeningAdd(true);
     router.push(`${pathname}?view=add`);
   };
 
   const cancelAddForm = () => {
-    setIsCancellingNew(true);
-    setIsOpeningAdd(false);
     router.push(pathname);
   };
+
+  if (isInventoryLoading) {
+    return <InventoryPageShimmer view={view} />;
+  }
 
   if (view === "add") {
     return (
@@ -394,7 +442,6 @@ function InventoryWorkspace({
             submitText={config.submitText}
             itemLabel={config.itemLabel}
             isSaving={isSavingNew}
-            isCancelling={isCancellingNew}
             compact
           />
         </section>
@@ -405,23 +452,22 @@ function InventoryWorkspace({
   return (
     <main className="min-h-screen bg-[#F4F4F4] p-2">
       <InventoryOverview
-        items={items}
         filteredItems={filteredItems}
         overview={overview}
         search={search}
         statusFilter={statusFilter}
-        onSearchChange={setSearch}
+        onSearchChange={changeSearch}
         onStatusFilterChange={setStatusFilter}
         onAdd={openAddForm}
         onHistory={openHistory}
         onEdit={openEditModal}
-        onDelete={removeItem}
+        onDelete={setDeleteItem}
         description={config.description}
         addButtonLabel={config.addButtonLabel}
         itemColumnLabel={config.itemColumnLabel}
-        isOpeningAdd={isOpeningAdd}
         historyLoadingId={historyLoadingId}
         deletingId={deletingId}
+        isLoading={isInventoryLoading || isSearchLoading}
       />
 
       {stockItem ? (
@@ -435,11 +481,29 @@ function InventoryWorkspace({
         />
       ) : null}
       {historyOpen ? <StockHistoryModal variant={variant} history={sportsContext ? history : undefined} onClose={() => setHistoryOpen(false)} /> : null}
+      <ConfirmDeleteModal
+        open={Boolean(deleteItem)}
+        title="Delete"
+        name="equipment"
+        confirmText="Yes, Delete"
+        loadingText="Deleting..."
+        isDeleting={Boolean(deleteItem && deletingId === deleteItem.id)}
+        onCancel={() => setDeleteItem(null)}
+        onConfirm={() => {
+          if (deleteItem) void removeItem(deleteItem);
+        }}
+        customDescription={deleteItem ? (
+          <>
+            Are you sure you want to delete <span className="font-semibold text-gray-700">{deleteItem.name}</span>? This action cannot be undone.
+          </>
+        ) : undefined}
+      />
     </main>
   );
 }
 
 function InventoryPageContent() {
+  const searchParams = useSearchParams();
   const { loading, userId, collegeId, wellBeingCategoryId, wellBeingCategoryIds, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
   const categories = [wellBeingCategoryName, ...wellBeingCategoryNames].map(
     normalizeCategoryName,
@@ -459,7 +523,7 @@ function InventoryPageContent() {
   );
 
   if (loading) {
-    return <main className="min-h-screen bg-[#F4F4F4] p-2" />;
+    return <InventoryPageShimmer view={searchParams.get("view") === "add" ? "add" : "list"} />;
   }
 
   if (!isSports && !isInfrastructure && !isSafety && !isAdministration) {
