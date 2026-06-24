@@ -32,6 +32,7 @@ import {
 } from "@/lib/helpers/admin/collegeExamAPI";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
+import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 
 interface ExamSubjectRow {
   subject: string;
@@ -489,21 +490,8 @@ export default function ExamsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 bg-white border border-gray-150 p-2.5 rounded-2xl shadow-sm self-start md:self-center">
-          <div className="bg-[#111E38] text-white w-12 h-12 flex flex-col items-center justify-center rounded-xl font-bold">
-            <span className="text-lg leading-none">{currentDay}</span>
-            <span className="text-[9px] uppercase tracking-wider mt-0.5 leading-none font-semibold text-gray-200">
-              {currentMonth}
-            </span>
-          </div>
-          <div className="pr-2 flex items-baseline">
-            <span className="text-2xl font-extrabold text-[#111E38] leading-none">
-              {currentTime.split(" ")[0] || "08:23"}
-            </span>
-            <span className="text-sm font-bold text-[#111E38] leading-none ml-1 lowercase">
-              {currentTime.split(" ")[1] || "am"}
-            </span>
-          </div>
+        <div className="flex items-center justify-center">
+          <CourseScheduleCard style="w-[320px] mt-4" isVisibile={false} />
         </div>
       </div>
 

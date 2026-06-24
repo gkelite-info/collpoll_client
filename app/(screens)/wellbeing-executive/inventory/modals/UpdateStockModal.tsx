@@ -10,9 +10,12 @@ type UpdateStockModalProps = {
   onChange: (nextUpdate: StockUpdateState) => void;
   onClose: () => void;
   onSave: () => void;
+  isLoading?: boolean;
 };
 
-export function UpdateStockModal({ item, stockUpdate, onChange, onClose, onSave }: UpdateStockModalProps) {
+export function UpdateStockModal({ item, stockUpdate, onChange, onClose, onSave, isLoading = false }: UpdateStockModalProps) {
+  const isReducing = stockUpdate.actionType === "remove";
+
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-end bg-black/55 p-2">
       <div className="relative max-h-[calc(100vh-1rem)] w-full max-w-[430px] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
@@ -62,8 +65,12 @@ export function UpdateStockModal({ item, stockUpdate, onChange, onClose, onSave 
             <p className="text-[12px] font-extrabold text-[#16284F]">2. Stock Details</p>
             <label className="mt-3 block">
               <span className="text-[10px] font-extrabold uppercase text-[#475569]">Quantity <span className="text-[#FF2A2A]">*</span></span>
-              <input type="number" min="1" value={stockUpdate.quantity} onChange={(event) => onChange({ ...stockUpdate, quantity: event.target.value })} className="mt-1 h-9 w-full rounded-sm border border-[#E2E8F0] px-3 text-[12px] font-semibold text-[#16284F] outline-none focus:border-[#43C17A]" />
-              <span className="mt-1 block text-[10px] font-medium text-[#94A3B8]">Enter positive number to add stock</span>
+              <input type="number" min="1" max={isReducing ? item.available : undefined} value={stockUpdate.quantity} onChange={(event) => onChange({ ...stockUpdate, quantity: event.target.value })} className="mt-1 h-9 w-full rounded-sm border border-[#E2E8F0] px-3 text-[12px] font-semibold text-[#16284F] outline-none focus:border-[#43C17A]" />
+              <span className="mt-1 block text-[10px] font-medium text-[#94A3B8]">
+                {isReducing
+                  ? `Enter a positive number to reduce stock (maximum ${item.available})`
+                  : "Enter a positive number to add stock"}
+              </span>
             </label>
             <label className="mt-3 block">
               <span className="text-[10px] font-extrabold uppercase text-[#475569]">Date <span className="text-[#FF2A2A]">*</span></span>
@@ -80,8 +87,10 @@ export function UpdateStockModal({ item, stockUpdate, onChange, onClose, onSave 
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
-          <button type="button" onClick={onClose} className="h-10 cursor-pointer rounded-sm border border-[#E2E8F0] text-[12px] font-bold text-[#16284F] hover:bg-[#F8FAFC]">Cancel</button>
-          <button type="button" onClick={onSave} className="h-10 cursor-pointer rounded-sm bg-[#16284F] text-[12px] font-bold text-white hover:bg-[#0F1E3A]">Update Stock</button>
+          <button type="button" onClick={onClose} disabled={isLoading} className="h-10 cursor-pointer rounded-sm border border-[#E2E8F0] text-[12px] font-bold text-[#16284F] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60">Cancel</button>
+          <button type="button" onClick={onSave} disabled={isLoading} className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-sm bg-[#16284F] text-[12px] font-bold text-white hover:bg-[#0F1E3A] disabled:cursor-not-allowed disabled:opacity-60">
+            {isLoading ? "Updating..." : "Update Stock"}
+          </button>
         </div>
       </div>
     </div>
