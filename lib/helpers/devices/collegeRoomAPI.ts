@@ -20,7 +20,6 @@ export type RoomType =
   | "lab"
   | "auditorium"
   | "seminarhall"
-  | "gate"
   | "library"
   | "conference";
 

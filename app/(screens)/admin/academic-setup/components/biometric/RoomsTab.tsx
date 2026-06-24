@@ -28,7 +28,6 @@ const ROOM_TYPES: { value: RoomType; label: string }[] = [
   { value: "lab", label: "Lab" },
   { value: "auditorium", label: "Auditorium" },
   { value: "seminarhall", label: "Seminar Hall" },
-  { value: "gate", label: "Gate" },
   { value: "library", label: "Library" },
   { value: "conference", label: "Conference" },
 ];
