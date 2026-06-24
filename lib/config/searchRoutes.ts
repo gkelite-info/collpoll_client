@@ -75,6 +75,7 @@ export const ROLE_BASED_ROUTES: Record<string, SearchRoute[]> = {
     { label: "Projects", path: "/admin/projects", category: "Academics", keywords: [] },
     { label: "Academic Setup", path: "/admin/academic-setup", category: "Academics", keywords: ["configuration", "structure", "courses"] },
     { label: "Academic Setup", subLabel: "Add Subject", path: "/admin/academic-setup?tab=add-subject", category: "Academics", keywords: ["add subject", "subject add"] },
+    { label: "Academic Setup", subLabel: "College Timings Structure", path: "/admin/academic-setup?tab=college-timings", category: "Academics", keywords: ["college timings", "operational hours", "working hours", "shifts"] },
     { label: "Academic Setup", subLabel: "Biometric Structure", path: "/admin/academic-setup?tab=biometric-structure", category: "Academics", keywords: ["rooms", "biometric structure", "devices"] },
     { label: "Rooms", subLabel: "Academic Setup / Biometric Structure", path: "/admin/academic-setup?tab=biometric-structure&biotab=rooms", category: "Academics", keywords: ["rooms", "biometric", "classes"] },
     { label: "Devices", subLabel: "Academic Setup / Biometric Structure", path: "/admin/academic-setup?tab=biometric-structure&biotab=devices", category: "Academics", keywords: ["devices", "biometric", "scanners", "hikvision"] },
