@@ -48,16 +48,16 @@ export const emptyForm: EquipmentFormState = {
   quantity: "",
   available: "",
   image: null,
+  imageFile: null,
 }; 
 
 export const normalizeCategoryName = (categoryName: string | null | undefined) =>
   categoryName?.toLowerCase().replace(/[^a-z]/g, "") ?? "";
 
 export const getStatus = (
-  item: Pick<EquipmentItem, "available" | "totalQty">,
+  item: Pick<EquipmentItem, "available">,
 ): EquipmentStatus => {
-  if (item.available <= 0) return "Out of Stock";
-  if (item.available <= Math.max(2, Math.ceil(item.totalQty * 0.25))) return "Low Stock";
+  if (item.available <= 5) return "Out of Stock";
   return "In Stock";
 };
 

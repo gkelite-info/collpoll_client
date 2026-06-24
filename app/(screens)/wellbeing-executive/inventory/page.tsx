@@ -1,8 +1,21 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
+import {
+  deleteInventoryAsset,
+  fetchInventoryAssets,
+  getInventoryImageUrl,
+  saveInventoryAsset,
+  type InventoryAssetRow,
+} from "@/lib/helpers/inventory/inventoryAssetAPI";
+import {
+  fetchInventoryStockHistory,
+  saveInventoryStockHistory,
+  type InventoryStockHistoryRow,
+} from "@/lib/helpers/inventory/inventoryStockHistoryAPI";
 import { EquipmentForm, InventoryOverview } from "./components";
 import {
   administrationItems,
@@ -68,14 +81,39 @@ const inventoryConfig = {
   description: string;
 }>;
 
+const getLocalDateInputValue = () => {
+  const today = new Date();
+  const timezoneOffset = today.getTimezoneOffset() * 60_000;
+  return new Date(today.getTime() - timezoneOffset).toISOString().slice(0, 10);
+};
+
 const createStockUpdate = (): StockUpdateState => ({
   actionType: "add",
-  quantity: "15",
-  date: new Date().toISOString().slice(0, 10),
+  quantity: "",
+  date: getLocalDateInputValue(),
   remarks: "",
 });
 
-function InventoryWorkspace({ variant }: { variant: InventoryVariant }) {
+const mapAssetToEquipmentItem = (asset: InventoryAssetRow, category: string): EquipmentItem => ({
+  id: `SP${asset.inventoryAssetId}`,
+  inventoryAssetId: asset.inventoryAssetId,
+  name: asset.assetName,
+  category,
+  totalQty: asset.totalQty,
+  available: asset.availableQty,
+  lastUpdated: new Date(asset.updatedAt).toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+  }),
+  image: getInventoryImageUrl(asset.referenceImage),
+});
+
+function InventoryWorkspace({
+  variant,
+  sportsContext,
+}: {
+  variant: InventoryVariant;
+  sportsContext?: { collegeId: number; categoryId: number; userId: number };
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -85,9 +123,38 @@ function InventoryWorkspace({ variant }: { variant: InventoryVariant }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | EquipmentStatus>("all");
   const [form, setForm] = useState<EquipmentFormState>(emptyForm);
-  const [stockItem, setStockItem] = useState<EquipmentItem | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<InventoryStockHistoryRow[]>([]);
+  const [inventoryAssets, setInventoryAssets] = useState<InventoryAssetRow[]>([]);
   const [stockUpdate, setStockUpdate] = useState<StockUpdateState>(createStockUpdate);
+  const [isSavingNew, setIsSavingNew] = useState(false);
+  const [isCancellingNew, setIsCancellingNew] = useState(false);
+  const [isOpeningAdd, setIsOpeningAdd] = useState(false);
+  const [isUpdatingStock, setIsUpdatingStock] = useState(false);
+  const [historyLoadingId, setHistoryLoadingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const stockId = searchParams.get("stockId");
+  const stockActionType: StockUpdateState["actionType"] =
+    searchParams.get("stockAction") === "reduce" ? "remove" : "add";
+  const stockItem = useMemo(
+    () => stockId ? items.find((item) => item.id === stockId) ?? null : null,
+    [items, stockId],
+  );
+  const sportsCollegeId = sportsContext?.collegeId;
+  const sportsCategoryId = sportsContext?.categoryId;
+
+  useEffect(() => {
+    if (!sportsCollegeId || !sportsCategoryId) return;
+    let active = true;
+    fetchInventoryAssets(sportsCollegeId, sportsCategoryId)
+      .then((assets) => {
+        if (!active) return;
+        setInventoryAssets(assets);
+        setItems(assets.map((asset) => mapAssetToEquipmentItem(asset, config.category)));
+      })
+      .catch((error) => toast.error(error instanceof Error ? error.message : "Failed to load inventory."));
+    return () => { active = false; };
+  }, [sportsCollegeId, sportsCategoryId, config.category]);
 
   const filteredItems = useMemo(
     () =>
@@ -112,10 +179,43 @@ function InventoryWorkspace({ variant }: { variant: InventoryVariant }) {
     };
   }, [items]);
 
-  const saveNewItem = () => {
+  const saveNewItem = async () => {
     const totalQty = Number(form.quantity) || 0;
     const available = Number(form.available || form.quantity) || 0;
-    if (!form.name.trim() || totalQty <= 0) return;
+    if (!form.name.trim()) {
+      toast.error("Please enter the equipment name.");
+      return;
+    }
+    if (totalQty <= 0) {
+      toast.error("Please enter a quantity greater than zero.");
+      return;
+    }
+    setIsSavingNew(true);
+
+    if (sportsContext) {
+      try {
+        const asset = await saveInventoryAsset({
+          collegeId: sportsContext.collegeId,
+          categoryId: sportsContext.categoryId,
+          createdBy: sportsContext.userId,
+          assetName: form.name.trim(),
+          totalQty,
+          availableQty: Math.min(available, totalQty),
+          referenceImage: form.imageFile,
+        });
+        setInventoryAssets((current) => [asset, ...current]);
+        setItems((current) => [mapAssetToEquipmentItem(asset, config.category), ...current]);
+        toast.success("Equipment added successfully.");
+        setForm(emptyForm);
+        setIsOpeningAdd(false);
+        router.replace(pathname);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to add equipment.");
+      } finally {
+        setIsSavingNew(false);
+      }
+      return;
+    }
 
     setItems((current) => [
       {
@@ -134,28 +234,89 @@ function InventoryWorkspace({ variant }: { variant: InventoryVariant }) {
       ...current,
     ]);
     setForm(emptyForm);
+    setIsOpeningAdd(false);
     router.replace(pathname);
+    setIsSavingNew(false);
   };
 
   const openEditModal = (item: EquipmentItem) => {
-    setStockItem(item);
     setStockUpdate(createStockUpdate());
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("stockId", item.id);
+    params.set("stockAction", "add");
+    router.push(`${pathname}?${params.toString()}`);
   };
 
-  const saveStockUpdate = () => {
+  const closeStockModal = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("stockId");
+    params.delete("stockAction");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  };
+
+  const changeStockUpdate = (nextUpdate: StockUpdateState) => {
+    setStockUpdate(nextUpdate);
+    if (nextUpdate.actionType === stockActionType) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("stockAction", nextUpdate.actionType === "remove" ? "reduce" : "add");
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
+  const saveStockUpdate = async () => {
     if (!stockItem) return;
     const quantity = Number(stockUpdate.quantity) || 0;
-    if (quantity <= 0) return;
+    if (quantity <= 0) {
+      toast.error("Please enter a quantity greater than zero.");
+      return;
+    }
+    if (!stockUpdate.date) {
+      toast.error("Please select the stock update date.");
+      return;
+    }
+    if (stockActionType === "remove" && quantity > stockItem.available) {
+      toast.error(`Only ${stockItem.available} item${stockItem.available === 1 ? " is" : "s are"} available to reduce.`);
+      return;
+    }
+    setIsUpdatingStock(true);
+
+    if (sportsContext && stockItem.inventoryAssetId) {
+      const asset = inventoryAssets.find((row) => row.inventoryAssetId === stockItem.inventoryAssetId);
+      if (!asset) return;
+      try {
+        const updated = await saveInventoryStockHistory({
+          asset,
+          actionType: stockActionType,
+          quantity,
+          actionDate: stockUpdate.date,
+          remarks: stockUpdate.remarks,
+          updatedBy: sportsContext.userId,
+        });
+        setInventoryAssets((current) => current.map((row) => row.inventoryAssetId === updated.inventoryAssetId ? updated : row));
+        setItems((current) => current.map((row) => row.inventoryAssetId === updated.inventoryAssetId ? mapAssetToEquipmentItem(updated, config.category) : row));
+        closeStockModal();
+        toast.success("Stock updated successfully.");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to update stock.");
+      } finally {
+        setIsUpdatingStock(false);
+      }
+      return;
+    }
 
     setItems((current) =>
       current.map((item) => {
         if (item.id !== stockItem.id) return item;
+        const nextTotalQty = stockActionType === "add"
+          ? item.totalQty + quantity
+          : item.totalQty;
         const nextAvailable =
-          stockUpdate.actionType === "add"
-            ? Math.min(item.available + quantity, item.totalQty)
+          stockActionType === "add"
+            ? item.available + quantity
             : Math.max(item.available - quantity, 0);
         return {
           ...item,
+          totalQty: nextTotalQty,
           available: nextAvailable,
           lastUpdated: new Date(`${stockUpdate.date}T00:00:00`).toLocaleDateString("en-GB", {
             day: "2-digit",
@@ -165,7 +326,58 @@ function InventoryWorkspace({ variant }: { variant: InventoryVariant }) {
         };
       }),
     );
-    setStockItem(null);
+    closeStockModal();
+    setIsUpdatingStock(false);
+  };
+
+  const openHistory = async (item: EquipmentItem) => {
+    setHistoryOpen(true);
+    setHistory([]);
+    if (!sportsContext || !item.inventoryAssetId) return;
+    setHistoryLoadingId(item.id);
+    try {
+      setHistory(await fetchInventoryStockHistory(sportsContext.collegeId, sportsContext.categoryId, item.inventoryAssetId));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to load stock history.");
+    } finally {
+      setHistoryLoadingId(null);
+    }
+  };
+
+  const removeItem = async (item: EquipmentItem) => {
+    setDeletingId(item.id);
+    if (!sportsContext || !item.inventoryAssetId) {
+      setItems((current) => current.filter((row) => row.id !== item.id));
+      setDeletingId(null);
+      return;
+    }
+    const asset = inventoryAssets.find((row) => row.inventoryAssetId === item.inventoryAssetId);
+    if (!asset) {
+      setDeletingId(null);
+      return;
+    }
+    try {
+      await deleteInventoryAsset(asset);
+      setInventoryAssets((current) => current.filter((row) => row.inventoryAssetId !== asset.inventoryAssetId));
+      setItems((current) => current.filter((row) => row.inventoryAssetId !== asset.inventoryAssetId));
+      toast.success("Equipment deleted successfully.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete equipment.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const openAddForm = () => {
+    setIsCancellingNew(false);
+    setIsOpeningAdd(true);
+    router.push(`${pathname}?view=add`);
+  };
+
+  const cancelAddForm = () => {
+    setIsCancellingNew(true);
+    setIsOpeningAdd(false);
+    router.push(pathname);
   };
 
   if (view === "add") {
@@ -177,10 +389,12 @@ function InventoryWorkspace({ variant }: { variant: InventoryVariant }) {
             description="Register new physical assets into the logistics ecosystem."
             form={form}
             onChange={setForm}
-            onCancel={() => router.push(pathname)}
+            onCancel={cancelAddForm}
             onSubmit={saveNewItem}
             submitText={config.submitText}
             itemLabel={config.itemLabel}
+            isSaving={isSavingNew}
+            isCancelling={isCancellingNew}
             compact
           />
         </section>
@@ -198,37 +412,44 @@ function InventoryWorkspace({ variant }: { variant: InventoryVariant }) {
         statusFilter={statusFilter}
         onSearchChange={setSearch}
         onStatusFilterChange={setStatusFilter}
-        onAdd={() => router.push(`${pathname}?view=add`)}
-        onHistory={() => setHistoryOpen(true)}
+        onAdd={openAddForm}
+        onHistory={openHistory}
         onEdit={openEditModal}
-        onDelete={(item) =>
-          setItems((current) => current.filter((row) => row.id !== item.id))
-        }
+        onDelete={removeItem}
         description={config.description}
         addButtonLabel={config.addButtonLabel}
         itemColumnLabel={config.itemColumnLabel}
+        isOpeningAdd={isOpeningAdd}
+        historyLoadingId={historyLoadingId}
+        deletingId={deletingId}
       />
 
       {stockItem ? (
         <UpdateStockModal
           item={stockItem}
-          stockUpdate={stockUpdate}
-          onChange={setStockUpdate}
-          onClose={() => setStockItem(null)}
+          stockUpdate={{ ...stockUpdate, actionType: stockActionType }}
+          onChange={changeStockUpdate}
+          onClose={closeStockModal}
           onSave={saveStockUpdate}
+          isLoading={isUpdatingStock}
         />
       ) : null}
-      {historyOpen ? <StockHistoryModal variant={variant} onClose={() => setHistoryOpen(false)} /> : null}
+      {historyOpen ? <StockHistoryModal variant={variant} history={sportsContext ? history : undefined} onClose={() => setHistoryOpen(false)} /> : null}
     </main>
   );
 }
 
 function InventoryPageContent() {
-  const { loading, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
+  const { loading, userId, collegeId, wellBeingCategoryId, wellBeingCategoryIds, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
   const categories = [wellBeingCategoryName, ...wellBeingCategoryNames].map(
     normalizeCategoryName,
   );
   const isSports = categories.includes("sports");
+  const assignedCategories = [
+    { id: wellBeingCategoryId, name: wellBeingCategoryName },
+    ...wellBeingCategoryNames.map((name, index) => ({ id: wellBeingCategoryIds[index], name })),
+  ];
+  const sportsCategoryId = assignedCategories.find(({ id, name }) => id && normalizeCategoryName(name) === "sports")?.id;
   const isInfrastructure = categories.includes("infrastructure");
   const isSafety = categories.some(
     (category) => category === "safetyandsecurity" || category === "safetysecurity",
@@ -260,7 +481,11 @@ function InventoryPageContent() {
       ? "safety"
       : "sports";
 
-  return <InventoryWorkspace key={variant} variant={variant} />;
+  const sportsContext = isSports && userId && collegeId && sportsCategoryId
+    ? { userId, collegeId, categoryId: sportsCategoryId }
+    : undefined;
+
+  return <InventoryWorkspace key={variant} variant={variant} sportsContext={sportsContext} />;
 }
 
 export default function WellbeingInventoryPage() {

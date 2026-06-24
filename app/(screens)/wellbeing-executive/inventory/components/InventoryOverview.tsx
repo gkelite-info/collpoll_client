@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import {
   ClockCounterClockwise,
+  CircleNotch,
   FunnelSimple,
   MagnifyingGlass,
   PencilSimple,
@@ -22,13 +24,16 @@ type InventoryOverviewProps = {
   onSearchChange: (value: string) => void;
   onStatusFilterChange: (value: "all" | EquipmentStatus) => void;
   onAdd: () => void;
-  onHistory: () => void;
+  onHistory: (item: EquipmentItem) => void;
   onEdit: (item: EquipmentItem) => void;
   onDelete: (item: EquipmentItem) => void;
   title?: string;
   description?: string;
   addButtonLabel?: string;
   itemColumnLabel?: string;
+  isOpeningAdd?: boolean;
+  historyLoadingId?: string | null;
+  deletingId?: string | null;
 };
 
 export function InventoryOverview({
@@ -47,7 +52,21 @@ export function InventoryOverview({
   description = "Track and manage all sports equipment and assets.",
   addButtonLabel = "Add New Equipment",
   itemColumnLabel = "Item Name",
+  isOpeningAdd = false,
+  historyLoadingId = null,
+  deletingId = null,
 }: InventoryOverviewProps) {
+  const [availableSort, setAvailableSort] = useState<"none" | "asc" | "desc">("none");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const sortedItems = useMemo(() => {
+    if (availableSort === "none") return filteredItems;
+    return [...filteredItems].sort((first, second) =>
+      availableSort === "asc"
+        ? first.available - second.available
+        : second.available - first.available,
+    );
+  }, [availableSort, filteredItems]);
+
   return (
     <section className="mx-auto max-w-[1180px] rounded-xl bg-white p-5 shadow-sm md:p-8">
       <div className="mb-8">
@@ -74,8 +93,32 @@ export function InventoryOverview({
             <option value="Low Stock">Low Stock</option>
             <option value="Out of Stock">Out of Stock</option>
           </select>
-          <button className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded border border-[#E2E8F0] px-4 text-[13px] font-bold text-[#475569] hover:bg-[#F8FAFC]"><FunnelSimple size={16} weight="bold" />Filters</button>
-          <button type="button" onClick={onAdd} className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded bg-[#0F8A4B] px-5 text-[13px] font-bold text-white hover:bg-[#0B743F]"><Plus size={16} weight="bold" />{addButtonLabel}</button>
+          <div className="relative">
+            <button type="button" onClick={() => setFiltersOpen((current) => !current)} aria-expanded={filtersOpen} className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded border border-[#E2E8F0] px-4 text-[13px] font-bold text-[#475569] hover:bg-[#F8FAFC] lg:w-auto">
+              <FunnelSimple size={16} weight="bold" />
+              {availableSort === "asc" ? "Available: Ascending" : availableSort === "desc" ? "Available: Descending" : "Filters"}
+            </button>
+            {filtersOpen ? (
+              <div className="absolute right-0 top-11 z-20 min-w-[210px] overflow-hidden rounded-md border border-[#E2E8F0] bg-white py-1 shadow-lg">
+                <p className="px-4 py-2 text-[10px] font-extrabold uppercase tracking-wide text-[#94A3B8]">Available Quantity</p>
+                {([
+                  { value: "asc" as const, label: "Ascending (Low to High)" },
+                  { value: "desc" as const, label: "Descending (High to Low)" },
+                ]).map((option) => (
+                  <button key={option.value} type="button" onClick={() => { setAvailableSort(option.value); setFiltersOpen(false); }} className={`block w-full cursor-pointer px-4 py-2.5 text-left text-[12px] font-semibold hover:bg-[#F8FAFC] ${availableSort === option.value ? "bg-[#EAF3FF] text-[#2563EB]" : "text-[#16284F]"}`}>
+                    {option.label}
+                  </button>
+                ))}
+                {availableSort !== "none" ? (
+                  <button type="button" onClick={() => { setAvailableSort("none"); setFiltersOpen(false); }} className="block w-full cursor-pointer border-t border-[#E2E8F0] px-4 py-2.5 text-left text-[12px] font-semibold text-[#64748B] hover:bg-[#F8FAFC]">Clear sorting</button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          <button type="button" onClick={onAdd} disabled={isOpeningAdd} className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded bg-[#0F8A4B] px-5 text-[13px] font-bold text-white hover:bg-[#0B743F] disabled:cursor-not-allowed disabled:opacity-60">
+            {!isOpeningAdd ? <Plus size={16} weight="bold" /> : null}
+            {isOpeningAdd ? "Opening..." : addButtonLabel}
+          </button>
         </div>
 
         <div className="overflow-x-auto">
@@ -86,7 +129,7 @@ export function InventoryOverview({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EEF2F7]">
-              {filteredItems.map((item) => {
+              {sortedItems.map((item) => {
                 const status = getStatus(item);
                 return (
                   <tr key={item.id} className="h-[74px] bg-white">
@@ -96,9 +139,13 @@ export function InventoryOverview({
                     <td className={`px-5 py-3 text-[12px] font-extrabold leading-4 ${statusClasses[status]}`}><span className="inline-flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full bg-current" /><span className="max-w-[72px] whitespace-normal">{status}</span></span></td>
                     <td className="px-5 py-3 text-[13px] font-semibold text-[#64748B]">{item.lastUpdated}</td>
                     <td className="px-5 py-3"><div className="flex items-center justify-center gap-4 text-[#94A3B8]">
-                      <button type="button" onClick={onHistory} className="cursor-pointer hover:text-[#16A85B]" title="Stock history"><ClockCounterClockwise size={21} weight="bold" /></button>
+                      <button type="button" onClick={() => onHistory(item)} disabled={historyLoadingId === item.id} className="cursor-pointer hover:text-[#16A85B] disabled:cursor-not-allowed disabled:opacity-60" title="Stock history">
+                        {historyLoadingId === item.id ? <CircleNotch size={21} className="animate-spin" /> : <ClockCounterClockwise size={21} weight="bold" />}
+                      </button>
                       <button type="button" onClick={() => onEdit(item)} className="cursor-pointer hover:text-[#16284F]" title="Edit"><PencilSimple size={20} weight="bold" /></button>
-                      <button type="button" onClick={() => onDelete(item)} className="cursor-pointer hover:text-[#FF2A2A]" title="Delete"><Trash size={20} weight="bold" /></button>
+                      <button type="button" onClick={() => onDelete(item)} disabled={deletingId === item.id} className="cursor-pointer hover:text-[#FF2A2A] disabled:cursor-not-allowed disabled:opacity-60" title="Delete">
+                        {deletingId === item.id ? <CircleNotch size={20} className="animate-spin" /> : <Trash size={20} weight="bold" />}
+                      </button>
                     </div></td>
                   </tr>
                 );

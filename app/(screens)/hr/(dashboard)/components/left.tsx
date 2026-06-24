@@ -464,14 +464,14 @@ export default function HrDashLeft() {
             )}
           </div>
 
-          <div className="mt-3 flex w-full min-w-0 flex-nowrap gap-2 overflow-x-auto hide-scrollbar">
+          <div className="custom-scrollbar mt-3 flex w-full min-w-0 flex-nowrap gap-2 overflow-x-scroll overflow-y-hidden pb-2 [scrollbar-gutter:stable]">
             {HR_ROLE_PILLS.map((pill) => {
               const isActive = activeRole === pill.value;
               return (
                 <button
                   key={pill.value}
                   onClick={() => handleRoleChange(pill.value)}
-                  className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${isActive ? "bg-[#22C55E] text-white border-[#22C55E]" : "bg-white text-[#282828] border-gray-300 hover:bg-[#22C55E] hover:text-white hover:border-[#22C55E]"}`}
+                  className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors cursor-pointer ${isActive ? "bg-[#22C55E] text-white border-[#22C55E]" : "bg-white text-[#282828] border-gray-300 hover:bg-[#22C55E] hover:text-white hover:border-[#22C55E]"}`}
                 >
                   {pill.label}
                 </button>

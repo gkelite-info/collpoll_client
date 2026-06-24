@@ -16,7 +16,7 @@ const ROLE_DISPLAY_MAP: Record<string, string> = {
   SuperAdmin: "Super Admin",
 };
 
-const EXCLUDED_ROLES = ["Student", "Parent"];
+const EXCLUDED_ROLES = ["SuperAdmin", "Student", "Parent"];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

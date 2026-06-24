@@ -8,6 +8,7 @@ export type EquipmentItem = {
   available: number;
   lastUpdated: string;
   image: string | null;
+  inventoryAssetId?: number;
 };
 
 export type EquipmentFormState = {
@@ -15,6 +16,7 @@ export type EquipmentFormState = {
   quantity: string;
   available: string;
   image: string | null;
+  imageFile?: File | null;
 };
 
 export type StockActionType = "add" | "remove";
