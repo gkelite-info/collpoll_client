@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Dynamic Hikvision device proxy.
  *
@@ -42,8 +44,14 @@ async function digestFetch(
   const { createHash } = await import("crypto");
 
   // Step 1: challenge
-  const challengeRes = await fetch(url, { method });
-  const wwwAuth = challengeRes.headers.get("www-authenticate") || "";
+  let challengeRes = await fetch(url, { method });
+  let wwwAuth = challengeRes.headers.get("www-authenticate") || "";
+
+  // Hikvision firmware fallback: Some POST/PUT requests fail to return a challenge
+  if (!wwwAuth && method !== "GET") {
+    challengeRes = await fetch(url, { method: "GET" });
+    wwwAuth = challengeRes.headers.get("www-authenticate") || "";
+  }
 
   const realm = wwwAuth.match(/realm="([^"]+)"/)?.[1] ?? "";
   const nonce = wwwAuth.match(/nonce="([^"]+)"/)?.[1] ?? "";

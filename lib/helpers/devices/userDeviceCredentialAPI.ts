@@ -277,6 +277,7 @@ export const searchUsersForEnrollment = async (collegeId: number, search: string
       .eq("collegeId", collegeId)
       .eq("is_deleted", false)
       .is("deletedAt", null)
+      .not("role", "in", '("Super Admin","SuperAdmin","Parent","parent","superadmin")')
       .or(`fullName.ilike.%${search.trim()}%,email.ilike.%${search.trim()}%,mobile.ilike.%${search.trim()}%`)
       .limit(20);
 
