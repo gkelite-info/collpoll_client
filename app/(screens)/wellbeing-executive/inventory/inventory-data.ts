@@ -57,7 +57,8 @@ export const normalizeCategoryName = (categoryName: string | null | undefined) =
 export const getStatus = (
   item: Pick<EquipmentItem, "available">,
 ): EquipmentStatus => {
-  if (item.available <= 5) return "Out of Stock";
+  if (item.available <= 0) return "Out of Stock";
+  if (item.available <= 5) return "Low Stock";
   return "In Stock";
 };
 
