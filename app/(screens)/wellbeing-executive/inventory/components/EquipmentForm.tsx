@@ -13,6 +13,8 @@ type EquipmentFormProps = {
   submitText: string;
   compact?: boolean;
   itemLabel?: string;
+  isSaving?: boolean;
+  isCancelling?: boolean;
 };
 
 export function EquipmentForm({
@@ -25,11 +27,18 @@ export function EquipmentForm({
   submitText,
   compact = false,
   itemLabel = "Equipment",
+  isSaving = false,
+  isCancelling = false,
 }: EquipmentFormProps) {
+  const isBusy = isSaving || isCancelling;
+  const isFormValid = form.name.trim().length > 0 && Number(form.quantity) > 0;
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    onChange({ ...form, image: URL.createObjectURL(file) });
+    if (form.image?.startsWith("blob:")) {
+      URL.revokeObjectURL(form.image);
+    }
+    onChange({ ...form, image: URL.createObjectURL(file), imageFile: file });
   };
 
   return (
@@ -95,25 +104,34 @@ export function EquipmentForm({
 
           <label className={`${compact ? "p-3" : "p-4"} flex cursor-pointer items-center justify-between gap-4 rounded-sm border border-dashed border-[#CBD5E1] bg-[#F8FAFC]`}>
             <span className="flex items-center gap-4">
-              <span className={`${compact ? "h-11 w-11" : "h-14 w-14"} flex items-center justify-center rounded-sm border border-[#CBD5E1] bg-white text-[#64748B]`}>
-                <ImageSquare size={compact ? 20 : 24} weight="bold" />
+              <span className={`${compact ? "h-11 w-11" : "h-14 w-14"} flex shrink-0 items-center justify-center overflow-hidden rounded-sm border border-[#CBD5E1] bg-white text-[#64748B]`}>
+                {form.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={form.image} alt="Selected reference" className="h-full w-full object-cover" />
+                ) : (
+                  <ImageSquare size={compact ? 20 : 24} weight="bold" />
+                )}
               </span>
-              <span>
+              <span className="min-w-0">
                 <span className="block text-[12px] font-extrabold text-[#334155]">Reference Image</span>
-                <span className="mt-1 block text-[12px] font-medium text-[#64748B]">Upload a visual reference for staff identification.</span>
+                <span className="mt-1 block max-w-[360px] truncate text-[12px] font-medium text-[#64748B]">
+                  {form.imageFile?.name || "Upload a visual reference for staff identification."}
+                </span>
               </span>
             </span>
-            <span className="rounded-sm border border-[#CBD5E1] bg-white px-5 py-2 text-[12px] font-bold text-[#16284F]">Browse</span>
+            <span className="shrink-0 rounded-sm border border-[#CBD5E1] bg-white px-5 py-2 text-[12px] font-bold text-[#16284F]">
+              {form.image ? "Change" : "Browse"}
+            </span>
             <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
           </label>
 
           <div className={`${compact ? "pt-6" : "pt-7"} flex justify-end gap-4 border-t border-[#CBD5E1]`}>
-            <button type="button" onClick={onCancel} className={`${compact ? "h-9 px-7" : "h-11 px-8"} cursor-pointer rounded-sm border border-[#16284F] text-[12px] font-bold text-[#16284F] hover:bg-[#F8FAFC]`}>
-              Cancel
+            <button type="button" onClick={onCancel} disabled={isBusy} className={`${compact ? "h-9 px-7" : "h-11 px-8"} inline-flex cursor-pointer items-center gap-2 rounded-sm border border-[#16284F] text-[12px] font-bold text-[#16284F] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60`}>
+              {isCancelling ? "Cancelling..." : "Cancel"}
             </button>
-            <button type="button" onClick={onSubmit} className={`${compact ? "h-9 px-7" : "h-11 px-8"} inline-flex cursor-pointer items-center gap-2 rounded-sm bg-[#16284F] text-[12px] font-bold text-white hover:bg-[#0F1E3A]`}>
-              <FloppyDisk size={16} weight="bold" />
-              {submitText}
+            <button type="button" onClick={onSubmit} disabled={isBusy || !isFormValid} className={`${compact ? "h-9 px-7" : "h-11 px-8"} inline-flex cursor-pointer items-center gap-2 rounded-sm bg-[#16284F] text-[12px] font-bold text-white hover:bg-[#0F1E3A] disabled:cursor-not-allowed disabled:opacity-60`}>
+              {!isSaving ? <FloppyDisk size={16} weight="bold" /> : null}
+              {isSaving ? "Saving..." : submitText}
             </button>
           </div>
         </div>

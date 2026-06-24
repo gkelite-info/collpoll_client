@@ -1,6 +1,7 @@
 "use client";
 
 import { ClockCounterClockwise, X } from "@phosphor-icons/react";
+import type { InventoryStockHistoryRow } from "@/lib/helpers/inventory/inventoryStockHistoryAPI";
 
 const sportsHistory = [
   { type: "Stock Added", quantity: "+15", date: "16 May 2025 • 10:30 AM", note: "Received 15 footballs from Decathlon.", added: true },
@@ -26,15 +27,29 @@ const administrationHistory = [
 type StockHistoryModalProps = {
   onClose: () => void;
   variant?: "sports" | "safety" | "administration";
+  history?: InventoryStockHistoryRow[];
 };
 
-export function StockHistoryModal({ onClose, variant = "sports" }: StockHistoryModalProps) {
-  const history =
+export function StockHistoryModal({ onClose, variant = "sports", history: dynamicHistory }: StockHistoryModalProps) {
+  const staticHistory =
     variant === "administration"
       ? administrationHistory
       : variant === "safety"
         ? safetyHistory
         : sportsHistory;
+  const history = dynamicHistory?.map((entry) => ({
+    type: entry.actionType === "stockadded"
+      ? "Stock Added"
+      : entry.actionType === "lostequipment"
+        ? "Lost Equipment"
+        : "Stock Reduced",
+    quantity: `${entry.actionType === "stockadded" ? "+" : "-"}${entry.quantity}`,
+    date: new Date(entry.actionDate).toLocaleString("en-GB", {
+      day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+    }),
+    note: entry.remarks || "No remarks added.",
+    added: entry.actionType === "stockadded",
+  })) ?? staticHistory;
 
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-end bg-black/55 p-2">
