@@ -123,6 +123,13 @@ export default function FacultyNavbar({ onClose }: FacultyNavbarProps) {
     },
     {
       icon: (isActive) => (
+        <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: t("Exams"),
+      path: "/faculty/exams",
+    },
+    {
+      icon: (isActive) => (
         <Laptop size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: t("Meetings"),
