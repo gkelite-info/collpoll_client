@@ -223,7 +223,8 @@ export default function AddCollegeTimings() {
     }
 
     setIsSaving(true);
-    const toastId = toast.loading("Saving college timings...", { id: "save-timings" });
+    const toastId = "save-timings";
+    toast.loading("Saving college timings...", { id: toastId });
 
     const payload: DayTimingPayload[] = timings.map(t => ({
       dayOfWeek: t.day,
@@ -237,16 +238,18 @@ export default function AddCollegeTimings() {
 
     const res = await upsertCollegeTimings(collegeId, userId || 0, payload);
 
-    if (res.success) {
-      toast.success("College timings saved successfully!", { id: toastId });
-      const params = new URLSearchParams(window.location.search);
-      params.set("action", "view");
-      router.replace(`${window.location.pathname}?${params.toString()}`);
-    } else {
-      toast.error(res.error || "Failed to save timings.", { id: toastId });
-    }
-    
     setIsSaving(false);
+
+    if (res.success) {
+      toast.success("College timings saved successfully!", { id: toastId, duration: 3000 });
+      setTimeout(() => {
+        const params = new URLSearchParams(window.location.search);
+        params.set("action", "view");
+        router.replace(`${window.location.pathname}?${params.toString()}`);
+      }, 1000);
+    } else {
+      toast.error(res.error || "Failed to save timings.", { id: toastId, duration: 4000 });
+    }
   };
 
   if (isLoadingData) {
