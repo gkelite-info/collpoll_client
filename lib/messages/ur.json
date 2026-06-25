@@ -21,7 +21,8 @@
     "Finance / Analytics": "مالیات / تجزیات",
     "Add Fee Structure": "فیس کا ڈھانچہ شامل کریں",
     "Registration": "رجسٹریشن",
-    "Wellbeing": "فلاح و بہبود"
+    "Wellbeing": "فلاح و بہبود",
+    "Exams": "امتحانات"
   },
   "Settings": {
     "Settings": "ترتیبات",
@@ -104,6 +105,7 @@
       "Actions": "عملیات",
       "ENROLL": "داخلہ لیں",
       "NOT ELIGIBLE": "قابلِ داخلہ نہیں",
+      "CLOSED": "بند",
       "Note": "نوٹ",
       "You’re eligible to enroll if your attendance ≥ 75%": "اگر آپ کی حاضری ≥ 75٪ ہے تو آپ داخلے کے اہل ہیں",
       "Select Subjects to Enroll": "داخلے کے لیے مضامین منتخب کریں",
@@ -164,7 +166,9 @@
       "Admin": "انتظامیہ",
       "Faculty": "فیکلٹی",
       "Student": "طالب علم",
-      "Parent": "والدین"
+      "Parent": "والدین",
+      "Exams": "امتحانات",
+      "Enroll for your upcoming exams starting March 11, 2026": "اپنے آنے والے امتحانات کے لیے 11 مارچ 2026 سے رجسٹر کریں۔"
     },
     "parent": {
       "StudentID:": "طالب علم کا شناختی نمبر:",

@@ -104,6 +104,7 @@
       "Actions": "చర్యలు",
       "ENROLL": "ఎన్‌రోల్",
       "NOT ELIGIBLE": "అర్హత లేదు",
+      "CLOSED": "ముగిసింది",
       "Note": "గమనిక",
       "You’re eligible to enroll if your attendance ≥ 75%": "మీ హాజరు ≥ 75% ఉంటేనే మీరు ఎన్‌రోల్ చేసుకోవడానికి అర్హులు",
       "Select Subjects to Enroll": "ఎన్‌రోల్ చేయడానికి సబ్జెక్టులను ఎంచుకోండి",
@@ -165,7 +166,8 @@
       "Faculty": "ఫ్యాకల్టీ",
       "Student": "విద్యార్థి",
       "Parent": "తల్లిదండ్రులు",
-      "Calculating performance": "పనితీరును లెక్కిస్తున్నాం..."
+      "Calculating performance": "పనితీరును లెక్కిస్తున్నాం...",
+      "Exams": "పరీక్షలు"
     },
     "parent": {
       "StudentID:": "విద్యార్థి ఐడి:",

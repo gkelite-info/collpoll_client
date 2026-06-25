@@ -440,7 +440,7 @@ export default function StuDashLeft() {
     {
       style: "bg-[#E6FBEA] h-[126.35px] w-[182px]",
       icon: <BookOpen size={32} weight="fill" color="#74FF8F" />,
-      value: t("Mid Exams"),
+      value: t("Exams"),
       label: t("N/A"),
       onClick: () => setView("exams"),
     },

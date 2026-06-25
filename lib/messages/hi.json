@@ -104,6 +104,7 @@
       "Actions": "कार्रवाई",
       "ENROLL": "नामांकन करें",
       "NOT ELIGIBLE": "पात्र नहीं",
+      "CLOSED": "बंद",
       "Note": "नोट",
       "You’re eligible to enroll if your attendance ≥ 75%": "यदि आपकी उपस्थिति ≥ 75% है तो आप नामांकन के पात्र हैं",
       "Select Subjects to Enroll": "नामांकन के लिए विषय चुनें",
@@ -165,7 +166,8 @@
       "Faculty": "संकाय",
       "Student": "छात्र",
       "Parent": "अभिभावक",
-      "Calculating performance": "प्रदर्शन की गणना हो रही है..."
+      "Calculating performance": "प्रदर्शन की गणना हो रही है...",
+      "Exams": "परीक्षाएँ"
     },
     "parent": {
       "StudentID:": "छात्र आईडी:",
