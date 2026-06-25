@@ -84,6 +84,7 @@ export function EquipmentForm({
                 type="number"
                 min="0"
                 value={form.quantity}
+                onWheel={(event) => event.currentTarget.blur()}
                 onChange={(event) => onChange({ ...form, quantity: event.target.value })}
                 placeholder="0"
                 className={`${compact ? "h-9" : "h-12"} mt-2 w-full rounded-sm border border-[#CBD5E1] bg-[#F8FAFC] px-4 text-[13px] font-semibold text-[#16284F] outline-none focus:border-[#43C17A]`}
@@ -95,6 +96,7 @@ export function EquipmentForm({
                 type="number"
                 min="0"
                 value={form.available}
+                onWheel={(event) => event.currentTarget.blur()}
                 onChange={(event) => onChange({ ...form, available: event.target.value })}
                 placeholder="0"
                 className="mt-2 h-12 w-full rounded-sm border border-[#CBD5E1] bg-[#F8FAFC] px-4 text-[13px] font-semibold text-[#16284F] outline-none focus:border-[#43C17A]"

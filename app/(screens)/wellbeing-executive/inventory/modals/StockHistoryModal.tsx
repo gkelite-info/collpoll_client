@@ -44,8 +44,8 @@ export function StockHistoryModal({ onClose, variant = "sports", history: dynami
         ? "Lost Equipment"
         : "Stock Reduced",
     quantity: String(entry.quantity),
-    date: new Date(entry.actionDate).toLocaleString("en-GB", {
-      day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+    date: new Date(entry.actionDate).toLocaleDateString("en-GB", {
+      day: "2-digit", month: "short", year: "numeric",
     }),
     note: entry.remarks || "No remarks added.",
     added: entry.actionType === "stockadded",
