@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  adminSupabase,
   validateAndLookupDevice,
   validateAndLookupDeviceById,
   validateAndLookupDeviceByIp,
@@ -7,7 +8,6 @@ import {
   lookupUserByCredential,
   insertPendingLog,
   updateLogStatus,
-  getUserRole,
   updateDeviceIp,
   insertRetryQueue,
 } from "@/lib/helpers/devices/scanIngestionHelper";
@@ -16,20 +16,13 @@ import { processGateScan } from "@/lib/helpers/devices/gateScanLogAPI";
 
 export const dynamic = "force-dynamic";
 
-/* ------------------------------------------------------------------ */
-/*  In-process rate limiter (per userId, per 5s)                       */
-/*  Prevents duplicate scans from flooding the DB.                     */
-/*  Note: resets on server restart — acceptable for single-node.       */
-/*  For multi-node SaaS: replace with Redis (Upstash).                */
-/* ------------------------------------------------------------------ */
-
 const lastScanMap = new Map<string, number>();
 
-function isRateLimited(userId: number, deviceId: number): boolean {
-  const key = `${userId}-${deviceId}`;
+function isRateLimited(userId: number, collegeId: number): boolean {
+  const key = `${userId}-${collegeId}`;
   const now = Date.now();
   const last = lastScanMap.get(key);
-  if (last && now - last < 5000) return true;
+  if (last && now - last < 20000) return true;
   lastScanMap.set(key, now);
 
   // Prevent unbounded growth (cap at 10k entries — ~600KB worst case)
@@ -40,28 +33,14 @@ function isRateLimited(userId: number, deviceId: number): boolean {
   return false;
 }
 
-/* ------------------------------------------------------------------ */
-/*  POST /api/biometric/scan                                            */
-/*                                                                      */
-/*  Receives device scan events (push from Hikvision / gateway).       */
-/*  Always returns 200 — Hikvision retries on non-200.                 */
-/*                                                                      */
-/*  Payload:                                                            */
-/*  {                                                                   */
-/*    deviceSerialNumber: string;                                       */
-/*    employeeNo?: string;                                              */
-/*    credentialIdentifier?: string;                                     */
-/*    authMethod: "Fingerprint" | "FaceRecognition" | "Card";         */
-/*    scanTimestamp: string; // ISO 8601                                */
-/*    rawDeviceData?: object;                                           */
-/*  }                                                                   */
-/* ------------------------------------------------------------------ */
+
 
 // Removed fs and path since they crash in serverless environments (e.g. Vercel)
 
 export async function POST(req: NextRequest) {
   try {
     // 1. Parse body (Handle JSON or Hikvision Multipart)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let body: any = {};
     const contentType = req.headers.get("content-type") || "";
 
@@ -78,6 +57,7 @@ export async function POST(req: NextRequest) {
         headers: req.headers,
         body: rawReqBodyBytes,
         duplex: 'half'
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
       
       const formData = await reqClone.formData();
@@ -105,7 +85,7 @@ export async function POST(req: NextRequest) {
     let credentialIdentifier = body.credentialIdentifier;
     let authMethod = body.authMethod;
     let scanTimestamp = body.scanTimestamp || body.dateTime;
-    let rawDeviceData = body.rawDeviceData || body;
+    const rawDeviceData = body.rawDeviceData || body;
 
     if (body.EventNotificationAlert?.AccessControllerEvent) {
       const evt = body.EventNotificationAlert.AccessControllerEvent;
@@ -238,17 +218,48 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 8. Rate limit check (after credential verified to prevent anon abuse)
-    if (isRateLimited(userId, device.deviceId)) {
+    // 8. Rate limit check & 20-second Debounce (SaaS Level Deduplication)
+    if (isRateLimited(userId, device.collegeId)) {
       if (deviceAttendanceLogId) {
         await updateLogStatus({
           deviceAttendanceLogId,
           processedStatus: "rejected",
-          rejectionReason: "RateLimited",
+          rejectionReason: "DuplicateScan",
         });
       }
       return NextResponse.json(
-        { processed: false, reason: "RateLimited" },
+        { processed: false, reason: "DuplicateScan" },
+        { status: 200 },
+      );
+    }
+
+    // DB-backed 20-second debounce across instances
+    const scanTimeMs = new Date(scanTimestamp).getTime();
+    const twentySecondsBefore = new Date(scanTimeMs - 20000).toISOString();
+    const twentySecondsAfter = new Date(scanTimeMs + 20000).toISOString();
+
+    const { data: duplicates } = await adminSupabase
+      .from("device_attendance_logs")
+      .select("deviceAttendanceLogId")
+      .eq("userId", userId)
+      .eq("collegeId", device.collegeId)
+      // Only match older logs within the 20s window to prevent race condition deadlock
+      .lt("deviceAttendanceLogId", deviceAttendanceLogId || 999999999)
+      .gte("scanTimestamp", twentySecondsBefore)
+      .lte("scanTimestamp", twentySecondsAfter)
+      .in("processedStatus", ["accepted", "pending"])
+      .limit(1);
+
+    if (duplicates && duplicates.length > 0) {
+      if (deviceAttendanceLogId) {
+        await updateLogStatus({
+          deviceAttendanceLogId,
+          processedStatus: "rejected",
+          rejectionReason: "DuplicateScan",
+        });
+      }
+      return NextResponse.json(
+        { processed: false, reason: "DuplicateScan" },
         { status: 200 },
       );
     }
@@ -295,8 +306,6 @@ export async function POST(req: NextRequest) {
 
       if (device.deviceCategory === "gate") {
         // ── Gate scan → gate_scan_logs + attendance_daily (staff)
-        const userRole = await getUserRole(userId);
-        const actualLogType = "Entry"; // Default; real direction comes from rawDeviceData
         // Hikvision sends direction in rawDeviceData.direction or similar field
         const scanType =
           device.gateDirection === "In" ? "Entry" :
@@ -335,6 +344,7 @@ export async function POST(req: NextRequest) {
               : "GateProcessFailed",
             gateScanLogId: gateResult.data?.gateScanLogId ?? null,
             attendanceDailyId:
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (gateResult.data as any)?.attendanceDailyId ?? null,
           });
         }
@@ -348,6 +358,7 @@ export async function POST(req: NextRequest) {
       // Unknown category
       return NextResponse.json({ processed: false, reason: "UnknownCategory" }, { status: 200 });
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (processError: any) {
       console.error("[POST /api/biometric/scan] Processing Error:", processError.message);
       
