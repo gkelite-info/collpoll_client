@@ -15,7 +15,6 @@ type UpdateStockModalProps = {
 
 export function UpdateStockModal({ item, stockUpdate, onChange, onClose, onSave, isLoading = false }: UpdateStockModalProps) {
   const isReducing = stockUpdate.actionType === "remove";
-  const maximumQuantity = isReducing ? item.available : item.totalQty;
 
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-end bg-black/55 p-2">
@@ -34,7 +33,7 @@ export function UpdateStockModal({ item, stockUpdate, onChange, onClose, onSave,
             <span className="mt-1 inline-flex rounded bg-[#DFF8EA] px-2 py-0.5 text-[9px] font-extrabold text-[#009B55]">{item.category}</span>
           </div>
         </div>
-
+ 
         <div className="mt-6 space-y-5">
           <div>
             <p className="text-[12px] font-extrabold text-[#16284F]">1. Action Type <span className="text-[#FF2A2A]">*</span></p>
@@ -48,7 +47,7 @@ export function UpdateStockModal({ item, stockUpdate, onChange, onClose, onSave,
                 return (
                   <button key={option.value} type="button" onClick={() => onChange({ ...stockUpdate, actionType: option.value })} className={`flex w-full cursor-pointer items-center justify-between border-l-4 px-4 py-3 text-left ${selected ? option.value === "add" ? "border-[#2563EB] bg-[#EAF3FF]" : "border-[#EF4444] bg-[#FFF1F2]" : "border-transparent bg-white hover:bg-[#F8FAFC]"}`}>
                     <span className="flex items-center gap-3">
-                      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[25px] leading-none ${option.value === "add" ? "bg-[#DBEAFE]" : "bg-[#FEE2E2]"}`} aria-hidden="true">
+                      <span className={`flenx h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[25px] leading-none ${option.value === "add" ? "bg-[#DBEAFE]" : "bg-[#FEE2E2]"}`} aria-hidden="true">
                         {option.value === "add" ? "📥" : "📤"}
                       </span>
                       <span>
@@ -69,11 +68,11 @@ export function UpdateStockModal({ item, stockUpdate, onChange, onClose, onSave,
             <p className="text-[12px] font-extrabold text-[#16284F]">2. Stock Details</p>
             <label className="mt-3 block">
               <span className="text-[10px] font-extrabold uppercase text-[#475569]">Quantity <span className="text-[#FF2A2A]">*</span></span>
-              <input type="number" min="1" max={maximumQuantity} value={stockUpdate.quantity} onChange={(event) => onChange({ ...stockUpdate, quantity: event.target.value })} className="mt-1 h-9 w-full rounded-sm border border-[#E2E8F0] px-3 text-[12px] font-semibold text-[#16284F] outline-none focus:border-[#43C17A]" />
+              <input type="number" onWheel={(e) => e.currentTarget.blur()} min="1" max={isReducing ? item.available : undefined} value={stockUpdate.quantity} onChange={(event) => onChange({ ...stockUpdate, quantity: event.target.value })} className="mt-1 h-9 w-full rounded-sm border border-[#E2E8F0] px-3 text-[12px] font-semibold text-[#16284F] outline-none focus:border-[#43C17A]" />
               <span className="mt-1 block text-[10px] font-medium text-[#94A3B8]">
                 {isReducing
                   ? `Enter a positive number to reduce stock (maximum ${item.available})`
-                  : `Enter a positive number to add stock (maximum ${maximumQuantity})`}
+                  : "Enter a positive number to add stock"}
               </span>
             </label>
             <label className="mt-3 block">
