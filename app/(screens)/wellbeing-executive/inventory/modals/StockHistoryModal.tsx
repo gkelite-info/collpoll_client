@@ -24,9 +24,18 @@ const administrationHistory = [
   { type: "Equipment Retired", quantity: "-2", date: "08 May 2025 • 02:45 PM", note: "Old desktop systems removed from active inventory.", added: false },
 ];
 
+const infrastructureHistory = [
+  { type: "Stock Added", quantity: "+8", date: "16 May 2025 â€¢ 10:30 AM", note: "Received new maintenance tools for infrastructure work.", added: true },
+  { type: "Damaged Asset", quantity: "-1", date: "14 May 2025 â€¢ 04:20 PM", note: "Asset damaged during maintenance work.", added: false },
+  { type: "Stock Added", quantity: "+12", date: "10 May 2025 â€¢ 11:15 AM", note: "Purchased new infrastructure equipment.", added: true },
+  { type: "Asset Retired", quantity: "-2", date: "08 May 2025 â€¢ 02:45 PM", note: "Old maintenance assets removed from active inventory.", added: false },
+];
+
+type InventoryHistoryVariant = "sports" | "safety" | "administration" | "infrastructure";
+
 type StockHistoryModalProps = {
   onClose: () => void;
-  variant?: "sports" | "safety" | "administration";
+  variant?: InventoryHistoryVariant;
   history?: InventoryStockHistoryRow[];
 };
 
@@ -34,6 +43,8 @@ export function StockHistoryModal({ onClose, variant = "sports", history: dynami
   const staticHistory =
     variant === "administration"
       ? administrationHistory
+      : variant === "infrastructure"
+        ? infrastructureHistory
       : variant === "safety"
         ? safetyHistory
         : sportsHistory;
