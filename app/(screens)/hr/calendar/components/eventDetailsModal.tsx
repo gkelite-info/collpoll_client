@@ -76,7 +76,6 @@ export default function EventDetailsModal({
           </span>
         </h3>
 
-        {/* Render Event Topic */}
         {event.topic && (
           <p className="text-sm text-gray-600 mb-4">
             <span className="font-medium">Event Topic:</span> {event.topic}
