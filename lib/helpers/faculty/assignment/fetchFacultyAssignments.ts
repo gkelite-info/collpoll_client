@@ -5,6 +5,7 @@ export const fetchFacultyAssignments = async (
   tab: "Active" | "Evaluated",
   page: number = 1,
   limit: number = 10,
+  dateStr?: string,
 ) => {
   try {
     const from = (page - 1) * limit;
@@ -21,6 +22,18 @@ export const fetchFacultyAssignments = async (
       .eq("createdBy", facultyId)
       .eq("is_deleted", false)
       .eq("status", "Active");
+
+    if (dateStr) {
+      const d = new Date(dateStr);
+      const selectedDateInt = parseInt(
+        `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(
+          d.getDate()
+        ).padStart(2, "0")}`
+      );
+      query = query
+        .lte("dateAssignedInt", selectedDateInt)
+        .gte("submissionDeadlineInt", selectedDateInt);
+    }
 
     if (tab === "Evaluated") {
       query = query.eq("student_assignments_submission.status", "Evaluated");

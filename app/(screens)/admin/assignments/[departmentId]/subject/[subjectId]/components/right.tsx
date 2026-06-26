@@ -16,6 +16,8 @@ import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcem
 interface props {
   facultyId?: number;
   collegeSubjectId?: number;
+  selectedDate?: Date;
+  onDateSelect?: (date: Date) => void;
 }
 
 const typeIcons: Record<string, string> = {
@@ -36,7 +38,7 @@ const typeIcons: Record<string, string> = {
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-export default function AssignmentsRight({ facultyId, collegeSubjectId }: props) {
+export default function AssignmentsRight({ facultyId, collegeSubjectId, selectedDate, onDateSelect }: props) {
   const [facultyTasks, setFacultyTasks] = useState<Task[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [openTaskModal, setOpenTaskModal] = useState(false);
@@ -121,6 +123,8 @@ export default function AssignmentsRight({ facultyId, collegeSubjectId }: props)
       description: string;
       dueDate: string;
       dueTime: string;
+      collegeAcademicYearId?: number | null;
+      collegeSectionsId?: number | null;
     },
     taskId?: number
   ) => {
@@ -133,6 +137,8 @@ export default function AssignmentsRight({ facultyId, collegeSubjectId }: props)
           description: payload.description,
           date: payload.dueDate,
           time: payload.dueTime,
+          collegeAcademicYearId: payload.collegeAcademicYearId,
+          collegeSectionsId: payload.collegeSectionsId,
         },
         facultyId!
       );
@@ -156,7 +162,10 @@ export default function AssignmentsRight({ facultyId, collegeSubjectId }: props)
     <>
       <div className="w-[32%] p-2 flex flex-col">
         <CourseScheduleCard isVisibile={false} />
-        <WorkWeekCalendar />
+        <WorkWeekCalendar 
+          activeDate={selectedDate}
+          onDateSelect={onDateSelect}
+        />
         {loadingTasks ? (
           <div className="bg-white mt-5 rounded-md shadow-md p-4 min-h-[345px]">
             <div className="flex justify-between items-center mb-3 animate-pulse">

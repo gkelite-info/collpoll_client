@@ -810,19 +810,22 @@ export default function DiscussionForumBasic({
       description: string;
       dueDate: string;
       dueTime: string;
+      collegeAcademicYearId?: number | null;
+      collegeSectionsId?: number | null;
     },
     taskId?: number,
   ) => {
     try {
-      const res = await saveFacultyTask(
-        {
-          facultyTaskId: taskId,
-          collegeSubjectId: collegeSubjectId!,
-          taskTitle: payload.title,
-          description: payload.description,
-          date: payload.dueDate,
-          time: payload.dueTime,
-        },
+      const res = await saveFacultyTask({
+        facultyTaskId: taskId,
+        collegeSubjectId: collegeSubjectId!,
+        taskTitle: payload.title,
+        description: payload.description,
+        date: payload.dueDate,
+        time: payload.dueTime,
+        collegeAcademicYearId: payload.collegeAcademicYearId,
+        collegeSectionsId: payload.collegeSectionsId,
+      },
         facultyId!,
       );
 
@@ -1118,12 +1121,12 @@ export default function DiscussionForumBasic({
                   yearLoading
                     ? [{ label: "Loading...", value: "loading" }]
                     : [
-                        { label: "All", value: "All" },
-                        ...yearOptions.map((y) => ({
-                          label: y.label,
-                          value: String(y.id),
-                        })),
-                      ]
+                      { label: "All", value: "All" },
+                      ...yearOptions.map((y) => ({
+                        label: y.label,
+                        value: String(y.id),
+                      })),
+                    ]
                 }
                 onChange={(val) => {
                   if (val !== "loading") setYearFilter(val);
@@ -1135,43 +1138,43 @@ export default function DiscussionForumBasic({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto ">
                 {branchLoading || yearLoading
                   ? Array.from({ length: 6 }).map((_, i) => (
-                      <DiscussionDeptCardSkeleton key={i} />
-                    ))
+                    <DiscussionDeptCardSkeleton key={i} />
+                  ))
                   : filteredCards.length > 0
                     ? filteredCards.map((card, idx) => {
-                        const branchTheme = getBranchTheme(card.name);
+                      const branchTheme = getBranchTheme(card.name);
 
-                        const cardData = countsData.find(
-                          (c) =>
-                            c.branchId === card.branchId &&
-                            c.yearId === card.yearId,
-                        );
+                      const cardData = countsData.find(
+                        (c) =>
+                          c.branchId === card.branchId &&
+                          c.yearId === card.yearId,
+                      );
 
-                        return (
-                          <DiscussionDeptCard
-                            key={`${card.branchId}-${card.year}-${idx}`}
-                            name={card.name}
-                            year={card.year}
-                            branchId={card.branchId}
-                            yearId={card.yearId}
-                            text={branchTheme.text}
-                            color={branchTheme.color}
-                            bgColor={branchTheme.bgColor}
-                            activeText="Active discussions forums"
-                            activeCount={
-                              cardData ? String(cardData.discussionCount) : "0"
-                            }
-                            students={cardData ? cardData.studentCount : 0}
-                            facultyCount={cardData ? cardData.facultyCount : 0}
-                            facultyPhotos={
-                              cardData ? cardData.facultyPhotos : []
-                            }
-                          />
-                        );
-                      })
+                      return (
+                        <DiscussionDeptCard
+                          key={`${card.branchId}-${card.year}-${idx}`}
+                          name={card.name}
+                          year={card.year}
+                          branchId={card.branchId}
+                          yearId={card.yearId}
+                          text={branchTheme.text}
+                          color={branchTheme.color}
+                          bgColor={branchTheme.bgColor}
+                          activeText="Active discussions forums"
+                          activeCount={
+                            cardData ? String(cardData.discussionCount) : "0"
+                          }
+                          students={cardData ? cardData.studentCount : 0}
+                          facultyCount={cardData ? cardData.facultyCount : 0}
+                          facultyPhotos={
+                            cardData ? cardData.facultyPhotos : []
+                          }
+                        />
+                      );
+                    })
                     : Array.from({ length: 6 }).map((_, i) => (
-                        <DiscussionDeptCardSkeleton key={i} />
-                      ))}
+                      <DiscussionDeptCardSkeleton key={i} />
+                    ))}
               </div>
             </div>
           </>

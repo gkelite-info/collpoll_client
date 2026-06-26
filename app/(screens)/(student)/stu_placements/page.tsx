@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { X } from "@phosphor-icons/react";
+import { useSearchParams } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 
@@ -123,7 +124,7 @@ function PlacementDetailsModal({
   company: StudentPlacementCompany;
   onClose: () => void;
 }) {
-  const t = useTranslations("Placements.student"); // Hook
+  const t = useTranslations("Placements.student");
   const websiteHref = getWebsiteHref(company.website);
 
   return (
@@ -303,7 +304,9 @@ export default function Page() {
     collegeBranchId,
     collegeAcademicYearId,
   } = useStudent();
-  const t = useTranslations("Placements.student"); // Hook
+  const searchParams = useSearchParams();
+  const selectedDate = searchParams.get("selectedDate");
+  const t = useTranslations("Placements.student");
 
   const [activeTab, setActiveTab] = useState<TabType>("opportunities");
   const [placements, setPlacements] = useState<StudentPlacementCompany[]>([]);
@@ -579,6 +582,14 @@ export default function Page() {
       list = list.filter((placement) => !placement.isEligible);
     }
 
+    if (selectedDate) {
+      list = list.filter((placement) => {
+        if (!placement.createdAt) return false;
+        const placementDate = new Date(placement.createdAt).toISOString().split('T')[0];
+        return placementDate === selectedDate;
+      });
+    }
+
     list.sort((a, b) => {
       switch (sortBy) {
         case "Recently Uploaded":
@@ -611,7 +622,7 @@ export default function Page() {
     });
 
     return list;
-  }, [activeTab, appliedByPlacementId, cycle, eligibility, placements, sortBy]);
+  }, [activeTab, appliedByPlacementId, cycle, eligibility, placements, sortBy, selectedDate]);
 
   const pageLoading = studentLoading || isLoading;
   const filterRefreshing = filterLoadingKey !== null;

@@ -8,6 +8,7 @@ import TableComponent from "@/app/utils/table/table";
 import { Avatar } from "@/app/utils/Avatar";
 import toast from "react-hot-toast";
 import { decodeId } from "@/app/utils/crypto";
+import AddMarksModal from "./AddMarksModal";
 
 interface StudentSubmissionsProps {
   projectId: string | null;
@@ -20,6 +21,8 @@ export default function StudentSubmissions() {
 
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
 
   const projectTitle = searchParams.get("title")
     ? decodeURIComponent(searchParams.get("title")!)
@@ -81,6 +84,32 @@ export default function StudentSubmissions() {
                 View
               </a>
             ),
+            marks: (
+              <button
+                onClick={() => {
+                  setSelectedSubmission({
+                    id: item.studentProjectSubmissionId,
+                    name: user?.fullName || "Unknown Student",
+                    rollNo: pinNumber || "N/A",
+                    submittedOn: item.updatedAt
+                      ? format(new Date(item.updatedAt), "dd/MM/yyyy")
+                      : "N/A",
+                    totalMarks: item.projects?.marks || 0,
+                    obtainedMarks: item.marksObtained,
+                  });
+                  setIsModalOpen(true);
+                }}
+                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
+                  item.marksObtained !== null && item.marksObtained !== undefined
+                    ? "bg-[#16a34a] text-white hover:bg-green-700"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {item.marksObtained !== null && item.marksObtained !== undefined
+                  ? `${item.marksObtained} / ${item.projects?.marks || 0}`
+                  : "Add Marks"}
+              </button>
+            ),
           };
         });
 
@@ -102,6 +131,7 @@ export default function StudentSubmissions() {
     { title: "Roll No", key: "rollNo" },
     { title: "Submission Date", key: "date" },
     { title: "File", key: "file" },
+    { title: "Marks", key: "marks" },
   ];
 
   return (
@@ -122,6 +152,25 @@ export default function StudentSubmissions() {
         tableData={submissions}
         isLoading={isLoading}
         height="60vh"
+      />
+
+      <AddMarksModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        submission={selectedSubmission}
+        onSave={(marks) => {
+          setSubmissions((prev) =>
+            prev.map((sub) => {
+              if (sub.marks.props.children[0] === undefined) {
+                // To properly update UI, we need to re-fetch or hack the update
+              }
+              // A simple way to trigger re-render is reload window or re-fetch
+              return sub;
+            })
+          );
+          // Just reload for simplicity and consistency
+          window.location.reload();
+        }}
       />
     </div>
   );

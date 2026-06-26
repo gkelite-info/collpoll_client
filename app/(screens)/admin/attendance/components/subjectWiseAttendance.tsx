@@ -60,6 +60,7 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
   >([]);
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [studentsList, setStudentsList] = useState<UIStudent[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -126,7 +127,12 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
     const init = async () => {
       setLoading(true);
       try {
-        const classes = await getAdminClassesForSection(collegeSectionsId);
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+        const day = String(selectedDate.getDate()).padStart(2, "0");
+        const dateStr = `${year}-${month}-${day}`;
+
+        const classes = await getAdminClassesForSection(collegeSectionsId, dateStr);
         setClassOptions(classes);
 
         if (classes.length > 0) {
@@ -139,14 +145,14 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
           );
           setStudentsList(students);
         } else {
-          // toast("No classes scheduled for today", { icon: "ℹ️" });
-          toast("No classes scheduled for today", {
+          setStudentsList([]);
+          setSelectedClassId("");
+          toast("No classes scheduled for this date", {
             icon: "ℹ️",
             id: TOAST_IDS.NO_CLASSES,
           });
         }
       } catch (err) {
-        // toast.error("Failed to load section data");
         toast.error("Failed to load section data", {
           id: TOAST_IDS.LOAD_ERROR,
         });
@@ -156,7 +162,7 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
     };
 
     init();
-  }, [collegeSectionsId]);
+  }, [collegeSectionsId, selectedDate]);
 
   const handleClassChange = async (newClassId: string) => {
     setSelectedClassId(newClassId);
@@ -323,7 +329,11 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
           ))}
         </div>
         <div>
-          <WorkWeekCalendar style="h-full w-[350px]" />
+          <WorkWeekCalendar 
+            style="h-full w-[350px]" 
+            activeDate={selectedDate}
+            onDateSelect={(date) => setSelectedDate(date)}
+          />
         </div>
       </div>
 

@@ -299,6 +299,8 @@ export default function PlacementsPage() {
       description: string;
       dueDate: string;
       dueTime: string;
+      collegeAcademicYearId?: number | null;
+      collegeSectionsId?: number | null;
     },
     taskId?: number,
   ) => {
@@ -314,6 +316,8 @@ export default function PlacementsPage() {
         description: payload.description,
         date: payload.dueDate,
         time: payload.dueTime,
+        collegeAcademicYearId: payload.collegeAcademicYearId,
+        collegeSectionsId: payload.collegeSectionsId,
       },
       facultyId,
     );

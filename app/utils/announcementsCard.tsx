@@ -1,6 +1,6 @@
 "use client";
 
-import { PencilSimple, Plus, Trash, X } from "@phosphor-icons/react";
+import { CalendarIcon, PencilSimple, Plus, Trash, X } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import AddAnnouncementModal from "../components/modals/AddAnnouncementModal";
@@ -10,6 +10,8 @@ import {
 } from "@/lib/helpers/announcements/announcementAPI";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
+import { supabase } from "@/lib/supabaseClient";
+import { useUser } from "@/app/utils/context/UserContext";
 
 type AnnounceCard = {
   collegeAnnouncementId?: number;
@@ -85,7 +87,6 @@ const AnnouncementDetailsShimmer = () => (
   </div>
 );
 
-// Helper for formatting roles cleanly
 const formatRole = (role: string) =>
   role
     ?.replace(/([A-Z])/g, " $1")
@@ -104,9 +105,8 @@ function ViewAnnouncementModal({
   isLoading: boolean;
   onClose: () => void;
 }) {
-  const t = useTranslations("Dashboard"); // Hook for Modal
+  const t = useTranslations("Dashboard");
 
-  // Safely capitalize type to match our translation keys
   const formattedType = basicData.type
     ? basicData.type.charAt(0).toUpperCase() + basicData.type.slice(1)
     : "Announcement";
@@ -256,6 +256,150 @@ export default function AnnouncementsCard({
     useState<AnnouncementDetails | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
+  const { userId, collegeId, role: userRole } = useUser();
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [calendarAnnouncements, setCalendarAnnouncements] = useState<AnnounceCard[]>([]);
+  const [isCalendarLoading, setIsCalendarLoading] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const getLocalDateRangeInUTC = (dateStr: string) => {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const start = new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
+    const end = new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
+    return { start, end };
+  };
+
+  const formatDateToDMY = (dateStr: string) => {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return dateStr;
+    const [year, month, day] = parts;
+    return `${day}-${month}-${year}`;
+  };
+
+  useEffect(() => {
+    if (!selectedDate || !collegeId || !userId || !userRole) {
+      setCalendarAnnouncements([]);
+      return;
+    }
+
+    const fetchAnnouncementsForDate = async () => {
+      setIsCalendarLoading(true);
+      try {
+        const { start, end } = getLocalDateRangeInUTC(selectedDate);
+        const numericUserId = Number(userId);
+
+        const roleRelation =
+          activeView === "others"
+            ? "college_announcements_roles!inner ( role, deletedAt )"
+            : "college_announcements_roles ( role, deletedAt )";
+
+        let query = supabase
+          .from("college_announcements")
+          .select(`
+            collegeAnnouncementId,
+            announcementTitle,
+            date,
+            type,
+            createdBy,
+            createdByRole,
+            createdAt,
+            ${roleRelation}
+          `)
+          .eq("collegeId", collegeId)
+          .is("is_deleted", false)
+          .gte("createdAt", start)
+          .lte("createdAt", end);
+
+        if (activeView === "my") {
+          query = query.eq("createdBy", numericUserId);
+        } else {
+          const targetRoleValues = [userRole.toLowerCase().replace(/[^a-z]/g, "")];
+          const canonicalRoles: Record<string, string> = {
+            admin: "Admin",
+            collegeadmin: "CollegeAdmin",
+            collegehr: "CollegeHr",
+            faculty: "Faculty",
+            finance: "Finance",
+            financemanager: "FinanceManager",
+            hr: "CollegeHr",
+            parent: "Parent",
+            placement: "PlacementOfficer",
+            placementofficer: "PlacementOfficer",
+            superadmin: "SuperAdmin",
+            student: "Student",
+            wellbeingexecutive: "WellbeingExecutive",
+            wellbeingmanager: "WellbeingManager",
+          };
+          const mappedRole = canonicalRoles[targetRoleValues[0]] || userRole;
+
+          query = query
+            .neq("createdBy", numericUserId)
+            .eq("college_announcements_roles.role", mappedRole)
+            .is("college_announcements_roles.deletedAt", null);
+        }
+
+        const { data, error } = await query.order("createdAt", { ascending: false });
+
+        if (error) throw error;
+
+        const typeIcons: Record<string, string> = {
+          class: "/class.png",
+          exam: "/exam.png",
+          meeting: "/meeting.png",
+          holiday: "/calendar-3d.png",
+          event: "/event.png",
+          notice: "/clip.png",
+          result: "/result.jpg",
+          timetable: "/timetable.png",
+          placement: "/placement.png",
+          emergency: "/emergency.png",
+          finance: "/finance.jpg",
+          other: "/others.png",
+        };
+
+        const formatted = (data || []).map((item: any) => {
+          const creatorRoleFormatted = item.createdByRole
+            ?.replace(/([A-Z])/g, " $1")
+            .replace(/_/g, " ")
+            .trim()
+            .replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+          return {
+            collegeAnnouncementId: item.collegeAnnouncementId,
+            title: item.announcementTitle,
+            date: item.date,
+            createdAt: item.createdAt,
+            type: item.type,
+            image: typeIcons[item.type] || "/clip.png",
+            imgHeight: "h-10",
+            cardBg: "#E8F8EF",
+            imageBg: "#D3F1E0",
+            professor: activeView === "my" ? "By You" : `By ${creatorRoleFormatted}`,
+          };
+        });
+
+        setCalendarAnnouncements(formatted);
+      } catch (err: any) {
+        console.error("Error fetching announcements for calendar date:", err?.message || err, err?.details || "", {
+          err,
+          collegeId,
+          userId,
+          userRole,
+          selectedDate,
+          activeView
+        });
+      } finally {
+        setIsCalendarLoading(false);
+      }
+    };
+
+    fetchAnnouncementsForDate();
+  }, [selectedDate, collegeId, userId, userRole, activeView, refreshTrigger]);
+
+  const announcementsToShow = selectedDate ? calendarAnnouncements : announceCard;
+  const isAnnouncementsLoading = isLoading || isCalendarLoading;
+
   const formatRelativeTime = (createdAt?: string) => {
     if (!createdAt) return "";
     const created = new Date(createdAt);
@@ -346,6 +490,9 @@ export default function AnnouncementsCard({
                 }
                 toast.success(t("Announcement deleted successfully"));
                 await refreshAnnouncements?.();
+                if (selectedDate) {
+                  setRefreshTrigger((prev) => prev + 1);
+                }
               } catch (error) {
                 console.error("Delete error:", error);
                 toast.error(t("Something went wrong"));
@@ -378,17 +525,28 @@ export default function AnnouncementsCard({
         <div className="flex items-center justify-between">
           <h4 className="text-[#282828] font-semibold">{t("Announcements")}</h4>
 
-          {!isReadOnlyUser && canManageAnnouncements && activeView === "my" && (
-            <button
-              onClick={() => {
-                setEditData(null);
-                setOpenModal(true);
-              }}
-              className="bg-[#43C17A] text-white w-7 h-7 flex items-center justify-center rounded-full cursor-pointer hover:bg-[#34a362] transition-colors"
-            >
-              <Plus size={14} weight="bold" />
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {!isReadOnlyUser && canManageAnnouncements && activeView === "my" && (
+              <button
+                onClick={() => {
+                  setEditData(null);
+                  setOpenModal(true);
+                }}
+                className="bg-[#43C17A] text-white w-7 h-7 flex items-center justify-center rounded-full cursor-pointer hover:bg-[#34a362] transition-colors"
+              >
+                <Plus size={14} weight="bold" />
+              </button>
+            )}
+            <div className="relative w-6 h-6 flex items-center justify-center cursor-pointer">
+              <CalendarIcon size={22} weight="fill" className="text-indigo-500" />
+              <input
+                type="date"
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                onChange={(e) => setSelectedDate(e.target.value || null)}
+                value={selectedDate || ""}
+              />
+            </div>
+          </div>
         </div>
 
         {!isReadOnlyUser && canManageAnnouncements && (
@@ -396,11 +554,10 @@ export default function AnnouncementsCard({
             <div className="flex items-center gap-1 text-sm font-semibold mt-2 lg:mt-2">
               <button
                 onClick={() => handleTabChange("others")}
-                className={`px-3 py-1 text-sm rounded-sm transition-all duration-200 cursor-pointer ${
-                  activeView === "others"
-                    ? "bg-[#43C17A] text-white shadow-sm"
-                    : "text-gray-400 hover:text-[#16284F]"
-                }`}
+                className={`px-3 py-1 text-sm rounded-sm transition-all duration-200 cursor-pointer ${activeView === "others"
+                  ? "bg-[#43C17A] text-white shadow-sm"
+                  : "text-gray-400 hover:text-[#16284F]"
+                  }`}
               >
                 {t("Shared")}
               </button>
@@ -409,11 +566,10 @@ export default function AnnouncementsCard({
 
               <button
                 onClick={() => handleTabChange("my")}
-                className={`px-3 py-1 text-sm rounded-sm transition-all duration-200 cursor-pointer ${
-                  activeView === "my"
-                    ? "bg-[#43C17A] text-white shadow-sm"
-                    : "text-gray-400 hover:text-[#16284F]"
-                }`}
+                className={`px-3 py-1 text-sm rounded-sm transition-all duration-200 cursor-pointer ${activeView === "my"
+                  ? "bg-[#43C17A] text-white shadow-sm"
+                  : "text-gray-400 hover:text-[#16284F]"
+                  }`}
               >
                 {t("Personal")}
               </button>
@@ -421,14 +577,29 @@ export default function AnnouncementsCard({
           </div>
         )}
       </div>
+      {selectedDate && (
+        <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-md py-1.5 px-3 mb-3 text-xs text-indigo-800 mx-1">
+          <span className="font-medium flex items-center gap-1.5 flex-row">
+            <CalendarIcon size={16} weight="fill" className="text-indigo-500" />
+            Showing announcements created on: <span className="font-bold">{formatDateToDMY(selectedDate)}</span>
+          </span>
+          <button
+            onClick={() => setSelectedDate(null)}
+            className="text-red-500 hover:text-red-700 font-semibold cursor-pointer text-xs"
+            title="Clear Filter"
+          >
+            <X size={12} weight="bold" />
+          </button>
+        </div>
+      )}
 
       <div
         className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto text-center"
         style={height ? { maxHeight: height } : undefined}
       >
-        {isLoading ? (
+        {isAnnouncementsLoading ? (
           <AnnouncementListShimmer />
-        ) : announceCard.length === 0 ? (
+        ) : announcementsToShow.length === 0 ? (
           isReadOnlyUser ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <p className="text-sm font-medium">
@@ -448,7 +619,7 @@ export default function AnnouncementsCard({
             </div>
           )
         ) : (
-          announceCard.map((card, index) => (
+          announcementsToShow.map((card, index) => (
             <div
               key={index}
               onClick={() => handleCardClick(card)}
@@ -527,6 +698,9 @@ export default function AnnouncementsCard({
           setOpenModal(false);
           setEditData(null);
           await refreshAnnouncements?.();
+          if (selectedDate) {
+            setRefreshTrigger((prev) => prev + 1);
+          }
         }}
       />
     </div>

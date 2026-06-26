@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, CheckCircle } from "@phosphor-icons/react";
 import TabNavigation from "./tabNavigation";
 import DiscussionDeptCard from "./discussionDeptCard";
 import DiscussionCourseCard from "./discussionCourseCard";
@@ -18,6 +18,14 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import AdminQuizResumeBanner from "./adminQuizResumeBanner";
 
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+
+import TaskModal from "@/app/components/modals/taskModal";
+import toast from "react-hot-toast";
+import type { Task } from "@/app/utils/taskPanel";
+import { fetchFacultyTasksByFacultyId, saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
+import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
+import { supabase } from "@/lib/supabaseClient";
+import TaskCardShimmer from "@/app/(screens)/faculty/shimmers/TaskCardShimmer";
 
 import {
   fetchAdminQuizDepartments,
@@ -87,60 +95,7 @@ const CourseCardShimmer = () => (
 );
 // --------------------------
 
-const MOCK_TASKS = [
-  {
-    facultyTaskId: 1,
-    title: "Complete Python Lab",
-    description: "Finish all 10 lab programs and upload to portal.",
-    time: "12:40 PM",
-    date: "2026-03-25",
-  },
-  {
-    facultyTaskId: 2,
-    title: "Group Discussion Prep",
-    description:
-      "Research topic 'Impact of AI on Education' for tomorrow's discussion.",
-    time: "12:40 PM",
-    date: "2026-03-26",
-  },
-  {
-    facultyTaskId: 3,
-    title: "Resume Update",
-    description: "Add latest internship experience to resume builder section.",
-    time: "12:40 PM",
-    date: "2026-03-27",
-  },
-];
 
-const MOCK_ANNOUNCEMENTS = [
-  {
-    collegeAnnouncementId: 1,
-    title: "Submit internal marks for all subjects before 25 Oct 2025.",
-    professor: "By Justin Orom",
-    image: "/clip.png",
-    imgHeight: "h-10",
-    cardBg: "#E8F8EF",
-    imageBg: "#D3F1E0",
-  },
-  {
-    collegeAnnouncementId: 2,
-    title: "Upload your mini project abstracts by 12 Nov 2025.",
-    professor: "By Justin Orom",
-    image: "/meeting.png",
-    imgHeight: "h-10",
-    cardBg: "#F3E8FF",
-    imageBg: "#E9D5FF",
-  },
-  {
-    collegeAnnouncementId: 3,
-    title: "DBMS Lab Report submissions are due by 10 Nov 2025.",
-    professor: "By Justin Orom",
-    image: "/exam.png",
-    imgHeight: "h-10",
-    cardBg: "#FFF3E8",
-    imageBg: "#FFE4CC",
-  },
-];
 
 export default function QuizBasic() {
   const searchParams = useSearchParams();
@@ -156,9 +111,145 @@ export default function QuizBasic() {
   const subjectId = searchParams.get("subjectId");
   const action = searchParams.get("action");
   const quizId = searchParams.get("quizId");
+  const facultyIdParam = searchParams.get("facultyId");
+  const facultyId = facultyIdParam ? Number(facultyIdParam) : undefined;
+
+  const [facultyTasks, setFacultyTasks] = useState<Task[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
+  const [openTaskModal, setOpenTaskModal] = useState(false);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [view, setView] = useState<"my" | "others">("others");
+  const [facultyUserId, setFacultyUserId] = useState<string | null>(null);
+
+  const fetchTasks = async () => {
+    if (!facultyId) return;
+    try {
+      setLoadingTasks(true);
+      const data = await fetchFacultyTasksByFacultyId(facultyId);
+      const formatted: Task[] = data.map((t) => ({
+        facultyTaskId: t.facultyTaskId,
+        title: t.taskTitle,
+        description: t.description,
+        time: t.time || "",
+        date: t.date || "",
+      }));
+      setFacultyTasks(formatted);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
+  const fetchAnnouncementsData = async (uid: string) => {
+    if (!collegeId || !uid) return;
+    try {
+      const res = await fetchCollegeAnnouncements({
+        collegeId: Number(collegeId),
+        userId: uid,
+        role: "faculty",
+        view,
+        page: 1,
+        limit: 20,
+      });
+
+      const typeIcons: Record<string, string> = {
+        class: "/class.png",
+        exam: "/exam.png",
+        meeting: "/meeting.png",
+        holiday: "/calendar-3d.png",
+        event: "/event.png",
+        notice: "/clip.png",
+        result: "/result.jpg",
+        timetable: "/timetable.png",
+        placement: "/placement.png",
+        emergency: "/emergency.png",
+        finance: "/finance.jpg",
+        other: "/others.png",
+      };
+
+      const formatRole = (r: string) => r?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+      const formatted = res.data.map((item: any) => ({
+        collegeAnnouncementId: item.collegeAnnouncementId,
+        title: item.title,
+        date: item.date,
+        createdAt: item.createdAt,
+        type: item.type,
+        targetRoles: item.targetRoles,
+        image: typeIcons[item.type] || "/clip.png",
+        imgHeight: "h-10",
+        cardBg: "#E8F8EF",
+        imageBg: "#D3F1E0",
+        professor:
+          view === "my"
+            ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
+            : `By ${formatRole(item.createdByRole)}`,
+      }));
+
+      setAnnouncements(formatted);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (!facultyId) return;
+    fetchTasks();
+    const getUserId = async () => {
+      const { data } = await supabase.from("faculty").select("userId").eq("facultyId", facultyId).single();
+      if (data?.userId) {
+        setFacultyUserId(String(data.userId));
+        fetchAnnouncementsData(String(data.userId));
+      }
+    };
+    getUserId();
+  }, [facultyId, view, collegeId]);
+
+  const handleSaveFacultyTask = async (
+    payload: {
+      title: string;
+      description: string;
+      dueDate: string;
+      dueTime: string;
+      collegeAcademicYearId?: number | null;
+      collegeSectionsId?: number | null;
+    },
+    taskId?: number
+  ) => {
+    try {
+      const res = await saveFacultyTask(
+        {
+          facultyTaskId: taskId,
+          collegeSubjectId: Number(subjectId),
+          taskTitle: payload.title,
+          description: payload.description,
+          date: payload.dueDate,
+          time: payload.dueTime,
+          collegeAcademicYearId: payload.collegeAcademicYearId,
+          collegeSectionsId: payload.collegeSectionsId,
+        },
+        facultyId!
+      );
+
+      if (!res.success) throw new Error("Save failed");
+
+      await fetchTasks();
+      setOpenTaskModal(false);
+    } catch (err) {
+      console.error("HANDLE SAVE ERROR:", err);
+      toast.error("Failed to save task");
+      throw err;
+    }
+  };
+
+  const handleDeleteTask = async (taskId: number) => {
+    await fetchTasks();
+  };
 
   const [yearFilter, setYearFilter] = useState("All");
   const [branchFilter, setBranchFilter] = useState("All");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -278,7 +369,7 @@ export default function QuizBasic() {
       );
     }
     if (subjectId) {
-      return <AdminQuizList subjectId={subjectId} />;
+      return <AdminQuizList subjectId={subjectId} selectedDate={selectedDate} />;
     }
     return null;
   };
@@ -347,11 +438,10 @@ export default function QuizBasic() {
           border border-gray-200
           transition-colors duration-150
           focus:outline-none focus:ring-2 focus:ring-[#43C17A] focus:ring-offset-1
-          ${
-            page === 1
-              ? "bg-gray-50 text-gray-400 cursor-not-allowed"
-              : "bg-white text-gray-700 hover:bg-gray-100 cursor-pointer"
-          }
+          ${page === 1
+                          ? "bg-gray-50 text-gray-400 cursor-not-allowed"
+                          : "bg-white text-gray-700 hover:bg-gray-100 cursor-pointer"
+                        }
         `}
                     >
                       <CaretLeft size={16} weight="bold" />
@@ -370,11 +460,10 @@ export default function QuizBasic() {
               border
               transition-colors duration-150
               focus:outline-none focus:ring-2 focus:ring-[#43C17A] focus:ring-offset-1
-              ${
-                page === p
-                  ? "bg-[#16284F] text-white border-[#16284F]"
-                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 cursor-pointer"
-              }
+              ${page === p
+                                ? "bg-[#16284F] text-white border-[#16284F]"
+                                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 cursor-pointer"
+                              }
             `}
                           >
                             {p}
@@ -395,11 +484,10 @@ export default function QuizBasic() {
           border border-gray-200
           transition-colors duration-150
           focus:outline-none focus:ring-2 focus:ring-[#43C17A] focus:ring-offset-1
-          ${
-            page === totalPages
-              ? "bg-gray-50 text-gray-400 cursor-not-allowed"
-              : "bg-white text-gray-700 hover:bg-gray-100 cursor-pointer"
-          }
+          ${page === totalPages
+                          ? "bg-gray-50 text-gray-400 cursor-not-allowed"
+                          : "bg-white text-gray-700 hover:bg-gray-100 cursor-pointer"
+                        }
         `}
                     >
                       <CaretRight size={16} weight="bold" />
@@ -458,24 +546,74 @@ export default function QuizBasic() {
           <div className="flex-1 min-w-0">{renderInnerContent()}</div>
 
           <div className="w-[32%] p-2 h-full flex flex-col">
-            <WorkWeekCalendar />
-            <TaskPanel
-              role="faculty"
-              facultyTasks={MOCK_TASKS as any}
-              loading={false}
-              onAddTask={() => {}}
-              onSaveTask={async () => {}}
-              onDeleteTask={async () => {}}
+            <WorkWeekCalendar
+              activeDate={selectedDate}
+              onDateSelect={setSelectedDate}
             />
+            {loadingTasks ? (
+              <div className="bg-white mt-5 rounded-md shadow-md p-4 min-h-[345px]">
+                <div className="flex justify-between items-center mb-3 animate-pulse">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-gray-200 rounded-full p-1 w-8 h-8" />
+                    <div className="h-4 w-24 bg-gray-200 rounded" />
+                  </div>
+                  <div className="h-6 w-20 bg-gray-200 rounded-full" />
+                </div>
+                <TaskCardShimmer />
+                <TaskCardShimmer />
+                <TaskCardShimmer />
+              </div>
+            ) : facultyTasks.length === 0 ? (
+              <div className="bg-white mt-5 rounded-md shadow-md p-4 min-h-[345px] flex flex-col">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-[#E7F7EE] rounded-full p-1">
+                      <CheckCircle size={22} weight="fill" color="#43C17A" />
+                    </div>
+                    <p className="text-[#282828] font-medium">My Tasks</p>
+                  </div>
+                  <button
+                    onClick={() => setOpenTaskModal(true)}
+                    className="flex items-center gap-2 px-3 py-1 rounded-full border border-[#43C17A] text-[#43C17A] text-xs font-medium hover:bg-[#43C17A] hover:text-white transition cursor-pointer"
+                  >
+                    + Add Task
+                  </button>
+                </div>
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-xs text-gray-400">No tasks available</p>
+                </div>
+              </div>
+            ) : (
+              <TaskPanel
+                role="faculty"
+                facultyTasks={facultyTasks}
+                facultyId={facultyId}
+                collegeSubjectId={subjectId ? Number(subjectId) : undefined}
+                onAddTask={() => setOpenTaskModal(true)}
+                onSaveTask={handleSaveFacultyTask}
+                onDeleteTask={handleDeleteTask}
+              />
+            )}
             <AnnouncementsCard
-              announceCard={MOCK_ANNOUNCEMENTS}
+              announceCard={announcements}
               height="80vh"
-              onViewChange={() => {}}
-              refreshAnnouncements={async () => {}}
+              currentView={view}
+              onViewChange={(v) => setView(v as "my" | "others")}
+              refreshAnnouncements={async () => { if (facultyUserId) await fetchAnnouncementsData(facultyUserId); }}
             />
           </div>
         </div>
       )}
+
+      <TaskModal
+        open={openTaskModal}
+        role="faculty"
+        facultyId={facultyId}
+        collegeSubjectId={subjectId ? Number(subjectId) : undefined}
+        defaultValues={null}
+        onClose={() => setOpenTaskModal(false)}
+        onSave={handleSaveFacultyTask}
+      />
     </div>
   );
 }

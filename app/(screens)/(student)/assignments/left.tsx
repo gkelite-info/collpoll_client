@@ -89,6 +89,7 @@ function AssignmentsLeftContent() {
     (searchParams.get("quizView") as "ongoing" | "attempted") || "ongoing";
   const discussionView =
     (searchParams.get("discussionView") as "active" | "completed") || "active";
+  const selectedDate = searchParams.get("selectedDate");
 
   const [activeAssignments, setActiveAssignments] = useState<any[]>([]);
   const [previousAssignments, setPreviousAssignments] = useState<any[]>([]);
@@ -205,6 +206,7 @@ function AssignmentsLeftContent() {
           collegeSectionsId,
           quizCurrentPage,
           QUIZ_PER_PAGE,
+          selectedDate || undefined
         );
 
         const ongoingWithAttempts = await Promise.all(
@@ -227,6 +229,7 @@ function AssignmentsLeftContent() {
           studentId,
           quizCurrentPage,
           QUIZ_PER_PAGE,
+          selectedDate || undefined
         );
         setAttemptedQuizzes(data);
         setQuizTotalRecords(totalCount);
@@ -249,6 +252,7 @@ function AssignmentsLeftContent() {
     quizRefreshKey,
     quizCurrentPage,
     quizView,
+    selectedDate,
   ]);
 
   async function loadDiscussions() {
@@ -256,8 +260,8 @@ function AssignmentsLeftContent() {
     try {
       setDiscussionsLoading(true);
       const [active, completed] = await Promise.all([
-        fetchActiveDiscussionsForStudent(collegeSectionsId, studentId),
-        fetchCompletedDiscussionsForStudent(collegeSectionsId),
+        fetchActiveDiscussionsForStudent(collegeSectionsId, studentId, selectedDate || undefined),
+        fetchCompletedDiscussionsForStudent(collegeSectionsId, selectedDate || undefined),
       ]);
 
       const activeWithUploads = await Promise.all(
@@ -283,7 +287,7 @@ function AssignmentsLeftContent() {
     if (activeTab === "discussion" && collegeSectionsId) {
       loadDiscussions();
     }
-  }, [activeTab, collegeSectionsId]);
+  }, [activeTab, collegeSectionsId, selectedDate]);
 
   async function loadLabs() {
     if (
@@ -397,6 +401,11 @@ function AssignmentsLeftContent() {
   const handleTabChange = (
     tab: "assignments" | "quiz" | "discussion" | "lab",
   ) => {
+    setCurrentPage(1);
+    setQuizCurrentPage(1);
+    setDiscussionCurrentPage(1);
+    setLabCurrentPage(1);
+
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
     params.delete("action");
@@ -408,11 +417,11 @@ function AssignmentsLeftContent() {
     if (tab === "quiz") params.set("quizView", "ongoing");
     if (tab === "discussion") params.set("discussionView", "active");
 
-    setLabCurrentPage(1);
     router.push(`${pathname}?${params.toString()}`);
   };
 
   const handleViewChange = (view: "active" | "previous") => {
+    setCurrentPage(1);
     const params = new URLSearchParams(searchParams.toString());
     params.set("view", view);
     router.push(`${pathname}?${params.toString()}`);
@@ -426,6 +435,7 @@ function AssignmentsLeftContent() {
   };
 
   const handleDiscussionViewChange = (view: "active" | "completed") => {
+    setDiscussionCurrentPage(1);
     const params = new URLSearchParams(searchParams.toString());
     params.set("discussionView", view);
     router.push(`${pathname}?${params.toString()}`);
@@ -433,7 +443,7 @@ function AssignmentsLeftContent() {
 
   useEffect(() => {
     loadAssignments();
-  }, [activeView, currentPage]);
+  }, [activeView, currentPage, selectedDate]);
 
   async function loadAssignments() {
     try {
@@ -491,6 +501,7 @@ function AssignmentsLeftContent() {
         currentPage,
         rowsPerPage,
         activeView,
+        selectedDate || undefined
       );
 
       if (!res.success) {
@@ -530,9 +541,13 @@ function AssignmentsLeftContent() {
         }),
       );
 
-      setActiveAssignments(formatted.filter((a) => a.toDateInt >= todayInt));
-
-      setPreviousAssignments(formatted.filter((a) => a.toDateInt < todayInt));
+      if (activeView === "active") {
+        setActiveAssignments(formatted);
+        setPreviousAssignments([]);
+      } else {
+        setPreviousAssignments(formatted);
+        setActiveAssignments([]);
+      }
     } catch (err) {
       console.error("Failed to load assignments:", err);
     } finally {
@@ -1063,33 +1078,14 @@ function AssignmentsLeftContent() {
           )}
         </div>
 
-        {activeTab === "assignments" && totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-6 pb-6">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 rounded-lg border cursor-pointer bg-white disabled:opacity-30 hover:bg-gray-50 transition-all"
-            >
-              <CaretLeft size={18} weight="bold" color="black" />
-            </button>
-            <div className="flex gap-1">
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${currentPage === i + 1 ? "bg-[#16284F] text-white" : "bg-white text-gray-600 border hover:border-gray-300"}`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all cursor-pointer"
-            >
-              <CaretRight size={18} weight="bold" color="black" />
-            </button>
+        {activeTab === "assignments" && (
+          <div className="mt-4 pb-6">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={totalRecords}
+              itemsPerPage={rowsPerPage}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
 

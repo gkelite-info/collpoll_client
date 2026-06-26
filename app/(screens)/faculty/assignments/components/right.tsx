@@ -4,6 +4,7 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import type { Task } from "@/app/utils/taskPanel";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { fetchFacultyTasks, saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
@@ -35,6 +36,20 @@ export default function AssignmentsRight() {
   const { facultyId, subjectIds, collegeId, userId, role, loading: facultyLoading } = useFaculty();
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("others");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const urlDateStr = searchParams.get("selectedDate");
+  const [selectedDate, setSelectedDate] = useState<Date>(
+    urlDateStr ? new Date(urlDateStr) : new Date()
+  );
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("selectedDate", date.toISOString());
+    router.push(`${pathname}?${params.toString()}`);
+  };
   const collegeSubjectId = subjectIds?.[0] ?? null;
 
 
@@ -120,6 +135,8 @@ export default function AssignmentsRight() {
       description: string;
       dueDate: string;
       dueTime: string;
+      collegeAcademicYearId?: number | null;
+      collegeSectionsId?: number | null;
     },
     taskId?: number
   ) => {
@@ -132,6 +149,8 @@ export default function AssignmentsRight() {
           description: payload.description,
           date: payload.dueDate,
           time: payload.dueTime,
+          collegeAcademicYearId: payload.collegeAcademicYearId,
+          collegeSectionsId: payload.collegeSectionsId,
         },
         facultyId!
       );
@@ -153,7 +172,7 @@ export default function AssignmentsRight() {
     <>
       <div className="w-[32%] p-2 h-full flex flex-col max-md:hidden">
         <CourseScheduleCard />
-        <WorkWeekCalendar />
+        <WorkWeekCalendar activeDate={selectedDate} onDateSelect={handleDateSelect} />
         <TaskPanel
           role="faculty"
           facultyTasks={loading ? [] : tasks}

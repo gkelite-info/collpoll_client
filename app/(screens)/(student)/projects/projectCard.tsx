@@ -61,7 +61,7 @@ export const ProjectCard = ({
   onViewDetails,
   role,
 }: ProjectCardListProps) => {
-  const t = useTranslations("Projects.student"); // Hook
+  const t = useTranslations("Projects.student");
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-md:gap-4">
       {data.map((project, index) => (
@@ -386,8 +386,8 @@ export const ProjectDetailsModal = ({
                     <div key={i} className="flex items-center gap-3">
                       <div className="w-10 h-10 max-md:w-11 max-md:h-11 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
                         {mentor.image &&
-                        (mentor.image.startsWith("http") ||
-                          mentor.image.startsWith("data:")) ? (
+                          (mentor.image.startsWith("http") ||
+                            mentor.image.startsWith("data:")) ? (
                           <img
                             src={mentor.image}
                             alt={mentor.name}
@@ -474,11 +474,10 @@ export const ProjectDetailsModal = ({
             />
 
             <div
-              className={`border-2 border-dashed rounded-lg p-10 max-md:p-6 flex flex-col items-center justify-center transition-all cursor-pointer ${
-                isDragging
-                  ? "border-green-500 bg-green-50 scale-[1.01]"
-                  : "border-gray-300 bg-gray-50 hover:bg-gray-100"
-              }`}
+              className={`border-2 border-dashed rounded-lg p-10 max-md:p-6 flex flex-col items-center justify-center transition-all cursor-pointer ${isDragging
+                ? "border-green-500 bg-green-50 scale-[1.01]"
+                : "border-gray-300 bg-gray-50 hover:bg-gray-100"
+                }`}
               onDragEnter={(e) => {
                 handleDrag(e);
                 setIsDragging(true);
@@ -544,11 +543,10 @@ export const ProjectDetailsModal = ({
               <button
                 onClick={handleFinalSubmit}
                 disabled={isUploading}
-                className={`w-full mt-4 flex items-center justify-center gap-2 py-2 rounded-lg font-semibold transition-all shadow-md cursor-pointer max-md:py-2.5 max-md:text-[15px] ${
-                  isUploading
-                    ? "bg-gray-400"
-                    : "bg-[#16a34a] hover:bg-[#15803d] text-white"
-                }`}
+                className={`w-full mt-4 flex items-center justify-center gap-2 py-2 rounded-lg font-semibold transition-all shadow-md cursor-pointer max-md:py-2.5 max-md:text-[15px] ${isUploading
+                  ? "bg-gray-400"
+                  : "bg-[#16a34a] hover:bg-[#15803d] text-white"
+                  }`}
               >
                 {isUploading ? (
                   <>
@@ -559,6 +557,35 @@ export const ProjectDetailsModal = ({
                   t("Submit Files")
                 )}
               </button>
+            )}
+
+            {project.studentFileUrl && (
+              <div className="mt-6 border-t border-gray-100 pt-5">
+                <h3 className="text-sm font-semibold mb-3 text-[#282828] max-md:text-[15px]">{t("Your Current Submission")}</h3>
+                <div className="flex items-center justify-between bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl shadow-sm">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="w-10 h-10 bg-green-100 text-green-700 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold uppercase">
+                      {project.studentFileUrl.split(".").pop()?.substring(0, 3)}
+                    </div>
+                    <a
+                      href={project.studentFileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm text-blue-600 truncate font-medium max-md:text-[13px] hover:underline"
+                    >
+                      {project.studentFileUrl.split("/").pop()}
+                    </a>
+                  </div>
+                  {project.marksObtained !== undefined && project.marksObtained !== null && (
+                    <div className="flex flex-col items-end pl-4 ml-2 border-l border-gray-200">
+                      <span className="text-[10px] text-gray-500 font-bold uppercase">{t("Marks Scored")}</span>
+                      <span className="text-base font-bold text-[#16a34a] whitespace-nowrap">
+                        {project.marksObtained} <span className="text-xs text-gray-400 font-medium">/ {project.marks}</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         )}

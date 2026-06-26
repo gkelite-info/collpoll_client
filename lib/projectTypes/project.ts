@@ -12,4 +12,6 @@ export type ProjectCardProps = {
     status?: string;
     endDate?: string | null;
     collegeSubjectId?: number | null;
+    marksObtained?: number | null;
+    studentFileUrl?: string | null;
 };

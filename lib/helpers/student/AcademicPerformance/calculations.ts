@@ -46,7 +46,7 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
 
         const { data: history, error: historyError } = await supabase
             .from("student_academic_history")
-            .select("collegeSemesterId, collegeAcademicYearId")
+            .select("collegeSemesterId, collegeAcademicYearId, collegeSectionsId")
             .eq("studentId", studentId)
             .eq("isCurrent", true)
             .maybeSingle();
@@ -86,18 +86,9 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
                     .maybeSingle();
 
                 if (!config) {
-                    const { data: rawQuizzes } = await supabase
-                        .from("quiz_submissions")
-                        .select("totalMarksObtained, quizzes!inner(totalMarks)")
-                        .eq("studentId", studentId)
-                        .eq("quizzes.collegeSubjectId", subject.collegeSubjectId);
-
-                    const rawEarned = rawQuizzes?.reduce((acc, curr) => acc + (curr.totalMarksObtained || 0), 0) || 0;
-                    const rawTotal = rawQuizzes?.reduce((acc, curr: any) => acc + (curr.quizzes?.totalMarks || 0), 0) || 0;
-
                     return {
                         subject: subject.subjectKey || subject.subjectName,
-                        value: rawTotal > 0 ? Math.round((rawEarned / rawTotal) * 100) : 0,
+                        value: 0,
                         full: 100,
                     };
                 }
@@ -119,72 +110,134 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
                     let possible = 0;
 
                     if (label.includes("quiz")) {
-                        const { data: quizData } = await supabase
-                            .from("quiz_submissions")
-                            .select("totalMarksObtained, quizId, quizzes!inner(totalMarks)")
-                            .eq("studentId", studentId)
-                            .eq("quizzes.collegeSubjectId", subject.collegeSubjectId);
+                        const { data: allQuizzes } = await supabase
+                            .from("quizzes")
+                            .select("quizId, totalMarks")
+                            .eq("collegeSubjectId", subject.collegeSubjectId)
+                            .is("is_deleted", false)
+                            .is("isActive", true);
 
-                        if (quizData && quizData.length > 0) {
-                            const bestAttempts = quizData.reduce((acc: any, curr: any) => {
-                                const id = curr.quizId;
-                                if (!acc[id] || curr.totalMarksObtained > acc[id].earned) {
-                                    acc[id] = { earned: curr.totalMarksObtained || 0, possible: curr.quizzes?.totalMarks || 0 };
-                                }
-                                return acc;
-                            }, {});
-                            const res = Object.values(bestAttempts) as any[];
-                            earned = res.reduce((s, r) => s + r.earned, 0);
-                            possible = res.reduce((s, r) => s + r.possible, 0);
+                        if (allQuizzes && allQuizzes.length > 0) {
+                            possible = allQuizzes.reduce((acc, curr) => acc + (Number(curr.totalMarks) || 0), 0);
+
+                            const quizIds = allQuizzes.map((q) => q.quizId);
+                            const { data: quizData } = await supabase
+                                .from("quiz_submissions")
+                                .select("totalMarksObtained, quizId")
+                                .eq("studentId", studentId)
+                                .in("quizId", quizIds);
+
+                            if (quizData && quizData.length > 0) {
+                                const bestAttempts = quizData.reduce((acc: any, curr: any) => {
+                                    const id = curr.quizId;
+                                    if (!acc[id] || curr.totalMarksObtained > acc[id].earned) {
+                                        acc[id] = { earned: curr.totalMarksObtained || 0 };
+                                    }
+                                    return acc;
+                                }, {});
+                                const res = Object.values(bestAttempts) as any[];
+                                earned = res.reduce((s, r) => s + r.earned, 0);
+                            }
                         }
                     }
 
                     else if (label.includes("discussion")) {
-                        const { data: forumData } = await supabase
-                            .from("student_discussion_uploads")
-                            .select(`
-                            marksObtained, discussionId,
-                            discussion_forum_sections!inner(marks, discussion_forum!inner(title))
-                        `)
-                            .eq("studentId", studentId)
-                            .is("is_deleted", false);
+                        if (history?.collegeSectionsId) {
+                            const { data: allForums } = await supabase
+                                .from("discussion_forum_sections")
+                                .select("discussionId, marks")
+                                .eq("collegeSectionsId", history.collegeSectionsId)
+                                .is("is_deleted", false)
+                                .is("isActive", true);
 
-                        if (forumData && forumData.length > 0) {
-                            const bestForum = forumData.reduce((acc: any, curr: any) => {
-                                const id = curr.discussionId;
-                                const s = Number(curr.marksObtained) || 0;
-                                const m = Number(curr.discussion_forum_sections?.marks) || 0;
-                                if (!acc[id] || s > acc[id].earned) {
-                                    acc[id] = { earned: Math.min(s, m), possible: m, title: curr.discussion_forum_sections?.discussion_forum?.title };
+                            if (allForums && allForums.length > 0) {
+                                possible = allForums.reduce((acc, curr) => acc + (Number(curr.marks) || 0), 0);
+
+                                const forumIds = allForums.map((f) => f.discussionId);
+                                const { data: forumData } = await supabase
+                                    .from("student_discussion_uploads")
+                                    .select("marksObtained, discussionId")
+                                    .eq("studentId", studentId)
+                                    .in("discussionId", forumIds)
+                                    .is("is_deleted", false);
+
+                                if (forumData && forumData.length > 0) {
+                                    const bestForum = forumData.reduce((acc: any, curr: any) => {
+                                        const id = curr.discussionId;
+                                        const s = Number(curr.marksObtained) || 0;
+                                        if (!acc[id] || s > acc[id].earned) {
+                                            acc[id] = { earned: s };
+                                        }
+                                        return acc;
+                                    }, {});
+                                    const res = Object.values(bestForum) as any[];
+                                    earned = res.reduce((s, r) => s + r.earned, 0);
                                 }
-                                return acc;
-                            }, {});
-                            const res = Object.values(bestForum) as any[];
-                            earned = res.reduce((s, r) => s + r.earned, 0);
-                            possible = res.reduce((s, r) => s + r.possible, 0);
+                            }
                         }
                     }
 
                     else if (label.includes("assignment")) {
-                        const { data: assignData } = await supabase
-                            .from("student_assignments_submission")
-                            .select(`marksScored, assignments!inner(assignmentId, marks, subjectId)`)
-                            .eq("studentId", studentId)
-                            .eq("assignments.subjectId", subject.collegeSubjectId);
+                        const { data: allAssignments } = await supabase
+                            .from("assignments")
+                            .select("assignmentId, marks")
+                            .eq("subjectId", subject.collegeSubjectId)
+                            .is("is_deleted", false);
 
-                        if (assignData && assignData.length > 0) {
-                            const uniqueAssign = assignData.reduce((acc: any, curr: any) => {
-                                const id = curr.assignments.assignmentId;
-                                const s = Number(curr.marksScored) || 0;
-                                const m = Number(curr.assignments.marks) || 0;
-                                if (!acc[id] || s > acc[id].earned) {
-                                    acc[id] = { earned: Math.min(s, m), possible: m };
-                                }
-                                return acc;
-                            }, {});
-                            const res = Object.values(uniqueAssign) as any[];
-                            earned = res.reduce((s, r) => s + r.earned, 0);
-                            possible = res.reduce((s, r) => s + r.possible, 0);
+                        if (allAssignments && allAssignments.length > 0) {
+                            possible = allAssignments.reduce((acc, curr) => acc + (Number(curr.marks) || 0), 0);
+
+                            const assignIds = allAssignments.map((a) => a.assignmentId);
+                            const { data: assignData } = await supabase
+                                .from("student_assignments_submission")
+                                .select("marksScored, assignmentId")
+                                .eq("studentId", studentId)
+                                .in("assignmentId", assignIds);
+
+                            if (assignData && assignData.length > 0) {
+                                const uniqueAssign = assignData.reduce((acc: any, curr: any) => {
+                                    const id = curr.assignmentId;
+                                    const s = Number(curr.marksScored) || 0;
+                                    if (!acc[id] || s > acc[id].earned) {
+                                        acc[id] = { earned: s };
+                                    }
+                                    return acc;
+                                }, {});
+                                const res = Object.values(uniqueAssign) as any[];
+                                earned = res.reduce((s, r) => s + r.earned, 0);
+                            }
+                        }
+                    }
+
+                    else if (label.includes("project")) {
+                        const { data: allProjects } = await supabase
+                            .from("projects")
+                            .select("projectId, marks")
+                            .eq("collegeSubjectId", subject.collegeSubjectId)
+                            .is("is_deleted", false);
+
+                        if (allProjects && allProjects.length > 0) {
+                            possible = allProjects.reduce((acc, curr) => acc + (Number(curr.marks) || 0), 0);
+
+                            const projectIds = allProjects.map((p) => p.projectId);
+                            const { data: projectData } = await supabase
+                                .from("student_project_submissions")
+                                .select("marksObtained, projectId")
+                                .eq("studentId", studentId)
+                                .in("projectId", projectIds);
+
+                            if (projectData && projectData.length > 0) {
+                                const bestProject = projectData.reduce((acc: any, curr: any) => {
+                                    const id = curr.projectId;
+                                    const s = Number(curr.marksObtained) || 0;
+                                    if (!acc[id] || s > acc[id].earned) {
+                                        acc[id] = { earned: s };
+                                    }
+                                    return acc;
+                                }, {});
+                                const res = Object.values(bestProject) as any[];
+                                earned = res.reduce((s, r) => s + r.earned, 0);
+                            }
                         }
                     }
 

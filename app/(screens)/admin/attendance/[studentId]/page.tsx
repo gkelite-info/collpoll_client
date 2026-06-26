@@ -9,6 +9,7 @@ import SubjectWiseAttendance from "../tables/subjectWiseTable";
 import StudentProfileCard from "@/app/(screens)/faculty/attendance/components/stuProfileCard";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { CaretLeftIcon } from "@phosphor-icons/react";
+import { useUser } from "@/app/utils/context/UserContext";
 
 type StudentAttendanceDetails = Awaited<
   ReturnType<typeof getStudentAttendanceDetails>
@@ -24,6 +25,7 @@ export default function StudentAttendanceDetailsPage() {
 
   const [student, setStudent] = useState<StudentAttendanceDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const { collegeEducationType } = useUser();
 
   useEffect(() => {
     async function fetchData() {
@@ -59,8 +61,8 @@ export default function StudentAttendanceDetailsPage() {
     <main className="p-4 space-y-6 min-h-screen">
       <section className="flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <CaretLeftIcon onClick={()=> router.back()} className="cursor-pointer h-4 w-4 -mr-4 font-bold"/>
-          <Info label="Department" value={student.department} />
+          <CaretLeftIcon onClick={() => router.back()} className="cursor-pointer h-4 w-4 -mr-4 font-bold" color="#282828" />
+          <Info label={collegeEducationType === "Inter" ? "Group" : "Branch"} value={student.department} />
           <Info label="Year" value={student.year?.toString()} />
           <Info label="Section" value={student.section} />
           <Info label="Degree" value={student.degree} />
@@ -71,6 +73,7 @@ export default function StudentAttendanceDetailsPage() {
           department={student.department}
           degree={student.degree}
           year={student.year?.toString()}
+          isVisibile={false}
         />
       </section>
 

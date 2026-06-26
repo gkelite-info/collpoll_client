@@ -79,6 +79,7 @@ function AssignmentsLeftContent() {
     "active";
   const discussionView =
     (searchParams.get("discussionView") as "active" | "completed") || "active";
+  const selectedDate = searchParams.get("selectedDate");
 
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [view, setView] = useState<"list" | "add" | "edit">("list");
@@ -138,6 +139,7 @@ function AssignmentsLeftContent() {
           "Active",
           quizCurrentPage,
           ITEMS_PER_PAGE,
+          selectedDate || undefined
         );
         setActiveQuizzes(result.data);
       } else if (quizView === "drafts") {
@@ -146,6 +148,7 @@ function AssignmentsLeftContent() {
           "Draft",
           quizCurrentPage,
           ITEMS_PER_PAGE,
+          selectedDate || undefined
         );
         setDraftQuizzes(result.data);
       } else {
@@ -154,6 +157,7 @@ function AssignmentsLeftContent() {
           "Completed",
           quizCurrentPage,
           ITEMS_PER_PAGE,
+          selectedDate || undefined
         );
         setCompletedQuizzes(result.data);
       }
@@ -176,7 +180,7 @@ function AssignmentsLeftContent() {
     if (activeTab === "quiz") {
       fetchQuizzes();
     }
-  }, [activeTab, facultyId, quizView, quizCurrentPage, refreshQuiz]);
+  }, [activeTab, facultyId, quizView, quizCurrentPage, refreshQuiz, selectedDate]);
 
   async function fetchCompletedDiscussions() {
     if (!facultyId) return;
@@ -186,6 +190,7 @@ function AssignmentsLeftContent() {
         facultyId,
         discussionCurrentPage,
         ITEMS_PER_PAGE,
+        selectedDate || undefined
       );
       setCompletedDiscussions(data);
       setDiscussionTotalCount(totalCount);
@@ -204,6 +209,7 @@ function AssignmentsLeftContent() {
         facultyId,
         discussionCurrentPage,
         ITEMS_PER_PAGE,
+        selectedDate || undefined
       );
       setDiscussions(data);
       setDiscussionTotalCount(totalCount);
@@ -222,7 +228,7 @@ function AssignmentsLeftContent() {
     } else {
       fetchCompletedDiscussions();
     }
-  }, [activeTab, discussionView, facultyId, refreshKey, discussionCurrentPage]);
+  }, [activeTab, discussionView, facultyId, refreshKey, discussionCurrentPage, selectedDate]);
 
   async function fetchLabs() {
     if (!facultyId) return;
@@ -315,7 +321,7 @@ function AssignmentsLeftContent() {
   useEffect(() => {
     if (activeTab !== "assignments") return;
     fetchAssignments();
-  }, [activeView, currentPage, activeTab]);
+  }, [activeView, currentPage, activeTab, selectedDate]);
 
   async function fetchAssignments() {
     if (!isFetchingMore) setIsLoading(true);
@@ -347,6 +353,7 @@ function AssignmentsLeftContent() {
         dbStatus,
         currentPage,
         ITEMS_PER_PAGE,
+        selectedDate || undefined
       );
 
       if (error) {

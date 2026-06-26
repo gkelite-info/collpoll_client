@@ -103,14 +103,14 @@ export default function SubjectDetailPage() {
       <section className="flex items-center justify-between">
         <div>
           <div className="flex items-center">
-            <CaretLeftIcon className="h-6 w-6 -ml-1 cursor-pointer mr-1" onClick={()=>router.back()}/>
+            <CaretLeftIcon className="h-6 w-6 -ml-1 cursor-pointer mr-1 text-[#282828]" onClick={() => router.back()} />
             <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
           </div>
           <p className="text-sm text-gray-500 mt-1">
-            Track, Verify and Manage Attendance Records.
+            Track, Verify and manage attendance records.
           </p>
         </div>
-        <CourseScheduleCard style="w-[320px]" />
+        <CourseScheduleCard style="w-[320px]" isVisibile={false} />
       </section>
 
       <section className="grid grid-cols-2 gap-6 lg:grid-cols-3">
