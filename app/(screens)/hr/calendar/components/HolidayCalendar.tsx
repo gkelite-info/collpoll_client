@@ -15,6 +15,7 @@ interface HolidayCalendarProps {
   setYear: (year: number) => void;
   onRefresh: () => void;
   onEditRequest?: (holiday: CollegeHoliday) => void;
+  readOnly?: boolean;
 }
 
 type HolidayStyle = {
@@ -89,7 +90,7 @@ const MONTH_COLORS = [
   "bg-gradient-to-r from-sky-500 to-sky-600 text-white", // Dec
 ];
 
-export default function HolidayCalendar({ holidays, year, setYear, onRefresh, onEditRequest }: HolidayCalendarProps) {
+export default function HolidayCalendar({ holidays, year, setYear, onRefresh, onEditRequest, readOnly = false }: HolidayCalendarProps) {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [holidayToDelete, setHolidayToDelete] = useState<CollegeHoliday | null>(null);
   const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
@@ -205,26 +206,28 @@ export default function HolidayCalendar({ holidays, year, setYear, onRefresh, on
         </h2>
         
         <div className="flex flex-wrap items-center justify-center md:justify-end gap-2 w-full md:w-auto">
-          <div className="flex items-center gap-2 md:mr-2 border-r border-slate-200 pr-2 md:pr-4">
-            <button
-              onClick={() => setBulkActionType("remove_sundays")}
-              disabled={!hasSundays}
-              className="px-2 sm:px-3 py-1.5 sm:py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 rounded-xl text-[11px] sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-rose-50"
-              title="Remove all Sundays"
-            >
-              <Trash size={16} weight="bold" />
-              <span className="hidden sm:inline">Clear Sundays</span>
-            </button>
-            <button
-              onClick={() => setBulkActionType("remove_saturdays")}
-              disabled={!hasSaturdays}
-              className="px-2 sm:px-3 py-1.5 sm:py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 rounded-xl text-[11px] sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-rose-50"
-              title="Remove all Saturdays"
-            >
-              <Trash size={16} weight="bold" />
-              <span className="hidden sm:inline">Clear Saturdays</span>
-            </button>
-          </div>
+          {!readOnly && (
+            <div className="flex items-center gap-2 md:mr-2 border-r border-slate-200 pr-2 md:pr-4">
+              <button
+                onClick={() => setBulkActionType("remove_sundays")}
+                disabled={!hasSundays}
+                className="px-2 sm:px-3 py-1.5 sm:py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 rounded-xl text-[11px] sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-rose-50"
+                title="Remove all Sundays"
+              >
+                <Trash size={16} weight="bold" />
+                <span className="hidden sm:inline">Clear Sundays</span>
+              </button>
+              <button
+                onClick={() => setBulkActionType("remove_saturdays")}
+                disabled={!hasSaturdays}
+                className="px-2 sm:px-3 py-1.5 sm:py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 rounded-xl text-[11px] sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-rose-50"
+                title="Remove all Saturdays"
+              >
+                <Trash size={16} weight="bold" />
+                <span className="hidden sm:inline">Clear Saturdays</span>
+              </button>
+            </div>
+          )}
 
           <button 
             onClick={() => setYear(year - 1)}
@@ -279,7 +282,9 @@ export default function HolidayCalendar({ holidays, year, setYear, onRefresh, on
         <div className="flex flex-col items-center justify-center py-20 text-gray-400">
           <CalendarDotsIcon size={64} weight="thin" className="mb-4 text-gray-300" />
           <p className="text-lg font-medium">No holidays found for {year}</p>
-          <p className="text-sm">Click &quot;Add Holiday&quot; to start building your calendar.</p>
+          {!readOnly && (
+            <p className="text-sm">Click &quot;Add Holiday&quot; to start building your calendar.</p>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -335,7 +340,7 @@ export default function HolidayCalendar({ holidays, year, setYear, onRefresh, on
                           >
                             <Eye size={18} weight="bold" />
                           </button>
-                          {onEditRequest && (
+                          {!readOnly && onEditRequest && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -347,21 +352,23 @@ export default function HolidayCalendar({ holidays, year, setYear, onRefresh, on
                               <PencilSimple size={18} weight="bold" />
                             </button>
                           )}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              confirmDelete(holiday);
-                            }}
-                            disabled={deletingId === holiday.holidayId}
-                            className="p-1.5 sm:p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                            title="Delete Holiday"
-                          >
-                            {deletingId === holiday.holidayId ? (
-                              <CircleNotch size={18} className="animate-spin" />
-                            ) : (
-                              <Trash size={18} weight="fill" />
-                            )}
-                          </button>
+                          {!readOnly && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                confirmDelete(holiday);
+                              }}
+                              disabled={deletingId === holiday.holidayId}
+                              className="p-1.5 sm:p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                              title="Delete Holiday"
+                            >
+                              {deletingId === holiday.holidayId ? (
+                                <CircleNotch size={18} className="animate-spin" />
+                              ) : (
+                                <Trash size={18} weight="fill" />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </div>
                     );

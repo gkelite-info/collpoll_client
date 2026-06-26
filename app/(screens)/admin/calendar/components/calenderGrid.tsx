@@ -52,8 +52,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-r-[20px] rounded-b-[20px] shadow-sm overflow-y-auto flex flex-col relative -mt-2 h-[80vh]">
-      <div className="flex border-b border-gray-400">
+    <div className="bg-white rounded-bl-[20px] shadow-sm overflow-y-auto custom-scrollbar flex flex-col relative -mt-2 h-[80vh]">
+      <div className="flex border-b border-gray-400 sticky top-0 z-50 bg-white">
         <div className="w-20 min-w-[80px] border-r border-gray-400 p-2 flex items-center justify-center gap-1 bg-white z-10">
           <button
             onClick={onPrevWeek}
@@ -88,7 +88,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+      <div className="flex-1 relative">
         <div className="flex min-h-[720px]">
           <div className="w-20 min-w-20 bg-white border-r border-gray-300 shrink-0 select-none">
             {TIME_SLOTS &&

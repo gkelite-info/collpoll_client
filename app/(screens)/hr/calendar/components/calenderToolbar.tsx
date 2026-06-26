@@ -26,7 +26,6 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
 
   const tabs = [
     { name: "All Scheduled", filterValue: "All Scheduled", icon: CalendarDotsIcon },
-    { name: "Holidays", filterValue: "Holidays", icon: CalendarDotsIcon },
   ];
 
   return (

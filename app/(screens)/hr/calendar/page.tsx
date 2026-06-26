@@ -46,15 +46,15 @@ function FinanceCalendarPageContent() {
   const pathname = usePathname();
 
   const tabQuery = searchParams.get("tab");
-  const initialTab = tabQuery === "Holidays" ? "Holidays" : "All Scheduled";
+  const activeMainTab = tabQuery === "Holidays" ? "Holidays" : "All Scheduled";
   
-  const [activeTab, setActiveTabState] = useState(initialTab);
+  const [activeTab, setActiveTabState] = useState("All Scheduled");
 
   const setActiveTab = (tab: string) => {
     setActiveTabState(tab);
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", tab);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    if (tab === "Holidays") {
+      router.push("/hr/calendar?tab=Holidays");
+    }
   };
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -134,10 +134,10 @@ function FinanceCalendarPageContent() {
   }, [collegeId, holidayYear]);
 
   useEffect(() => {
-    if (activeTab === "Holidays") {
+    if (activeMainTab === "Holidays") {
       loadHolidays();
     }
-  }, [activeTab, loadHolidays, holidayYear, collegeId]);
+  }, [activeMainTab, loadHolidays, holidayYear, collegeId]);
 
   const handleDelete = async () => {
     if (!eventToDelete) return;
@@ -178,10 +178,12 @@ function FinanceCalendarPageContent() {
         <section className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="w-full md:w-auto">
             <h1 className="text-black text-xl font-semibold">
-              Calendar & Events
+              {activeMainTab === "Holidays" ? "Holiday Calendar" : "Calendar & Events"}
             </h1>
             <p className="text-black text-sm">
-              Stay organized and on track with your personalised calendar
+              {activeMainTab === "Holidays"
+                ? "View the complete holiday schedule for the academic year."
+                : "Stay organized and on track with your personalised calendar"}
             </p>
           </div>
           <div className="hidden md:block w-[140px]">
@@ -189,30 +191,19 @@ function FinanceCalendarPageContent() {
           </div>
         </section>
 
-        <div className="flex md:hidden justify-between items-center w-full">
-          <div>
-            {activeTab === "Holidays" ? (
-              <CalendarHeader onAddClick={() => setIsAddHolidayModalOpen(true)} />
-            ) : (
-              <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
-            )}
-          </div>
-          <div className="w-[140px]">
-            <CourseScheduleCard style="w-full" isVisibile={false} fullWidth={true} />
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center w-full">
-          <div className="w-full md:w-auto overflow-x-auto">
-            <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
-          </div>
-          <div className="hidden md:block">
-            {activeTab === "Holidays" ? (
-              <CalendarHeader onAddClick={() => setIsAddHolidayModalOpen(true)} />
-            ) : (
-              <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
-            )}
-          </div>
+        <div className="flex gap-3 mb-2 mt-2">
+          <button
+            onClick={() => router.push("/hr/calendar")}
+            className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${activeMainTab !== "Holidays" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+          >
+            Calendar Overview
+          </button>
+          <button
+            onClick={() => router.push("/hr/calendar?tab=Holidays")}
+            className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${activeMainTab === "Holidays" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+          >
+            Holiday Calendar
+          </button>
         </div>
       </div>
         <AddEventModal
@@ -235,7 +226,7 @@ function FinanceCalendarPageContent() {
           year={holidayYear}
           editData={holidayToEdit}
         />
-      {activeTab === "Holidays" ? (
+      {activeMainTab === "Holidays" ? (
         (isFetchingHolidays || ctxLoading) ? (
           <HolidayCalendarShimmer />
         ) : (
@@ -251,33 +242,50 @@ function FinanceCalendarPageContent() {
           />
         )
       ) : (
-        <div className="relative bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden rounded-lg">
-          {(ctxLoading || isFetchingEvents || (activeTab === "Holidays" && isFetchingHolidays)) && (
-            <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
-              <Loader />
-              <span className="text-sm font-medium text-gray-600">
-              Loading events...
-            </span>
+        <>
+          <div className="flex justify-between items-center w-full mb-2">
+            <div className="w-full md:w-auto overflow-x-auto relative z-10">
+              <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
+            </div>
+            <div className="hidden md:block">
+              <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
+            </div>
           </div>
-        )}
+          
+          <div className="flex md:hidden justify-between items-center w-full mb-2">
+            <div>
+              <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
+            </div>
+          </div>
 
-        <CalendarGrid
-          events={events}
-          weekDays={weekDays}
-          activeTab={activeTab}
-          onPrevWeek={handlePrevWeek}
-          onNextWeek={handleNextWeek}
-          onEditRequest={(event) => {
-            setEventToEdit(event);
-            setIsModalOpen(true);
-          }}
-          onDeleteRequest={(event) => setEventToDelete(event)}
-          onEventClick={(event) => {
-            setSelectedEvent(event);
-            setShowDetails(true);
-          }}
-        />
-      </div>
+          <div className="relative bg-white shadow-sm overflow-hidden rounded-bl-[20px] -mt-2">
+            {(ctxLoading || isFetchingEvents) && (
+              <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
+                <Loader />
+                <span className="text-sm font-medium text-gray-600">
+                Loading events...
+              </span>
+            </div>
+          )}
+
+          <CalendarGrid
+            events={events}
+            weekDays={weekDays}
+            activeTab={activeTab}
+            onPrevWeek={handlePrevWeek}
+            onNextWeek={handleNextWeek}
+            onEditRequest={(event) => {
+              setEventToEdit(event);
+              setIsModalOpen(true);
+            }}
+            onDeleteRequest={(event) => setEventToDelete(event)}
+            onEventClick={(event) => {
+              setSelectedEvent(event);
+              setShowDetails(true);
+            }}
+          />
+        </div>
+      </>
       )}
 
       <EventDetailsModal
