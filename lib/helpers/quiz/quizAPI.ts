@@ -72,11 +72,12 @@ export async function fetchQuizzesByStatus(
   status: "Draft" | "Active" | "Completed",
   page: number = 1,
   limit: number = 10,
+  dateStr?: string,
 ) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("quizzes")
     .select(
       `
@@ -105,7 +106,14 @@ export async function fetchQuizzesByStatus(
     .eq("facultyId", facultyId)
     .eq("status", status)
     .eq("isActive", true)
-    .is("deletedAt", null)
+    .is("deletedAt", null);
+
+  if (dateStr) {
+    const formattedDate = dateStr.split("T")[0];
+    query = query.lte("startDate", formattedDate).gte("endDate", formattedDate);
+  }
+
+  const { data, error, count } = await query
     .order("createdAt", { ascending: false })
     .range(from, to);
 
@@ -282,11 +290,12 @@ export async function fetchAttemptedQuizzesForStudent(
   studentId: number,
   page: number = 1,
   limit: number = 10,
+  dateStr?: string,
 ) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("quiz_submissions")
     .select(
       `
@@ -300,7 +309,16 @@ export async function fetchAttemptedQuizzesForStudent(
     )
     .eq("studentId", studentId)
     .eq("isActive", true)
-    .is("deletedAt", null)
+    .is("deletedAt", null);
+
+  if (dateStr) {
+    const formattedDate = dateStr.split("T")[0];
+    query = query
+      .gte("submittedAt", formattedDate)
+      .lte("submittedAt", `${formattedDate}T23:59:59.999Z`);
+  }
+
+  const { data, error, count } = await query
     .order("submittedAt", { ascending: false })
     .range(from, to);
 
@@ -360,8 +378,9 @@ export async function fetchActiveQuizzesForStudent(
   collegeSectionsId: number,
   page: number = 1,
   limit: number = 10,
+  dateStr?: string,
 ) {
-  const today = new Date().toISOString().split("T")[0];
+  const targetDate = dateStr ? dateStr.split("T")[0] : new Date().toISOString().split("T")[0];
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
@@ -394,8 +413,8 @@ export async function fetchActiveQuizzesForStudent(
     .eq("status", "Active")
     .eq("isActive", true)
     .is("deletedAt", null)
-    .lte("startDate", today)
-    .gte("endDate", today)
+    .lte("startDate", targetDate)
+    .gte("endDate", targetDate)
     .order("createdAt", { ascending: false })
     .range(from, to);
 

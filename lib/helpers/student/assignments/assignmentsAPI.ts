@@ -10,7 +10,8 @@ export const fetchAssignmentsForStudent = async (
   filters: AssignmentFilters,
   page: number,
   limit: number,
-  type: "active" | "previous"
+  type: "active" | "previous",
+  dateStr?: string,
 ) => {
   try {
     const { collegeBranchId, collegeAcademicYearId, collegeSectionsId } = filters;
@@ -22,6 +23,28 @@ export const fetchAssignmentsForStudent = async (
     const todayInt = Number(
       `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`
     );
+
+    // Fetch current section name
+    const { data: sectionRow, error: secError } = await supabase
+      .from("college_sections")
+      .select("collegeSections")
+      .eq("collegeSectionsId", collegeSectionsId)
+      .single();
+
+    let sectionIds = [collegeSectionsId];
+    if (!secError && sectionRow?.collegeSections) {
+      // Fetch all matching section IDs (including soft-deleted ones)
+      const { data: sectionsList, error: listError } = await supabase
+        .from("college_sections")
+        .select("collegeSectionsId")
+        .eq("collegeBranchId", collegeBranchId)
+        .eq("collegeAcademicYearId", collegeAcademicYearId)
+        .eq("collegeSections", sectionRow.collegeSections);
+
+      if (!listError && sectionsList) {
+        sectionIds = sectionsList.map((s: any) => s.collegeSectionsId);
+      }
+    }
 
     let query = supabase
       .from("assignments")
@@ -49,13 +72,25 @@ export const fetchAssignmentsForStudent = async (
       )
       .eq("collegeBranchId", collegeBranchId)
       .eq("collegeAcademicYearId", collegeAcademicYearId)
-      .eq("collegeSectionsId", collegeSectionsId)
+      .in("collegeSectionsId", sectionIds)
       .eq("is_deleted", false);
 
+    let targetDateInt = todayInt;
+
+    if (dateStr) {
+      const d = new Date(dateStr);
+      targetDateInt = parseInt(
+        `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(
+          d.getDate()
+        ).padStart(2, "0")}`
+      );
+      query = query.lte("dateAssignedInt", targetDateInt);
+    }
+
     if (type === "active") {
-      query = query.gte("submissionDeadlineInt", todayInt);
+      query = query.gte("submissionDeadlineInt", targetDateInt);
     } else if (type === "previous") {
-      query = query.lt("submissionDeadlineInt", todayInt);
+      query = query.lt("submissionDeadlineInt", targetDateInt);
     }
 
     const { data, error, count } = await query

@@ -12,7 +12,7 @@ import {
   publishAdminQuiz,
 } from "@/lib/helpers/admin/assignments/quiz/adminQuizAPI";
 
-export default function AdminQuizList({ subjectId }: { subjectId: string }) {
+export default function AdminQuizList({ subjectId, selectedDate }: { subjectId: string, selectedDate?: Date }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -33,10 +33,15 @@ export default function AdminQuizList({ subjectId }: { subjectId: string }) {
       completed: "Completed",
     } as const;
 
-    fetchAdminQuizzesBySubject(Number(subjectId), statusMap[quizView])
+    const year = selectedDate?.getFullYear();
+    const month = String((selectedDate?.getMonth() || 0) + 1).padStart(2, "0");
+    const day = String(selectedDate?.getDate()).padStart(2, "0");
+    const dateStr = selectedDate ? `${year}-${month}-${day}` : undefined;
+
+    fetchAdminQuizzesBySubject(Number(subjectId), statusMap[quizView], dateStr)
       .then(setQuizzes)
       .finally(() => setIsLoading(false));
-  }, [subjectId, quizView, refreshKey]);
+  }, [subjectId, quizView, refreshKey, selectedDate]);
 
   const handleViewChange = (view: "active" | "drafts" | "completed") => {
     const params = new URLSearchParams(searchParams.toString());

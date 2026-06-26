@@ -192,9 +192,9 @@ const Page = () => {
           <p className="text-sm mt-1 max-w-[280px] text-center">
             {subjectFilter !== "All" || statusFilter !== "All"
               ? t("We couldnt find any projects for filter", {
-                  subject: subjectFilter === "All" ? "" : subjectFilter,
-                  status: statusFilter === "All" ? "" : statusFilter,
-                })
+                subject: subjectFilter === "All" ? "" : subjectFilter,
+                status: statusFilter === "All" ? "" : statusFilter,
+              })
               : t("Your faculty hasnt assigned any projects to you yet")}
           </p>
 

@@ -867,7 +867,9 @@
       "Browse Files": "फ़ाइलें ब्राउज़ करें",
       "Uploading": "अपलोड हो रहा है",
       "Submit Files": "फ़ाइलें जमा करें",
-      "We couldnt find any projects for filter": "हमने \"{subject}\" {status} के लिए कोई प्रोजेक्ट नहीं पाया।"
+      "We couldnt find any projects for filter": "हमने \"{subject}\" {status} के लिए कोई प्रोजेक्ट नहीं पाया।",
+      "Your Current Submission": "आपका वर्तमान सबमिशन",
+      "Marks Scored": "प्राप्त अंक"
     }
   },
   "Placements": {

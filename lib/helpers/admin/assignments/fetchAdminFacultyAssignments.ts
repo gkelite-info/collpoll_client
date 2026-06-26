@@ -5,11 +5,13 @@ export const fetchAdminFacultyAssignments = async (
   facultyId: number,
   page: number,
   pageSize: number,
+  dateStr?: string
 ) => {
   try {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
-    const { data, error, count } = await supabase
+
+    let query = supabase
       .from("assignments")
       .select(
         `
@@ -28,7 +30,20 @@ export const fetchAdminFacultyAssignments = async (
       )
       .eq("subjectId", subjectId)
       .eq("createdBy", facultyId)
-      .eq("is_deleted", false)
+      .eq("is_deleted", false);
+
+    if (dateStr) {
+      const [year, month, day] = dateStr.split("-").map(Number);
+      const dateInt = year * 10000 + month * 100 + day;
+
+      // Show assignments that are active on the selected date:
+      // i.e., assigned on or before the date, and due on or after the date.
+      query = query
+        .lte("dateAssignedInt", dateInt)
+        .gte("submissionDeadlineInt", dateInt);
+    }
+
+    const { data, error, count } = await query
       .order("assignmentId", { ascending: false })
       .range(from, to);
 
