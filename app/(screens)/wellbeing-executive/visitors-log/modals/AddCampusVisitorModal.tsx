@@ -11,42 +11,38 @@ export type NewCampusVisitor = {
   category: VisitorCategory;
   purpose: string;
   numberOfVisitors: number;
+  date: string;
   entryTime: string;
-};
-
-const formatEntryDateTime = (date: Date) => {
-  const datePart = new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date);
-  const timePart = new Intl.DateTimeFormat("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  }).format(date);
-  return `${datePart} | ${timePart}`;
+  exitTime: string;
 };
 
 export function AddCampusVisitorModal({
   onClose,
   onSave,
+  initialVisitor,
 }: {
   onClose: () => void;
   onSave: (visitor: NewCampusVisitor) => void;
+  initialVisitor?: NewCampusVisitor;
 }) {
   const now = new Date();
   const [form, setForm] = useState<NewCampusVisitor>({
-    name: "",
-    mobile: "",
-    category: "Parent",
-    purpose: "",
-    numberOfVisitors: 1,
-    entryTime: new Intl.DateTimeFormat("en-US", {
+    name: initialVisitor?.name ?? "",
+    mobile: initialVisitor?.mobile ?? "",
+    category: initialVisitor?.category ?? "Parent",
+    purpose: initialVisitor?.purpose ?? "",
+    numberOfVisitors: initialVisitor?.numberOfVisitors ?? 1,
+    date: initialVisitor?.date ?? new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(now),
+    entryTime: initialVisitor?.entryTime ?? new Intl.DateTimeFormat("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
     }).format(now),
+    exitTime: initialVisitor?.exitTime ?? "-",
   });
 
   const fieldClass =
@@ -112,69 +108,84 @@ export function AddCampusVisitorModal({
             />
           </label>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <fieldset>
-              <legend className={labelClass}>
-                Visitor Category <span className="text-red-500">*</span>
-              </legend>
-              <div className="mt-2 space-y-2 rounded-md border border-[#D7DFEC] p-3">
-                {(["Parent", "Guest", "Other"] as VisitorCategory[]).map((category) => (
-                  <label key={category} className="flex cursor-pointer items-center gap-2 text-sm text-[#34425E]">
-                    <input
-                      type="radio"
-                      name="visitor-category"
-                      checked={form.category === category}
-                      onChange={() => setForm({ ...form, category })}
-                      className="accent-[#22B967]"
-                    />
-                    {category}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+          <fieldset>
+            <legend className={labelClass}>
+              Visitor Category <span className="text-red-500">*</span>
+            </legend>
+            <div className="mt-2 grid gap-2 rounded-md border border-[#D7DFEC] p-3 sm:grid-cols-3">
+              {(["Parent", "Guest", "Other"] as VisitorCategory[]).map((category) => (
+                <label key={category} className="flex cursor-pointer items-center gap-2 text-sm text-[#34425E]">
+                  <input
+                    type="radio"
+                    name="visitor-category"
+                    checked={form.category === category}
+                    onChange={() => setForm({ ...form, category })}
+                    className="accent-[#22B967]"
+                  />
+                  {category}
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
+          <h3 className="pt-1 text-xs font-extrabold text-[#334155]">Visit Information</h3>
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <label className={labelClass}>
               Purpose of Visit <span className="text-red-500">*</span>
-              <select
+              <input
                 required
                 value={form.purpose}
                 onChange={(event) => setForm({ ...form, purpose: event.target.value })}
+                placeholder="Enter purpose"
+                className={fieldClass}
+              />
+            </label>
+
+            <label className={labelClass}>
+              Number of Visitors <span className="text-red-500">*</span>
+              <select
+                value={form.numberOfVisitors}
+                onChange={(event) =>
+                  setForm({ ...form, numberOfVisitors: Number(event.target.value) })
+                }
                 className={fieldClass}
               >
-                <option value="">Select purpose</option>
-                <option>Parent Meeting</option>
-                <option>Admission Inquiry</option>
-                <option>Fee Enquiry</option>
-                <option>Official Visit</option>
-                <option>Delivery</option>
-                <option>Other</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
+                  <option key={count} value={count}>{count}</option>
+                ))}
               </select>
             </label>
           </div>
 
-          <h3 className="pt-1 text-xs font-extrabold text-[#334155]">Visit Information</h3>
-
-          <label className={labelClass}>
-            Number of Visitors <span className="text-red-500">*</span>
-            <select
-              value={form.numberOfVisitors}
-              onChange={(event) =>
-                setForm({ ...form, numberOfVisitors: Number(event.target.value) })
-              }
-              className={fieldClass}
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
-                <option key={count} value={count}>{count}</option>
-              ))}
-            </select>
-          </label>
-
           <div>
-            <span className={labelClass}>Entry Date &amp; Time</span>
+            <span className={labelClass}>Date</span>
             <div className="mt-2 flex h-10 items-center gap-2 rounded-md border border-[#D7DFEC] bg-[#F8FAFC] px-3 text-sm text-[#475569]">
               <CalendarBlank size={16} className="text-[#94A3B8]" />
-              {formatEntryDateTime(now)}
+              {form.date}
             </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className={labelClass}>
+              Entry Time
+              <input
+                value={form.entryTime}
+                onChange={(event) => setForm({ ...form, entryTime: event.target.value })}
+                placeholder="Enter entry time"
+                className={fieldClass}
+              />
+            </label>
+
+            <label className={labelClass}>
+              Exit Time
+              <input
+                value={form.exitTime}
+                onChange={(event) => setForm({ ...form, exitTime: event.target.value })}
+                placeholder="Enter exit time"
+                className={fieldClass}
+              />
+            </label>
           </div>
         </div>
 
@@ -190,7 +201,7 @@ export function AddCampusVisitorModal({
             type="submit"
             className="h-10 cursor-pointer rounded-md bg-[#169653] text-sm font-bold text-white hover:bg-[#117D45]"
           >
-            Add Visitor
+            {initialVisitor ? "Update Visitor" : "Add Visitor"}
           </button>
         </footer>
       </form>

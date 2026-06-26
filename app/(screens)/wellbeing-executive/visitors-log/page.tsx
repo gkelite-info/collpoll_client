@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import { CampusVisitorsLogDashboard, EquipmentUsageHistory, SafetyVisitorsLogDashboard, VisitorsLogDashboard } from "./components";
 import { NewVisitorEntryModal } from "./modals";
 import type { VisitorEntry } from "./types";
@@ -21,11 +22,22 @@ const isAdministrationCategory = (categoryName: string | null | undefined) => {
 };
 
 export default function VisitorsLogPage() {
-  const { loading, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
+  const { loading, collegeId, wellBeingCategoryId, wellBeingCategoryIds, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
+  const [entries, setEntries] = useState(visitorEntries);
   const [search, setSearch] = useState("");
   const [newEntryOpen, setNewEntryOpen] = useState(false);
+  const [editEntry, setEditEntry] = useState<VisitorEntry | null>(null);
+  const [deleteEntry, setDeleteEntry] = useState<VisitorEntry | null>(null);
   const [selectedVisitor, setSelectedVisitor] = useState<VisitorEntry | null>(null);
   const categories = [wellBeingCategoryName, ...wellBeingCategoryNames];
+  const assignedCategories = [
+    { id: wellBeingCategoryId, name: wellBeingCategoryName },
+    ...wellBeingCategoryNames.map((name, index) => ({ id: wellBeingCategoryIds[index], name })),
+  ];
+  const sportsCategoryId = assignedCategories.find(({ id, name }) => id && isSportsCategory(name))?.id;
+  const sportsInventoryContext = collegeId && sportsCategoryId
+    ? { collegeId, categoryId: sportsCategoryId }
+    : undefined;
   const isSports = categories.some(isSportsCategory);
   const isSafety = categories.some(isSafetyCategory);
   const isAdministration = categories.some(isAdministrationCategory);
@@ -33,13 +45,13 @@ export default function VisitorsLogPage() {
 
   const filteredEntries = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return visitorEntries;
-    return visitorEntries.filter(
+    if (!query) return entries;
+    return entries.filter(
       (entry) =>
         entry.student.toLowerCase().includes(query) ||
         entry.rollNo.toLowerCase().includes(query),
     );
-  }, [search]);
+  }, [entries, search]);
 
   if (loading) {
     return <main className="min-h-screen bg-[#F4F4F4] p-2" />;
@@ -73,13 +85,42 @@ export default function VisitorsLogPage() {
           onSearchChange={setSearch}
           onNewEntry={() => setNewEntryOpen(true)}
           onView={setSelectedVisitor}
+          onEdit={setEditEntry}
+          onDelete={setDeleteEntry}
         />
       )}
 
       {isSports && newEntryOpen ? (
         <NewVisitorEntryModal
+          inventoryContext={sportsInventoryContext}
           onClose={() => setNewEntryOpen(false)}
           onSave={() => setNewEntryOpen(false)}
+        />
+      ) : null}
+      {isSports && editEntry ? (
+        <NewVisitorEntryModal
+          inventoryContext={sportsInventoryContext}
+          onClose={() => setEditEntry(null)}
+          onSave={() => setEditEntry(null)}
+        />
+      ) : null}
+      {isSports ? (
+        <ConfirmDeleteModal
+          open={Boolean(deleteEntry)}
+          title="Delete"
+          name="entry"
+          confirmText="Yes, Delete"
+          onCancel={() => setDeleteEntry(null)}
+          onConfirm={() => {
+            if (!deleteEntry) return;
+            setEntries((current) => current.filter((entry) => entry.id !== deleteEntry.id));
+            setDeleteEntry(null);
+          }}
+          customDescription={deleteEntry ? (
+            <>
+              Are you sure you want to delete <span className="font-semibold text-gray-700">{deleteEntry.student}</span>? This action cannot be undone.
+            </>
+          ) : undefined}
         />
       ) : null}
     </main>

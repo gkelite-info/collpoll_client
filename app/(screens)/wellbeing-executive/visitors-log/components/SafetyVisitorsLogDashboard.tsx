@@ -1,19 +1,34 @@
 "use client";
 
-import { CaretDown, CheckCircle, ClipboardText, DownloadSimple, MapPin, MagnifyingGlass, Plus, UsersThree } from "@phosphor-icons/react";
+import { CaretDown, CheckCircle, ClipboardText, DownloadSimple, MapPin, MagnifyingGlass, PencilSimple, Plus, Trash, UsersThree } from "@phosphor-icons/react";
 import { useState } from "react";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import { AddCampusVisitorModal, type NewCampusVisitor } from "../modals/AddCampusVisitorModal";
 import { DataTable, type DataTableColumn } from "./DataTable";
 import { SummaryCard } from "./SummaryCard";
 
 type CampusVisitorStatus = "Completed" | "Inside Campus" | "Pending Exit";
 type CampusVisitorVariant = "safety" | "administration";
-type CampusVisitor = { id: number; initials: string; tone: string; name: string; mobile: string; purpose: string; watchman: string; entryTime: string; status: CampusVisitorStatus };
+type CampusVisitor = {
+  id: number;
+  initials: string;
+  tone: string;
+  name: string;
+  mobile: string;
+  category: NewCampusVisitor["category"];
+  purpose: string;
+  numberOfVisitors: number;
+  watchman: string;
+  date: string;
+  entryTime: string;
+  exitTime: string;
+  status: CampusVisitorStatus;
+};
 
 const safetyVisitors: CampusVisitor[] = [
-  { id: 1, initials: "RK", tone: "bg-[#E8ECF7] text-[#34425E]", name: "Rahul Kumar", mobile: "+91 XXXXX1234", purpose: "Admission Inquiry", watchman: "Ravi Kumar", entryTime: "10:00 AM", status: "Completed" },
-  { id: 2, initials: "PS", tone: "bg-[#FFF0DF] text-[#F97316]", name: "Priya Sharma", mobile: "+91 XXXXX5678", purpose: "Parent Meeting", watchman: "Mahesh", entryTime: "11:15 AM", status: "Inside Campus" },
-  { id: 3, initials: "KR", tone: "bg-[#FFE5E5] text-[#EF4444]", name: "Kiran Reddy", mobile: "+91 XXXXX7890", purpose: "Fee Enquiry", watchman: "Ravi Kumar", entryTime: "12:30 PM", status: "Pending Exit" },
+  { id: 1, initials: "RK", tone: "bg-[#E8ECF7] text-[#34425E]", name: "Rahul Kumar", mobile: "+91 XXXXX1234", category: "Parent", purpose: "Admission Inquiry", numberOfVisitors: 1, watchman: "Ravi Kumar", date: "15 May 2025", entryTime: "10:00 AM", exitTime: "12:30 PM", status: "Completed" },
+  { id: 2, initials: "PS", tone: "bg-[#FFF0DF] text-[#F97316]", name: "Priya Sharma", mobile: "+91 XXXXX5678", category: "Parent", purpose: "Parent Meeting", numberOfVisitors: 2, watchman: "Mahesh", date: "15 May 2025", entryTime: "11:15 AM", exitTime: "-", status: "Inside Campus" },
+  { id: 3, initials: "KR", tone: "bg-[#FFE5E5] text-[#EF4444]", name: "Kiran Reddy", mobile: "+91 XXXXX7890", category: "Guest", purpose: "Fee Enquiry", numberOfVisitors: 1, watchman: "Ravi Kumar", date: "15 May 2025", entryTime: "12:30 PM", exitTime: "-", status: "Pending Exit" },
 ];
 
 const administrationVisitors: CampusVisitor[] = Array.from({ length: 8 }, (_, index) => ({
@@ -32,13 +47,18 @@ export function CampusVisitorsLogDashboard({ variant }: { variant: CampusVisitor
   const isAdministration = variant === "administration";
   const [visitors, setVisitors] = useState(() => isAdministration ? administrationVisitors : safetyVisitors);
   const [addVisitorOpen, setAddVisitorOpen] = useState(false);
+  const [editingVisitor, setEditingVisitor] = useState<CampusVisitor | null>(null);
+  const [deleteVisitor, setDeleteVisitor] = useState<CampusVisitor | null>(null);
   const columns: DataTableColumn[] = [
     { key: "visitor", label: "Visitor Name" },
     { key: "mobile", label: "Mobile Number" },
     { key: "purpose", label: "Purpose" },
     ...(!isAdministration ? [{ key: "watchman", label: "Watchman" }] : []),
+    { key: "date", label: "Date" },
     { key: "entryTime", label: "Entry Time" },
+    { key: "exitTime", label: "Exit Time" },
     { key: "status", label: "Status" },
+    { key: "actions", label: "Actions", align: "center" as const },
   ];
 
   const updateStatus = (id: number, status: CampusVisitorStatus) => {
@@ -47,14 +67,33 @@ export function CampusVisitorsLogDashboard({ variant }: { variant: CampusVisitor
 
   const addVisitor = (visitor: NewCampusVisitor) => {
     const initials = visitor.name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
-    setVisitors((current) => [{ id: Date.now(), initials, tone: "bg-[#E8ECF7] text-[#34425E]", name: visitor.name, mobile: visitor.mobile, purpose: visitor.purpose, watchman: "Unassigned", entryTime: visitor.entryTime, status: "Inside Campus" }, ...current]);
+    setVisitors((current) => [{ id: Date.now(), initials, tone: "bg-[#E8ECF7] text-[#34425E]", name: visitor.name, mobile: visitor.mobile, category: visitor.category, purpose: visitor.purpose, numberOfVisitors: visitor.numberOfVisitors, watchman: "Unassigned", date: visitor.date, entryTime: visitor.entryTime, exitTime: visitor.exitTime || "-", status: "Inside Campus" }, ...current]);
     setAddVisitorOpen(false);
+  };
+
+  const updateVisitor = (updatedVisitor: NewCampusVisitor) => {
+    if (!editingVisitor) return;
+    const initials = updatedVisitor.name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
+    setVisitors((current) =>
+      current.map((visitor) =>
+        visitor.id === editingVisitor.id
+          ? { ...visitor, initials, name: updatedVisitor.name, mobile: updatedVisitor.mobile, category: updatedVisitor.category, purpose: updatedVisitor.purpose, numberOfVisitors: updatedVisitor.numberOfVisitors, date: updatedVisitor.date, entryTime: updatedVisitor.entryTime, exitTime: updatedVisitor.exitTime || "-" }
+          : visitor,
+      ),
+    );
+    setEditingVisitor(null);
+  };
+
+  const removeVisitor = () => {
+    if (!deleteVisitor) return;
+    setVisitors((current) => current.filter((visitor) => visitor.id !== deleteVisitor.id));
+    setDeleteVisitor(null);
   };
 
   const exportLogs = async () => {
     const XLSX = await import("xlsx");
-    const worksheet = XLSX.utils.json_to_sheet(visitors.map((visitor) => ({ "Visitor Name": visitor.name, "Mobile Number": visitor.mobile, Purpose: visitor.purpose, ...(!isAdministration ? { Watchman: visitor.watchman } : {}), "Entry Time": visitor.entryTime, Status: visitor.status })));
-    worksheet["!cols"] = [{ wch: 22 }, { wch: 18 }, { wch: 24 }, { wch: 18 }, { wch: 14 }, { wch: 18 }];
+    const worksheet = XLSX.utils.json_to_sheet(visitors.map((visitor) => ({ "Visitor Name": visitor.name, "Mobile Number": visitor.mobile, Purpose: visitor.purpose, ...(!isAdministration ? { Watchman: visitor.watchman } : {}), Date: visitor.date, "Entry Time": visitor.entryTime, "Exit Time": visitor.exitTime, Status: visitor.status })));
+    worksheet["!cols"] = [{ wch: 22 }, { wch: 18 }, { wch: 24 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 18 }];
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Visitor Logs");
     XLSX.writeFile(workbook, `visitor-logs-${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -65,8 +104,20 @@ export function CampusVisitorsLogDashboard({ variant }: { variant: CampusVisitor
     mobile: visitor.mobile,
     purpose: <span className="rounded border border-[#D7DFEC] bg-[#F3F6FA] px-2 py-1 text-xs">{visitor.purpose}</span>,
     watchman: visitor.watchman,
+    date: <span className="font-semibold">{visitor.date}</span>,
     entryTime: <span className="font-bold">{visitor.entryTime}</span>,
+    exitTime: <span className="font-bold">{visitor.exitTime}</span>,
     status: <CampusVisitorStatusDropdown status={visitor.status} onChange={(status) => updateStatus(visitor.id, status)} />,
+    actions: (
+      <div className="flex items-center justify-center gap-3">
+        <button type="button" onClick={() => setEditingVisitor(visitor)} title="Edit visitor" className="cursor-pointer text-[#64748B] hover:text-[#149447]">
+          <PencilSimple size={18} weight="bold" />
+        </button>
+        <button type="button" onClick={() => setDeleteVisitor(visitor)} title="Delete visitor" className="cursor-pointer text-[#EF4444] hover:text-[#B91C1C]">
+          <Trash size={18} weight="bold" />
+        </button>
+      </div>
+    ),
   }));
 
   return (
@@ -74,17 +125,46 @@ export function CampusVisitorsLogDashboard({ variant }: { variant: CampusVisitor
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div><h1 className="text-2xl font-extrabold text-[#16284F]">Visitor Logs</h1><p className="mt-1 text-sm text-[#64748B]">Monitor and track all visitor entries recorded across the campus.</p></div>
         <div className="flex flex-wrap gap-3">
-          {isAdministration ? <button type="button" onClick={() => setAddVisitorOpen(true)} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded bg-[#43C17A] px-5 text-sm font-bold text-white hover:bg-[#35A968]"><Plus size={16} weight="bold" />Add Visitor</button> : null}
+          <button type="button" onClick={() => setAddVisitorOpen(true)} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded bg-[#43C17A] px-5 text-sm font-bold text-white hover:bg-[#35A968]"><Plus size={16} weight="bold" />Add Visitor</button>
           <button type="button" onClick={exportLogs} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded bg-[#43C17A] px-5 text-sm font-bold text-white hover:bg-[#35A968]"><DownloadSimple size={16} weight="bold" />Export Logs</button>
         </div>
       </div>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map((card) => <SummaryCard key={card.label} {...card} />)}</div>
       <div className="mt-6 overflow-hidden rounded-lg border border-[#D7DFEC] bg-white">
         <div className="flex flex-col gap-3 border-b border-[#D7DFEC] p-4 lg:flex-row lg:items-center"><label className="relative min-w-0 flex-1"><MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748B]" /><input placeholder="Search visitor name" className="h-10 w-full rounded border border-[#D7DFEC] pl-10 pr-3 text-sm outline-none focus:border-[#43C17A]" /></label><span className="text-sm font-semibold text-[#475569]">Filters:</span><button className="h-10 cursor-pointer rounded border border-[#D7DFEC] bg-white px-4 text-sm text-[#34425E]">Today, 15 May</button><select className="h-10 cursor-pointer rounded border border-[#D7DFEC] bg-white px-4 text-sm text-[#34425E]"><option>All Watchmen</option><option>Ravi Kumar</option><option>Mahesh</option></select><select className="h-10 cursor-pointer rounded border border-[#D7DFEC] bg-white px-4 text-sm text-[#34425E]"><option>All Statuses</option><option>Completed</option><option>Inside Campus</option><option>Pending Exit</option></select></div>
-        <DataTable columns={columns} rows={rows} minWidth="850px" />
+        <DataTable columns={columns} rows={rows} minWidth={isAdministration ? "1120px" : "1240px"} />
         <div className="flex items-center justify-between border-t border-[#D7DFEC] px-5 py-4 text-xs text-[#64748B]"><span>Showing 1 to {visitors.length} of 128 entries</span><div className="flex items-center gap-2"><button className="h-8 w-8 cursor-pointer rounded bg-[#16284F] font-bold text-white">1</button><button className="h-8 w-8 cursor-pointer rounded">2</button><button className="h-8 w-8 cursor-pointer rounded">3</button><span>...</span><button className="h-8 w-8 cursor-pointer rounded">43</button><button className="h-8 w-8 cursor-pointer rounded">›</button></div></div>
       </div>
       {addVisitorOpen ? <AddCampusVisitorModal onClose={() => setAddVisitorOpen(false)} onSave={addVisitor} /> : null}
+      {editingVisitor ? (
+        <AddCampusVisitorModal
+          initialVisitor={{
+            name: editingVisitor.name,
+            mobile: editingVisitor.mobile,
+            category: editingVisitor.category,
+            purpose: editingVisitor.purpose,
+            numberOfVisitors: editingVisitor.numberOfVisitors,
+            date: editingVisitor.date,
+            entryTime: editingVisitor.entryTime,
+            exitTime: editingVisitor.exitTime,
+          }}
+          onClose={() => setEditingVisitor(null)}
+          onSave={updateVisitor}
+        />
+      ) : null}
+      <ConfirmDeleteModal
+        open={Boolean(deleteVisitor)}
+        title="Delete"
+        name="visitor"
+        confirmText="Yes, Delete"
+        onCancel={() => setDeleteVisitor(null)}
+        onConfirm={removeVisitor}
+        customDescription={deleteVisitor ? (
+          <>
+            Are you sure you want to delete <span className="font-semibold text-gray-700">{deleteVisitor.name}</span>? This action cannot be undone.
+          </>
+        ) : undefined}
+      />
     </section>
   );
 }
