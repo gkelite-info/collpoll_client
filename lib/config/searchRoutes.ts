@@ -116,7 +116,7 @@ export const ROLE_BASED_ROUTES: Record<string, SearchRoute[]> = {
   ],
   CollegeHr: [
     { label: "Home", path: "/hr", category: "Dashboard", keywords: [] },
-    { label: "Calendar", path: "/hr/calendar", category: "Academics", keywords: [] },
+    { label: "Calendar", subLabel: "Holiday Calendar", path: "/hr/calendar?tab=Holidays", category: "Academics", keywords: ["holidays", "calendar", "weekoffs", "events", "schedule"] },
     { label: "Attendance", path: "/hr/attendance", category: "Management", keywords: ["staff attendance"] },
     { label: "Leave Requests", path: "/hr/leaveRequests", category: "Requests", keywords: ["leave", "permission"] },
     { label: "Drive", path: "/hr/drive", category: "Resources", keywords: ["files", "documents", "storage"] },

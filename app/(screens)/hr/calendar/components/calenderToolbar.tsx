@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { CalendarBlank } from "@phosphor-icons/react";
+import { CalendarDotsIcon } from "@phosphor-icons/react";
 
 interface CalendarToolbarProps {
   activeTab?: string;
@@ -25,7 +25,8 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
   };
 
   const tabs = [
-    { name: "All Scheduled", filterValue: "All Scheduled", icon: CalendarBlank },
+    { name: "All Scheduled", filterValue: "All Scheduled", icon: CalendarDotsIcon },
+    { name: "Holidays", filterValue: "Holidays", icon: CalendarDotsIcon },
   ];
 
   return (

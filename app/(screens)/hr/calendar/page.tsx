@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { Trash, CircleNotch } from "@phosphor-icons/react";
 import CalendarToolbar from "./components/calenderToolbar";
@@ -8,27 +9,53 @@ import CalendarHeader from "./components/calenderHeader";
 import AddEventModal from "./modal/AddEventModal";
 import CalendarGrid from "./components/CalenderGrid";
 import EventDetailsModal from "./components/eventDetailsModal";
+import HolidayCalendar from "./components/HolidayCalendar";
+import AddHolidayModal from "./components/AddHolidayModal";
+import HolidayCalendarShimmer from "./components/HolidayCalendarShimmer";
 
 import toast from "react-hot-toast";
-import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
+import { useUser } from "@/app/utils/context/UserContext";
 import {
   deactivateHrCalendarEvent,
   fetchHrCalendarEvents,
 } from "@/lib/helpers/Hr/calendar/hrCalendarEventsAPI";
+import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/holidayAPI";
 import { Loader } from "../../(student)/calendar/right/timetable";
 
 const convertTo24Hour = (time12h: string) => {
   const [time, modifier] = time12h.split(" ");
-  let [hours, minutes] = time.split(":");
+  let hours = time.split(":")[0];
+  const minutes = time.split(":")[1];
   if (hours === "12") hours = "00";
   if (modifier === "PM") hours = String(parseInt(hours, 10) + 12);
   return `${hours.padStart(2, "0")}:${minutes}:00`;
 };
 
 export default function FinanceCalendarPage() {
-  const { collegeId, loading: ctxLoading } = useCollegeHr();
+  return (
+    <Suspense fallback={<div className="p-4"><Loader /></div>}>
+      <FinanceCalendarPageContent />
+    </Suspense>
+  );
+}
 
-  const [activeTab, setActiveTab] = useState("All Scheduled");
+function FinanceCalendarPageContent() {
+  const { collegeId, loading: ctxLoading } = useUser();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const tabQuery = searchParams.get("tab");
+  const initialTab = tabQuery === "Holidays" ? "Holidays" : "All Scheduled";
+  
+  const [activeTab, setActiveTabState] = useState(initialTab);
+
+  const setActiveTab = (tab: string) => {
+    setActiveTabState(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [eventToEdit, setEventToEdit] = useState<any>(null);
@@ -38,7 +65,14 @@ export default function FinanceCalendarPage() {
   const [events, setEvents] = useState<any[]>([]);
 
   const [isFetchingEvents, setIsFetchingEvents] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false); // NEW: Deleting state
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Holidays State
+  const [holidays, setHolidays] = useState<CollegeHoliday[]>([]);
+  const [holidayYear, setHolidayYear] = useState(new Date().getFullYear());
+  const [holidayToEdit, setHolidayToEdit] = useState<CollegeHoliday | null>(null);
+  const [isFetchingHolidays, setIsFetchingHolidays] = useState(false);
+  const [isAddHolidayModalOpen, setIsAddHolidayModalOpen] = useState(false);
 
   const weekDays = useMemo(() => {
     const week = [];
@@ -86,6 +120,25 @@ export default function FinanceCalendarPage() {
     if (!ctxLoading) loadEvents();
   }, [collegeId, ctxLoading]);
 
+  const loadHolidays = useCallback(async () => {
+    if (!collegeId) return;
+    setIsFetchingHolidays(true);
+    try {
+      const data = await fetchCollegeHolidays(collegeId, holidayYear);
+      setHolidays(data || []);
+    } catch (error) {
+      console.error("Error fetching holidays:", error);
+    } finally {
+      setIsFetchingHolidays(false);
+    }
+  }, [collegeId, holidayYear]);
+
+  useEffect(() => {
+    if (activeTab === "Holidays") {
+      loadHolidays();
+    }
+  }, [activeTab, loadHolidays, holidayYear, collegeId]);
+
   const handleDelete = async () => {
     if (!eventToDelete) return;
     setIsDeleting(true);
@@ -121,38 +174,88 @@ export default function FinanceCalendarPage() {
 
   return (
     <main className="p-4 relative">
-      <section className="flex justify-between items-center mb-4">
-        <div>
-          <h1 className="text-black text-xl font-semibold">
-            Calendar & Events
-          </h1>
-          <p className="text-black text-sm">
-            Stay organized and on track with your personalised calendar
-          </p>
-        </div>
-        <CourseScheduleCard style="w-[320px]" isVisibile={false} />
-      </section>
+      <div className="flex flex-col gap-4 mb-1">
+        <section className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="w-full md:w-auto">
+            <h1 className="text-black text-xl font-semibold">
+              Calendar & Events
+            </h1>
+            <p className="text-black text-sm">
+              Stay organized and on track with your personalised calendar
+            </p>
+          </div>
+          <div className="hidden md:block w-[140px]">
+            <CourseScheduleCard style="w-full" isVisibile={false} fullWidth={true} />
+          </div>
+        </section>
 
-      <div className="flex justify-between items-center">
-        <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
-        <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
+        <div className="flex md:hidden justify-between items-center w-full">
+          <div>
+            {activeTab === "Holidays" ? (
+              <CalendarHeader onAddClick={() => setIsAddHolidayModalOpen(true)} />
+            ) : (
+              <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
+            )}
+          </div>
+          <div className="w-[140px]">
+            <CourseScheduleCard style="w-full" isVisibile={false} fullWidth={true} />
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center w-full">
+          <div className="w-full md:w-auto overflow-x-auto">
+            <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
+          </div>
+          <div className="hidden md:block">
+            {activeTab === "Holidays" ? (
+              <CalendarHeader onAddClick={() => setIsAddHolidayModalOpen(true)} />
+            ) : (
+              <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
+            )}
+          </div>
+        </div>
+      </div>
         <AddEventModal
           isOpen={isModalOpen}
           editData={eventToEdit}
-          events={events} // NEW: Pass existing events to check conflicts
+          events={events}
           onSuccess={loadEvents}
           onClose={() => {
             setIsModalOpen(false);
             setEventToEdit(null);
           }}
         />
-      </div>
-
-      <div className="relative bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden rounded-lg">
-        {(ctxLoading || isFetchingEvents) && (
-          <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
-            <Loader />
-            <span className="text-sm font-medium text-gray-600">
+        <AddHolidayModal
+          isOpen={isAddHolidayModalOpen}
+          onClose={() => {
+            setIsAddHolidayModalOpen(false);
+            setHolidayToEdit(null);
+          }}
+          onSuccess={loadHolidays}
+          year={holidayYear}
+          editData={holidayToEdit}
+        />
+      {activeTab === "Holidays" ? (
+        (isFetchingHolidays || ctxLoading) ? (
+          <HolidayCalendarShimmer />
+        ) : (
+          <HolidayCalendar
+            holidays={holidays}
+            year={holidayYear}
+            setYear={setHolidayYear}
+            onRefresh={loadHolidays}
+            onEditRequest={(holiday) => {
+              setHolidayToEdit(holiday);
+              setIsAddHolidayModalOpen(true);
+            }}
+          />
+        )
+      ) : (
+        <div className="relative bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden rounded-lg">
+          {(ctxLoading || isFetchingEvents || (activeTab === "Holidays" && isFetchingHolidays)) && (
+            <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
+              <Loader />
+              <span className="text-sm font-medium text-gray-600">
               Loading events...
             </span>
           </div>
@@ -175,6 +278,7 @@ export default function FinanceCalendarPage() {
           }}
         />
       </div>
+      )}
 
       <EventDetailsModal
         open={showDetails}

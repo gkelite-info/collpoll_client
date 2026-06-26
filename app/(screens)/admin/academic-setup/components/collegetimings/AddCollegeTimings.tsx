@@ -386,7 +386,7 @@ export default function AddCollegeTimings() {
                           onChange={(val) => handleTimeChange(index, "lunchFrom", val)}
                           label="Lunch From"
                           allowClear={true}
-                          options={TIME_OPTIONS_15}
+                          options={TIME_OPTIONS_5}
                           minMins={openAtMins || -1}
                           maxMins={closeAtMins || 1500}
                         />
@@ -395,7 +395,7 @@ export default function AddCollegeTimings() {
                           onChange={(val) => handleTimeChange(index, "lunchTo", val)}
                           label="Lunch To"
                           allowClear={true}
-                          options={TIME_OPTIONS_15}
+                          options={TIME_OPTIONS_5}
                           minMins={lunchFromMins || openAtMins || -1}
                           maxMins={closeAtMins || 1500}
                         />
