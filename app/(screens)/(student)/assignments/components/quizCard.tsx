@@ -158,9 +158,6 @@ export default function QuizCard({ data }: { data: any }) {
 
   return (
     <>
-      {/* ======================================================== */}
-      {/* 🖥️ DESKTOP VIEW (Strictly Preserved Original Code)      */}
-      {/* ======================================================== */}
       <div className="hidden md:flex items-stretch justify-between p-3.5 bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100">
         <div className="flex items-stretch gap-5 h-full w-full">
           <div
@@ -257,9 +254,6 @@ export default function QuizCard({ data }: { data: any }) {
         </div>
       </div>
 
-      {/* ======================================================== */}
-      {/* 📱 MOBILE VIEW (Matches Image Screenshots Perfectly)    */}
-      {/* ======================================================== */}
       <div className="md:hidden flex flex-col p-4 bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 w-full">
         <div className="flex gap-3">
           <div

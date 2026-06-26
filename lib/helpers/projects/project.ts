@@ -441,7 +441,7 @@ export async function fetchEnrichedProjectsByStudent(
 
     if (projectsError || !projectData?.length) return [];
 
-    const [mentorsRes, teamRes, filesRes] = await Promise.all([
+    const [mentorsRes, teamRes, filesRes, submissionsRes] = await Promise.all([
         supabase
             .from("project_mentors")
             .select("projectId, facultyId")
@@ -456,11 +456,19 @@ export async function fetchEnrichedProjectsByStudent(
             .from("project_files")
             .select("projectId, fileUrl")
             .in("projectId", projectIds),
+
+        supabase
+            .from("student_project_submissions")
+            .select("projectId, fileUrl, marksObtained")
+            .in("projectId", projectIds)
+            .eq("studentId", studentId),
     ]);
 
     const mentorRows = mentorsRes.data ?? [];
     const teamRows = teamRes.data ?? [];
     const fileRows = filesRes.data ?? [];
+    const submissionRows = submissionsRes.data ?? [];
+
 
     const uniqueFacultyIds = [...new Set(mentorRows.map((m) => m.facultyId))];
     const uniqueStudentIds = [...new Set(teamRows.map((t) => t.studentId))];
@@ -544,12 +552,18 @@ export async function fetchEnrichedProjectsByStudent(
             ? new Date(project.endDate).toLocaleDateString("en-GB")
             : "";
 
+        const submission = submissionRows.find(
+            (s: any) => s.projectId === project.projectId
+        );
+
         return {
             projectId: project.projectId,
             title: project.title,
             description: project.description,
             domain: project.domain,
             marks: project.marks,
+            marksObtained: submission?.marksObtained ?? null,
+            studentFileUrl: submission?.fileUrl ?? null,
             startDate: project.startDate,
             endDate: project.endDate,
             collegeSubjectId: project.collegeSubjectId,

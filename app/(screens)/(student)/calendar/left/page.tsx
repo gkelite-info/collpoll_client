@@ -143,10 +143,8 @@ export default function CalendarLeft({
               .lte("discussion_forum.deadline", `${day.fullDate}T23:59:59`),
             fetchFacultyTasksForStudent({
               date: day.fullDate,
-              collegeId,
-              collegeBranchId,
               collegeAcademicYearId,
-              collegeSemesterId,
+              collegeSectionsId,
             }),
           ]);
 

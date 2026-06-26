@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
 
-export async function fetchActiveDiscussionsForStudent(collegeSectionsId: number, studentId: number) {
+export async function fetchActiveDiscussionsForStudent(collegeSectionsId: number, studentId: number, dateStr?: string) {
     const today = new Date().toISOString().split("T")[0];
 
     await supabase
@@ -46,7 +46,16 @@ export async function fetchActiveDiscussionsForStudent(collegeSectionsId: number
     }
 
     return (data ?? [])
-        .filter((d: any) => d.discussion_forum?.isActive === true)
+        .filter((d: any) => {
+            const df = d.discussion_forum;
+            if (!df || df.isActive !== true) return false;
+            if (dateStr) {
+                const formattedDate = dateStr.split("T")[0];
+                if (df.createdAt > `${formattedDate}T23:59:59.999Z`) return false;
+                if (df.deadline < formattedDate) return false;
+            }
+            return true;
+        })
         .map((d: any) => ({
             discussionId: d.discussion_forum?.discussionId,
             discussionSectionId: d.discussionSectionId,
@@ -60,7 +69,7 @@ export async function fetchActiveDiscussionsForStudent(collegeSectionsId: number
         }));
 }
 
-export async function fetchCompletedDiscussionsForStudent(collegeSectionsId: number) {
+export async function fetchCompletedDiscussionsForStudent(collegeSectionsId: number, dateStr?: string) {
     const { data, error } = await supabase
         .from("discussion_forum_sections")
         .select(`
@@ -94,7 +103,16 @@ export async function fetchCompletedDiscussionsForStudent(collegeSectionsId: num
     }
 
     return (data ?? [])
-        .filter((d: any) => d.discussion_forum?.isActive === false)
+        .filter((d: any) => {
+            const df = d.discussion_forum;
+            if (!df || df.isActive !== false) return false;
+            if (dateStr) {
+                const formattedDate = dateStr.split("T")[0];
+                if (df.createdAt > `${formattedDate}T23:59:59.999Z`) return false;
+                if (df.deadline < formattedDate) return false;
+            }
+            return true;
+        })
         .map((d: any) => ({
             discussionId: d.discussion_forum?.discussionId,
             discussionSectionId: d.discussionSectionId,

@@ -110,7 +110,7 @@ export const SubjectWiseAttendance = ({
     } catch (err: any) {
       toast.error(
         err?.message ||
-          "Unable to load students. Please refresh and try again.",
+        "Unable to load students. Please refresh and try again.",
       );
       setStudents([]);
       setTotalRecords(0);

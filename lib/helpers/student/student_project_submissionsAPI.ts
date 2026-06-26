@@ -117,6 +117,10 @@ export async function fetchProjectSubmissionsWithStudents(projectId: number) {
             studentProjectSubmissionId,
             fileUrl,
             updatedAt,
+            marksObtained,
+            projects (
+                marks
+            ),
             students (
                 studentId,
                 userId,
@@ -165,4 +169,23 @@ export async function uploadFileToStorage(file: File, projectId: number, student
         .getPublicUrl(filePath);
 
     return { success: true, url: urlData.publicUrl };
+}
+
+export async function updateProjectSubmissionMarks(
+    studentProjectSubmissionId: number,
+    marksObtained: number
+) {
+    const { data, error } = await supabase
+        .from("student_project_submissions")
+        .update({ marksObtained })
+        .eq("studentProjectSubmissionId", studentProjectSubmissionId)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("updateProjectSubmissionMarks error:", error);
+        return { success: false, error };
+    }
+
+    return { success: true, data };
 }

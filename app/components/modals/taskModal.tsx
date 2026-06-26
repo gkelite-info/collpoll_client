@@ -3,12 +3,15 @@
 import { useState, useEffect } from "react";
 import { X } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabaseClient";
 
 export type TaskPayload = {
   title: string;
   description: string;
   dueDate: string;
   dueTime: string;
+  collegeAcademicYearId?: number | null;
+  collegeSectionsId?: number | null;
 };
 
 type TaskModalProps = {
@@ -25,6 +28,8 @@ type TaskModalProps = {
     description: string;
     time: string;
     date: string;
+    collegeAcademicYearId?: number | null;
+    collegeSectionsId?: number | null;
   } | null;
 
   onSave: (
@@ -33,6 +38,8 @@ type TaskModalProps = {
       description: string;
       dueDate: string;
       dueTime: string;
+      collegeAcademicYearId?: number | null;
+      collegeSectionsId?: number | null;
     },
     taskId?: number,
   ) => Promise<void>;
@@ -59,6 +66,11 @@ export default function TaskModal({
   const [dueTime, setDueTime] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [selectedYearId, setSelectedYearId] = useState<string>("");
+  const [selectedSectionId, setSelectedSectionId] = useState<string>("");
+  const [academicYears, setAcademicYears] = useState<{ id: number; name: string }[]>([]);
+  const [allSections, setAllSections] = useState<any[]>([]);
+
   useEffect(() => {
     if (defaultValues?.facultyTaskId) {
       setTitle(defaultValues.title);
@@ -66,13 +78,75 @@ export default function TaskModal({
       setDueTime(defaultValues.time);
 
       setDueDate(defaultValues.date ?? new Date().toISOString().split("T")[0]);
+      setSelectedYearId(defaultValues.collegeAcademicYearId ? String(defaultValues.collegeAcademicYearId) : "");
+      setSelectedSectionId(defaultValues.collegeSectionsId ? String(defaultValues.collegeSectionsId) : "");
     } else {
       setTitle("");
       setDescription("");
       setDueDate("");
       setDueTime("");
+      setSelectedYearId("");
+      setSelectedSectionId("");
     }
   }, [defaultValues]);
+
+  useEffect(() => {
+    if (!open || role !== "faculty" || !facultyId || !collegeSubjectId) {
+      setAcademicYears([]);
+      setAllSections([]);
+      return;
+    }
+
+    const fetchYearsAndSections = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("faculty_sections")
+          .select(`
+            collegeSectionsId,
+            collegeAcademicYearId,
+            college_sections:collegeSectionsId!inner (
+              collegeSections
+            ),
+            college_academic_year:collegeAcademicYearId!inner (
+              collegeAcademicYear
+            )
+          `)
+          .eq("facultyId", facultyId)
+          .eq("collegeSubjectId", collegeSubjectId)
+          .eq("isActive", true)
+          .is("deletedAt", null);
+
+        if (error) throw error;
+
+        if (data) {
+          const uniqueSectionsMap = new Map();
+          data.forEach((item: any) => {
+            if (!uniqueSectionsMap.has(item.collegeSectionsId)) {
+              uniqueSectionsMap.set(item.collegeSectionsId, item);
+            }
+          });
+          const uniqueSections = Array.from(uniqueSectionsMap.values());
+          setAllSections(uniqueSections);
+
+          const yearsMap = new Map();
+          uniqueSections.forEach((item: any) => {
+            const yId = item.collegeAcademicYearId;
+            const yName = Array.isArray(item.college_academic_year)
+              ? item.college_academic_year[0]?.collegeAcademicYear
+              : item.college_academic_year?.collegeAcademicYear;
+            if (yId && yName) {
+              yearsMap.set(yId, { id: yId, name: yName });
+            }
+          });
+          setAcademicYears(Array.from(yearsMap.values()));
+        }
+      } catch (err) {
+        console.error("Error fetching years and sections for task modal:", err);
+      }
+    };
+
+    fetchYearsAndSections();
+  }, [open, role, facultyId, collegeSubjectId]);
 
   if (!open) return null;
 
@@ -81,6 +155,8 @@ export default function TaskModal({
     setDescription("");
     setDueDate("");
     setDueTime("");
+    setSelectedYearId("");
+    setSelectedSectionId("");
 
     onClose();
   };
@@ -98,6 +174,17 @@ export default function TaskModal({
     if (!description.trim()) {
       toast.error("Description is required.");
       return;
+    }
+
+    if (role === "faculty") {
+      if (!selectedYearId) {
+        toast.error("Please select an academic year.");
+        return;
+      }
+      if (!selectedSectionId) {
+        toast.error("Please select a section.");
+        return;
+      }
     }
 
     if (!dueDate) {
@@ -118,6 +205,8 @@ export default function TaskModal({
         description: description.trim(),
         dueDate,
         dueTime,
+        collegeAcademicYearId: selectedYearId ? Number(selectedYearId) : null,
+        collegeSectionsId: selectedSectionId ? Number(selectedSectionId) : null,
       },
         defaultValues?.facultyTaskId,
       );
@@ -182,6 +271,67 @@ export default function TaskModal({
             className="border rounded-md px-3 py-2 text-sm h-[80px] resize-none outline-none text-[#282828]"
           />
         </div>
+
+        {role === "faculty" && (
+          <div className="flex gap-3 mb-5">
+            <div className="flex flex-col w-1/2 text-left">
+              <label className="text-sm font-medium mb-1 text-[#282828]">
+                Academic Year <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedYearId}
+                onChange={(e) => {
+                  setSelectedYearId(e.target.value);
+                  setSelectedSectionId("");
+                }}
+                className="border rounded-md px-3 py-2 text-sm outline-none text-[#282828] bg-white cursor-pointer"
+              >
+                <option value="">Select Year</option>
+                {academicYears.map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col w-1/2 text-left">
+              <label className="text-sm font-medium mb-1 text-[#282828]">
+                Section <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedSectionId}
+                onChange={(e) => setSelectedSectionId(e.target.value)}
+                disabled={!selectedYearId}
+                className="border rounded-md px-3 py-2 text-sm outline-none text-[#282828] bg-white cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                <option value="">Select Section</option>
+                {Array.from(
+                  new Map(
+                    allSections
+                      .filter((item) => String(item.collegeAcademicYearId) === selectedYearId)
+                      .map((item) => {
+                        const secName = Array.isArray(item.college_sections)
+                          ? item.college_sections[0]?.collegeSections
+                          : item.college_sections?.collegeSections;
+                        return [secName, item];
+                      })
+                  ).values()
+                ).map((item: any) => {
+                  const secId = item.collegeSectionsId;
+                  const secName = Array.isArray(item.college_sections)
+                    ? item.college_sections[0]?.collegeSections
+                    : item.college_sections?.collegeSections;
+                  return (
+                    <option key={secId} value={secId}>
+                      {secName}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
+        )}
 
         <h3 className="text-sm font-semibold text-[#282828] mb-2">Schedule</h3>
 
