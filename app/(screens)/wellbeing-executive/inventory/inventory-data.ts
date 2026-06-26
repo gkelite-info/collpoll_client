@@ -43,6 +43,16 @@ export const administrationItems: EquipmentItem[] = [
   { id: "AD0026", name: "Public Address Systems", category: "Administration", totalQty: 10, available: 1, lastUpdated: "15 May 2025", image: equipmentImage("PA", "#111827", "#FBBF24") },
 ];
 
+export const infrastructureItems: EquipmentItem[] = [
+  { id: "IN0012", name: "Ladders", category: "Infrastructure", totalQty: 6, available: 0, lastUpdated: "15 May 2025", image: equipmentImage("LDR", "#1F2937", "#94A3B8") },
+  { id: "IN0021", name: "Tool Kits", category: "Infrastructure", totalQty: 30, available: 12, lastUpdated: "15 May 2025", image: equipmentImage("TLS", "#7C2D12", "#FB923C") },
+  { id: "IN0022", name: "Extension Cables", category: "Infrastructure", totalQty: 15, available: 3, lastUpdated: "15 May 2025", image: equipmentImage("CBL", "#334155", "#CBD5E1") },
+  { id: "IN0023", name: "Water Pumps", category: "Infrastructure", totalQty: 12, available: 8, lastUpdated: "15 May 2025", image: equipmentImage("PMP", "#0F766E", "#5EEAD4") },
+  { id: "IN0024", name: "Maintenance Cones", category: "Infrastructure", totalQty: 20, available: 7, lastUpdated: "15 May 2025", image: equipmentImage("CNE", "#9A3412", "#FB923C") },
+  { id: "IN0025", name: "Power Drills", category: "Infrastructure", totalQty: 25, available: 18, lastUpdated: "15 May 2025", image: equipmentImage("DRL", "#312E81", "#A5B4FC") },
+  { id: "IN0026", name: "Measuring Tapes", category: "Infrastructure", totalQty: 10, available: 1, lastUpdated: "15 May 2025", image: equipmentImage("MTR", "#111827", "#FBBF24") },
+];
+
 export const emptyForm: EquipmentFormState = {
   name: "",
   quantity: "",

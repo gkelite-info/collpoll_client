@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import TableShimmer from "@/app/utils/table/tableShimmer";
 import {
+  CalendarBlank,
   ClockCounterClockwise,
   CircleNotch,
   FunnelSimple,
@@ -11,11 +12,25 @@ import {
   PencilSimple,
   Plus,
   Trash,
+  X,
 } from "@phosphor-icons/react";
 import { getStatus, statusClasses } from "../inventory-data";
 import type { EquipmentItem, EquipmentStatus } from "../types";
 import { EquipmentThumb } from "./EquipmentThumb";
 import { StatCard } from "./StatCard";
+
+const getDateKey = (date: Date) => {
+  const timezoneOffset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 10);
+};
+
+const formatDateKey = (dateKey: string) =>
+  new Date(`${dateKey}T00:00:00`).toLocaleDateString("en-GB");
+
+const parseDisplayDateToKey = (date: string) => {
+  const parsedDate = new Date(date);
+  return Number.isNaN(parsedDate.getTime()) ? "" : getDateKey(parsedDate);
+};
 
 type InventoryOverviewProps = {
   filteredItems: EquipmentItem[];
@@ -59,15 +74,24 @@ export function InventoryOverview({
   const itemsPerPage = 10;
   const [availableSort, setAvailableSort] = useState<"none" | "asc" | "desc">("none");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [selectedDateKey, setSelectedDateKey] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const dateFilteredItems = useMemo(
+    () =>
+      selectedDateKey
+        ? filteredItems.filter((item) => parseDisplayDateToKey(item.lastUpdated) === selectedDateKey)
+        : filteredItems,
+    [filteredItems, selectedDateKey],
+  );
   const sortedItems = useMemo(() => {
-    if (availableSort === "none") return filteredItems;
-    return [...filteredItems].sort((first, second) =>
+    if (availableSort === "none") return dateFilteredItems;
+    return [...dateFilteredItems].sort((first, second) =>
       availableSort === "asc"
         ? first.available - second.available
         : second.available - first.available,
     );
-  }, [availableSort, filteredItems]);
+  }, [availableSort, dateFilteredItems]);
   const totalPages = Math.max(1, Math.ceil(sortedItems.length / itemsPerPage));
   const visiblePage = Math.min(currentPage, totalPages);
   const pageStart = (visiblePage - 1) * itemsPerPage;
@@ -121,13 +145,63 @@ export function InventoryOverview({
               </div>
             ) : null}
           </div>
+          <div className="relative">
+            {!isDatePickerOpen ? (
+              <button
+                type="button"
+                onClick={() => setIsDatePickerOpen(true)}
+                className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-[#DAE9E1] px-4 text-[13px] font-bold tracking-wide text-[#43C17A] transition-colors hover:bg-[#CBE6D7] lg:w-auto"
+                title="Select last updated date"
+              >
+                <CalendarBlank size={18} weight="fill" />
+                {selectedDateKey ? formatDateKey(selectedDateKey) : new Date().toLocaleDateString("en-GB")}
+              </button>
+            ) : (
+              <div className="flex h-10 items-center gap-2 rounded-md border border-[#43C17A] bg-white p-1 shadow-sm">
+                <CalendarBlank size={18} className="ml-2 text-[#43C17A]" weight="fill" />
+                <input
+                  type="date"
+                  value={selectedDateKey}
+                  onChange={(event) => {
+                    if (event.target.value) {
+                      setSelectedDateKey(event.target.value);
+                      setCurrentPage(1);
+                      setIsDatePickerOpen(false);
+                    }
+                  }}
+                  className="cursor-pointer rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-700 outline-none focus:border-[#43C17A]"
+                />
+                {selectedDateKey ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedDateKey("");
+                      setCurrentPage(1);
+                      setIsDatePickerOpen(false);
+                    }}
+                    className="cursor-pointer rounded px-1 text-xs font-medium text-red-500 hover:text-red-700"
+                  >
+                    Clear
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setIsDatePickerOpen(false)}
+                  className="cursor-pointer rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                  title="Close"
+                >
+                  <X size={14} weight="bold" />
+                </button>
+              </div>
+            )}
+          </div>
           <button type="button" onClick={onAdd} className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded bg-[#0F8A4B] px-5 text-[13px] font-bold text-white hover:bg-[#0B743F]">
             <Plus size={16} weight="bold" />
             {addButtonLabel}
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="min-h-[250px] overflow-x-auto">
           <table className="w-full min-w-[900px] border-collapse text-left">
             <thead className="bg-[#F8FAFC] text-[11px] font-extrabold uppercase tracking-[0.04em] text-[#94A3B8]">
               <tr>
@@ -135,7 +209,14 @@ export function InventoryOverview({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EEF2F7]">
-              {isLoading ? <TableShimmer columnCount={6} rowCount={5} /> : paginatedItems.map((item) => {
+              {isLoading ? <TableShimmer columnCount={6} rowCount={5} /> : paginatedItems.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="h-[180px] px-5 py-8 text-center">
+                    <p className="text-[15px] font-extrabold text-[#16284F]">No Data Available</p>
+                    <p className="mt-1 text-[12px] font-medium text-[#94A3B8]">No inventory records found for the selected filters.</p>
+                  </td>
+                </tr>
+              ) : paginatedItems.map((item) => {
                 const status = getStatus(item);
                 return (
                   <tr key={item.id} className="h-[74px] bg-white">

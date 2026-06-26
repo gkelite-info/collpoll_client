@@ -23,6 +23,7 @@ import {
   defaultItems,
   emptyForm,
   getStatus,
+  infrastructureItems,
   normalizeCategoryName,
   safetyItems,
 } from "./inventory-data";
@@ -34,7 +35,7 @@ import type {
   StockUpdateState,
 } from "./types";
 
-export type InventoryVariant = "sports" | "safety" | "administration";
+export type InventoryVariant = "sports" | "safety" | "administration" | "infrastructure";
 
 const inventoryConfig = {
   sports: {
@@ -69,6 +70,17 @@ const inventoryConfig = {
     addButtonLabel: "Add New Equipment",
     itemColumnLabel: "Item Name",
     description: "Track and manage all administration equipment and office assets across the campus.",
+  },
+  infrastructure: {
+    items: infrastructureItems,
+    category: "Infrastructure",
+    idPrefix: "IN",
+    itemLabel: "Asset",
+    addTitle: "Add New Asset",
+    submitText: "Save Asset",
+    addButtonLabel: "Add New Asset",
+    itemColumnLabel: "Asset Name",
+    description: "Track and manage all infrastructure equipment and maintenance assets across the campus.",
   },
 } satisfies Record<InventoryVariant, {
   items: EquipmentItem[];
@@ -518,9 +530,24 @@ function InventoryPageContent() {
     const normalizedName = normalizeCategoryName(name);
     return id && (normalizedName.includes("administration") || normalizedName.includes("admin"));
   })?.id;
-  const isInfrastructure = categories.includes("infrastructure");
+  const safetyCategoryId = assignedCategories.find(({ id, name }) => {
+    const normalizedName = normalizeCategoryName(name);
+    return id && (
+      normalizedName.includes("safetyandsecurity") ||
+      normalizedName.includes("safetysecurity") ||
+      normalizedName.includes("safety")
+    );
+  })?.id;
+  const infrastructureCategoryId = assignedCategories.find(({ id, name }) => {
+    const normalizedName = normalizeCategoryName(name);
+    return id && normalizedName.includes("infrastructure");
+  })?.id;
+  const isInfrastructure = categories.some((category) => category.includes("infrastructure"));
   const isSafety = categories.some(
-    (category) => category === "safetyandsecurity" || category === "safetysecurity",
+    (category) =>
+      category.includes("safetyandsecurity") ||
+      category.includes("safetysecurity") ||
+      category.includes("safety"),
   );
   const isAdministration = categories.some(
     (category) => category.includes("administration") || category.includes("admin"),
@@ -547,10 +574,16 @@ function InventoryPageContent() {
     ? "administration"
     : isSafety
       ? "safety"
-      : "sports";
+      : isInfrastructure
+        ? "infrastructure"
+        : "sports";
 
   const selectedCategoryId = variant === "administration"
     ? administrationCategoryId
+    : variant === "safety"
+      ? safetyCategoryId
+      : variant === "infrastructure" 
+        ? infrastructureCategoryId
     : variant === "sports"
       ? sportsCategoryId
       : undefined;
