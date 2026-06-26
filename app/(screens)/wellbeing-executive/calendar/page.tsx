@@ -96,18 +96,20 @@ function PageContent() {
   };
 
   return (
-    <main className="min-h-full bg-[#F4F4F4] p-2 md:p-4">
+    <main className="min-h-full bg-[#F4F4F4] p-2">
       <section className="mb-3 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-black">
-            Calendar & Events
+            {activeMainTab === "Holidays" ? "Holiday Calendar" : "Academic Calendar"}
           </h1>
           <p className="mt-2 text-sm text-black">
-            Stay organized and on track with your personalised calendar
+            {activeMainTab === "Holidays"
+              ? "View the complete holiday schedule for the academic year."
+              : "Stay organized and on track with your personalised calendar"}
           </p>
         </div>
 
-        <CourseScheduleCard style="w-[240px]" isVisibile={false} />
+        <CourseScheduleCard style="w-[300px]" isVisibile={false} />
       </section>
 
       <div className="flex gap-3 mb-5 mt-2">
@@ -115,7 +117,7 @@ function PageContent() {
           onClick={() => router.push("/wellbeing-executive/calendar")}
           className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${activeMainTab === "Academics" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
         >
-          Academics Calendar
+          Academic Calendar
         </button>
         <button
           onClick={() => router.push("/wellbeing-executive/calendar?tab=Holidays")}
@@ -126,7 +128,7 @@ function PageContent() {
       </div>
 
       {activeMainTab === "Holidays" ? (
-        <div className="bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden relative rounded-xl p-4">
+        <div>
           {isFetchingHolidays ? (
             <HolidayCalendarShimmer />
           ) : (
@@ -141,7 +143,7 @@ function PageContent() {
         </div>
       ) : (
         <>
-          <div className="-mt-1 flex items-end justify-between">
+          <div className="flex flex-col md:flex-row justify-between md:items-center mb-2 gap-4">
             <CalendarToolbar
               activeTab={activeTab}
               setActiveTab={setActiveTab}
@@ -151,15 +153,17 @@ function PageContent() {
             <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
           </div>
 
-          <CalendarGrid
-            weekDays={weekDays}
-            onPrevWeek={handlePrevWeek}
-            onNextWeek={handleNextWeek}
-            onEventClick={(event) => {
-              setSelectedEvent(event);
-              setShowDetails(true);
-            }}
-          />
+          <div className="w-full h-[80vh] bg-[#f3f4f6] text-gray-800 mt-4">
+            <CalendarGrid
+              weekDays={weekDays}
+              onPrevWeek={handlePrevWeek}
+              onNextWeek={handleNextWeek}
+              onEventClick={(event) => {
+                setSelectedEvent(event);
+                setShowDetails(true);
+              }}
+            />
+          </div>
         </>
       )}
 

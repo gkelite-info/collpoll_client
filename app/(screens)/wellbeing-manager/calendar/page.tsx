@@ -18,7 +18,6 @@ import HolidayCalendarShimmer from "@/app/(screens)/hr/calendar/components/Holid
 import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/holidayAPI";
 import { Loader } from "../../(student)/calendar/right/timetable";
 
-// --- STATIC MOCK DATA ---
 const MOCK_EVENTS = [
   {
     id: "1",
@@ -70,7 +69,6 @@ function PageContent() {
     }
   }, [activeMainTab, loadHolidays, holidayYear, collegeId]);
 
-  // Modal & Event State
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<any | null>(null);
@@ -78,7 +76,6 @@ function PageContent() {
   const [eventForm, setEventForm] = useState<any | null>(null);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
 
-  // --- HANDLERS ---
   const handleNextWeek = () => {
     const next = new Date(currentDate);
     next.setDate(next.getDate() + 7);
@@ -95,9 +92,7 @@ function PageContent() {
     setEvents((prev) => prev.filter((e) => e.id !== eventId));
   };
 
-  // Static Save Logic
   const handleSaveEvent = (payload: any) => {
-    // In static mode, we trigger the conflict modal just to show the UI
     if (payload.eventTitle?.toLowerCase().includes("conflict")) {
       setShowConflictModal(true);
       setIsModalOpen(false);
@@ -107,12 +102,18 @@ function PageContent() {
   };
 
   return (
-    <main className="relative overflow-hidden p-4 bg-[#f3f4f6] min-h-screen">
+    <main className="relative overflow-hidden p-2 bg-[#f3f4f6] min-h-screen">
       {/* <WipOverlay fullHeight={true} /> */}
       <section className="flex justify-between items-center mb-4">
         <div>
-          <h1 className="text-black text-xl font-semibold">Calendar & Events</h1>
-          <p className="text-black text-sm">Stay organized and on track with your personalised calendar</p>
+          <h1 className="text-black text-xl font-semibold">
+            {activeMainTab === "Holidays" ? "Holiday Calendar" : "Calendar Overview"}
+          </h1>
+          <p className="text-black text-sm">
+            {activeMainTab === "Holidays"
+              ? "View the complete holiday schedule for the academic year."
+              : "Stay organized and on track with your personalised calendar"}
+          </p>
         </div>
         <CourseScheduleCard style="w-[320px]" isVisibile={false} />
       </section>
@@ -122,7 +123,7 @@ function PageContent() {
           onClick={() => router.push("/wellbeing-manager/calendar")}
           className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${activeMainTab === "Academics" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
         >
-          Academics Calendar
+          Academic Calendar
         </button>
         <button
           onClick={() => router.push("/wellbeing-manager/calendar?tab=Holidays")}
@@ -133,7 +134,7 @@ function PageContent() {
       </div>
 
       {activeMainTab === "Holidays" ? (
-        <div className="bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden relative rounded-xl p-4">
+        <div>
           {isFetchingHolidays ? (
             <HolidayCalendarShimmer />
           ) : (
@@ -148,7 +149,7 @@ function PageContent() {
         </div>
       ) : (
         <>
-          <div className="flex justify-between">
+          <div className="flex flex-col md:flex-row justify-between md:items-center mb-2 gap-4">
             <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
             <CalendarHeader
               onAddClick={() => {
@@ -159,7 +160,7 @@ function PageContent() {
             />
           </div>
 
-          <div className="w-full mt-2">
+          <div className="w-full h-[80vh] bg-[#f3f4f6] text-gray-800 mt-4">
             <CalendarGrid
               events={events}
               activeTab={activeTab}

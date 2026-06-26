@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { CALENDAR_EVENTS, TIME_SLOTS } from "../calenderData";
 import type { CalendarEvent, WeekDay } from "../types";
@@ -18,67 +19,109 @@ export default function CalendarGrid({
   onNextWeek,
   onEventClick,
 }: Props) {
-  return (
-    <section className="-mt-px h-[500px] overflow-hidden rounded-r-[20px] rounded-b-[20px] border border-gray-200 bg-white shadow-sm 2xl:h-[700px]">
-      <div className="flex h-full flex-col">
-        <div className="grid grid-cols-[80px_repeat(6,minmax(0,1fr))] border-b border-gray-400 bg-white pr-1.5">
-          <div className="flex h-[60px] items-center justify-center gap-1 border-r border-gray-400 bg-white p-2">
-            <button
-              type="button"
-              onClick={onPrevWeek}
-              className="rounded p-1 text-[#667085] hover:bg-gray-100"
-            >
-              <CaretLeft size={20} weight="bold" />
-            </button>
-            <button
-              type="button"
-              onClick={onNextWeek}
-              className="rounded p-1 text-[#667085] hover:bg-gray-100"
-            >
-              <CaretRight size={20} weight="bold" />
-            </button>
-          </div>
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
 
+  useEffect(() => {
+    setSelectedDayIndex(0);
+  }, [weekDays]);
+
+  const handlePrevDay = () => {
+    if (selectedDayIndex > 0) {
+      setSelectedDayIndex(prev => prev - 1);
+    } else {
+      onPrevWeek();
+      setSelectedDayIndex(weekDays.length - 1);
+    }
+  };
+
+  const handleNextDay = () => {
+    if (selectedDayIndex < weekDays.length - 1) {
+      setSelectedDayIndex(prev => prev + 1);
+    } else {
+      onNextWeek();
+      setSelectedDayIndex(0);
+    }
+  };
+
+  return (
+    <div className="bg-red-00 rounded-bl-[20px] shadow-sm overflow-y-auto custom-scrollbar flex flex-col relative -mt-2 h-[80vh]">
+      <div className="flex border-b border-gray-400 sticky top-0 z-20 bg-white">
+        <div className="hidden md:flex lg:flex w-20 min-w-[80px] border-r border-gray-400 p-2 flex items-center justify-center gap-1 bg-white z-10">
+          <button
+            type="button"
+            onClick={onPrevWeek}
+            className="p-1 hover:bg-gray-100 cursor-pointer rounded text-gray-500 transition-colors"
+          >
+            <CaretLeft size={16} weight="bold" />
+          </button>
+          <button
+            type="button"
+            onClick={onNextWeek}
+            className="p-1 hover:bg-gray-100 cursor-pointer rounded text-gray-500 transition-colors"
+          >
+            <CaretRight size={16} weight="bold" />
+          </button>
+        </div>
+
+        <div className="bg-white flex md:hidden lg:hidden w-full items-center justify-center py-4 gap-4">
+          <button onClick={handlePrevDay} className="p-2 cursor-pointer"><CaretLeft size={20} weight="bold" /></button>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+            {weekDays[selectedDayIndex]?.label} {weekDays[selectedDayIndex]?.date}
+          </h2>
+          <button onClick={handleNextDay} className="p-2 cursor-pointer"><CaretLeft className="rotate-180" size={20} weight="bold" /></button>
+        </div>
+
+        <div className="flex-1 hidden md:grid md:grid-cols-6 lg:grid grid-cols-6 scrollbar-hide">
           {weekDays.map((day) => (
             <div
               key={day.fullDate}
-              className="flex h-[60px] items-center justify-center gap-1 border-r border-gray-400 bg-white text-xs font-semibold text-[#5B6472]"
+              className={`text-center py-2.5 border-r border-gray-400 last:border-r-0`}
             >
-              <span>{day.label}</span>
-              <span className="text-sm font-bold text-[#27364A]">
-                {day.date}
-              </span>
+              <div className="flex items-center justify-center space-x-1">
+                <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{day.label}</span>
+                <span className="text-sm font-bold text-gray-700">{day.date}</span>
+              </div>
             </div>
           ))}
         </div>
+      </div>
 
-        <div
-          className="custom-scrollbar relative flex-1 overflow-y-auto"
-          style={{ scrollbarGutter: "stable" }}
-        >
-          <div className="grid min-h-[1680px] grid-cols-[80px_repeat(6,minmax(0,1fr))]">
-            <div className="bg-white">
+      <div className="bg-white flex-1 relative">
+        <div className="flex min-h-[1680px]">
+          <div className="w-16 md:w-20 lg:w-20 bg-white border-r border-gray-300 shrink-0 select-none">
               {TIME_SLOTS.map((time) => (
                 <div
                   key={time}
-                  className="h-[120px] border-r border-[#D9D9D9] pt-3 text-center text-[11px] font-medium text-gray-400"
+                  className="h-[120px] text-[10px] md:text-[11px] lg:text-[11px] font-medium text-gray-400 text-center pt-3 border-b border-dashed border-gray-100"
                 >
                   {time}
                 </div>
               ))}
             </div>
 
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-6 lg:grid-cols-6 relative">
+            <div className="absolute inset-0 z-0 pointer-events-none hidden lg:flex flex-col">
+              {TIME_SLOTS.map((_, i) => (
+                <div
+                  key={i}
+                  className="h-[120px] w-full border-b border-[#C6C6C69E]"
+                />
+              ))}
+            </div>
+
             {weekDays.map((day, dayIndex) => (
               <div
                 key={day.fullDate}
-                className="relative min-h-[1680px] border-r border-[#C6C6C69E]"
+                className={`relative min-h-[1680px] border-r border-[#C6C6C69E] last:border-r-0 z-10 px-1 ${selectedDayIndex === dayIndex ? "block" : "hidden lg:block"}`}
               >
-                {TIME_SLOTS.map((time) => (
-                  <div
-                    key={time}
-                    className="h-[120px] border-b border-[#C6C6C69E]"
-                  />
-                ))}
+                <div className="absolute inset-0 z-0 pointer-events-none lg:hidden flex flex-col">
+                  {TIME_SLOTS.map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-[120px] w-full border-b border-[#C6C6C69E]"
+                    />
+                  ))}
+                </div>
 
                 {CALENDAR_EVENTS.filter(
                   (event) => event.dayIndex === dayIndex,
@@ -104,6 +147,6 @@ export default function CalendarGrid({
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

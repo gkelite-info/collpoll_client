@@ -319,14 +319,16 @@ function PageContent() {
   };
 
   return (
-    <main className="p-4 relative">
+    <main className="p-2 relative">
       <section className="flex justify-between items-center mb-4">
         <div>
           <h1 className="text-black text-xl font-semibold">
-            Calendar & Events
+            {activeMainTab === "Holidays" ? "Holiday Calendar" : "Calendar Overview"}
           </h1>
           <p className="text-black text-sm">
-            Stay organized and on track with your personalised calendar
+            {activeMainTab === "Holidays"
+              ? "View the complete holiday schedule for the academic year."
+              : "Stay organized and on track with your personalised calendar"}
           </p>
         </div>
         <CourseScheduleCard style="w-[320px]" />
@@ -348,7 +350,7 @@ function PageContent() {
       </div>
 
       {activeMainTab === "Holidays" ? (
-        <div className="bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden relative rounded-xl p-4">
+        <div>
           {isFetchingHolidays ? (
             <HolidayCalendarShimmer />
           ) : (
@@ -363,7 +365,7 @@ function PageContent() {
         </div>
       ) : (
         <>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row justify-between md:items-center mb-2 gap-4">
             <CalendarToolbar
               activeTab={activeTab}
               setActiveTab={setActiveTab}
@@ -376,19 +378,19 @@ function PageContent() {
               }}
             />
             <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
-
-            <AddEventModal
-              isOpen={isModalOpen}
-              editData={eventToEdit}
-              onSuccess={loadEvents}
-              onClose={() => {
-                setIsModalOpen(false);
-                setEventToEdit(null);
-              }}
-            />
           </div>
 
-          <div className="bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden relative mt-4">
+          <AddEventModal
+            isOpen={isModalOpen}
+            editData={eventToEdit}
+            onSuccess={loadEvents}
+            onClose={() => {
+              setIsModalOpen(false);
+              setEventToEdit(null);
+            }}
+          />
+
+          <div className="w-full h-[80vh] bg-[#f3f4f6] text-gray-800 mt-4">
             {isLoading || fmLoading ? (
               <CalendarShimmer />
             ) : (

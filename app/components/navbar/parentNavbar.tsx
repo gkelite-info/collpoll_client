@@ -8,6 +8,7 @@ import {
   House,
   Laptop,
   Student,
+  CalendarDots,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -31,6 +32,13 @@ export default function ParentNavbar() {
       ),
       label: t("Home"),
       path: "/parent",
+    },
+    {
+      icon: (isActive) => (
+        <CalendarDots size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Holiday Calendar",
+      path: "/parent/calendar",
     },
     {
       icon: (isActive) => (
