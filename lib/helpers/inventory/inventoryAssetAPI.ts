@@ -71,15 +71,20 @@ async function uploadInventoryAssetImage(file: File, collegeId: number) {
   return path;
 }
 
-export async function fetchInventoryAssets(collegeId: number, categoryId: number) {
-  const { data, error } = await supabase
+export async function fetchInventoryAssets(collegeId: number, categoryId: number, search = "") {
+  let query = supabase
     .from("inventory_assets")
     .select(INVENTORY_ASSET_COLUMNS)
     .eq("collegeId", collegeId)
     .eq("categoryId", categoryId)
     .eq("isActive", true)
-    .eq("is_deleted", false)
-    .order("updatedAt", { ascending: false });
+    .eq("is_deleted", false);
+
+  if (search.trim()) {
+    query = query.ilike("assetName", `%${search.trim()}%`);
+  }
+
+  const { data, error } = await query.order("updatedAt", { ascending: false });
 
   if (error) {
     throw createInventoryError("fetchInventoryAssets", error);
@@ -146,7 +151,7 @@ export async function deleteInventoryAsset(asset: InventoryAssetRow) {
   const now = new Date().toISOString();
   const { error } = await supabase
     .from("inventory_assets")
-    .update({ is_deleted: true, isActive: false, deletedAt: now, updatedAt: now })
+    .update({ is_deleted: true, isActive: false, deletedAt: now })
     .eq("inventoryAssetId", asset.inventoryAssetId)
     .eq("collegeId", asset.collegeId);
 

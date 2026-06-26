@@ -22,16 +22,22 @@ export type FacultyWeightageConfigRow = {
 export async function fetchExistingFacultyWeightageConfig(
     collegeSubjectId: number,
     collegeSectionsId: number,
-    collegeSemesterId: number,
+    collegeSemesterId: number | null | undefined,
 ) {
-    const { data, error } = await supabase
+    let query = supabase
         .from("faculty_weightage_configs")
         .select("facultyWeightageConfigId")
         .eq("collegeSubjectId", collegeSubjectId)
         .eq("collegeSectionsId", collegeSectionsId)
-        .eq("collegeSemesterId", collegeSemesterId)
-        .is("deletedAt", null)
-        .single();
+        .is("deletedAt", null);
+
+    if (collegeSemesterId) {
+        query = query.eq("collegeSemesterId", collegeSemesterId);
+    } else {
+        query = query.is("collegeSemesterId", null);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) {
         if (error.code === "PGRST116") {
@@ -46,9 +52,9 @@ export async function fetchExistingFacultyWeightageConfig(
 export async function fetchFacultyWeightageConfigs(
     collegeSubjectId: number,
     collegeSectionsId: number,
-    collegeSemesterId: number,
+    collegeSemesterId: number | null | undefined,
 ) {
-    const { data, error } = await supabase
+    let query = supabase
         .from("faculty_weightage_configs")
         .select(`
       facultyWeightageConfigId,
@@ -67,9 +73,16 @@ export async function fetchFacultyWeightageConfigs(
     `)
         .eq("collegeSubjectId", collegeSubjectId)
         .eq("collegeSectionsId", collegeSectionsId)
-        .eq("collegeSemesterId", collegeSemesterId)
         .is("deletedAt", null)
         .order("createdAt", { ascending: false });
+
+    if (collegeSemesterId) {
+        query = query.eq("collegeSemesterId", collegeSemesterId);
+    } else {
+        query = query.is("collegeSemesterId", null);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error("fetchFacultyWeightageConfigs error:", error);
@@ -97,16 +110,27 @@ export async function saveFacultyWeightageConfig(
 ) {
     const now = new Date().toISOString();
 
+    const { data: subjectData } = await supabase
+        .from("college_subjects")
+        .select("collegeEducationId, collegeBranchId, collegeSemesterId")
+        .eq("collegeSubjectId", payload.collegeSubjectId)
+        .single();
+
     const basePayload: any = {
         collegeId: payload.collegeId,
-        collegeEducationId: payload.collegeEducationId,
-        collegeBranchId: payload.collegeBranchId,
+        collegeEducationId: subjectData?.collegeEducationId || payload.collegeEducationId,
+        collegeBranchId: subjectData?.collegeBranchId || payload.collegeBranchId,
         collegeSubjectId: payload.collegeSubjectId,
         collegeSectionsId: payload.collegeSectionsId,
-        collegeSemesterId: payload.collegeSemesterId,
         totalPercentage: payload.totalPercentage,
         updatedAt: now,
     };
+
+    if (subjectData && subjectData.collegeSemesterId !== undefined) {
+        basePayload.collegeSemesterId = subjectData.collegeSemesterId;
+    } else {
+        basePayload.collegeSemesterId = payload.collegeSemesterId;
+    }
 
     if (actor.facultyId) basePayload.facultyId = actor.facultyId;
     if (actor.adminId) basePayload.adminId = actor.adminId;

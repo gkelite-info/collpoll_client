@@ -293,7 +293,7 @@ const AcademicPage = () => {
             value={year?.collegeAcademicYearId?.toString() ?? "All"}
             placeholder="All"
             disabled={false}
-            options={["All", ...years.map((y) => y.collegeAcademicYearId.toString())]}
+            options={["All", ...[...years].sort((a, b) => (a.collegeAcademicYear || "").localeCompare(b.collegeAcademicYear || "")).map((y) => y.collegeAcademicYearId.toString())]}
             onChange={(val) => {
               if (val === "All") {
                 selectYear(null);

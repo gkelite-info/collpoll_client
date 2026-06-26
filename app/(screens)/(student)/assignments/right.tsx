@@ -10,6 +10,7 @@ import {
 } from "@/lib/helpers/student/studentTaskAPI";
 import { fetchFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
@@ -37,6 +38,20 @@ export default function AssignmentsRight() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("others");
   const { collegeId, userId, role } = useUser();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const urlDateStr = searchParams.get("selectedDate");
+  const [selectedDate, setSelectedDate] = useState<Date>(
+    urlDateStr ? new Date(urlDateStr) : new Date()
+  );
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("selectedDate", date.toISOString());
+    router.push(`${pathname}?${params.toString()}`);
+  };
 
   useEffect(() => {
     if (!studentId) return;
@@ -248,7 +263,7 @@ export default function AssignmentsRight() {
     <>
       <div className="w-[32%] p-2 flex flex-col max-md:hidden">
         <CourseScheduleCard />
-        <WorkWeekCalendar />
+        <WorkWeekCalendar activeDate={selectedDate} onDateSelect={handleDateSelect} />
         <TaskPanel
           role="student"
           loading={loading}

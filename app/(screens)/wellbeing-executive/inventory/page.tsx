@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import {
   deleteInventoryAsset,
   fetchInventoryAssets,
@@ -16,7 +17,7 @@ import {
   saveInventoryStockHistory,
   type InventoryStockHistoryRow,
 } from "@/lib/helpers/inventory/inventoryStockHistoryAPI";
-import { EquipmentForm, InventoryOverview } from "./components";
+import { EquipmentForm, InventoryOverview, InventoryPageShimmer } from "./components";
 import {
   administrationItems,
   defaultItems,
@@ -94,8 +95,8 @@ const createStockUpdate = (): StockUpdateState => ({
   remarks: "",
 });
 
-const mapAssetToEquipmentItem = (asset: InventoryAssetRow, category: string): EquipmentItem => ({
-  id: `SP${asset.inventoryAssetId}`,
+const mapAssetToEquipmentItem = (asset: InventoryAssetRow, category: string, idPrefix: string): EquipmentItem => ({
+  id: `${idPrefix}${asset.inventoryAssetId}`,
   inventoryAssetId: asset.inventoryAssetId,
   name: asset.assetName,
   category,
@@ -109,10 +110,10 @@ const mapAssetToEquipmentItem = (asset: InventoryAssetRow, category: string): Eq
 
 function InventoryWorkspace({
   variant,
-  sportsContext,
+  inventoryContext,
 }: {
   variant: InventoryVariant;
-  sportsContext?: { collegeId: number; categoryId: number; userId: number };
+  inventoryContext?: { collegeId: number; categoryId: number; userId: number };
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -120,7 +121,10 @@ function InventoryWorkspace({
   const config = inventoryConfig[variant];
   const view = searchParams.get("view") === "add" ? "add" : "list";
   const [items, setItems] = useState<EquipmentItem[]>(() => config.items);
+  const [searchedItems, setSearchedItems] = useState<EquipmentItem[] | null>(null);
   const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | EquipmentStatus>("all");
   const [form, setForm] = useState<EquipmentFormState>(emptyForm);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -128,11 +132,11 @@ function InventoryWorkspace({
   const [inventoryAssets, setInventoryAssets] = useState<InventoryAssetRow[]>([]);
   const [stockUpdate, setStockUpdate] = useState<StockUpdateState>(createStockUpdate);
   const [isSavingNew, setIsSavingNew] = useState(false);
-  const [isCancellingNew, setIsCancellingNew] = useState(false);
-  const [isOpeningAdd, setIsOpeningAdd] = useState(false);
   const [isUpdatingStock, setIsUpdatingStock] = useState(false);
   const [historyLoadingId, setHistoryLoadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteItem, setDeleteItem] = useState<EquipmentItem | null>(null);
+  const [isInventoryLoading, setIsInventoryLoading] = useState(Boolean(inventoryContext));
   const stockId = searchParams.get("stockId");
   const stockActionType: StockUpdateState["actionType"] =
     searchParams.get("stockAction") === "reduce" ? "remove" : "add";
@@ -140,33 +144,74 @@ function InventoryWorkspace({
     () => stockId ? items.find((item) => item.id === stockId) ?? null : null,
     [items, stockId],
   );
-  const sportsCollegeId = sportsContext?.collegeId;
-  const sportsCategoryId = sportsContext?.categoryId;
+  const inventoryCollegeId = inventoryContext?.collegeId;
+  const inventoryCategoryId = inventoryContext?.categoryId;
 
   useEffect(() => {
-    if (!sportsCollegeId || !sportsCategoryId) return;
+    if (!inventoryCollegeId || !inventoryCategoryId) {
+      setIsInventoryLoading(false);
+      return;
+    }
     let active = true;
-    fetchInventoryAssets(sportsCollegeId, sportsCategoryId)
+    setIsInventoryLoading(true);
+    fetchInventoryAssets(inventoryCollegeId, inventoryCategoryId)
       .then((assets) => {
         if (!active) return;
         setInventoryAssets(assets);
-        setItems(assets.map((asset) => mapAssetToEquipmentItem(asset, config.category)));
+        setItems(assets.map((asset) => mapAssetToEquipmentItem(asset, config.category, config.idPrefix)));
       })
-      .catch((error) => toast.error(error instanceof Error ? error.message : "Failed to load inventory."));
+      .catch((error) => {
+        if (active) toast.error(error instanceof Error ? error.message : "Failed to load inventory.");
+      })
+      .finally(() => {
+        if (active) setIsInventoryLoading(false);
+      });
     return () => { active = false; };
-  }, [sportsCollegeId, sportsCategoryId, config.category]);
+  }, [inventoryCollegeId, inventoryCategoryId, config.category, config.idPrefix]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setAppliedSearch(search);
+      if (!inventoryCollegeId || !inventoryCategoryId) setIsSearchLoading(false);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [search, inventoryCollegeId, inventoryCategoryId]);
+
+  useEffect(() => {
+    if (!inventoryCollegeId || !inventoryCategoryId || !appliedSearch.trim()) return;
+    let active = true;
+    fetchInventoryAssets(inventoryCollegeId, inventoryCategoryId, appliedSearch)
+      .then((assets) => {
+        if (active) setSearchedItems(assets.map((asset) => mapAssetToEquipmentItem(asset, config.category, config.idPrefix)));
+      })
+      .catch((error) => {
+        if (active) toast.error(error instanceof Error ? error.message : "Failed to search inventory.");
+      })
+      .finally(() => {
+        if (active) setIsSearchLoading(false);
+      });
+    return () => { active = false; };
+  }, [appliedSearch, inventoryCollegeId, inventoryCategoryId, config.category, config.idPrefix]);
 
   const filteredItems = useMemo(
     () =>
-      items.filter((item) => {
+      (inventoryContext && appliedSearch.trim() ? searchedItems ?? [] : items).filter((item) => {
         const matchesSearch =
-          item.name.toLowerCase().includes(search.toLowerCase()) ||
-          item.id.toLowerCase().includes(search.toLowerCase());
+          inventoryContext || item.name.toLowerCase().includes(appliedSearch.toLowerCase());
         const status = getStatus(item);
         return matchesSearch && (statusFilter === "all" || status === statusFilter);
       }),
-    [items, search, statusFilter],
+    [items, searchedItems, appliedSearch, inventoryContext, statusFilter],
   );
+
+  const changeSearch = (value: string) => {
+    setSearch(value);
+    setIsSearchLoading(Boolean(value.trim()));
+    if (!value.trim()) {
+      setAppliedSearch("");
+      setSearchedItems(null);
+    }
+  };
 
   const overview = useMemo(() => {
     const lowStock = items.filter((item) => getStatus(item) === "Low Stock").length;
@@ -192,22 +237,21 @@ function InventoryWorkspace({
     }
     setIsSavingNew(true);
 
-    if (sportsContext) {
+    if (inventoryContext) {
       try {
         const asset = await saveInventoryAsset({
-          collegeId: sportsContext.collegeId,
-          categoryId: sportsContext.categoryId,
-          createdBy: sportsContext.userId,
+          collegeId: inventoryContext.collegeId,
+          categoryId: inventoryContext.categoryId,
+          createdBy: inventoryContext.userId,
           assetName: form.name.trim(),
           totalQty,
           availableQty: Math.min(available, totalQty),
           referenceImage: form.imageFile,
         });
         setInventoryAssets((current) => [asset, ...current]);
-        setItems((current) => [mapAssetToEquipmentItem(asset, config.category), ...current]);
+        setItems((current) => [mapAssetToEquipmentItem(asset, config.category, config.idPrefix), ...current]);
         toast.success("Equipment added successfully.");
         setForm(emptyForm);
-        setIsOpeningAdd(false);
         router.replace(pathname);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to add equipment.");
@@ -234,7 +278,6 @@ function InventoryWorkspace({
       ...current,
     ]);
     setForm(emptyForm);
-    setIsOpeningAdd(false);
     router.replace(pathname);
     setIsSavingNew(false);
   };
@@ -280,7 +323,7 @@ function InventoryWorkspace({
     }
     setIsUpdatingStock(true);
 
-    if (sportsContext && stockItem.inventoryAssetId) {
+    if (inventoryContext && stockItem.inventoryAssetId) {
       const asset = inventoryAssets.find((row) => row.inventoryAssetId === stockItem.inventoryAssetId);
       if (!asset) return;
       try {
@@ -290,10 +333,11 @@ function InventoryWorkspace({
           quantity,
           actionDate: stockUpdate.date,
           remarks: stockUpdate.remarks,
-          updatedBy: sportsContext.userId,
+          updatedBy: inventoryContext.userId,
         });
         setInventoryAssets((current) => current.map((row) => row.inventoryAssetId === updated.inventoryAssetId ? updated : row));
-        setItems((current) => current.map((row) => row.inventoryAssetId === updated.inventoryAssetId ? mapAssetToEquipmentItem(updated, config.category) : row));
+        setItems((current) => current.map((row) => row.inventoryAssetId === updated.inventoryAssetId ? mapAssetToEquipmentItem(updated, config.category, config.idPrefix) : row));
+        setSearchedItems((current) => current?.map((row) => row.inventoryAssetId === updated.inventoryAssetId ? mapAssetToEquipmentItem(updated, config.category, config.idPrefix) : row) ?? null);
         closeStockModal();
         toast.success("Stock updated successfully.");
       } catch (error) {
@@ -333,10 +377,10 @@ function InventoryWorkspace({
   const openHistory = async (item: EquipmentItem) => {
     setHistoryOpen(true);
     setHistory([]);
-    if (!sportsContext || !item.inventoryAssetId) return;
+    if (!inventoryContext || !item.inventoryAssetId) return;
     setHistoryLoadingId(item.id);
     try {
-      setHistory(await fetchInventoryStockHistory(sportsContext.collegeId, sportsContext.categoryId, item.inventoryAssetId));
+      setHistory(await fetchInventoryStockHistory(inventoryContext.collegeId, inventoryContext.categoryId, item.inventoryAssetId));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to load stock history.");
     } finally {
@@ -346,20 +390,24 @@ function InventoryWorkspace({
 
   const removeItem = async (item: EquipmentItem) => {
     setDeletingId(item.id);
-    if (!sportsContext || !item.inventoryAssetId) {
+    if (!inventoryContext || !item.inventoryAssetId) {
       setItems((current) => current.filter((row) => row.id !== item.id));
       setDeletingId(null);
+      setDeleteItem(null);
       return;
     }
     const asset = inventoryAssets.find((row) => row.inventoryAssetId === item.inventoryAssetId);
     if (!asset) {
       setDeletingId(null);
+      setDeleteItem(null);
       return;
     }
     try {
       await deleteInventoryAsset(asset);
       setInventoryAssets((current) => current.filter((row) => row.inventoryAssetId !== asset.inventoryAssetId));
       setItems((current) => current.filter((row) => row.inventoryAssetId !== asset.inventoryAssetId));
+      setSearchedItems((current) => current?.filter((row) => row.inventoryAssetId !== asset.inventoryAssetId) ?? null);
+      setDeleteItem(null);
       toast.success("Equipment deleted successfully.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete equipment.");
@@ -369,16 +417,16 @@ function InventoryWorkspace({
   };
 
   const openAddForm = () => {
-    setIsCancellingNew(false);
-    setIsOpeningAdd(true);
     router.push(`${pathname}?view=add`);
   };
 
   const cancelAddForm = () => {
-    setIsCancellingNew(true);
-    setIsOpeningAdd(false);
     router.push(pathname);
   };
+
+  if (isInventoryLoading) {
+    return <InventoryPageShimmer view={view} />;
+  }
 
   if (view === "add") {
     return (
@@ -394,7 +442,6 @@ function InventoryWorkspace({
             submitText={config.submitText}
             itemLabel={config.itemLabel}
             isSaving={isSavingNew}
-            isCancelling={isCancellingNew}
             compact
           />
         </section>
@@ -405,23 +452,22 @@ function InventoryWorkspace({
   return (
     <main className="min-h-screen bg-[#F4F4F4] p-2">
       <InventoryOverview
-        items={items}
         filteredItems={filteredItems}
         overview={overview}
         search={search}
         statusFilter={statusFilter}
-        onSearchChange={setSearch}
+        onSearchChange={changeSearch}
         onStatusFilterChange={setStatusFilter}
         onAdd={openAddForm}
         onHistory={openHistory}
         onEdit={openEditModal}
-        onDelete={removeItem}
+        onDelete={setDeleteItem}
         description={config.description}
         addButtonLabel={config.addButtonLabel}
         itemColumnLabel={config.itemColumnLabel}
-        isOpeningAdd={isOpeningAdd}
         historyLoadingId={historyLoadingId}
         deletingId={deletingId}
+        isLoading={isInventoryLoading || isSearchLoading}
       />
 
       {stockItem ? (
@@ -434,12 +480,30 @@ function InventoryWorkspace({
           isLoading={isUpdatingStock}
         />
       ) : null}
-      {historyOpen ? <StockHistoryModal variant={variant} history={sportsContext ? history : undefined} onClose={() => setHistoryOpen(false)} /> : null}
+      {historyOpen ? <StockHistoryModal variant={variant} history={inventoryContext ? history : undefined} onClose={() => setHistoryOpen(false)} /> : null}
+      <ConfirmDeleteModal
+        open={Boolean(deleteItem)}
+        title="Delete"
+        name="equipment"
+        confirmText="Yes, Delete"
+        loadingText="Deleting..."
+        isDeleting={Boolean(deleteItem && deletingId === deleteItem.id)}
+        onCancel={() => setDeleteItem(null)}
+        onConfirm={() => {
+          if (deleteItem) void removeItem(deleteItem);
+        }}
+        customDescription={deleteItem ? (
+          <>
+            Are you sure you want to delete <span className="font-semibold text-gray-700">{deleteItem.name}</span>? This action cannot be undone.
+          </>
+        ) : undefined}
+      />
     </main>
   );
 }
 
 function InventoryPageContent() {
+  const searchParams = useSearchParams();
   const { loading, userId, collegeId, wellBeingCategoryId, wellBeingCategoryIds, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
   const categories = [wellBeingCategoryName, ...wellBeingCategoryNames].map(
     normalizeCategoryName,
@@ -450,16 +514,20 @@ function InventoryPageContent() {
     ...wellBeingCategoryNames.map((name, index) => ({ id: wellBeingCategoryIds[index], name })),
   ];
   const sportsCategoryId = assignedCategories.find(({ id, name }) => id && normalizeCategoryName(name) === "sports")?.id;
+  const administrationCategoryId = assignedCategories.find(({ id, name }) => {
+    const normalizedName = normalizeCategoryName(name);
+    return id && (normalizedName.includes("administration") || normalizedName.includes("admin"));
+  })?.id;
   const isInfrastructure = categories.includes("infrastructure");
   const isSafety = categories.some(
     (category) => category === "safetyandsecurity" || category === "safetysecurity",
   );
   const isAdministration = categories.some(
-    (category) => category === "administration" || category === "admin",
+    (category) => category.includes("administration") || category.includes("admin"),
   );
 
   if (loading) {
-    return <main className="min-h-screen bg-[#F4F4F4] p-2" />;
+    return <InventoryPageShimmer view={searchParams.get("view") === "add" ? "add" : "list"} />;
   }
 
   if (!isSports && !isInfrastructure && !isSafety && !isAdministration) {
@@ -481,11 +549,16 @@ function InventoryPageContent() {
       ? "safety"
       : "sports";
 
-  const sportsContext = isSports && userId && collegeId && sportsCategoryId
-    ? { userId, collegeId, categoryId: sportsCategoryId }
+  const selectedCategoryId = variant === "administration"
+    ? administrationCategoryId
+    : variant === "sports"
+      ? sportsCategoryId
+      : undefined;
+  const inventoryContext = selectedCategoryId && userId && collegeId
+    ? { userId, collegeId, categoryId: selectedCategoryId }
     : undefined;
 
-  return <InventoryWorkspace key={variant} variant={variant} sportsContext={sportsContext} />;
+  return <InventoryWorkspace key={`${variant}-${selectedCategoryId ?? "static"}`} variant={variant} inventoryContext={inventoryContext} />;
 }
 
 export default function WellbeingInventoryPage() {

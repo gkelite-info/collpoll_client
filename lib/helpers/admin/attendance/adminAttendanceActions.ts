@@ -38,9 +38,9 @@ interface AttendancePayload {
   adminId?: number;
 }
 
-export async function getAdminClassesForSection(sectionId: number) {
+export async function getAdminClassesForSection(sectionId: number, dateStr?: string) {
   const supabase = await createClient();
-  const today = new Date().toISOString().split("T")[0];
+  const today = dateStr || new Date().toISOString().split("T")[0];
 
   const { data: events, error } = await supabase
     .from("calendar_event")

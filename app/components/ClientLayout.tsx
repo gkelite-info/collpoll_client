@@ -404,6 +404,8 @@ export default function ClientLayout({
       description: string;
       dueDate: string;
       dueTime: string;
+      collegeAcademicYearId?: number | null;
+      collegeSectionsId?: number | null;
     },
     taskId?: number,
   ) => {
@@ -419,6 +421,8 @@ export default function ClientLayout({
         description: payload.description,
         date: payload.dueDate,
         time: payload.dueTime,
+        collegeAcademicYearId: payload.collegeAcademicYearId,
+        collegeSectionsId: payload.collegeSectionsId,
       },
       facultyId,
     );

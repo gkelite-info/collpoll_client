@@ -12,6 +12,8 @@ export type FacultyTaskRow = {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  collegeAcademicYearId: number | null;
+  collegeSectionsId: number | null;
 };
 
 export async function fetchFacultyTasks(collegeSubjectId: number) {
@@ -46,7 +48,9 @@ export async function fetchFacultyTasks(collegeSubjectId: number) {
       isActive,
       createdAt,
       updatedAt,
-      deletedAt
+      deletedAt,
+      collegeAcademicYearId,
+      collegeSectionsId
     `)
     .eq("collegeSubjectId", collegeSubjectId)
     .eq("date", today)
@@ -96,6 +100,8 @@ export async function saveFacultyTask(
     description: string;
     date: string;
     time: string;
+    collegeAcademicYearId?: number | null;
+    collegeSectionsId?: number | null;
   },
   facultyId: number,
 ) {
@@ -113,6 +119,8 @@ export async function saveFacultyTask(
     isActive: shouldBeActive,
     is_deleted: !shouldBeActive,
     updatedAt: now,
+    collegeAcademicYearId: payload.collegeAcademicYearId ?? null,
+    collegeSectionsId: payload.collegeSectionsId ?? null,
   };
 
   if (!payload.facultyTaskId) {
@@ -185,7 +193,9 @@ export async function fetchFacultyTasksForLoggedInFaculty(
       taskTitle,
       description,
       date,
-      time
+      time,
+      collegeAcademicYearId,
+      collegeSectionsId
     `)
     .eq("createdBy", facultyId)
     .eq("collegeSubjectId", collegeSubjectId)
@@ -231,31 +241,31 @@ export const fetchFacultyTasksByFacultyId = async (facultyId: number) => {
 
 export async function fetchFacultyTasksForStudent(params: {
   date: string;
-  collegeId: number;
-  collegeBranchId: number;
   collegeAcademicYearId: number;
-  collegeSemesterId?: number | null;
+  collegeSectionsId: number;
 }) {
   const { data, error } = await supabase
     .from("faculty_tasks")
     .select(`
-      *,
-      college_subjects!inner (
-        subjectName,
-        subjectCode,
-        collegeId,
-        collegeBranchId,
-        collegeAcademicYearId,
-        collegeSemesterId
-      )
+      facultyTaskId,
+      collegeSubjectId,
+      taskTitle,
+      description,
+      date,
+      time,
+      createdBy,
+      isActive,
+      createdAt,
+      updatedAt,
+      deletedAt,
+      collegeAcademicYearId,
+      collegeSectionsId
     `)
     .eq("date", params.date)
+    .eq("collegeAcademicYearId", params.collegeAcademicYearId)
+    .eq("collegeSectionsId", params.collegeSectionsId)
     .eq("isActive", true)
-    .is("deletedAt", null)
-    .eq("college_subjects.collegeId", params.collegeId)
-    .eq("college_subjects.collegeBranchId", params.collegeBranchId)
-    .eq("college_subjects.collegeAcademicYearId", params.collegeAcademicYearId)
-    .eq("college_subjects.collegeSemesterId", params.collegeSemesterId ?? null);
+    .is("deletedAt", null);
 
   if (error) {
     console.error("fetchFacultyTasksForStudent error:", error);

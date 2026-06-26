@@ -381,6 +381,7 @@ export async function fetchDiscussionsByFacultyId(
   facultyId: number,
   page: number = 1,
   limit: number = 10,
+  dateStr?: string,
 ) {
   const today = new Date().toISOString().split("T")[0];
   const from = (page - 1) * limit;
@@ -396,7 +397,7 @@ export async function fetchDiscussionsByFacultyId(
     .lt("deadline", today)
     .eq("isActive", true);
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("discussion_forum")
     .select(
       `
@@ -417,7 +418,16 @@ export async function fetchDiscussionsByFacultyId(
     .eq("createdBy", facultyId)
     .eq("isActive", true)
     .eq("is_deleted", false) // 🟢 ADDED: Exclude deleted
-    .is("deletedAt", null)
+    .is("deletedAt", null);
+
+  if (dateStr) {
+    const formattedDate = dateStr.split("T")[0];
+    query = query
+      .lte("createdAt", `${formattedDate}T23:59:59.999Z`)
+      .gte("deadline", formattedDate);
+  }
+
+  const { data, error, count } = await query
     .order("deadline", { ascending: true })
     .range(from, to);
 
@@ -440,11 +450,12 @@ export async function fetchCompletedDiscussionsByFacultyId(
   facultyId: number,
   page: number = 1,
   limit: number = 10,
+  dateStr?: string,
 ) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("discussion_forum")
     .select(
       `
@@ -464,7 +475,16 @@ export async function fetchCompletedDiscussionsByFacultyId(
     )
     .eq("createdBy", facultyId)
     .eq("isActive", false)
-    .eq("is_deleted", false) // 🟢 ADDED: Exclude deleted
+    .eq("is_deleted", false);
+
+  if (dateStr) {
+    const formattedDate = dateStr.split("T")[0];
+    query = query
+      .lte("createdAt", `${formattedDate}T23:59:59.999Z`)
+      .gte("deadline", formattedDate);
+  }
+
+  const { data, error, count } = await query
     .order("deadline", { ascending: false })
     .range(from, to);
 

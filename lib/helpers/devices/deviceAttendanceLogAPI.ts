@@ -63,7 +63,7 @@ export const getDeviceAttendanceLogs = async (
         { count: "exact" },
       )
       .eq("collegeId", collegeId)
-      .or('"rejectionReason".is.null,"rejectionReason".neq.RateLimited');
+      .or('rejectionReason.is.null,rejectionReason.not.in.(RateLimited,DuplicateScan)');
 
     if (filters?.deviceId) query = query.eq("deviceId", filters.deviceId);
     if (filters?.userId) query = query.eq("userId", filters.userId);

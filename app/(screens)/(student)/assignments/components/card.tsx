@@ -35,7 +35,7 @@ async function downloadFile(filePath: string) {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-  } catch (err) {}
+  } catch (err) { }
 }
 
 export type CardProp = {
@@ -231,37 +231,47 @@ export default function AssignmentCard({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer">
-                    <LinkSimpleHorizontal className="text-md text-[#57C788]" />
+                {(uploadedFiles[index] || item.videoLink) ? (
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer"
+                      onClick={() => {
+                        if (uploadedFiles[index]) {
+                          downloadFile(uploadedFiles[index]);
+                        } else if (item.videoLink) {
+                          window.open(item.videoLink, "_blank");
+                        }
+                      }}
+                    >
+                      <LinkSimpleHorizontal className="text-md text-[#57C788]" />
+                    </div>
+                    <span
+                      onClick={() => {
+                        if (uploadedFiles[index]) {
+                          downloadFile(uploadedFiles[index]);
+                        } else if (item.videoLink) {
+                          window.open(item.videoLink, "_blank");
+                        }
+                      }}
+                      className={`text-[#474747] text-xs truncate max-w-[150px] ${uploadedFiles[index] || item.videoLink ? "underline cursor-pointer" : ""}`}
+                    >
+                      {uploadedFiles[index]
+                        ? uploadedFiles[index].split("/").pop()
+                        : item.videoLink}
+                    </span>
                   </div>
-                  <p className="text-[#474747] text-xs truncate max-w-[150px]">
-                    {item.videoLink}
-                  </p>
-                </div>
+                ) : null}
 
-                {activeView === "active" && (
+                {activeView === "active" && !uploadedFiles[index] && (
                   <div className="flex items-center gap-1 -ml-2">
-                    {uploadedFiles[index] ? (
-                      <div className="flex items-center bg-[#E2F3E9] rounded-full px-3 py-1 max-w-[210px]">
-                        <span
-                          onClick={() => downloadFile(uploadedFiles[index])}
-                          className="text-[#43C17A] text-xs underline truncate cursor-pointer"
-                          title={uploadedFiles[index]}
-                        >
-                          {uploadedFiles[index].split("/").pop()}
-                        </span>
-                      </div>
-                    ) : (
-                      <div
-                        className="flex items-center rounded-full px-2 py-1 bg-[#E2F3E9] cursor-pointer"
-                        onClick={() => openUploadModal(index)}
-                      >
-                        <p className="text-[#43C17A] text-xs font-semibold">
-                          {t("Upload")}
-                        </p>
-                      </div>
-                    )}
+                    <div
+                      className="flex items-center rounded-full px-2 py-1 bg-[#E2F3E9] cursor-pointer"
+                      onClick={() => openUploadModal(index)}
+                    >
+                      <p className="text-[#43C17A] text-xs font-semibold">
+                        {t("Upload")}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -404,13 +414,22 @@ export default function AssignmentCard({
                       />
                       <span className="truncate">{item.professor}</span>
                     </div>
-                    {(item.videoLink || uploadedFiles[index]) && (
+                    {(uploadedFiles[index] || item.videoLink) && (
                       <div className="flex items-center gap-1.5 text-[10px] text-gray-600 min-w-0 mt-0.5">
                         <LinkSimpleHorizontal
                           size={14}
                           className="text-[#43C17A] shrink-0"
                         />
-                        <span className="truncate text-emerald-600 underline">
+                        <span
+                          onClick={() => {
+                            if (uploadedFiles[index]) {
+                              downloadFile(uploadedFiles[index]);
+                            } else if (item.videoLink) {
+                              window.open(item.videoLink, "_blank");
+                            }
+                          }}
+                          className="truncate text-emerald-600 underline cursor-pointer"
+                        >
                           {uploadedFiles[index]
                             ? uploadedFiles[index].split("/").pop()
                             : item.videoLink || "Resource Link"}
@@ -432,10 +451,10 @@ export default function AssignmentCard({
         submissionFileName={
           selectedCard
             ? (uploadedFiles[
-                cardProp.findIndex(
-                  (c) => c.assignmentId === selectedCard.assignmentId,
-                )
-              ] ??
+              cardProp.findIndex(
+                (c) => c.assignmentId === selectedCard.assignmentId,
+              )
+            ] ??
               selectedCard.existingFilePath ??
               undefined)
             : undefined

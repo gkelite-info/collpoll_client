@@ -389,7 +389,7 @@ export default function AddAnnouncementModal({
 
           <div className="flex flex-col gap-1 mb-5">
             <label className="text-base font-medium text-[#2F2F2F]">
-              {t("Title")}
+              {t("Title")} <span className="text-red-500">*</span>
             </label>
 
             <input
@@ -408,7 +408,7 @@ export default function AddAnnouncementModal({
 
             <div className="flex flex-col gap-1 mb-5">
               <label className="text-base font-medium text-[#2F2F2F] mb-1">
-                {t("Date")}
+                {t("Date")} <span className="text-red-500">*</span>
               </label>
 
               <input
@@ -423,7 +423,7 @@ export default function AddAnnouncementModal({
             <div className="flex gap-4">
               <div className="flex flex-col w-1/2">
                 <label className="text-base font-medium text-[#2F2F2F] mb-1">
-                  {t("Type")}
+                  {t("Type")} <span className="text-red-500">*</span>
                 </label>
 
                 <select
@@ -458,7 +458,7 @@ export default function AddAnnouncementModal({
                 className="flex flex-col w-1/2 relative role-dropdown"
               >
                 <label className="text-base font-medium text-[#2F2F2F] mb-1">
-                  {t("Select Roles")}
+                  {t("Select Roles")} <span className="text-red-500">*</span>
                 </label>
 
                 <div

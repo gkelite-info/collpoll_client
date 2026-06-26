@@ -24,8 +24,9 @@ export async function fetchFacultyForSubject(collegeSubjectId: number) {
 export async function fetchAdminQuizzesBySubject(
   collegeSubjectId: number,
   status: "Draft" | "Active" | "Completed",
+  dateStr?: string
 ) {
-  const { data } = await supabase
+  let query = supabase
     .from("quizzes")
     .select(
       `
@@ -39,8 +40,19 @@ export async function fetchAdminQuizzesBySubject(
     .eq("collegeSubjectId", collegeSubjectId)
     .eq("status", status)
     .eq("isActive", true)
-    .is("deletedAt", null)
-    .order("createdAt", { ascending: false });
+    .is("deletedAt", null);
+
+  if (dateStr) {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const startOfDay = new Date(year, month - 1, day, 0, 0, 0).toISOString();
+    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
+
+    query = query
+      .lte("startDate", endOfDay)
+      .gte("endDate", startOfDay);
+  }
+
+  const { data } = await query.order("createdAt", { ascending: false });
 
   function formatDate(dateStr: string) {
     if (!dateStr) return "-";
@@ -193,12 +205,14 @@ export async function fetchAdminQuizDepartments(
         "facultyId, fullName, collegeBranchId, users:userId(user_profile(profileUrl))",
       )
       .eq("collegeId", collegeId)
-      .eq("isActive", true),
+      .eq("isActive", true)
+      .is("deletedAt", null),
     supabase
       .from("students")
       .select("studentId, collegeBranchId")
       .eq("collegeId", collegeId)
-      .eq("isActive", true),
+      .eq("isActive", true)
+      .is("deletedAt", null),
     supabase
       .from("student_academic_history")
       .select("studentId, collegeAcademicYearId")
@@ -207,17 +221,20 @@ export async function fetchAdminQuizDepartments(
       .from("college_subjects")
       .select("collegeSubjectId, collegeBranchId, collegeAcademicYearId")
       .eq("collegeId", collegeId)
-      .eq("isActive", true),
+      .eq("isActive", true)
+      .is("deletedAt", null),
     supabase
       .from("quizzes")
       .select("collegeSubjectId")
       .eq("status", "Active")
-      .eq("isActive", true),
+      .eq("isActive", true)
+      .is("deletedAt", null),
 
     supabase
       .from("faculty_sections")
       .select("facultyId, collegeAcademicYearId")
-      .eq("isActive", true),
+      .eq("isActive", true)
+      .is("deletedAt", null),
   ]);
 
   const activeSubjectIds = new Set(quizzes?.map((q) => q.collegeSubjectId));
@@ -326,7 +343,8 @@ export async function fetchAdminQuizSubjects(
       .eq("collegeId", collegeId)
       .eq("collegeBranchId", branchId)
       .eq("collegeAcademicYearId", yearId)
-      .eq("isActive", true),
+      .eq("isActive", true)
+      .is("deletedAt", null),
     supabase
       .from("student_academic_history")
       .select("studentId")
@@ -336,7 +354,8 @@ export async function fetchAdminQuizSubjects(
       .from("students")
       .select("studentId")
       .eq("collegeBranchId", branchId)
-      .eq("isActive", true),
+      .eq("isActive", true)
+      .is("deletedAt", null),
     supabase
       .from("faculty_sections")
       .select(
@@ -345,7 +364,8 @@ export async function fetchAdminQuizSubjects(
         `,
       )
       .eq("collegeAcademicYearId", yearId)
-      .eq("isActive", true),
+      .eq("isActive", true)
+      .is("deletedAt", null),
   ]);
 
   const facultyUserIds = [
@@ -383,6 +403,11 @@ export async function fetchAdminQuizSubjects(
   const subjectFacultyMap = new Map();
   facultyAssignments?.forEach((fa: any) => {
     if (!subjectFacultyMap.has(fa.collegeSubjectId)) {
+      subjectFacultyMap.set(fa.collegeSubjectId, []);
+    }
+    const facArray = subjectFacultyMap.get(fa.collegeSubjectId);
+
+    if (!facArray.find((f: any) => f.id === fa.facultyId)) {
       const fac = Array.isArray(fa.faculty) ? fa.faculty[0] : fa.faculty;
       if (fac) {
         const profile = fac.users?.user_profile;
@@ -390,7 +415,7 @@ export async function fetchAdminQuizSubjects(
           ? profile[0]?.profileUrl
           : profile?.profileUrl;
 
-        subjectFacultyMap.set(fa.collegeSubjectId, {
+        facArray.push({
           id: fa.facultyId,
           employeeId: employeeIdMap.get(fac.userId) || "N/A",
           name: fac.fullName,
@@ -408,15 +433,25 @@ export async function fetchAdminQuizSubjects(
       0,
     );
 
-    const assignedFaculty = subjectFacultyMap.get(sub.collegeSubjectId);
+    const assignedFaculties = subjectFacultyMap.get(sub.collegeSubjectId) || [];
+    let primaryFaculty = assignedFaculties[assignedFaculties.length - 1]; // Default to the most recently assigned if multiple
+    
+    if (activeQuizzes.length > 0) {
+      // Find the faculty who actually created these quizzes
+      const quizFacultyId = activeQuizzes[0].facultyId;
+      const creator = assignedFaculties.find((f: any) => f.id === quizFacultyId);
+      if (creator) {
+        primaryFaculty = creator;
+      }
+    }
 
     return {
       id: sub.collegeSubjectId,
       subject: sub.subjectName,
-      facultyName: assignedFaculty ? assignedFaculty.name : "Unassigned",
-      facultyId: assignedFaculty ? String(assignedFaculty.id) : "-",
-      employeeId: assignedFaculty?.employeeId || "N/A",
-      avatar: assignedFaculty?.avatar || null,
+      facultyName: primaryFaculty ? primaryFaculty.name : "Unassigned",
+      facultyId: primaryFaculty ? String(primaryFaculty.id) : "-",
+      employeeId: primaryFaculty?.employeeId || "N/A",
+      avatar: primaryFaculty?.avatar || null,
       activeQuiz: activeQuizzes.length,
       pendingSubmissions: pendingCount,
     };

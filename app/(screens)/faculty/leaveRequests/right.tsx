@@ -130,6 +130,8 @@ export default function FacultyDashRight() {
       description: string;
       dueDate: string;
       dueTime: string;
+      collegeAcademicYearId?: number | null;
+      collegeSectionsId?: number | null;
     },
     taskId?: number,
   ) => {
@@ -142,6 +144,8 @@ export default function FacultyDashRight() {
           description: payload.description,
           date: payload.dueDate,
           time: payload.dueTime,
+          collegeAcademicYearId: payload.collegeAcademicYearId,
+          collegeSectionsId: payload.collegeSectionsId,
         },
         facultyId!,
       );

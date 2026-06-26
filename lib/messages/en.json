@@ -82,7 +82,7 @@
       "Attendance": "Attendance",
       "Assignments": "Assignments",
       "{count} Due": "{count} Due",
-      "Mid Exams": "Mid Exams",
+      "Exams": "Exams",
       "N/A": "N/A",
       "Fee Due": "Fee Due",
       "Upcoming Events": "Upcoming Events",
@@ -105,6 +105,7 @@
       "Actions": "Actions",
       "ENROLL": "ENROLL",
       "NOT ELIGIBLE": "NOT ELIGIBLE",
+      "CLOSED": "CLOSED",
       "Note": "Note",
       "You’re eligible to enroll if your attendance ≥ 75%": "You’re eligible to enroll if your attendance ≥ 75%",
       "Select Subjects to Enroll": "Select Subjects to Enroll",
@@ -113,7 +114,7 @@
       "Attendance": "Attendance",
       "Assignments": "Assignments",
       "{count} Due": "{count} Due",
-      "Mid Exams": "Mid Exams",
+      "Exams": "Exams",
       "N/A": "N/A",
       "Fee Due": "Fee Due",
       "Prof {name}": "Prof. {name}",
@@ -894,7 +895,9 @@
       "Drag & Drop Your File here or": "Drag & Drop Your File here or",
       "Browse Files": "Browse Files",
       "Uploading": "Uploading",
-      "Submit Files": "Submit Files"
+      "Submit Files": "Submit Files",
+      "Your Current Submission": "Your Current Submission",
+      "Marks Scored": "Marks Scored"
     }
   },
   "Placements": {

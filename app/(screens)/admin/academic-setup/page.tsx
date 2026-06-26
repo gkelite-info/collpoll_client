@@ -16,6 +16,7 @@ import {
   uploadSubjectImage,
 } from "@/lib/helpers/admin/academicSetup/subjectImageStorageAPI";
 import BiometricStructure from "./components/BiometricStructure";
+import CollegeTimingsStructure from "./components/collegetimings/CollegeTimingsStructure";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Suspense } from "react";
 
@@ -25,7 +26,8 @@ type Tab =
   | "view-subject"
   | "add-subject"
   | "attendance-eligibility"
-  | "biometric-structure";
+  | "biometric-structure"
+  | "college-timings";
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "Something went wrong";
@@ -89,6 +91,11 @@ function AcademicSetupContent() {
       ? {
           title: "Biometric Structure",
           description: "Manage rooms and biometric devices in your institution.",
+        }
+      : activeTab === "college-timings"
+      ? {
+          title: "College Timings Structure",
+          description: "Configure college operational hours and shifts.",
         }
       : {
           title: "Academic Structure",
@@ -241,27 +248,28 @@ function AcademicSetupContent() {
         )}
 
         {/* Structure Selection Header */}
-        <div className="flex flex-col items-start gap-1 md:flex-row md:items-center md:gap-3 text-xl font-bold mb-6 border-b border-gray-100 pb-4">
+        <div className="mb-6 border-b border-gray-100 pb-1">
+          <div className="flex flex-row items-center gap-2 sm:gap-3 text-base sm:text-lg md:text-xl font-bold w-full overflow-x-auto custom-scrollbar whitespace-nowrap pb-3">
           <button
             onClick={() => {
               setActiveTab("view");
               setEditSubject(null);
               setEditData(null);
             }}
-            className={`transition-all duration-200 cursor-pointer ${
-              activeTab !== "biometric-structure"
+            className={`transition-all duration-200 cursor-pointer flex-shrink-0 ${
+              activeTab !== "biometric-structure" && activeTab !== "college-timings"
                 ? "text-[#43C17A]"
                 : "text-[#282828] hover:text-[#16284F]"
             }`}
           >
             Academic Structure
           </button>
-          <span className="text-gray-300 font-light text-2xl hidden md:inline">/</span>
+          <span className="text-gray-300 font-light text-xl md:text-2xl flex-shrink-0">/</span>
           <button
             onClick={() => {
               setActiveTab("biometric-structure");
             }}
-            className={`transition-all duration-200 cursor-pointer ${
+            className={`transition-all duration-200 cursor-pointer flex-shrink-0 ${
               activeTab === "biometric-structure"
                 ? "text-[#43C17A]"
                 : "text-[#282828] hover:text-[#16284F]"
@@ -269,9 +277,23 @@ function AcademicSetupContent() {
           >
             Biometric Structure
           </button>
+          <span className="text-gray-300 font-light text-xl md:text-2xl flex-shrink-0">/</span>
+          <button
+            onClick={() => {
+              setActiveTab("college-timings");
+            }}
+            className={`transition-all duration-200 cursor-pointer flex-shrink-0 ${
+              activeTab === "college-timings"
+                ? "text-[#43C17A]"
+                : "text-[#282828] hover:text-[#16284F]"
+            }`}
+          >
+            College Timings Structure
+          </button>
+          </div>
         </div>
 
-        {activeTab !== "biometric-structure" ? (
+        {activeTab !== "biometric-structure" && activeTab !== "college-timings" ? (
           <>
             {pageHeader.title !== "Academic Structure" && (
               <h1 className="text-xl font-bold text-[#282828] mb-1">
@@ -343,6 +365,10 @@ function AcademicSetupContent() {
         
         {activeTab === "biometric-structure" && (
           <BiometricStructure />
+        )}
+        
+        {activeTab === "college-timings" && (
+          <CollegeTimingsStructure />
         )}
       </div>
     </section>

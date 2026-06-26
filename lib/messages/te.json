@@ -104,6 +104,7 @@
       "Actions": "చర్యలు",
       "ENROLL": "ఎన్‌రోల్",
       "NOT ELIGIBLE": "అర్హత లేదు",
+      "CLOSED": "ముగిసింది",
       "Note": "గమనిక",
       "You’re eligible to enroll if your attendance ≥ 75%": "మీ హాజరు ≥ 75% ఉంటేనే మీరు ఎన్‌రోల్ చేసుకోవడానికి అర్హులు",
       "Select Subjects to Enroll": "ఎన్‌రోల్ చేయడానికి సబ్జెక్టులను ఎంచుకోండి",
@@ -165,7 +166,8 @@
       "Faculty": "ఫ్యాకల్టీ",
       "Student": "విద్యార్థి",
       "Parent": "తల్లిదండ్రులు",
-      "Calculating performance": "పనితీరును లెక్కిస్తున్నాం..."
+      "Calculating performance": "పనితీరును లెక్కిస్తున్నాం...",
+      "Exams": "పరీక్షలు"
     },
     "parent": {
       "StudentID:": "విద్యార్థి ఐడి:",
@@ -864,7 +866,9 @@
       "Drag & Drop Your File here or": "ఇక్కడ మీ ఫైల్‌ను డ్రాగ్ & డ్రాప్ చేయండి లేదా",
       "Browse Files": "ఫైళ్ళను బ్రౌజ్ చేయండి",
       "Uploading": "అప్‌లోడింగ్",
-      "Submit Files": "ఫైళ్ళను సమర్పించండి"
+      "Submit Files": "ఫైళ్ళను సమర్పించండి",
+      "Your Current Submission": "మీ ప్రస్తుత సబ్మిషన్",
+      "Marks Scored": "సాధించిన మార్కులు"
     }
   },
   "Placements": {

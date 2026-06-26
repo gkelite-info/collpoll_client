@@ -137,7 +137,7 @@ export const processGateScan = async (payload: GateScanPayload) => {
       const lastTime = new Date(lastScan.scanTime).getTime();
       const currTime = new Date(payload.scanTime).getTime();
       
-      if (currTime - lastTime < 60000 && currTime >= lastTime) {
+      if (currTime - lastTime < 20000 && currTime >= lastTime) {
         return { success: true as const, data: null };
       }
     }

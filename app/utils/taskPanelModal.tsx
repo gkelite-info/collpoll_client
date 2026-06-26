@@ -73,7 +73,7 @@ export default function TaskPanelModal({
 }: TaskPanelModalProps) {
 
     const [editTask, setEditTask] = useState<Task | null>(null);
-    const { collegeId, collegeBranchId, collegeAcademicYearId, collegeSemesterId } = useStudent();
+    const { collegeId, collegeBranchId, collegeAcademicYearId, collegeSemesterId, collegeSectionsId } = useStudent();
     const [activeView, setActiveView] = useState<"student" | "faculty">(
         "faculty",
     );
@@ -136,9 +136,8 @@ export default function TaskPanelModal({
         if (
             role !== "student" ||
             !open ||
-            !collegeId ||
-            !collegeBranchId ||
-            !collegeAcademicYearId
+            !collegeAcademicYearId ||
+            !collegeSectionsId
         ) return;
 
         try {
@@ -149,10 +148,8 @@ export default function TaskPanelModal({
 
             const tasks = await fetchFacultyTasksForStudent({
                 date: today,
-                collegeId,
-                collegeBranchId,
                 collegeAcademicYearId,
-                collegeSemesterId,
+                collegeSectionsId,
             });
 
             const mappedTasks = tasks.map((task) => ({
@@ -189,6 +186,7 @@ export default function TaskPanelModal({
         collegeBranchId,
         collegeAcademicYearId,
         collegeSemesterId,
+        collegeSectionsId,
     ]);
 
     if (!open) return null;
