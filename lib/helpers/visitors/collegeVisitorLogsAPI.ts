@@ -22,9 +22,15 @@ export type CollegeVisitorLogRow = {
 
 export type FetchCollegeVisitorLogsParams = {
   collegeId: number;
+  createdBy?: number;
   entryDate?: string;
   visitorStatus?: CollegeVisitorStatus | "all";
   search?: string;
+};
+
+export type FetchCollegeVisitorLogsPageParams = FetchCollegeVisitorLogsParams & {
+  page: number;
+  limit: number;
 };
 
 export type CreateCollegeVisitorLogPayload = {
@@ -88,6 +94,7 @@ function normalizeVisitorPayload<T extends CreateCollegeVisitorLogPayload | Upda
 
 export async function fetchCollegeVisitorLogs({
   collegeId,
+  createdBy,
   entryDate,
   visitorStatus = "all",
   search = "",
@@ -99,6 +106,10 @@ export async function fetchCollegeVisitorLogs({
 
   if (entryDate) {
     query = query.eq("entryDate", entryDate);
+  }
+
+  if (createdBy) {
+    query = query.eq("createdBy", createdBy);
   }
 
   if (visitorStatus !== "all") {
@@ -121,6 +132,52 @@ export async function fetchCollegeVisitorLogs({
   }
 
   return (data ?? []) as CollegeVisitorLogRow[];
+}
+
+export async function fetchCollegeVisitorLogsPage({
+  page,
+  limit,
+  ...params
+}: FetchCollegeVisitorLogsPageParams) {
+  const from = Math.max(page - 1, 0) * limit;
+  const to = from + limit - 1;
+  let query = supabase
+    .from("college_visitor_logs")
+    .select(COLLEGE_VISITOR_LOG_COLUMNS, { count: "exact" })
+    .eq("collegeId", params.collegeId);
+
+  if (params.entryDate) {
+    query = query.eq("entryDate", params.entryDate);
+  }
+
+  if (params.createdBy) {
+    query = query.eq("createdBy", params.createdBy);
+  }
+
+  if (params.visitorStatus && params.visitorStatus !== "all") {
+    query = query.eq("visitorStatus", params.visitorStatus);
+  }
+
+  const trimmedSearch = params.search?.trim() ?? "";
+  if (trimmedSearch) {
+    query = query.or(
+      `visitorName.ilike.%${trimmedSearch}%,visitorMobile.ilike.%${trimmedSearch}%,purposeOfVisit.ilike.%${trimmedSearch}%`,
+    );
+  }
+
+  const { data, error, count } = await query
+    .order("entryDate", { ascending: false })
+    .order("entryTime", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    throw createCollegeVisitorLogError("fetchCollegeVisitorLogsPage", error);
+  }
+
+  return {
+    data: (data ?? []) as CollegeVisitorLogRow[],
+    count: count ?? 0,
+  };
 }
 
 export async function createCollegeVisitorLog(payload: CreateCollegeVisitorLogPayload) {

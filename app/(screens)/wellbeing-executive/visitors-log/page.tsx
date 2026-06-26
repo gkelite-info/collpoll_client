@@ -22,7 +22,7 @@ const isAdministrationCategory = (categoryName: string | null | undefined) => {
 };
 
 export default function VisitorsLogPage() {
-  const { loading, collegeId, wellBeingCategoryId, wellBeingCategoryIds, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
+  const { loading, userId, collegeId, wellBeingCategoryId, wellBeingCategoryIds, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
   const [entries, setEntries] = useState(visitorEntries);
   const [search, setSearch] = useState("");
   const [newEntryOpen, setNewEntryOpen] = useState(false);
@@ -35,9 +35,18 @@ export default function VisitorsLogPage() {
     ...wellBeingCategoryNames.map((name, index) => ({ id: wellBeingCategoryIds[index], name })),
   ];
   const sportsCategoryId = assignedCategories.find(({ id, name }) => id && isSportsCategory(name))?.id;
-  const sportsInventoryContext = collegeId && sportsCategoryId
-    ? { collegeId, categoryId: sportsCategoryId }
-    : undefined;
+  const sportsInventoryContext = useMemo(
+    () => collegeId && sportsCategoryId
+      ? { collegeId, categoryId: sportsCategoryId }
+      : undefined,
+    [collegeId, sportsCategoryId],
+  );
+  const campusVisitorContext = useMemo(
+    () => collegeId && userId
+      ? { collegeId, userId }
+      : undefined,
+    [collegeId, userId],
+  );
   const isSports = categories.some(isSportsCategory);
   const isSafety = categories.some(isSafetyCategory);
   const isAdministration = categories.some(isAdministrationCategory);
@@ -73,9 +82,9 @@ export default function VisitorsLogPage() {
   return (
     <main className="min-h-screen bg-[#F4F4F4] p-2">
       {isAdministration ? (
-        <CampusVisitorsLogDashboard variant="administration" />
+        <CampusVisitorsLogDashboard variant="administration" visitorContext={campusVisitorContext} />
       ) : isSafety ? (
-        <SafetyVisitorsLogDashboard />
+        <SafetyVisitorsLogDashboard visitorContext={campusVisitorContext} />
       ) : selectedVisitor ? (
         <EquipmentUsageHistory visitor={selectedVisitor} onBack={() => setSelectedVisitor(null)} />
       ) : (
