@@ -6,7 +6,9 @@ import {
   Eye,
   FunnelSimple,
   MagnifyingGlass,
+  PencilSimple,
   Plus,
+  Trash,
   UsersThree,
 } from "@phosphor-icons/react";
 import type { VisitorEntry } from "../types";
@@ -19,6 +21,8 @@ type VisitorsLogDashboardProps = {
   onSearchChange: (value: string) => void;
   onNewEntry: () => void;
   onView: (entry: VisitorEntry) => void;
+  onEdit: (entry: VisitorEntry) => void;
+  onDelete: (entry: VisitorEntry) => void;
 };
 
 const summaryCards = [
@@ -28,7 +32,7 @@ const summaryCards = [
   { label: "Pending Returns", value: 26, tone: "bg-[#FFE0E0] text-[#FF2530]", icon: Cube },
 ];
 
-export function VisitorsLogDashboard({ entries, search, onSearchChange, onNewEntry, onView }: VisitorsLogDashboardProps) {
+export function VisitorsLogDashboard({ entries, search, onSearchChange, onNewEntry, onView, onEdit, onDelete }: VisitorsLogDashboardProps) {
   const columns: DataTableColumn[] = [
     { key: "student", label: "Student" },
     { key: "rollNo", label: "Roll No." },
@@ -61,9 +65,17 @@ export function VisitorsLogDashboard({ entries, search, onSearchChange, onNewEnt
     ),
     returnedAt: <span className="font-semibold">{entry.returnedAt}</span>,
     actions: (
-      <button type="button" onClick={() => onView(entry)} title="View usage history" className="cursor-pointer text-[#94A3B8] hover:text-[#149447]">
-        <Eye size={20} weight="bold" />
-      </button>
+      <div className="flex items-center justify-center gap-3">
+        <button type="button" onClick={() => onView(entry)} title="View usage history" className="cursor-pointer text-[#94A3B8] hover:text-[#149447]">
+          <Eye size={20} weight="bold" />
+        </button>
+        <button type="button" onClick={() => onEdit(entry)} title="Edit entry" className="cursor-pointer text-[#94A3B8] hover:text-[#149447]">
+          <PencilSimple size={19} weight="bold" />
+        </button>
+        <button type="button" onClick={() => onDelete(entry)} title="Delete entry" className="cursor-pointer text-[#EF4444] hover:text-[#B91C1C]">
+          <Trash size={19} weight="bold" />
+        </button>
+      </div>
     ),
   }));
 
