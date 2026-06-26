@@ -248,7 +248,7 @@ export default function AddEventModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white w-[480px] max-h-[90vh] rounded-xl flex flex-col relative overflow-hidden">
         {showConflictModal && (
           <div className="absolute inset-0 z-[60] flex items-center justify-center bg-white/90 backdrop-blur-sm p-6">

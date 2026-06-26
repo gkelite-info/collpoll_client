@@ -191,19 +191,34 @@ function FinanceCalendarPageContent() {
           </div>
         </section>
 
-        <div className="flex gap-3 mb-2 mt-2">
-          <button
-            onClick={() => router.push("/hr/calendar")}
-            className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${activeMainTab !== "Holidays" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
-          >
-            Calendar Overview
-          </button>
-          <button
-            onClick={() => router.push("/hr/calendar?tab=Holidays")}
-            className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${activeMainTab === "Holidays" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
-          >
-            Holiday Calendar
-          </button>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 mt-2">
+          <div className="flex gap-3 overflow-x-auto w-full sm:w-auto no-scrollbar pb-1 sm:pb-0">
+            <button
+              onClick={() => router.push("/hr/calendar")}
+              className={`px-4 sm:px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm whitespace-nowrap ${activeMainTab !== "Holidays" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+            >
+              Calendar Overview
+            </button>
+            <button
+              onClick={() => router.push("/hr/calendar?tab=Holidays")}
+              className={`px-4 sm:px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm whitespace-nowrap ${activeMainTab === "Holidays" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+            >
+              Holiday Calendar
+            </button>
+          </div>
+          {activeMainTab === "Holidays" && (
+            <div className="w-full sm:w-auto flex justify-end">
+              <button
+                onClick={() => {
+                  setHolidayToEdit(null);
+                  setIsAddHolidayModalOpen(true);
+                }}
+                className="px-4 py-2 bg-[#43C17A] hover:bg-[#3ba869] text-white rounded-lg text-sm font-semibold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+              >
+                <span>+ Add Holiday</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
         <AddEventModal
