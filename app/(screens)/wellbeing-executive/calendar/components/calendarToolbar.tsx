@@ -44,7 +44,7 @@ export default function CalendarToolbar({
   }, []);
 
   return (
-    <div className="flex w-fit items-center gap-8 rounded-t-[20px] bg-[#5252521C] px-6 pt-3">
+    <div className="flex w-fit items-center gap-8 rounded-t-[20px] bg-[#5252521C] px-6 pt-3 -mb-2">
       <button
         onClick={() => setActiveTab("All")}
         className={`flex items-center gap-2 border-b-2 pb-3 text-sm font-semibold transition-all ${

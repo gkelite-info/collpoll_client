@@ -19,7 +19,7 @@ export default function CalendarToolbar({
   ];
 
   return (
-    <div className="bg-[#5252521C] rounded-t-[20px] border-b border-gray-200 px-6 py-3 flex flex-col lg:flex-row items-center justify-between gap-4">
+    <div className="bg-[#5252521C] -mb-2 rounded-t-[20px] border-b border-gray-200 px-6 py-3 flex flex-col lg:flex-row items-center justify-between gap-4">
       <div className="flex items-center gap-6 overflow-x-auto w-full lg:w-auto hide-scrollbar"></div>
       {tabs.map((tab) => {
         const isActive = activeTab === tab.value;

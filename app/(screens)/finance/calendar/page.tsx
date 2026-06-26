@@ -299,14 +299,16 @@ function PageContent() {
   };
 
   return (
-    <main className="p-4 relative">
+    <main className="p-2 relative">
       <section className="flex justify-between items-center mb-4">
         <div>
           <h1 className="text-black text-xl font-semibold">
-            Calendar & Events
+            {activeMainTab === "Holidays" ? "Holiday Calendar" : "Calendar Overview"}
           </h1>
           <p className="text-black text-sm">
-            Stay organized and on track with your personalised calendar
+            {activeMainTab === "Holidays"
+              ? "View the complete holiday schedule for the academic year."
+              : "Stay organized and on track with your personalised calendar"}
           </p>
         </div>
         <CourseScheduleCard style="w-[320px]" />
@@ -328,7 +330,7 @@ function PageContent() {
       </div>
 
       {activeMainTab === "Holidays" ? (
-        <div className="bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden relative rounded-xl p-4">
+        <div>
           {isFetchingHolidays ? (
             <HolidayCalendarShimmer />
           ) : (

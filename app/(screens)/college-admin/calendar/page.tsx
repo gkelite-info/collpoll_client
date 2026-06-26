@@ -1,5 +1,6 @@
 "use client";
 import PageUnderConstruction from "@/app/utils/PageUnderConstruction";
+import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -39,7 +40,22 @@ function PageContent() {
     }, [activeMainTab, loadHolidays, holidayYear, collegeId]);
 
     return (
-        <div className="w-full h-full p-4 flex flex-col min-h-screen bg-[#f3f4f6]">
+        <main className="w-full h-full p-1.5 md:p-2.5 lg:p-4 flex flex-col min-h-screen bg-[#f3f4f6]">
+            <section className="bg-indigo-00 flex justify-between items-center mb-4">
+                <div>
+                    <h1 className="text-black text-xl font-semibold">
+                        {activeMainTab === "Holidays" ? "Holiday Calendar" : "Calendar Overview"}
+                    </h1>
+                    <p className="text-black text-sm">
+                        {activeMainTab === "Holidays"
+                            ? "View the complete holiday schedule for the academic year."
+                            : "Stay organized and on track with your personalised calendar"}
+                    </p>
+                </div>
+
+                <CourseScheduleCard isVisibile={false} style="w-[320px] hidden md:flex lg:flex" />
+            </section>
+
             <div className="flex gap-3 mb-5 mt-2">
                 <button
                     onClick={() => router.push("/college-admin/calendar")}
@@ -56,7 +72,7 @@ function PageContent() {
             </div>
 
             {activeMainTab === "Holidays" ? (
-                <div className="bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden relative rounded-xl p-4">
+                <div>
                     {isFetchingHolidays ? (
                         <HolidayCalendarShimmer />
                     ) : (
@@ -74,7 +90,7 @@ function PageContent() {
                     <PageUnderConstruction />
                 </div>
             )}
-        </div>
+        </main>
     )
 }
 
