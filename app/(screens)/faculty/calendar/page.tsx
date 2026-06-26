@@ -1,7 +1,8 @@
 "use client";
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import ConfirmConflictModal from "../../admin/calendar/components/ConfirmConflictModal";
 import ConfirmDeleteModal from "../../admin/calendar/components/ConfirmDeleteModal";
@@ -33,6 +34,9 @@ import {
   checkSectionConflict,
   ConflictingSection,
 } from "@/lib/helpers/calendar/checkSectionConflict";
+import HolidayCalendar from "@/app/(screens)/hr/calendar/components/HolidayCalendar";
+import HolidayCalendarShimmer from "@/app/(screens)/hr/calendar/components/HolidayCalendarShimmer";
+import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/holidayAPI";
 
 export type CalendarEventPayload = {
   facultyId: number;
@@ -66,8 +70,12 @@ const convertTo24Hour = (time12h: string) => {
   return `${hours.padStart(2, "0")}:${minutes}:00`;
 };
 
-export default function Page() {
-  const [mainTab, setMainTab] = useState<"Faculty" | "HR">("Faculty");
+function PageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabQuery = searchParams.get("tab");
+  const activeMainTab = tabQuery === "Holidays" ? "Holidays" : "Academics";
+
   const [hrEvents, setHrEvents] = useState<CalendarEvent[]>([]);
 
   const [activeTab, setActiveTab] = useState("All");
@@ -106,6 +114,29 @@ export default function Page() {
   );
   const [showDetails, setShowDetails] = useState(false);
   const [isDeleteLoading, setIsDeleteLoading] = useState<boolean>(false);
+
+  const [holidays, setHolidays] = useState<CollegeHoliday[]>([]);
+  const [holidayYear, setHolidayYear] = useState(new Date().getFullYear());
+  const [isFetchingHolidays, setIsFetchingHolidays] = useState(false);
+
+  const loadHolidays = useCallback(async () => {
+    if (!collegeId) return;
+    setIsFetchingHolidays(true);
+    try {
+      const data = await fetchCollegeHolidays(collegeId, holidayYear);
+      setHolidays(data || []);
+    } catch (error) {
+      console.error("Error fetching holidays:", error);
+    } finally {
+      setIsFetchingHolidays(false);
+    }
+  }, [collegeId, holidayYear]);
+
+  useEffect(() => {
+    if (activeMainTab === "Holidays") {
+      loadHolidays();
+    }
+  }, [activeMainTab, loadHolidays, holidayYear, collegeId]);
 
   useEffect(() => {
     if (!userId || role !== "Faculty") return;
@@ -602,10 +633,12 @@ export default function Page() {
       <section className="bg-indigo-00 flex justify-between items-center mb-4">
         <div>
           <h1 className="text-black text-xl font-semibold">
-            Calendar & Events
+            {activeMainTab === "Holidays" ? "Holiday Calendar" : "Calendar & Events"}
           </h1>
           <p className="text-black text-sm">
-            Stay organized and on track with your personalised calendar
+            {activeMainTab === "Holidays"
+              ? "View the complete holiday schedule for the academic year."
+              : "Stay organized and on track with your personalised calendar"}
           </p>
         </div>
 
@@ -614,103 +647,121 @@ export default function Page() {
 
       <div className="flex gap-3 mb-5">
         <button
-          onClick={() => setMainTab("Faculty")}
-          className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${mainTab === "Faculty" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+          onClick={() => router.push("/faculty/calendar")}
+          className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${activeMainTab === "Academics" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
         >
           Academics Calendar
         </button>
+        <button
+          onClick={() => router.push("/faculty/calendar?tab=Holidays")}
+          className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${activeMainTab === "Holidays" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+        >
+          Holiday Calendar
+        </button>
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between md:items-center mb-2 gap-4">
-        {mainTab === "Faculty" ? (
-          <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      {activeMainTab === "Holidays" ? (
+        isFetchingHolidays ? (
+          <HolidayCalendarShimmer />
         ) : (
-          <div className="bg-[#5252521C] rounded-[20px] border border-gray-200 px-6 h-[45px] flex items-center">
-            <span className="text-sm font-semibold text-gray-600">
-              HR College Schedule
-            </span>
-          </div>
-        )}
-
-        {mainTab === "Faculty" && (
-          <CalendarHeader
-            currentDate={currentDate}
-            onMonthYearChange={(month, year) => {
-              setCurrentDate(new Date(year, month, 1));
-            }}
-            onAddClick={() => {
-              setEditingEventId(null);
-              setFormMode("create");
-              setEventForm(null);
-              setIsModalOpen(true);
-            }}
+          <HolidayCalendar
+            holidays={holidays}
+            year={holidayYear}
+            setYear={setHolidayYear}
+            onRefresh={loadHolidays}
+            readOnly={true}
           />
-        )}
-      </div>
-
-      {loading ? (
-        <Loader />
+        )
       ) : (
-        <div className="w-full h-[80vh] bg-[#f3f4f6] text-gray-800">
-          <CalendarGrid
-            events={mainTab === "Faculty" ? events : hrEvents}
-            weekDays={weekDays}
-            activeTab={mainTab === "Faculty" ? activeTab : "All"}
-            onPrevWeek={handlePrevWeek}
-            onNextWeek={handleNextWeek}
-            onDeleteRequest={(event) => {
-              if (mainTab === "HR")
-                return toast.error("Cannot delete HR events");
-              setEventToDelete(event);
-            }}
-            onEditRequest={(event) => {
-              if (mainTab === "HR") return toast.error("Cannot edit HR events");
-              handleEditEvent(event);
-            }}
-            onEventClick={(event) => {
-              setSelectedEvent(event);
-              setShowDetails(true);
-            }}
-          />
+        <>
+          <div className="flex flex-col md:flex-row justify-between md:items-center mb-2 gap-4">
+            <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
+            <CalendarHeader
+              currentDate={currentDate}
+              onMonthYearChange={(month, year) => {
+                setCurrentDate(new Date(year, month, 1));
+              }}
+              onAddClick={() => {
+                setEditingEventId(null);
+                setFormMode("create");
+                setEventForm(null);
+                setIsModalOpen(true);
+              }}
+            />
+          </div>
 
-          <EventDetailsModal
-            open={showDetails}
-            event={selectedEvent}
-            onClose={() => {
-              setShowDetails(false);
-              setSelectedEvent(null);
-            }}
-          />
+          {loading ? (
+            <Loader />
+          ) : (
+            <div className="w-full h-[80vh] bg-[#f3f4f6] text-gray-800">
+              <CalendarGrid
+                events={events}
+                weekDays={weekDays}
+                activeTab={activeTab}
+                onPrevWeek={handlePrevWeek}
+                onNextWeek={handleNextWeek}
+                onDeleteRequest={(event) => setEventToDelete(event)}
+                onEditRequest={(event) => handleEditEvent(event)}
+                onEventClick={(event) => {
+                  setSelectedEvent(event);
+                  setShowDetails(true);
+                }}
+              />
 
-          <AddEventModal
-            isOpen={isModalOpen}
-            value={eventForm}
-            initialData={eventForm}
-            onClose={closeAddEventModal}
-            onSave={handleSaveEvent}
-            degreeOptions={degreeOptions}
-            isSaving={isSaving}
-            mode={formMode}
-          />
+              <EventDetailsModal
+                open={showDetails}
+                event={selectedEvent}
+                onClose={() => {
+                  setShowDetails(false);
+                  setSelectedEvent(null);
+                }}
+              />
 
-          <ConfirmConflictModal
-            open={showConflictModal}
-            onConfirm={confirmAddEvent}
-            onCancel={handleConflictCancel}
-            conflictDetails={conflictDetails}
-          />
+              <AddEventModal
+                isOpen={isModalOpen}
+                value={eventForm}
+                initialData={eventForm}
+                onClose={closeAddEventModal}
+                onSave={handleSaveEvent}
+                degreeOptions={degreeOptions}
+                isSaving={isSaving}
+                mode={formMode}
+              />
 
-          <ConfirmDeleteModal
-            open={!!eventToDelete}
-            onCancel={() => setEventToDelete(null)}
-            onConfirm={async () => {
-              if (eventToDelete) await handleDeleteEvent(eventToDelete);
-              setEventToDelete(null);
-            }}
-            isDeleting={isDeleteLoading}
-          />
-        </div>
+              <ConfirmConflictModal
+                open={showConflictModal}
+                onConfirm={confirmAddEvent}
+                onCancel={handleConflictCancel}
+                conflictDetails={conflictDetails}
+              />
+
+              <ConfirmDeleteModal
+                open={!!eventToDelete}
+                onCancel={() => setEventToDelete(null)}
+                onConfirm={async () => {
+                  if (eventToDelete) await handleDeleteEvent(eventToDelete);
+                  setEventToDelete(null);
+                }}
+                isDeleting={isDeleteLoading}
+              />
+            </div>
+          )}
+        </>
       )}
     </main>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen bg-[#f3f4f6]">
+          <Loader />
+        </div>
+      }
+    >
+      <PageContent />
+    </Suspense>
   );
 }

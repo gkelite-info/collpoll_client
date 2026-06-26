@@ -135,20 +135,6 @@ export default function FacultyOverview({ onSelect }: Props) {
 
     return (
         <main>
-            <section className="mb-6 flex justify-between items-center">
-                <div>
-                    <h1 className="text-xl font-semibold text-[#1F2937]">
-                        Calendar Overview
-                    </h1>
-                    <p className="text-sm text-gray-500">
-                        Select a faculty, branch, or course calendar to view or manage schedules.
-                    </p>
-                </div>
-                <div className="flex items-center justify-center">
-                    <CourseScheduleCard style="w-[320px] mt-4" isVisibile={false} />
-                </div>
-            </section>
-
             <section className="bg-white rounded-xl p-4 flex gap-4 mb-6">
                 <div className="flex-1">
                     <label className="text-xs text-[#282828]">Education Type</label>

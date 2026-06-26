@@ -1,5 +1,6 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import CalendarToolbar from "./components/calenderToolbar";
 import CalendarGrid from "./components/CalendarGrid";
@@ -18,6 +19,12 @@ import {
   fetchFinanceCalendarSectionsWithDetails,
 } from "@/lib/helpers/finance/calendar/financeCalendarSectionsAPI";
 import toast from "react-hot-toast";
+
+import { useUser } from "@/app/utils/context/UserContext";
+import HolidayCalendar from "@/app/(screens)/hr/calendar/components/HolidayCalendar";
+import HolidayCalendarShimmer from "@/app/(screens)/hr/calendar/components/HolidayCalendarShimmer";
+import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/holidayAPI";
+import { Loader } from "../../(student)/calendar/right/timetable";
 
 type ManagerCalendarEvent = {
   id: string;
@@ -116,7 +123,12 @@ const getWeekDays = (startDate: Date) => {
   return days;
 };
 
-export default function FinanceManagerCalendarPage() {
+function PageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabQuery = searchParams.get("tab");
+  const activeMainTab = tabQuery === "Holidays" ? "Holidays" : "Academics";
+
   const [activeTab, setActiveTab] = useState("All Scheduled");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [eventToEdit, setEventToEdit] =
@@ -133,6 +145,30 @@ export default function FinanceManagerCalendarPage() {
   const [deleteSuccess, setDeleteSuccess] = useState(false);
 
   const { financeManagerId, loading: fmLoading } = useFinanceManager();
+  const { collegeId } = useUser();
+
+  const [holidays, setHolidays] = useState<CollegeHoliday[]>([]);
+  const [holidayYear, setHolidayYear] = useState(new Date().getFullYear());
+  const [isFetchingHolidays, setIsFetchingHolidays] = useState(false);
+
+  const loadHolidays = useCallback(async () => {
+    if (!collegeId) return;
+    setIsFetchingHolidays(true);
+    try {
+      const data = await fetchCollegeHolidays(collegeId, holidayYear);
+      setHolidays(data || []);
+    } catch (error) {
+      console.error("Error fetching holidays:", error);
+    } finally {
+      setIsFetchingHolidays(false);
+    }
+  }, [collegeId, holidayYear]);
+
+  useEffect(() => {
+    if (activeMainTab === "Holidays") {
+      loadHolidays();
+    }
+  }, [activeMainTab, loadHolidays, holidayYear, collegeId]);
 
   const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
 
@@ -296,53 +332,86 @@ export default function FinanceManagerCalendarPage() {
         <CourseScheduleCard style="w-[320px]" />
       </section>
 
-      <div className="flex justify-between items-center">
-        <CalendarToolbar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          currentDate={currentDate}
-          onMonthYearChange={(month, year) => {
-            const updated = new Date(currentDate);
-            updated.setMonth(month);
-            updated.setFullYear(year);
-            setCurrentDate(updated);
-          }}
-        />
-        <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
-
-        <AddEventModal
-          isOpen={isModalOpen}
-          editData={eventToEdit}
-          onSuccess={loadEvents}
-          onClose={() => {
-            setIsModalOpen(false);
-            setEventToEdit(null);
-          }}
-        />
+      <div className="flex gap-3 mb-5 mt-2">
+        <button
+          onClick={() => router.push("/finance-manager/calendar")}
+          className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${activeMainTab === "Academics" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+        >
+          Academics Calendar
+        </button>
+        <button
+          onClick={() => router.push("/finance-manager/calendar?tab=Holidays")}
+          className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${activeMainTab === "Holidays" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+        >
+          Holiday Calendar
+        </button>
       </div>
 
-      <div className="bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden relative">
-        {isLoading || fmLoading ? (
-          <CalendarShimmer />
-        ) : (
-          <CalendarGrid
-            events={events}
-            weekDays={weekDays}
-            activeTab={activeTab}
-            onPrevWeek={handlePrevWeek}
-            onNextWeek={handleNextWeek}
-            onEditRequest={(event) => {
-              setEventToEdit(event);
-              setIsModalOpen(true);
-            }}
-            onDeleteRequest={(event) => setEventToDelete(event)}
-            onEventClick={(event) => {
-              setSelectedEvent(event);
-              setShowDetails(true);
-            }}
-          />
-        )}
-      </div>
+      {activeMainTab === "Holidays" ? (
+        <div className="bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden relative rounded-xl p-4">
+          {isFetchingHolidays ? (
+            <HolidayCalendarShimmer />
+          ) : (
+            <HolidayCalendar
+              holidays={holidays}
+              year={holidayYear}
+              setYear={setHolidayYear}
+              onRefresh={loadHolidays}
+              readOnly={true}
+            />
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="flex justify-between items-center">
+            <CalendarToolbar
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              currentDate={currentDate}
+              onMonthYearChange={(month, year) => {
+                const updated = new Date(currentDate);
+                updated.setMonth(month);
+                updated.setFullYear(year);
+                setCurrentDate(updated);
+              }}
+            />
+            <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
+
+            <AddEventModal
+              isOpen={isModalOpen}
+              editData={eventToEdit}
+              onSuccess={loadEvents}
+              onClose={() => {
+                setIsModalOpen(false);
+                setEventToEdit(null);
+              }}
+            />
+          </div>
+
+          <div className="bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden relative mt-4">
+            {isLoading || fmLoading ? (
+              <CalendarShimmer />
+            ) : (
+              <CalendarGrid
+                events={events}
+                weekDays={weekDays}
+                activeTab={activeTab}
+                onPrevWeek={handlePrevWeek}
+                onNextWeek={handleNextWeek}
+                onEditRequest={(event) => {
+                  setEventToEdit(event);
+                  setIsModalOpen(true);
+                }}
+                onDeleteRequest={(event) => setEventToDelete(event)}
+                onEventClick={(event) => {
+                  setSelectedEvent(event);
+                  setShowDetails(true);
+                }}
+              />
+            )}
+          </div>
+        </>
+      )}
 
       {/* EVENT DETAILS MODAL */}
       <EventDetailsModal
@@ -395,5 +464,19 @@ export default function FinanceManagerCalendarPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function FinanceManagerCalendarPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen bg-[#f3f4f6]">
+          <Loader />
+        </div>
+      }
+    >
+      <PageContent />
+    </Suspense>
   );
 }

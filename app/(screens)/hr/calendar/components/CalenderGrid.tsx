@@ -174,8 +174,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   };
 
   return (
-    <div className="bg-white shadow-sm overflow-y-auto flex flex-col relative -mt-2 lg:h-[400px] xl:h-[560px]">
-      <div className="flex border-b border-gray-400 bg-white min-h-[60px]">
+    <div className="bg-white overflow-y-auto custom-scrollbar flex flex-col relative lg:h-[400px] xl:h-[560px]">
+      <div className="flex border-b border-gray-400 bg-white min-h-[60px] sticky top-0 z-50">
         <div className="w-20 min-w-[80px] border-r border-gray-400 p-2 flex items-center justify-center gap-1 z-10">
 
           <button
@@ -213,7 +213,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+      <div className="flex-1 relative">
         <div className="flex min-h-[720px]">
           <div className="w-20 min-w-20 bg-white border-r border-gray-300 shrink-0 select-none">
             {TIME_SLOTS.map((time) => (
