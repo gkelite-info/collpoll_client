@@ -9,11 +9,13 @@ import { getStatusBadge } from "./statusBadge";
 import TimeInput from "./TimeInput";
 import {
   AttendanceStaffRow,
-  buildTimeString,
   formatMinutes,
+  buildTimeString,
+} from "@/lib/helpers/Hr/attendance/staffAttendanceTypes";
+import {
   saveAttendance,
   saveStatusOnly,
-} from "@/lib/helpers/Hr/attendance/Getattendancestaff";
+} from "@/lib/helpers/Hr/attendance/staffAttendanceWriteAPI";
 
 type Props = {
   isEditMode: boolean;

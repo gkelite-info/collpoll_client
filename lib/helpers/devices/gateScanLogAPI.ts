@@ -43,9 +43,10 @@ export interface GateScanRow {
 }
 
 
-const SHIFT_START = "09:00";
-const SHIFT_END = "17:00";
-const LATE_THRESHOLD_MIN = 15; // Grace period
+import { getShiftTimings, calculateEffectiveShiftMinutes, parseTimeToMins as helperParseTime } from "./shiftTimingsHelper";
+import { getStaffPolicy } from "../Hr/attendance/staffPolicyAPI";
+
+// Removed hardcoded SHIFT_START, SHIFT_END, LATE_THRESHOLD_MIN
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
@@ -261,24 +262,79 @@ async function processStaffAttendance(
     }
   }
 
+  // Edge Case: Open segment (Entry without Exit yet — staff is still inside campus)
+  // Close the open segment with the latest scan time for realtime accuracy.
+  // The EOD cron will finalize with the actual closing time.
+  if (inTimeStr) {
+    const latestScanTime = scans[scans.length - 1]?.scanTime;
+    if (latestScanTime) {
+      let nowTimeStr = "00:00";
+      try {
+        nowTimeStr = new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Asia/Kolkata",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(new Date(payload.scanTime));
+      } catch {
+        const match = latestScanTime.match(/T(\d{2}:\d{2})/);
+        if (match) nowTimeStr = match[1];
+      }
+      totalMinutes += minutesBetween(inTimeStr, nowTimeStr);
+    }
+    // Do NOT set inTimeStr = null — we want the system to know the segment is still open
+  }
+
+  // Fetch dynamic policy and timings
+  const policyRes = await getStaffPolicy(payload.collegeId);
+  const policy = policyRes?.success && policyRes.data ? policyRes.data : {
+    graceMinutes: 15,
+    halfDayMinPercent: 50,
+    fullDayMinPercent: 75,
+    earlyOutThresholdMin: 30
+  };
+
+  const timing = await getShiftTimings(payload.collegeId, payload.scanDate);
+  const shiftStartStr = timing?.isOpen && timing.openAt ? timing.openAt : "09:00";
+  const shiftEndStr = timing?.isOpen && timing.closeAt ? timing.closeAt : "17:00";
+  
+  const effectiveShiftMins = timing?.isOpen 
+    ? calculateEffectiveShiftMinutes(timing) 
+    : minutesBetween("09:00", "17:00");
+
   let lateBy = 0;
   let earlyOut = 0;
   let status = "Present";
 
-  if (firstCheckInStr) {
-    lateBy = Math.max(0, timeToMinutes(firstCheckInStr) - timeToMinutes(SHIFT_START) - LATE_THRESHOLD_MIN);
-    if (lateBy > 0) status = "Late";
-  }
+  if (timing && !timing.isOpen) {
+    // Edge Case: SaaS Standard for Weekend/Holiday Scans
+    // If the college is closed but they scanned in, mark them as Present on a closed day.
+    // No late, early out, or threshold deductions apply.
+    status = "Present (Weekly Off/Holiday)";
+  } else {
+    // Standard Working Day Calculations
+    if (firstCheckInStr) {
+      lateBy = Math.max(0, timeToMinutes(firstCheckInStr) - timeToMinutes(shiftStartStr) - policy.graceMinutes);
+      if (lateBy > 0) status = "Late";
+    }
 
-  if (lastCheckOutStr) {
-    earlyOut = Math.max(0, timeToMinutes(SHIFT_END) - timeToMinutes(lastCheckOutStr));
-  }
+    if (lastCheckOutStr) {
+      // Allow them to leave exactly on the dot without triggering early out.
+      earlyOut = Math.max(0, timeToMinutes(shiftEndStr) - timeToMinutes(lastCheckOutStr));
+      // Only penalize if they left BEFORE the early out threshold.
+      // E.g., if threshold is 30 mins, and they left 31 mins early. But usually, any minute early is "earlyOut", and the policy defines the penalty in payroll.
+    }
 
-  const shiftDuration = minutesBetween(SHIFT_START, SHIFT_END);
-  if (totalMinutes > 0 && totalMinutes < shiftDuration / 2) {
-    status = "HalfDay";
-  } else if (totalMinutes === 0 && !firstCheckInStr) {
-    status = "Absent";
+    if (totalMinutes > 0 && effectiveShiftMins > 0) {
+      const workedPercent = (totalMinutes / effectiveShiftMins) * 100;
+      if (workedPercent < policy.halfDayMinPercent) {
+        status = "Absent"; // Less than half day minimum
+      } else if (workedPercent >= policy.halfDayMinPercent && workedPercent < policy.fullDayMinPercent) {
+        status = "HalfDay";
+      }
+    } else if (totalMinutes === 0 && !firstCheckInStr) {
+      status = "Absent";
+    }
   }
 
   const { data: existing } = await adminSupabase
