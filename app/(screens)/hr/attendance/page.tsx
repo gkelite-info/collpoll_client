@@ -13,13 +13,16 @@ import AttendanceStatCards from "./components/AttendanceStatCards";
 import AttendanceToolbar from "./components/AttendanceToolbar";
 
 import AttendanceTable from "./components/AttendanceTable";
+import PolicyTab from "./components/PolicyTab";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import {
-  AttendanceStaffRow,
   getAttendanceStaff,
   getAttendanceStaffStats,
+} from "@/lib/helpers/Hr/attendance/staffAttendanceReadAPI";
+import {
+  AttendanceStaffRow,
   AttendanceStatsResult,
-} from "@/lib/helpers/Hr/attendance/Getattendancestaff";
+} from "@/lib/helpers/Hr/attendance/staffAttendanceTypes";
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import AttendanceFilters from "./components/AttendanceFilteres";
 import { useHrAttendanceRealtime } from "@/lib/helpers/Hr/attendance/liveHrAttendanceAPI";
@@ -140,6 +143,21 @@ function FacultyAttendanceDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [staffList, setStaffList] = useState<AttendanceStaffRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+
+  const urlView = (searchParams.get("view") === "policy") ? "policy" : "overview";
+  const [mainView, setMainView] = useState<"overview" | "policy">(urlView);
+
+  // Sync state to URL and vice-versa
+  useEffect(() => {
+    setMainView(searchParams.get("view") === "policy" ? "policy" : "overview");
+  }, [searchParams]);
+
+  const handleSetMainView = (view: "overview" | "policy") => {
+    setMainView(view);
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.set("view", view);
+    router.push(`${pathname}?${newParams.toString()}`, { scroll: false });
+  };
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -517,11 +535,46 @@ function FacultyAttendanceDashboard() {
       <Toaster position="top-right" />
       <div className="flex justify-between items-start mb-6">
         <div className="flex flex-col justify-start">
-          <h1 className="text-xl font-bold text-[#282828] whitespace-nowrap">
-            Attendance Management
-          </h1>
-          <p className="text-sm text-[#282828] mt-1">
-            Stay organized and on track with your personalized calendar
+          <div className="flex items-center gap-6">
+            <h1 className="text-xl font-bold text-[#282828] whitespace-nowrap min-w-[280px]">
+              {mainView === "overview" ? "Attendance Management" : "Attendance Policy Settings"}
+            </h1>
+            <div className="flex bg-gray-200 p-1 rounded-xl shadow-inner gap-1">
+              <button
+                onClick={() => handleSetMainView("overview")}
+                className={`relative px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-300 cursor-pointer overflow-hidden flex items-center gap-2 ${
+                  mainView === "overview"
+                    ? "text-white shadow-md transform scale-[1.02]"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-300/50"
+                }`}
+              >
+                {mainView === "overview" && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#6C20CA] to-[#8C3BEA] -z-10 rounded-lg"></div>
+                )}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <span className="z-10">Overview</span>
+              </button>
+              
+              <button
+                onClick={() => handleSetMainView("policy")}
+                className={`relative px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-300 cursor-pointer overflow-hidden flex items-center gap-2 ${
+                  mainView === "policy"
+                    ? "text-white shadow-md transform scale-[1.02]"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-300/50"
+                }`}
+              >
+                {mainView === "policy" && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#6C20CA] to-[#8C3BEA] -z-10 rounded-lg"></div>
+                )}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span className="z-10">Policy Settings</span>
+              </button>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500 mt-1">
+            {mainView === "overview"
+              ? "Stay organized and on track with staff attendance insights"
+              : "Configure dynamic attendance rules, grace periods, and thresholds"}
           </p>
         </div>
         <div className="w-[320px] shrink-0">
@@ -531,74 +584,80 @@ function FacultyAttendanceDashboard() {
 
       <div className="w-full flex gap-5">
         <div className="w-[68%] flex flex-col gap-6">
-          <AttendanceStatCards
-            activeTab={activeTab} // Uses localTab for immediate visual updates
-            totalCount={stats.total}
-            presentCount={stats.present}
-            absentCount={stats.absent}
-            lateCount={stats.late}
-            leaveCount={stats.leave}
-            isLoading={isInitialLoad}
-            onTabChange={handleTabChange}
-          />
-
-          <div className="flex flex-col flex-1 w-full min-w-0 overflow-hidden">
-            <AttendanceToolbar
-              isEditMode={isEditMode}
-              selectedRows={selectedRows}
-              onToggleEdit={handleToggleEdit}
-              onMarkStatus={(status) => {
-                const visibleList = activeRole
-                  ? staffList.filter((s) => s.role === activeRole)
-                  : staffList;
-                handleMarkStatus(status, visibleList);
-              }}
-              onDateFilter={handleDateFilter}
-            />
-
-            <AttendanceFilters
-              activeRole={activeRole}
-              searchQuery={searchQuery}
-              onRoleChange={setActiveRole}
-              onSearchChange={setSearchQuery}
-            />
-
-            <AttendanceTable
-              isEditMode={isEditMode}
-              isFetching={isFetching || isTabSwitching}
-              activeRole={activeRole}
-              staffList={staffList}
-              fullStaffList={staffList}
-              selectedRows={selectedRows}
-              selectAll={selectAll}
-              collegeHrId={collegeHrId ?? 0}
-              markedUserIds={markedUserIds}
-              filterDate={filterDate}
-              onSelectAll={handleSelectAll}
-              onSelectRow={handleSelectRow}
-              onSave={handleSave}
-              onCancel={handleCancel}
-              onRefresh={() => {
-                fetchStats(searchQuery, filterDateRef.current, activeRole);
-                fetchStaffSilent(
-                  searchQuery,
-                  filterDateRef.current,
-                  activeRole,
-                  currentPage,
-                  localTab,
-                );
-              }}
-            />
-            <div className={`${isEditMode ? "mt-1" : "-mt-4"} mb-3`}>
-              <Pagination
-                currentPage={currentPage}
-                totalItems={totalCount}
-                itemsPerPage={itemsPerPage}
-                onPageChange={handlePageChange}
-                roundedBottom="rounded-b-xl border-x border-b border-gray-100"
+          {mainView === "policy" ? (
+            <PolicyTab />
+          ) : (
+            <>
+              <AttendanceStatCards
+                activeTab={activeTab} // Uses localTab for immediate visual updates
+                totalCount={stats.total}
+                presentCount={stats.present}
+                absentCount={stats.absent}
+                lateCount={stats.late}
+                leaveCount={stats.leave}
+                isLoading={isInitialLoad}
+                onTabChange={handleTabChange}
               />
-            </div>
-          </div>
+
+              <div className="flex flex-col flex-1 w-full min-w-0 overflow-hidden">
+                <AttendanceToolbar
+                  isEditMode={isEditMode}
+                  selectedRows={selectedRows}
+                  onToggleEdit={handleToggleEdit}
+                  onMarkStatus={(status) => {
+                    const visibleList = activeRole
+                      ? staffList.filter((s) => s.role === activeRole)
+                      : staffList;
+                    handleMarkStatus(status, visibleList);
+                  }}
+                  onDateFilter={handleDateFilter}
+                />
+
+                <AttendanceFilters
+                  activeRole={activeRole}
+                  searchQuery={searchQuery}
+                  onRoleChange={setActiveRole}
+                  onSearchChange={setSearchQuery}
+                />
+
+                <AttendanceTable
+                  isEditMode={isEditMode}
+                  isFetching={isFetching || isTabSwitching}
+                  activeRole={activeRole}
+                  staffList={staffList}
+                  fullStaffList={staffList}
+                  selectedRows={selectedRows}
+                  selectAll={selectAll}
+                  collegeHrId={collegeHrId ?? 0}
+                  markedUserIds={markedUserIds}
+                  filterDate={filterDate}
+                  onSelectAll={handleSelectAll}
+                  onSelectRow={handleSelectRow}
+                  onSave={handleSave}
+                  onCancel={handleCancel}
+                  onRefresh={() => {
+                    fetchStats(searchQuery, filterDateRef.current, activeRole);
+                    fetchStaffSilent(
+                      searchQuery,
+                      filterDateRef.current,
+                      activeRole,
+                      currentPage,
+                      localTab,
+                    );
+                  }}
+                />
+                <div className={`${isEditMode ? "mt-1" : "-mt-4"} mb-3`}>
+                  <Pagination
+                    currentPage={currentPage}
+                    totalItems={totalCount}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={handlePageChange}
+                    roundedBottom="rounded-b-xl border-x border-b border-gray-100"
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="w-[32%] flex flex-col -gap-1 -mt-5 pb-4">

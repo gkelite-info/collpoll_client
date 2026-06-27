@@ -63,8 +63,9 @@ async function findActiveClassSessions(
   const scanMin = timeToMin(scanTime);
 
   const validSessions = sessions.filter((s: any) => {
-    const from = timeToMin(s.fromTime);
-    const to = timeToMin(s.toTime);
+    const buffer = s.bufferMinutes || 0;
+    const from = timeToMin(s.fromTime) - buffer;
+    const to = timeToMin(s.toTime) + buffer;
     
     return scanMin >= from && scanMin <= to;
   });
@@ -128,7 +129,7 @@ export async function processClassroomAttendance(params: {
       .maybeSingle();
 
     if (userErr) throw new Error(userErr.message);
-    if (!userData || userData.role !== "Student") {
+    if (!userData || (userData.role || "").toLowerCase() !== "student") {
       return {
         success: false,
         rejectionReason: "StaffNotEligible",
@@ -292,8 +293,7 @@ export async function processClassroomAttendance(params: {
           event: "new_attendance",
           payload,
         });
-    } catch (broadcastErr) {
-    }
+    } catch (broadcastErr) {}
 
     return {
       success: true,
