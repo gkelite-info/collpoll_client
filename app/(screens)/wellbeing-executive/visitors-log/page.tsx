@@ -1,12 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
+import {
+  deleteSportsRoomLog,
+  fetchSportsRoomLogsPage,
+  fetchSportsRoomLogSummary,
+  mapSportsRoomLogToVisitorEntry,
+} from "@/lib/helpers/visitors/sportsRoomLogsAPI";
 import { CampusVisitorsLogDashboard, EquipmentUsageHistory, SafetyVisitorsLogDashboard, VisitorsLogDashboard } from "./components";
 import { NewVisitorEntryModal } from "./modals";
 import type { VisitorEntry } from "./types";
-import { visitorEntries } from "./visitor-data";
 
 const isSportsCategory = (categoryName: string | null | undefined) =>
   categoryName?.toLowerCase().replace(/[^a-z]/g, "") === "sports";
@@ -21,10 +27,23 @@ const isAdministrationCategory = (categoryName: string | null | undefined) => {
   return category === "administration" || category === "admin";
 };
 
+const SPORTS_LOGS_PAGE_SIZE = 10;
+
 export default function VisitorsLogPage() {
   const { loading, userId, collegeId, wellBeingCategoryId, wellBeingCategoryIds, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
-  const [entries, setEntries] = useState(visitorEntries);
+  const [entries, setEntries] = useState<VisitorEntry[]>([]);
+  const [sportsSummary, setSportsSummary] = useState({
+    visitorsLog: 0,
+    equipmentIssued: 0,
+    returnedEquipment: 0,
+    pendingReturns: 0,
+  });
+  const [isSportsLoading, setIsSportsLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [sportsPage, setSportsPage] = useState(1);
+  const [sportsTotalCount, setSportsTotalCount] = useState(0);
+  const [sportsEntryDate, setSportsEntryDate] = useState("");
+  const [sportsReturnStatus, setSportsReturnStatus] = useState<"all" | "pending" | "returned">("all");
   const [newEntryOpen, setNewEntryOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<VisitorEntry | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<VisitorEntry | null>(null);
@@ -52,15 +71,58 @@ export default function VisitorsLogPage() {
   const isAdministration = categories.some(isAdministrationCategory);
   const canViewVisitorsLog = isSports || isSafety || isAdministration;
 
-  const filteredEntries = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return entries;
-    return entries.filter(
-      (entry) =>
-        entry.student.toLowerCase().includes(query) ||
-        entry.rollNo.toLowerCase().includes(query),
-    );
-  }, [entries, search]);
+  const loadSportsEntries = useCallback(async () => {
+    if (!collegeId || !isSports) return;
+
+    try {
+      setIsSportsLoading(true);
+      const [logsResult, summary] = await Promise.all([
+        fetchSportsRoomLogsPage({
+          collegeId,
+          page: sportsPage,
+          limit: SPORTS_LOGS_PAGE_SIZE,
+          search,
+          entryDate: sportsEntryDate || undefined,
+          returnStatus: sportsReturnStatus,
+        }),
+        fetchSportsRoomLogSummary(collegeId),
+      ]);
+      setSportsTotalCount(logsResult.count);
+      setSportsSummary(summary);
+      const totalPages = Math.max(1, Math.ceil(logsResult.count / SPORTS_LOGS_PAGE_SIZE));
+      if (sportsPage > totalPages) {
+        setSportsPage(totalPages);
+        return;
+      }
+
+      setEntries(logsResult.data.map(mapSportsRoomLogToVisitorEntry));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to load sports room visitors log.");
+    } finally {
+      setIsSportsLoading(false);
+    }
+  }, [collegeId, isSports, search, sportsEntryDate, sportsPage, sportsReturnStatus]);
+
+  useEffect(() => {
+    if (!loading) {
+      void loadSportsEntries();
+    }
+  }, [loading, loadSportsEntries]);
+
+  const handleSportsSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setSportsPage(1);
+  }, []);
+
+  const handleSportsEntryDateChange = useCallback((value: string) => {
+    setSportsEntryDate(value);
+    setSportsPage(1);
+  }, []);
+
+  const handleSportsReturnStatusChange = useCallback((value: "all" | "pending" | "returned") => {
+    setSportsReturnStatus(value);
+    setSportsPage(1);
+  }, []);
 
   if (loading) {
     return <main className="min-h-screen bg-[#F4F4F4] p-2" />;
@@ -89,9 +151,19 @@ export default function VisitorsLogPage() {
         <EquipmentUsageHistory visitor={selectedVisitor} onBack={() => setSelectedVisitor(null)} />
       ) : (
         <VisitorsLogDashboard
-          entries={filteredEntries}
+          entries={entries}
           search={search}
-          onSearchChange={setSearch}
+          entryDate={sportsEntryDate}
+          returnStatus={sportsReturnStatus}
+          currentPage={sportsPage}
+          itemsPerPage={SPORTS_LOGS_PAGE_SIZE}
+          isLoading={isSportsLoading}
+          totalCount={sportsTotalCount}
+          summary={sportsSummary}
+          onSearchChange={handleSportsSearchChange}
+          onEntryDateChange={handleSportsEntryDateChange}
+          onReturnStatusChange={handleSportsReturnStatusChange}
+          onPageChange={setSportsPage}
           onNewEntry={() => setNewEntryOpen(true)}
           onView={setSelectedVisitor}
           onEdit={setEditEntry}
@@ -103,14 +175,23 @@ export default function VisitorsLogPage() {
         <NewVisitorEntryModal
           inventoryContext={sportsInventoryContext}
           onClose={() => setNewEntryOpen(false)}
-          onSave={() => setNewEntryOpen(false)}
+          onSave={(savedEntry) => {
+            setEntries((current) => [savedEntry, ...current.filter((entry) => entry.id !== savedEntry.id)]);
+            setNewEntryOpen(false);
+            void loadSportsEntries();
+          }}
         />
       ) : null}
       {isSports && editEntry ? (
         <NewVisitorEntryModal
           inventoryContext={sportsInventoryContext}
+          initialEntry={editEntry}
           onClose={() => setEditEntry(null)}
-          onSave={() => setEditEntry(null)}
+          onSave={(savedEntry) => {
+            setEntries((current) => current.map((entry) => entry.id === savedEntry.id ? savedEntry : entry));
+            setEditEntry(null);
+            void loadSportsEntries();
+          }}
         />
       ) : null}
       {isSports ? (
@@ -122,8 +203,24 @@ export default function VisitorsLogPage() {
           onCancel={() => setDeleteEntry(null)}
           onConfirm={() => {
             if (!deleteEntry) return;
-            setEntries((current) => current.filter((entry) => entry.id !== deleteEntry.id));
-            setDeleteEntry(null);
+            const activeCollegeId = deleteEntry.collegeId ?? collegeId;
+            if (!activeCollegeId) {
+              toast.error("College context is missing.");
+              return;
+            }
+            deleteSportsRoomLog({
+              sportsRoomLogId: deleteEntry.sportsRoomLogId ?? deleteEntry.id,
+              collegeId: activeCollegeId,
+            })
+              .then(() => {
+                setEntries((current) => current.filter((entry) => entry.id !== deleteEntry.id));
+                setDeleteEntry(null);
+                void loadSportsEntries();
+                toast.success("Entry deleted.");
+              })
+              .catch((error) => {
+                toast.error(error instanceof Error ? error.message : "Failed to delete entry.");
+              });
           }}
           customDescription={deleteEntry ? (
             <>
