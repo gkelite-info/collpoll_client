@@ -11,36 +11,78 @@ import {
   Trash,
   UsersThree,
 } from "@phosphor-icons/react";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import type { VisitorEntry } from "../types";
 import { DataTable, type DataTableColumn } from "./DataTable";
 import { SummaryCard } from "./SummaryCard";
 
+type VisitorsLogSummary = {
+  visitorsLog: number;
+  equipmentIssued: number;
+  returnedEquipment: number;
+  pendingReturns: number;
+};
+
 type VisitorsLogDashboardProps = {
   entries: VisitorEntry[];
   search: string;
+  entryDate: string;
+  returnStatus: "all" | "pending" | "returned";
+  currentPage: number;
+  itemsPerPage: number;
+  isLoading?: boolean;
+  totalCount?: number;
+  summary?: VisitorsLogSummary;
   onSearchChange: (value: string) => void;
+  onEntryDateChange: (value: string) => void;
+  onReturnStatusChange: (value: "all" | "pending" | "returned") => void;
+  onPageChange: (page: number) => void;
   onNewEntry: () => void;
   onView: (entry: VisitorEntry) => void;
   onEdit: (entry: VisitorEntry) => void;
   onDelete: (entry: VisitorEntry) => void;
 };
 
-const summaryCards = [
-  { label: "Visitors log", value: 142, tone: "bg-[#DDFBE7] text-[#22B86B]", icon: UsersThree },
-  { label: "Equipment Issued", value: 98, tone: "bg-[#DDEBFF] text-[#3292F4]", icon: Cube },
-  { label: "Returned equipment", value: 18, tone: "bg-[#FFEACD] text-[#FF9E3D]", icon: Cube },
-  { label: "Pending Returns", value: 26, tone: "bg-[#FFE0E0] text-[#FF2530]", icon: Cube },
-];
+const defaultSummary: VisitorsLogSummary = {
+  visitorsLog: 0,
+  equipmentIssued: 0,
+  returnedEquipment: 0,
+  pendingReturns: 0,
+};
 
-export function VisitorsLogDashboard({ entries, search, onSearchChange, onNewEntry, onView, onEdit, onDelete }: VisitorsLogDashboardProps) {
+export function VisitorsLogDashboard({
+  entries,
+  search,
+  entryDate,
+  returnStatus,
+  currentPage,
+  itemsPerPage,
+  isLoading = false,
+  totalCount = entries.length,
+  summary = defaultSummary,
+  onSearchChange,
+  onEntryDateChange,
+  onReturnStatusChange,
+  onPageChange,
+  onNewEntry,
+  onView,
+  onEdit,
+  onDelete,
+}: VisitorsLogDashboardProps) {
   const columns: DataTableColumn[] = [
     { key: "student", label: "Student" },
     { key: "rollNo", label: "Roll No." },
-    { key: "takenAt", label: "Taken At" },
     { key: "equipment", label: "Equipment" },
     { key: "returnStatus", label: "Return Status" },
     { key: "returnedAt", label: "Returned At" },
     { key: "actions", label: "Actions", align: "center" },
+  ];
+
+  const summaryCards = [
+    { label: "Visitors log", value: summary.visitorsLog, tone: "bg-[#DDFBE7] text-[#22B86B]", icon: UsersThree },
+    { label: "Equipment Issued", value: summary.equipmentIssued, tone: "bg-[#DDEBFF] text-[#3292F4]", icon: Cube },
+    { label: "Returned equipment", value: summary.returnedEquipment, tone: "bg-[#FFEACD] text-[#FF9E3D]", icon: Cube },
+    { label: "Pending Returns", value: summary.pendingReturns, tone: "bg-[#FFE0E0] text-[#FF2530]", icon: Cube },
   ];
 
   const rows = entries.map((entry) => ({
@@ -51,17 +93,28 @@ export function VisitorsLogDashboard({ entries, search, onSearchChange, onNewEnt
       </div>
     ),
     rollNo: <span className="font-semibold">{entry.rollNo}</span>,
-    takenAt: <span className="font-semibold">{entry.takenAt}</span>,
     equipment: (
       <div className="flex items-center gap-3">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#EEF3F8] text-[#16284F]"><Cube size={16} weight="fill" /></span>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#EEF3F8] text-[#16284F]">
+          {entry.equipmentImageUrl ? (
+            <span
+              aria-label={entry.equipment}
+              className="h-full w-full bg-cover bg-center"
+              style={{ backgroundImage: `url("${entry.equipmentImageUrl}")` }}
+            />
+          ) : (
+            <Cube size={16} weight="fill" />
+          )}
+        </span>
         <div><p className="font-extrabold text-[#16284F]">{entry.equipment}</p><p className="text-xs text-[#94A3B8]">({entry.quantity})</p></div>
       </div>
     ),
     returnStatus: (
-      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-extrabold ${entry.returnStatus === "Returned" ? "bg-[#E7FAEE] text-[#16A85B]" : "bg-[#FFF1DE] text-[#F97316]"}`}>
-        {entry.returnStatus === "Returned" ? "✓" : "◷"}&nbsp; {entry.returnStatus}
-      </span>
+      <div className="max-w-[170px] overflow-x-auto">
+        <span className={`inline-flex whitespace-nowrap rounded-full px-4 py-2 text-xs font-extrabold ${entry.returnStatus === "Returned" ? "bg-[#E7FAEE] text-[#16A85B]" : "bg-[#FFF1DE] text-[#F97316]"}`}>
+          {entry.returnStatus}
+        </span>
+      </div>
     ),
     returnedAt: <span className="font-semibold">{entry.returnedAt}</span>,
     actions: (
@@ -92,7 +145,7 @@ export function VisitorsLogDashboard({ entries, search, onSearchChange, onNewEnt
       </div>
 
       <div className="mt-7 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        {summaryCards.map((card) => <SummaryCard key={card.label} {...card} />)}
+        {summaryCards.map((card) => <SummaryCard key={card.label} {...card} isLoading={isLoading && !entries.length} />)}
       </div>
 
       <div className="mt-7 overflow-hidden rounded-xl border border-[#DFE7F0] bg-white shadow-sm">
@@ -102,16 +155,39 @@ export function VisitorsLogDashboard({ entries, search, onSearchChange, onNewEnt
             <input value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder="Search student or roll no..." className="h-10 w-full rounded-md border border-[#DCE5EF] pl-4 pr-10 text-sm text-[#334155] outline-none focus:border-[#43C17A]" />
             <MagnifyingGlass size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
           </label>
-          <button className="inline-flex h-10 min-w-[190px] items-center gap-3 rounded-md border border-[#DCE5EF] px-4 text-sm font-semibold text-[#334155]"><CalendarBlank size={16} />15 May 2025<span className="ml-auto text-[#94A3B8]">⌄</span></button>
-          <button className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#DCE5EF] px-4 text-sm font-semibold text-[#475569]"><FunnelSimple size={16} />Filter</button>
+          <label className="relative inline-flex h-10 w-full items-center rounded-md border border-[#DCE5EF] px-4 text-sm font-semibold text-[#334155] focus-within:border-[#43C17A] lg:max-w-[190px]">
+            <CalendarBlank size={16} className="mr-3 shrink-0" />
+            <input
+              type="date"
+              value={entryDate}
+              onChange={(event) => onEntryDateChange(event.target.value)}
+              className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#334155] outline-none"
+            />
+          </label>
+          <label className="relative inline-flex h-10 w-full items-center rounded-md border border-[#DCE5EF] px-4 text-sm font-semibold text-[#475569] focus-within:border-[#43C17A] lg:max-w-[170px]">
+            <FunnelSimple size={16} className="mr-3 shrink-0" />
+            <select
+              value={returnStatus}
+              onChange={(event) => onReturnStatusChange(event.target.value as "all" | "pending" | "returned")}
+              className="min-w-0 flex-1 cursor-pointer appearance-none bg-transparent pr-5 text-sm font-semibold text-[#475569] outline-none"
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="returned">Received</option>
+            </select>
+            <span className="pointer-events-none absolute right-4 text-[#94A3B8]">v</span>
+          </label>
         </div>
 
-        <DataTable columns={columns} rows={rows} minWidth="980px" />
+        <DataTable columns={columns} rows={rows} minWidth="980px" isLoading={isLoading} emptyMessage="No Visitors Found" emptyDescription="Sports room entries will appear here once added." />
 
-        <div className="flex flex-col gap-3 p-5 text-xs font-medium text-[#64748B] sm:flex-row sm:items-center sm:justify-between">
-          <span>Showing 1 to {entries.length} of 18 entries</span>
-          <div className="flex items-center gap-2"><button className="flex h-8 w-8 items-center justify-center rounded bg-[#149447] font-bold text-white">1</button>{[2, 3].map((page) => <button key={page} className="flex h-8 w-8 items-center justify-center rounded border border-[#E2E8F0]">{page}</button>)}<span>...</span><button className="flex h-8 w-8 items-center justify-center rounded border border-[#E2E8F0]">4</button><button className="flex h-8 w-8 items-center justify-center rounded border border-[#E2E8F0]">›</button></div>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalCount}
+          itemsPerPage={itemsPerPage}
+          onPageChange={onPageChange}
+          roundedBottom="rounded-b-xl"
+        />
       </div>
     </section>
   );
