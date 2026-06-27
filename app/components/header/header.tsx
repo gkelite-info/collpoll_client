@@ -73,6 +73,8 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
     placementEmployeeId,
     wellBeingId,
     identifierId,
+    wellBeingCategoryName,
+    wellBeingCategoryNames,
     loading,
   } = useUser();
   const { facultyId: activeFacultyId } = useFaculty();
@@ -123,6 +125,13 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
   };
   const displayRole = role ? displayRoleMap[role] ?? role : "";
   const displayId = identifierId || (role ? roleIdMap[role] : null) || userId;
+  const wellbeingCategoryDisplay = Array.from(
+    new Map(
+      [wellBeingCategoryName, ...wellBeingCategoryNames]
+        .filter((category): category is string => Boolean(category?.trim()))
+        .map((category) => [category.trim().toLowerCase(), category.trim()]),
+    ).values(),
+  ).join(", ");
 
   // const filteredSuggestions = useMemo(() => {
   //   if (!searchValue.trim()) return [];
@@ -826,13 +835,23 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
               </div>
 
               <div className="w-[75%] flex flex-col justify-center px-2 gap-[2px] text-[#282828] font-semibold min-w-0">
-                <div className="flex items-center justify-between w-full">
-                  <p
-                    className="text-sm text-[#ffffff] truncate leading-none"
-                    title={fullName || ""}
-                  >
-                    {fullName}
-                  </p>
+                <div className="flex items-center justify-between w-full gap-2">
+                  <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-2 overflow-x-auto whitespace-nowrap">
+                    <p
+                      className="shrink-0 text-sm text-[#ffffff] leading-none"
+                      title={fullName || ""}
+                    >
+                      {fullName}
+                    </p>
+                    {(role === "WellbeingExecutive" || role === "WellbeingManager") && wellbeingCategoryDisplay ? (
+                      <span
+                        className="shrink-0 rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold leading-none text-white"
+                        title={wellbeingCategoryDisplay}
+                      >
+                        {wellbeingCategoryDisplay}
+                      </span>
+                    ) : null}
+                  </div>
                   <CaretDown
                     size={20}
                     weight="bold"

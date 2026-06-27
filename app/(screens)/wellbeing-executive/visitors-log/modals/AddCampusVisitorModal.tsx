@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { CalendarBlank, UserPlus, X } from "@phosphor-icons/react";
+import { CalendarBlank, CircleNotch, UserPlus, X } from "@phosphor-icons/react";
+import toast from "react-hot-toast";
 
 export type VisitorCategory = "Parent" | "Guest" | "Other";
 
@@ -20,10 +21,12 @@ export function AddCampusVisitorModal({
   onClose,
   onSave,
   initialVisitor,
+  isSaving = false,
 }: {
   onClose: () => void;
   onSave: (visitor: NewCampusVisitor) => void;
   initialVisitor?: NewCampusVisitor;
+  isSaving?: boolean;
 }) {
   const now = new Date();
   const [form, setForm] = useState<NewCampusVisitor>({
@@ -47,13 +50,63 @@ export function AddCampusVisitorModal({
 
   const fieldClass =
     "mt-2 h-10 w-full rounded-md border border-[#D7DFEC] bg-white px-3 text-sm text-[#16284F] outline-none placeholder:text-[#94A3B8] focus:border-[#43C17A]";
+  const purposeFieldClass =
+    `${fieldClass} overflow-x-auto whitespace-nowrap no-scrollbar`;
   const labelClass = "block text-[11px] font-bold uppercase text-[#475569]";
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!form.name.trim() || !form.mobile.trim() || !form.purpose) return;
-    onSave({ ...form, name: form.name.trim(), mobile: form.mobile.trim() });
+    const mobile = form.mobile.trim();
+    if (!form.name.trim()) {
+      toast.error("Please enter the visitor name.");
+      return;
+    }
+    if (!mobile) {
+      toast.error("Please enter the mobile number.");
+      return;
+    }
+    if (!/^\d{10}$/.test(mobile)) {
+      toast.error("Mobile number must be exactly 10 digits.");
+      return;
+    }
+    if (!form.category) {
+      toast.error("Please select a visitor category.");
+      return;
+    }
+    if (!form.purpose.trim()) {
+      toast.error("Please enter the purpose of visit.");
+      return;
+    }
+    if (!form.numberOfVisitors || form.numberOfVisitors < 1) {
+      toast.error("Please select the number of visitors.");
+      return;
+    }
+    if (!form.date.trim()) {
+      toast.error("Please select the visit date.");
+      return;
+    }
+    if (!form.entryTime.trim()) {
+      toast.error("Please enter the entry time.");
+      return;
+    }
+    onSave({
+      ...form,
+      name: form.name.trim(),
+      mobile,
+      purpose: form.purpose.trim(),
+      exitTime: form.exitTime.trim(),
+    });
   };
+
+  const isFormInvalid =
+    !form.name.trim() ||
+    !/^\d{10}$/.test(form.mobile.trim()) ||
+    !form.category ||
+    !form.purpose.trim() ||
+    !form.numberOfVisitors ||
+    form.numberOfVisitors < 1 ||
+    !form.date.trim() ||
+    !form.entryTime.trim();
 
   return (
     <div
@@ -75,8 +128,9 @@ export function AddCampusVisitorModal({
           <button
             type="button"
             onClick={onClose}
+            disabled={isSaving}
             title="Close"
-            className="cursor-pointer text-[#94A3B8] hover:text-[#EF4444]"
+            className="cursor-pointer text-[#94A3B8] hover:text-[#EF4444] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <X size={18} weight="bold" />
           </button>
@@ -102,7 +156,12 @@ export function AddCampusVisitorModal({
               required
               type="tel"
               value={form.mobile}
-              onChange={(event) => setForm({ ...form, mobile: event.target.value })}
+              inputMode="numeric"
+              maxLength={10}
+              pattern="[0-9]{10}"
+              onChange={(event) =>
+                setForm({ ...form, mobile: event.target.value.replace(/\D/g, "").slice(0, 10) })
+              }
               placeholder="Enter mobile number"
               className={fieldClass}
             />
@@ -138,7 +197,7 @@ export function AddCampusVisitorModal({
                 value={form.purpose}
                 onChange={(event) => setForm({ ...form, purpose: event.target.value })}
                 placeholder="Enter purpose"
-                className={fieldClass}
+                className={purposeFieldClass}
               />
             </label>
 
@@ -159,7 +218,7 @@ export function AddCampusVisitorModal({
           </div>
 
           <div>
-            <span className={labelClass}>Date</span>
+            <span className={labelClass}>Date <span className="text-red-500">*</span></span>
             <div className="mt-2 flex h-10 items-center gap-2 rounded-md border border-[#D7DFEC] bg-[#F8FAFC] px-3 text-sm text-[#475569]">
               <CalendarBlank size={16} className="text-[#94A3B8]" />
               {form.date}
@@ -168,8 +227,9 @@ export function AddCampusVisitorModal({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className={labelClass}>
-              Entry Time
+              Entry Time <span className="text-red-500">*</span>
               <input
+                required
                 value={form.entryTime}
                 onChange={(event) => setForm({ ...form, entryTime: event.target.value })}
                 placeholder="Enter entry time"
@@ -193,15 +253,22 @@ export function AddCampusVisitorModal({
           <button
             type="button"
             onClick={onClose}
-            className="h-10 cursor-pointer rounded-md border border-[#D7DFEC] text-sm font-bold text-[#334155] hover:bg-[#F8FAFC]"
+            disabled={isSaving}
+            className="h-10 cursor-pointer rounded-md border border-[#D7DFEC] text-sm font-bold text-[#334155] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="h-10 cursor-pointer rounded-md bg-[#169653] text-sm font-bold text-white hover:bg-[#117D45]"
+            disabled={isSaving || isFormInvalid}
+            className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md bg-[#169653] text-sm font-bold text-white hover:bg-[#117D45] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {initialVisitor ? "Update Visitor" : "Add Visitor"}
+            {isSaving ? (
+              <>
+                <CircleNotch size={16} className="animate-spin" />
+                Saving...
+              </>
+            ) : initialVisitor ? "Update Visitor" : "Add Visitor"}
           </button>
         </footer>
       </form>
