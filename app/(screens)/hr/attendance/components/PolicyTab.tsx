@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
+import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 import PolicyShimmer from "./PolicyShimmer";
 
 export default function PolicyTab() {
   const { collegeId, collegeHrId } = useCollegeHr();
+  const { userId: currentUserId } = useUser();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -24,7 +26,7 @@ export default function PolicyTab() {
     halfDayMaxPercent: "",
     fullDayMinPercent: "",
     earlyOutThresholdMin: "",
-    lopPerAbsentDay: true,
+    lopPerAbsentDay: false,
   });
 
   useEffect(() => {
@@ -85,7 +87,7 @@ export default function PolicyTab() {
       // Auto-compute halfDayMaxPercent = fullDayMinPercent (50%-75% range = HalfDay)
       const payload = {
         collegeId,
-        userId: collegeHrId,
+        userId: currentUserId,
         ...policy,
         halfDayMaxPercent: policy.fullDayMinPercent, // Always synced
       };

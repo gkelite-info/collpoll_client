@@ -19,6 +19,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(result);
     } catch (e: any) {
         console.error("Policy API error:", e);
-        return NextResponse.json({ success: false, error: e.message }, { status: 500 });
+        return NextResponse.json({ success: false, error: "Unable to process policy request. Please try again." }, { status: 500 });
     }
 }
