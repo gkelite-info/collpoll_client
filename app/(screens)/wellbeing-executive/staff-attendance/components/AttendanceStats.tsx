@@ -153,4 +153,9 @@ export const statusMeta: Record<
     dot: "bg-[#F59E0B]",
     className: "bg-[#FFF7E5] text-[#D97706]",
   },
+  not_marked: {
+    label: "Not Marked",
+    dot: "bg-[#94A3B8]",
+    className: "bg-[#EEF1F5] text-[#64748B]",
+  },
 };
