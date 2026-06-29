@@ -15,7 +15,8 @@ export interface ProcessResult {
   alreadyMarked?: boolean;
   attendanceRecordId?: number;
   deviceClassSessionId?: number;
-  calendarEventId?: number;
+  calendarEventId?: number | null;
+  bulkCalendarEventId?: number | null;
   rejectionReason?: ProcessRejectionReason;
   error?: string;
 }
@@ -42,15 +43,15 @@ async function findActiveClassSessions(
   scanTime: string,
 ): Promise<Array<{
   deviceClassSessionId: number;
-  calendarEventId: number;
+  calendarEventId: number | null;
+  bulkCalendarEventId: number | null;
   fromTime: string;
   toTime: string;
-  bufferMinutes: number;
 }>> {
   const { data: sessions, error } = await adminSupabase
     .from("device_class_sessions")
     .select(
-      "deviceClassSessionId, calendarEventId, fromTime, toTime, bufferMinutes",
+      "deviceClassSessionId, calendarEventId, bulkCalendarEventId, fromTime, toTime",
     )
     .eq("deviceId", deviceId)
     .eq("eventDate", scanDate)
@@ -63,10 +64,9 @@ async function findActiveClassSessions(
   const scanMin = timeToMin(scanTime);
 
   const validSessions = sessions.filter((s: any) => {
-    const buffer = s.bufferMinutes || 0;
-    const from = timeToMin(s.fromTime) - buffer;
-    const to = timeToMin(s.toTime) + buffer;
-    
+    // STRICT TIME WINDOW: No buffers. Only accept during actual class time.
+    const from = timeToMin(s.fromTime);
+    const to = timeToMin(s.toTime);
     return scanMin >= from && scanMin <= to;
   });
 
@@ -84,12 +84,17 @@ async function findActiveClassSessions(
 
 async function verifyStudentEnrollment(
   studentId: number,
-  calendarEventId: number,
+  calendarEventId?: number | null,
+  bulkCalendarEventId?: number | null,
 ): Promise<boolean> {
+  const table = bulkCalendarEventId ? "bulk_calendar_event_sections" : "calendar_event_section";
+  const idCol = bulkCalendarEventId ? "bulkCalendarEventId" : "calendarEventId";
+  const eventId = bulkCalendarEventId || calendarEventId;
+
   const { data: eventSections, error: secErr } = await adminSupabase
-    .from("calendar_event_section")
+    .from(table)
     .select("collegeSectionId")
-    .eq("calendarEventId", calendarEventId);
+    .eq(idCol, eventId);
 
   if (secErr || !eventSections || eventSections.length === 0) return false;
 
@@ -180,7 +185,11 @@ export async function processClassroomAttendance(params: {
 
     let matchedSession = null;
     for (const session of sessions) {
-      const isEnrolled = await verifyStudentEnrollment(studentId, session.calendarEventId);
+      const isEnrolled = await verifyStudentEnrollment(
+        studentId, 
+        session.calendarEventId,
+        session.bulkCalendarEventId
+      );
       if (isEnrolled) {
         matchedSession = session;
         break;
@@ -194,19 +203,29 @@ export async function processClassroomAttendance(params: {
       };
     }
 
-    const { deviceClassSessionId, calendarEventId } = matchedSession;
+    const { deviceClassSessionId, calendarEventId, bulkCalendarEventId } = matchedSession;
 
-    const { data: existing, error: existErr } = await adminSupabase
+    let query = adminSupabase
       .from("attendance_record")
       .select("attendanceRecordId, studentLoginTime")
       .eq("studentId", studentId)
-      .eq("calendarEventId", calendarEventId)
-      .is("deletedAt", null)
-      .maybeSingle();
+      .is("deletedAt", null);
+
+    if (calendarEventId) {
+      query = query.eq("calendarEventId", calendarEventId);
+    } else if (bulkCalendarEventId) {
+      query = query.eq("bulkCalendarEventId", bulkCalendarEventId);
+    }
+
+    const { data: existing, error: existErr } = await query.maybeSingle();
 
     if (existErr) throw new Error(existErr.message);
 
     const now = new Date().toISOString();
+
+    const channelName = bulkCalendarEventId 
+      ? `public:attendance_record:bulk-eventId=${bulkCalendarEventId}` 
+      : `public:attendance_record:eventId=${calendarEventId}`;
 
     if (existing) {
       const existingMin = existing.studentLoginTime
@@ -225,6 +244,7 @@ export async function processClassroomAttendance(params: {
         attendanceRecordId: existing.attendanceRecordId,
         studentId,
         calendarEventId,
+        bulkCalendarEventId,
         status: "PRESENT",
         studentLoginTime: scanMin < existingMin ? scanTime : existing.studentLoginTime,
         markedAt: scanDate,
@@ -232,7 +252,7 @@ export async function processClassroomAttendance(params: {
 
       try {
         await adminSupabase
-          .channel(`public:attendance_record:eventId=${calendarEventId}`)
+          .channel(channelName)
           .send({ type: "broadcast", event: "new_attendance", payload });
 
         await adminSupabase
@@ -246,22 +266,23 @@ export async function processClassroomAttendance(params: {
         attendanceRecordId: existing.attendanceRecordId,
         deviceClassSessionId,
         calendarEventId,
+        bulkCalendarEventId,
       };
     }
 
     const { data: newRecord, error: insertErr } = await adminSupabase
       .from("attendance_record")
-      .upsert(
+      .insert(
         {
           studentId,
-          calendarEventId,
+          calendarEventId: calendarEventId || null,
+          bulkCalendarEventId: bulkCalendarEventId || null,
           status: "PRESENT",
           studentLoginTime: scanTime,
           markedAt: scanDate,
           createdAt: now,
           updatedAt: now,
-        },
-        { onConflict: "studentId,calendarEventId", ignoreDuplicates: false },
+        }
       )
       .select("attendanceRecordId")
       .single();
@@ -272,6 +293,7 @@ export async function processClassroomAttendance(params: {
       attendanceRecordId: newRecord.attendanceRecordId,
       studentId,
       calendarEventId,
+      bulkCalendarEventId,
       status: "PRESENT",
       studentLoginTime: scanTime,
       markedAt: scanDate,
@@ -279,7 +301,7 @@ export async function processClassroomAttendance(params: {
 
     try {
       await adminSupabase
-        .channel(`public:attendance_record:eventId=${calendarEventId}`)
+        .channel(channelName)
         .send({
           type: "broadcast",
           event: "new_attendance",
@@ -300,6 +322,7 @@ export async function processClassroomAttendance(params: {
       attendanceRecordId: newRecord.attendanceRecordId,
       deviceClassSessionId,
       calendarEventId,
+      bulkCalendarEventId,
     };
   } catch (err) {
     return {

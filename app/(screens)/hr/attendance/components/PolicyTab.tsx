@@ -2,14 +2,12 @@
 
 import { useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import { useUser } from "@/app/utils/context/UserContext";
-import { supabase } from "@/lib/supabaseClient";
+import { getStaffPolicyClient } from "@/lib/helpers/Hr/attendance/staffPolicyClientAPI";
 import PolicyShimmer from "./PolicyShimmer";
 
 export default function PolicyTab() {
-  const { collegeId, collegeHrId } = useCollegeHr();
-  const { userId: currentUserId } = useUser();
+  const { userId: currentUserId, collegeId } = useUser();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,15 +32,11 @@ export default function PolicyTab() {
     const fetchPolicy = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("staff_attendance_policies")
-          .select("*")
-          .eq("collegeId", collegeId)
-          .eq("is_deleted", false)
-          .maybeSingle();
+        const result = await getStaffPolicyClient(collegeId);
 
-        if (error) throw error;
-        if (data) {
+        if (!result.success) throw new Error(result.error);
+        if (result.data) {
+          const data = result.data;
           setPolicy({
             graceMinutes: data.graceMinutes,
             halfDayMinPercent: data.halfDayMinPercent,
@@ -53,7 +47,6 @@ export default function PolicyTab() {
           });
         }
       } catch (err) {
-        console.error("Failed to load policy:", err);
         toast.error("Failed to load attendance policy", { id: "policy-load-err" });
       } finally {
         setLoading(false);
@@ -63,7 +56,7 @@ export default function PolicyTab() {
   }, [collegeId]);
 
   const handleSave = async () => {
-    if (!collegeId || !collegeHrId) return;
+    if (!collegeId || !currentUserId) return;
 
     if (policy.graceMinutes === "") {
       toast.error("Grace Period is required", { id: "policy-val-grace" });

@@ -55,10 +55,17 @@ export function useAttendanceRealtime(
           event: "*", // Listen to INSERT and UPDATE
           schema: "public",
           table: "attendance_record",
-          filter: `"${columnName}"=eq.${calendarEventId}`,
         },
-        (payload) => {
-          callbackRef.current(payload);
+        (payload: any) => {
+          const rec = payload.new;
+          if (rec) {
+            const matches = isBulk 
+              ? rec.bulkCalendarEventId === calendarEventId 
+              : rec.calendarEventId === calendarEventId;
+            if (matches) {
+              callbackRef.current(payload);
+            }
+          }
         }
       )
       .on("broadcast", { event: "new_attendance" }, ({ payload }) => {

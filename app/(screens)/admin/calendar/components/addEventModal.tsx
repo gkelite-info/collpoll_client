@@ -212,7 +212,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       .eq("collegeSubjectId", subjectId)
       .order("unitNumber", { ascending: true })
       .then(({ data }) => {
-        setUnits(data ?? []);
+        const unitsData = data ?? [];
+        unitsData.sort((a, b) => Number(a.unitNumber) - Number(b.unitNumber));
+        setUnits(unitsData);
       });
   }, [subjectId, collegeId]);
 
