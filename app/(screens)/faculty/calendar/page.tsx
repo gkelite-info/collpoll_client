@@ -636,6 +636,64 @@ function PageContent() {
     setIsSaving(true);
 
     try {
+      if (pendingEvent.calendarMode === "bulk") {
+        const eventRes = await saveBulkCalendarEvent({
+          bulkCalendarEventId: editingEventId ? Number(editingEventId) : undefined,
+          facultyId,
+          subjectId: pendingEvent.subjectId ?? null,
+          eventTitle: pendingEvent.eventTitle,
+          type: pendingEvent.type as any,
+          fromDate: pendingEvent.fromDate!,
+          toDate: pendingEvent.toDate!,
+          collegeRoomId: pendingEvent.collegeRoomId ?? null,
+          fromTime: pendingEvent.fromTime,
+          toTime: pendingEvent.toTime,
+          meetingLink: pendingEvent.meetingLink ?? null,
+          meetingId: pendingEvent.meetingId ?? null,
+          meetingPassword: pendingEvent.meetingPassword ?? null,
+        });
+
+        if (!eventRes.success) {
+          toast.error("Failed to save bulk event");
+          return;
+        }
+
+        const bulkCalendarEventId = eventRes.bulkCalendarEventId!;
+
+        const sectionRes = await saveBulkCalendarEventSections(bulkCalendarEventId, {
+          collegeEducationId: pendingEvent.collegeEducationId,
+          collegeBranchId: pendingEvent.collegeBranchId,
+          collegeAcademicYearId: pendingEvent.collegeAcademicYearId,
+          collegeSemesterId: pendingEvent.collegeSemesterId,
+          sectionIds: pendingEvent.sectionIds,
+        });
+
+        if (!sectionRes.success) {
+          toast.error("Failed to save sections for bulk event");
+          return;
+        }
+
+        const unitRes = await saveBulkCalendarEventUnits(
+          bulkCalendarEventId,
+          pendingEvent.eventUnitIds ?? []
+        );
+
+        if (!unitRes.success) {
+          toast.error("Failed to save units for bulk event");
+          return;
+        }
+
+        toast.success("Bulk event saved despite conflict ⚠️");
+
+        setPendingEvent(null);
+        setIsModalOpen(false);
+        setEditingEventId(null);
+        setEventForm(null);
+        setFormMode("create");
+        await loadCalendarEvents(currentMonth, currentYear);
+        return;
+      }
+
       const eventRes = await saveCalendarEvent({
         calendarEventId: editingEventId ? Number(editingEventId) : undefined,
         facultyId,

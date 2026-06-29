@@ -63,7 +63,8 @@ async function resolveDeviceForRoom(collegeRoomId: number): Promise<{
 
 async function upsertDeviceClassSession(payload: {
   facultyClassSessionsId: number;
-  calendarEventId: number;
+  calendarEventId?: number;
+  bulkCalendarEventId?: number;
   deviceId: number;
   collegeRoomId: number;
   collegeId: number;
@@ -74,21 +75,46 @@ async function upsertDeviceClassSession(payload: {
 }): Promise<number> {
   const now = new Date().toISOString();
 
-  const { data: existing } = await adminSupabase
+  let query = adminSupabase
     .from("device_class_sessions")
-    .select("deviceClassSessionId")
-    .eq("calendarEventId", payload.calendarEventId)
-    .eq("deviceId", payload.deviceId)
-    .is("deletedAt", null)
-    .maybeSingle();
+    .select("deviceClassSessionId, isActive, deletedAt")
+    .eq("deviceId", payload.deviceId);
 
-  if (existing) return existing.deviceClassSessionId;
+  if (payload.calendarEventId) {
+    query = query.eq("calendarEventId", payload.calendarEventId);
+  } else if (payload.bulkCalendarEventId) {
+    query = query.eq("bulkCalendarEventId", payload.bulkCalendarEventId);
+  }
+
+  const { data: existing } = await query.maybeSingle();
+
+  if (existing) {
+    if (!existing.isActive || existing.deletedAt !== null) {
+      await adminSupabase
+        .from("device_class_sessions")
+        .update({
+          isActive: true,
+          activatedAt: now,
+          deactivatedAt: null,
+          deactivationReason: null,
+          deletedAt: null,
+          facultyClassSessionsId: payload.facultyClassSessionsId,
+          fromTime: payload.fromTime,
+          toTime: payload.toTime,
+          bufferMinutes: payload.bufferMinutes,
+          updatedAt: now,
+        })
+        .eq("deviceClassSessionId", existing.deviceClassSessionId);
+    }
+    return existing.deviceClassSessionId;
+  }
 
   const { data, error } = await adminSupabase
     .from("device_class_sessions")
     .insert({
       facultyClassSessionsId: payload.facultyClassSessionsId,
-      calendarEventId: payload.calendarEventId,
+      calendarEventId: payload.calendarEventId || null,
+      bulkCalendarEventId: payload.bulkCalendarEventId || null,
       deviceId: payload.deviceId,
       collegeRoomId: payload.collegeRoomId,
       collegeId: payload.collegeId,
@@ -118,30 +144,24 @@ export async function activateDeviceSessionForClass(params: {
   try {
     const { calendarEventId, isBulk, facultyClassSessionsId, collegeId } = params;
 
-    if (isBulk) {
-      return { success: true, skipped: true, skipReason: "BulkEventBiometricsNotSupported" };
-    }
+    const eventTable = isBulk ? "bulk_calendar_events" : "calendar_event";
+    const idColumn = isBulk ? "bulkCalendarEventId" : "calendarEventId";
+    const selectStr = isBulk ? "type, fromDate, fromTime, toTime, collegeRoomId" : "type, date, fromTime, toTime, collegeRoomId";
 
-    const { data: evt, error: evtErr } = await adminSupabase
-      .from("calendar_event")
-      .select("type, date, fromTime, toTime, collegeRoomId")
-      .eq("calendarEventId", calendarEventId)
+    const { data: evtRaw, error: evtErr } = await adminSupabase
+      .from(eventTable as any)
+      .select(selectStr)
+      .eq(idColumn, calendarEventId)
       .maybeSingle();
 
     if (evtErr) throw new Error(evtErr.message);
-    if (!evt) {
+    if (!evtRaw) {
       return { success: true, skipped: true, skipReason: "EventNotFound" };
     }
 
-    if (evt.type !== "class") {
-      return {
-        success: true,
-        skipped: true,
-        skipReason: `EventType=${evt.type}NoBiometric`,
-      };
-    }
+    const evt: any = evtRaw;
 
-    const collegeRoomId = await resolveCollegeRoomId(calendarEventId, collegeId);
+    const collegeRoomId = evt.collegeRoomId || (await resolveCollegeRoomId(calendarEventId, collegeId));
     if (!collegeRoomId) {
       return {
         success: true,
@@ -161,11 +181,12 @@ export async function activateDeviceSessionForClass(params: {
 
     const deviceClassSessionId = await upsertDeviceClassSession({
       facultyClassSessionsId,
-      calendarEventId,
+      calendarEventId: isBulk ? undefined : calendarEventId,
+      bulkCalendarEventId: isBulk ? calendarEventId : undefined,
       deviceId: device.deviceId,
       collegeRoomId,
       collegeId,
-      eventDate: evt.date,
+      eventDate: evt.date || evt.fromDate || new Date().toISOString().split("T")[0],
       fromTime: evt.fromTime,
       toTime: evt.toTime,
       bufferMinutes: 0,
