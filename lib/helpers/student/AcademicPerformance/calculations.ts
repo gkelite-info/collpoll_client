@@ -246,10 +246,16 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
                             .from("attendance_record")
                             .select(`
                             status,
-                            calendar_event:calendarEventId (
+                            calendar_event (
                                 subject,
                                 type,
                                 date,
+                                is_deleted
+                            ),
+                            bulk_calendar_events (
+                                subject,
+                                type,
+                                fromDate,
                                 is_deleted
                             )
                         `)
@@ -264,17 +270,24 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
                                     date: string;
                                     is_deleted: boolean | null;
                                 } | null;
+                                bulk_calendar_events: {
+                                    subject: number | null;
+                                    type: string;
+                                    fromDate: string;
+                                    is_deleted: boolean | null;
+                                } | null;
                             }>>();
 
                         const validAttendance = (attendanceRecords ?? []).filter((record) => {
-                            const event = record.calendar_event;
+                            const event = record.calendar_event || record.bulk_calendar_events;
+                            const eventDate = record.calendar_event ? record.calendar_event.date : record.bulk_calendar_events?.fromDate;
 
                             return (
                                 !!event &&
                                 event.subject === subject.collegeSubjectId &&
                                 event.type === "class" &&
                                 event.is_deleted === false &&
-                                event.date <= today &&
+                                !!eventDate && eventDate <= today &&
                                 !isCancelledStatus(record.status)
                             );
                         });

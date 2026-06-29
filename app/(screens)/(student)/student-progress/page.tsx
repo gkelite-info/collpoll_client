@@ -111,7 +111,6 @@ const Page = () => {
     : "Semester N/A";
   const isLoading = userLoading || studentLoading || progressLoading;
 
-  // Query student results from Database
   useEffect(() => {
     if (!studentId) return;
     setResultsLoading(true);
@@ -141,7 +140,6 @@ const Page = () => {
       });
   }, [studentId]);
 
-  // Resolve college name
   useEffect(() => {
     if (!collegeId) return;
     supabase
@@ -156,7 +154,6 @@ const Page = () => {
       });
   }, [collegeId]);
 
-  // Group and compute GPAs for the exam schedules list
   const schedulesWithResults = useMemo(() => {
     const schedMap = new Map<number, {
       scheduleId: number;
@@ -241,7 +238,6 @@ const Page = () => {
     return found ? found.semesterNum : null;
   }, [schedulesWithResults, selectedScheduleId]);
 
-  // Subject rows for the detailed Memo view
   const memoRows = useMemo(() => {
     if (selectedScheduleId === null) return [];
 
@@ -273,7 +269,6 @@ const Page = () => {
       });
   }, [studentResults, selectedScheduleId]);
 
-  // Memo totals and stats
   const memoSummary = useMemo(() => {
     if (memoRows.length === 0) {
       return { registered: 0, appeared: 0, passed: 0, totalCredits: "0.0", sgpa: "0.00" };
@@ -298,7 +293,6 @@ const Page = () => {
     };
   }, [memoRows]);
 
-  // Dynamic Performance Trend Chart Data
   const trendBars = useMemo(() => {
     const colors = ["#CBE5DB", "#9BC1B0", "#669D85", "#34805C", "#045B37"];
     return schedulesWithResults.map((item, idx) => {
@@ -318,9 +312,8 @@ const Page = () => {
       const element = printRef.current;
       if (!element) return;
 
-      // Clone the element to render in background without responsive zoom/overflow issues
       const clone = element.cloneNode(true) as HTMLDivElement;
-      
+
       const wrapper = document.createElement("div");
       wrapper.style.position = "fixed";
       wrapper.style.top = "0";
@@ -330,22 +323,20 @@ const Page = () => {
       wrapper.style.zIndex = "-9999";
       wrapper.style.overflow = "hidden";
       wrapper.style.pointerEvents = "none";
-      
-      // Ensure the clone has static dimensions matching the target A4 size
+
       clone.style.width = "794px";
       clone.style.height = "1123px";
       clone.style.transform = "none";
       clone.style.margin = "0";
       clone.style.padding = "0";
-      
+
       wrapper.appendChild(clone);
       document.body.appendChild(wrapper);
 
-      // Small delay to ensure the browser updates layout/rendering context of clone
       await new Promise((resolve) => setTimeout(resolve, 150));
 
       const canvas = await html2canvas(clone, {
-        scale: 2, // High resolution capture
+        scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#ffffff",
@@ -356,7 +347,6 @@ const Page = () => {
         scrollY: 0,
       });
 
-      // Cleanup cloned wrapper
       document.body.removeChild(wrapper);
 
       const imgData = canvas.toDataURL("image/png");
@@ -416,7 +406,6 @@ const Page = () => {
   return (
     <>
       <main className="p-3 max-md:p-2 max-md:pb-7 max-md:bg-[#f4f5f6] relative overflow-hidden min-h-screen">
-        {/* Tabs navigation */}
         <div className="flex mx-auto mb-5 justify-center">
           <div className="relative flex items-center bg-gray-100 p-1.5 rounded-full shadow-sm">
             {tabs.map((tab) => (
@@ -479,7 +468,6 @@ const Page = () => {
                       </span>
                     </div>
 
-                    {/* Semester */}
                     <div className="flex items-center gap-1 max-md:shrink-0">
                       <span className="text-gray-600 text-lg font-medium max-md:text-[13px] max-md:ml-1">
                         Semester:

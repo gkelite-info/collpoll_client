@@ -21,7 +21,8 @@ type StatusFilter = "ALL" | "ATTENDED" | "ABSENT" | "LEAVE";
 ================================ */
 type AttendanceRow = {
   attendanceRecordId: number;
-  calendarEventId: number;
+  calendarEventId: number | null;
+  bulkCalendarEventId: number | null;
   status: string;
   reason: string | null;
   markedAt: string;
@@ -30,6 +31,16 @@ type AttendanceRow = {
     subject: number;
     facultyId: number;
     date: string;
+    fromTime: string;
+    toTime: string;
+    is_deleted: boolean | null;
+  } | null;
+  bulk_calendar_events: {
+    bulkCalendarEventId: number;
+    subject: number;
+    facultyId: number;
+    fromDate: string;
+    toDate: string;
     fromTime: string;
     toTime: string;
     is_deleted: boolean | null;
@@ -66,18 +77,16 @@ export async function getStudentAttendanceDetails({
   }
   const { studentId } = ctx;
 
-  const from = (page - 1) * limit;
-  const to = from + limit;
-
-  const { data, error } = await supabase
+  const { data: rawData, error } = await (supabase as any)
     .from("attendance_record")
     .select(`
       attendanceRecordId,
       calendarEventId,
+      bulkCalendarEventId,
       status,
       reason,
       markedAt,
-      calendar_event:calendarEventId (
+      calendar_event (
         calendarEventId,
         subject,
         facultyId,
@@ -85,37 +94,66 @@ export async function getStudentAttendanceDetails({
         fromTime,
         toTime,
         is_deleted
+      ),
+      bulk_calendar_events (
+        bulkCalendarEventId,
+        subject,
+        facultyId,
+        fromDate,
+        toDate,
+        fromTime,
+        toTime,
+        is_deleted
       )
     `)
     .eq("studentId", studentId)
-    .is("deletedAt", null)
-    .returns<AttendanceRow[]>();
+    .is("deletedAt", null);
 
   if (error) throw error;
+  const data = rawData as AttendanceRow[] | null;
   if (!data?.length) return emptyResult();
 
-  const overallRows = data.filter(
-    (r) =>
+  const normalizedData = (data ?? []).map((r: AttendanceRow) => {
+    let event = r.calendar_event;
+    if (!event && r.bulk_calendar_events) {
+      event = {
+        calendarEventId: r.bulk_calendar_events.bulkCalendarEventId,
+        subject: r.bulk_calendar_events.subject,
+        facultyId: r.bulk_calendar_events.facultyId,
+        date: r.markedAt,
+        fromTime: r.bulk_calendar_events.fromTime,
+        toTime: r.bulk_calendar_events.toTime,
+        is_deleted: r.bulk_calendar_events.is_deleted,
+      };
+    }
+    return {
+      ...r,
+      event,
+    };
+  });
+
+  const overallRows = normalizedData.filter(
+    (r: any) =>
       !isCancelledStatus(r.status) &&
-      r.calendar_event &&
-      r.calendar_event.is_deleted === false
+      r.event &&
+      r.event.is_deleted === false
   );
 
   const baseRows = overallRows.filter(
     (r) =>
-      (!subjectId || r.calendar_event!.subject === subjectId) &&
-      (!facultyId || r.calendar_event!.facultyId === facultyId)
+      (!subjectId || r.event!.subject === subjectId) &&
+      (!facultyId || r.event!.facultyId === facultyId)
   );
 
   const subjectIds = [
     ...new Set(
-      baseRows.map((r) => r.calendar_event?.subject).filter(Boolean)
+      baseRows.map((r) => r.event?.subject).filter(Boolean)
     ),
   ] as number[];
 
   const facultyIds = [
     ...new Set(
-      baseRows.map((r) => r.calendar_event?.facultyId).filter(Boolean)
+      baseRows.map((r) => r.event?.facultyId).filter(Boolean)
     ),
   ] as number[];
 
@@ -137,30 +175,34 @@ export async function getStudentAttendanceDetails({
     (faculty ?? []).map((f) => [f.facultyId, f.fullName])
   );
 
+  const from = (page - 1) * limit;
+  const to = from + limit;
+
   let filteredRows = baseRows;
 
   if (statusFilter === "ATTENDED") {
-    filteredRows = baseRows.filter((r) =>
+    filteredRows = baseRows.filter((r: any) =>
       ATTENDED_STATUSES.includes(r.status as (typeof ATTENDED_STATUSES)[number])
     );
   } else if (statusFilter === "ABSENT") {
-    filteredRows = baseRows.filter((r) => r.status === "ABSENT");
+    filteredRows = baseRows.filter((r: any) => r.status === "ABSENT");
   } else if (statusFilter === "LEAVE") {
-    filteredRows = baseRows.filter((r) => r.status === "LEAVE");
+    filteredRows = baseRows.filter((r: any) => r.status === "LEAVE");
   }
 
-  const conductedSet = new Set<number>();
-  const attendedSet = new Set<number>();
+  const conductedSet = new Set<string>();
+  const attendedSet = new Set<string>();
   let absent = 0;
   let leave = 0;
 
   for (const r of baseRows) {
+    const evId = r.calendarEventId ? `cal_${r.calendarEventId}` : `bulk_${r.bulkCalendarEventId}_${r.markedAt}`;
     if (CONDUCTED_STATUSES.includes(r.status as (typeof CONDUCTED_STATUSES)[number])) {
-      conductedSet.add(r.calendarEventId);
+      conductedSet.add(evId);
     }
 
     if (ATTENDED_STATUSES.includes(r.status as (typeof ATTENDED_STATUSES)[number])) {
-      attendedSet.add(r.calendarEventId);
+      attendedSet.add(evId);
     }
 
     if (r.status === "ABSENT") absent++;
@@ -170,16 +212,17 @@ export async function getStudentAttendanceDetails({
   const total = conductedSet.size;
   const attended = attendedSet.size;
 
-  const overallConductedSet = new Set<number>();
-  const overallAttendedSet = new Set<number>();
+  const overallConductedSet = new Set<string>();
+  const overallAttendedSet = new Set<string>();
 
   for (const r of overallRows) {
+    const evId = r.calendarEventId ? `cal_${r.calendarEventId}` : `bulk_${r.bulkCalendarEventId}_${r.markedAt}`;
     if (ELIGIBILITY_STATUSES.includes(r.status as (typeof ELIGIBILITY_STATUSES)[number])) {
-      overallConductedSet.add(r.calendarEventId);
+      overallConductedSet.add(evId);
     }
 
     if (ATTENDED_STATUSES.includes(r.status as (typeof ATTENDED_STATUSES)[number])) {
-      overallAttendedSet.add(r.calendarEventId);
+      overallAttendedSet.add(evId);
     }
   }
 
@@ -198,13 +241,13 @@ export async function getStudentAttendanceDetails({
 
 
   const allRows = filteredRows.map((r) => ({
-    calendarEventId: r.calendarEventId,
-    date: r.calendar_event!.date,
-    time: `${r.calendar_event!.fromTime} - ${r.calendar_event!.toTime}`,
-    subjectId: r.calendar_event!.subject,
-    facultyId: r.calendar_event!.facultyId,
-    subjectName: subjectMap.get(r.calendar_event!.subject) ?? "-",
-    facultyName: facultyMap.get(r.calendar_event!.facultyId) ?? "-",
+    calendarEventId: r.calendarEventId ?? r.bulkCalendarEventId,
+    date: r.event!.date,
+    time: `${r.event!.fromTime} - ${r.event!.toTime}`,
+    subjectId: r.event!.subject,
+    facultyId: r.event!.facultyId,
+    subjectName: subjectMap.get(r.event!.subject) ?? "-",
+    facultyName: facultyMap.get(r.event!.facultyId) ?? "-",
     status: r.status,
     reason: r.reason ?? "-",
   }));
