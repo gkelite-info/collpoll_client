@@ -22,6 +22,8 @@ type StaffProfileScreenProps = {
   onBack: () => void;
 };
 
+type MonthlyAttendanceStatus = Exclude<StaffAttendanceStatus, "not_marked"> | "empty";
+
 const statusClass: Record<StaffAttendanceStatus, string> = {
   present: "bg-[#DFF8EB] text-[#10A66A]",
   absent: "bg-[#FFE5E5] text-[#EF4444]",
@@ -58,7 +60,11 @@ export default function StaffProfileScreen({
     ),
     workHours: log.workHours,
   }));
-  const monthlyAttendanceData = Array.from({ length: 31 }, (_, index) => {
+  const monthlyAttendanceData: {
+    day: number;
+    date: string;
+    status: MonthlyAttendanceStatus;
+  }[] = Array.from({ length: 31 }, (_, index) => {
     const day = index + 1;
     return {
       day,
@@ -309,7 +315,7 @@ function ProfileStat({
   );
 }
 
-function CalendarDay({ day, status }: { day: number; status: "present" | "absent" | "late" | "empty" }) {
+function CalendarDay({ day, status }: { day: number; status: MonthlyAttendanceStatus }) {
   const className =
     status === "present"
       ? "bg-[#18B978] text-white"
