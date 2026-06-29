@@ -27,7 +27,8 @@ function isCancelledStatus(status: string) {
   return (CANCELLED_STATUSES as readonly string[]).includes(status);
 }
 
-function toDateKey(value: string) {
+function toDateKey(value: string | undefined | null) {
+  if (!value) return "";
   return value.slice(0, 10);
 }
 
@@ -143,7 +144,9 @@ export async function getStudentDashboardData(
   const { data: sahRows, error: sahErr } = await sahQuery;
   if (sahErr) throw sahErr;
 
-  const sahStudentIds = (sahRows ?? []).map((r) => r.studentId);
+  const sahStudentIds = (sahRows ?? [])
+    .map((r) => r.studentId)
+    .filter((id): id is number => id !== null && id !== undefined && String(id) !== "null");
   if (!sahStudentIds.length) return emptyDashboard();
 
   let classStudentsQuery = supabase
@@ -174,38 +177,40 @@ export async function getStudentDashboardData(
 
   if (classErr) throw classErr;
 
-  const classStudentIds = (classStudents ?? []).map((s) => s.studentId);
+  const classStudentIds = (classStudents ?? [])
+    .map((s) => s.studentId)
+    .filter((id): id is number => id !== null && id !== undefined && String(id) !== "null");
   if (!classStudentIds.length) return emptyDashboard();
 
   const weekDateKeys = getWeekDateKeys(dateStr);
   const weekStartDate = weekDateKeys[0] ?? dateStr;
 
-  const { data: todayAll, error: todayErr } = await supabase
+  const { data: todayAll, error: todayErr } = await (supabase as any)
     .from("attendance_record")
-    .select("studentId, calendarEventId, status")
+    .select("studentId, calendarEventId, bulkCalendarEventId, status, markedAt")
     .in("studentId", classStudentIds)
     .eq("markedAt", dateStr);
 
   if (todayErr) throw todayErr;
 
-  const { data: semAll, error: semErr } = await supabase
+  const { data: semAll, error: semErr } = await (supabase as any)
     .from("attendance_record")
-    .select("studentId, calendarEventId, status, markedAt")
+    .select("studentId, calendarEventId, bulkCalendarEventId, status, markedAt")
     .in("studentId", classStudentIds)
     .lte("markedAt", dateStr);
 
   if (semErr) throw semErr;
 
-  const { data: weekAll, error: weekErr } = await supabase
+  const { data: weekAll, error: weekErr } = await (supabase as any)
     .from("attendance_record")
-    .select("studentId, calendarEventId, status, markedAt")
+    .select("studentId, calendarEventId, bulkCalendarEventId, status, markedAt")
     .in("studentId", classStudentIds)
     .gte("markedAt", weekStartDate)
     .lte("markedAt", dateStr);
 
   if (weekErr) throw weekErr;
 
-  const eventIds = [
+  const calendarEventIds = [
     ...new Set(
       [...(semAll ?? []), ...(weekAll ?? [])]
         .map((r) => r.calendarEventId)
@@ -213,21 +218,50 @@ export async function getStudentDashboardData(
     ),
   ];
 
-  const { data: events, error: eventErr } = eventIds.length
+  const bulkEventIds = [
+    ...new Set(
+      [...(semAll ?? []), ...(weekAll ?? [])]
+        .map((r) => (r as any).bulkCalendarEventId)
+        .filter((id): id is number => id !== null && id !== undefined && String(id) !== "null"),
+    ),
+  ];
+
+  const { data: calEvents, error: calErr } = calendarEventIds.length
     ? await supabase
         .from("calendar_event")
         .select("calendarEventId, subject, facultyId")
-        .in("calendarEventId", eventIds)
+        .in("calendarEventId", calendarEventIds)
         .eq("is_deleted", false)
     : { data: [], error: null };
 
-  if (eventErr) throw eventErr;
+  if (calErr) throw calErr;
 
-  const eventMap = new Map((events ?? []).map((e) => [e.calendarEventId, e]));
+  const { data: bulkEvents, error: bulkErr } = bulkEventIds.length
+    ? await (supabase as any)
+        .from("bulk_calendar_events")
+        .select("bulkCalendarEventId, subject, facultyId")
+        .in("bulkCalendarEventId", bulkEventIds)
+        .eq("is_deleted", false)
+    : { data: [], error: null };
+
+  if (bulkErr) throw bulkErr;
+
+  const eventMap = new Map();
+  const allEventsForSubjects: any[] = [];
+  
+  for (const e of calEvents ?? []) {
+    eventMap.set(`cal_${e.calendarEventId}`, e);
+    allEventsForSubjects.push(e);
+  }
+  
+  for (const e of bulkEvents ?? []) {
+    eventMap.set(`bulk_${e.bulkCalendarEventId}`, e);
+    allEventsForSubjects.push(e);
+  }
 
   const subjectIds = [
     ...new Set(
-      (events ?? [])
+      allEventsForSubjects
         .map((e) => e.subject)
         .filter((id): id is number => id !== null && id !== undefined && String(id) !== "null"),
     ),
@@ -254,7 +288,7 @@ export async function getStudentDashboardData(
 
   const facultyIds = [
     ...new Set(
-      (events ?? [])
+      allEventsForSubjects
         .map((e) => e.facultyId)
         .filter((id): id is number => id !== null && id !== undefined && String(id) !== "null"),
     ),
@@ -279,29 +313,31 @@ export async function getStudentDashboardData(
     (faculty ?? []).map((f) => [f.facultyId, f.fullName]),
   );
 
-  const semesterConductedSet = new Set<number>();
-  const eligibilityConductedSet = new Set<number>();
-  const eligibilityAttendedSet = new Set<number>();
+  const semesterConductedSet = new Set<string>();
+  const eligibilityConductedSet = new Set<string>();
+  const eligibilityAttendedSet = new Set<string>();
 
   let presentCount = 0;
   let absentCount = 0;
   let leaveCount = 0;
 
   for (const r of semAll ?? []) {
-    const ev = eventMap.get(r.calendarEventId);
+    const eventKey = r.calendarEventId ? `cal_${r.calendarEventId}` : `bulk_${(r as any).bulkCalendarEventId}`;
+    const evId = r.calendarEventId ? `cal_${r.calendarEventId}` : `bulk_${(r as any).bulkCalendarEventId}_${toDateKey(r.markedAt)}`;
+    const ev = eventMap.get(eventKey);
     if (!ev || isCancelledStatus(r.status)) continue;
 
     if (isConductedStatus(r.status)) {
-      semesterConductedSet.add(r.calendarEventId);
+      semesterConductedSet.add(evId);
     }
 
     if (r.studentId === studentId) {
       if (isEligibilityStatus(r.status)) {
-        eligibilityConductedSet.add(r.calendarEventId);
+        eligibilityConductedSet.add(evId);
       }
 
       if (isAttendedStatus(r.status)) {
-        eligibilityAttendedSet.add(r.calendarEventId);
+        eligibilityAttendedSet.add(evId);
       }
 
       if (r.status === "PRESENT" || r.status === "LATE") presentCount++;
@@ -327,15 +363,17 @@ export async function getStudentDashboardData(
   const subjectWiseMap: Record<
     number,
     {
-      total: Set<number>;
-      attended: Set<number>;
-      missed: Set<number>;
-      leave: Set<number>;
+      total: Set<string>;
+      attended: Set<string>;
+      missed: Set<string>;
+      leave: Set<string>;
     }
   > = {};
 
   for (const r of semAll ?? []) {
-    const ev = eventMap.get(r.calendarEventId);
+    const eventKey = r.calendarEventId ? `cal_${r.calendarEventId}` : `bulk_${(r as any).bulkCalendarEventId}`;
+    const evId = r.calendarEventId ? `cal_${r.calendarEventId}` : `bulk_${(r as any).bulkCalendarEventId}_${toDateKey(r.markedAt)}`;
+    const ev = eventMap.get(eventKey);
     if (!ev || !ev.subject || isCancelledStatus(r.status)) continue;
 
     if (!subjectWiseMap[ev.subject]) {
@@ -348,16 +386,16 @@ export async function getStudentDashboardData(
     }
 
     if (isConductedStatus(r.status)) {
-      subjectWiseMap[ev.subject].total.add(r.calendarEventId);
+      subjectWiseMap[ev.subject].total.add(evId);
     }
 
     if (r.studentId === studentId) {
       if (isAttendedStatus(r.status)) {
-        subjectWiseMap[ev.subject].attended.add(r.calendarEventId);
+        subjectWiseMap[ev.subject].attended.add(evId);
       } else if (r.status === "ABSENT") {
-        subjectWiseMap[ev.subject].missed.add(r.calendarEventId);
+        subjectWiseMap[ev.subject].missed.add(evId);
       } else if (r.status === "LEAVE") {
-        subjectWiseMap[ev.subject].leave.add(r.calendarEventId);
+        subjectWiseMap[ev.subject].leave.add(evId);
       }
     }
   }
@@ -381,26 +419,29 @@ export async function getStudentDashboardData(
   );
 
   const todayStudentRows = (todayAll ?? []).filter(
-    (r) => r.studentId === studentId,
+    (r: any) => r.studentId === studentId,
   );
-  const todayConductedSet = new Set<number>();
-  const todayAttendedSet = new Set<number>();
+  const todayConductedSet = new Set<string>();
+  const todayAttendedSet = new Set<string>();
 
   for (const r of todayAll ?? []) {
-    const ev = eventMap.get(r.calendarEventId);
+    const eventKey = r.calendarEventId ? `cal_${r.calendarEventId}` : `bulk_${(r as any).bulkCalendarEventId}`;
+    const evId = r.calendarEventId ? `cal_${r.calendarEventId}` : `bulk_${(r as any).bulkCalendarEventId}_${toDateKey(r.markedAt)}`;
+    const ev = eventMap.get(eventKey);
     if (!ev || isCancelledStatus(r.status)) continue;
 
     if (isConductedStatus(r.status)) {
-      todayConductedSet.add(r.calendarEventId);
+      todayConductedSet.add(evId);
     }
 
     if (r.studentId === studentId && isAttendedStatus(r.status)) {
-      todayAttendedSet.add(r.calendarEventId);
+      todayAttendedSet.add(evId);
     }
   }
 
-  const tableData = todayStudentRows.map((row) => {
-    const ev = eventMap.get(row.calendarEventId);
+  const tableData = todayStudentRows.map((row: any) => {
+    const eventKey = row.calendarEventId ? `cal_${row.calendarEventId}` : `bulk_${row.bulkCalendarEventId}`;
+    const ev = eventMap.get(eventKey);
 
     if (
       !ev?.subject ||
@@ -435,21 +476,23 @@ export async function getStudentDashboardData(
 
   const paginatedRows = tableData.slice(from, to + 1);
   const weeklyStats = weekDateKeys.map((dayKey) => {
-    const conductedSet = new Set<number>();
-    const attendedSet = new Set<number>();
+    const conductedSet = new Set<string>();
+    const attendedSet = new Set<string>();
 
     for (const r of weekAll ?? []) {
       if (toDateKey(r.markedAt) !== dayKey) continue;
 
-      const ev = eventMap.get(r.calendarEventId);
+      const eventKey = r.calendarEventId ? `cal_${r.calendarEventId}` : `bulk_${(r as any).bulkCalendarEventId}`;
+      const evId = r.calendarEventId ? `cal_${r.calendarEventId}` : `bulk_${(r as any).bulkCalendarEventId}_${toDateKey(r.markedAt)}`;
+      const ev = eventMap.get(eventKey);
       if (!ev || isCancelledStatus(r.status)) continue;
 
       if (isConductedStatus(r.status)) {
-        conductedSet.add(r.calendarEventId);
+        conductedSet.add(evId);
       }
 
       if (r.studentId === studentId && isAttendedStatus(r.status)) {
-        attendedSet.add(r.calendarEventId);
+        attendedSet.add(evId);
       }
     }
 

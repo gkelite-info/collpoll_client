@@ -291,13 +291,22 @@ export async function getStudentProgressData(userId: number) {
     .select(
       `
       calendarEventId,
+      bulkCalendarEventId,
       status,
-      calendar_event:calendarEventId (
+      calendar_event (
         calendarEventId,
         subject,
         facultyId,
         type,
         date,
+        is_deleted
+      ),
+      bulk_calendar_events (
+        bulkCalendarEventId,
+        subject,
+        facultyId,
+        type,
+        fromDate,
         is_deleted
       )
     `,
@@ -305,18 +314,39 @@ export async function getStudentProgressData(userId: number) {
     .eq("studentId", studentContext.studentId)
     .is("deletedAt", null)
     .lte("markedAt", today)
-    .returns<AttendanceRecordRow[]>();
+    .returns<Array<{
+      calendarEventId: number;
+      bulkCalendarEventId: number;
+      status: string;
+      calendar_event: {
+        calendarEventId: number;
+        subject: number | null;
+        facultyId: number | null;
+        type: string;
+        date: string;
+        is_deleted: boolean | null;
+      } | null;
+      bulk_calendar_events: {
+        bulkCalendarEventId: number;
+        subject: number | null;
+        facultyId: number | null;
+        type: string;
+        fromDate: string;
+        is_deleted: boolean | null;
+      } | null;
+    }>>();
 
   if (attendanceError) throw attendanceError;
 
   const validRecords = (attendanceRecords ?? []).filter((record) => {
-    const event = record.calendar_event;
+    const event = record.calendar_event || record.bulk_calendar_events;
+    const eventDate = record.calendar_event ? record.calendar_event.date : record.bulk_calendar_events?.fromDate;
 
     return (
       !!event &&
       event.type === "class" &&
       event.is_deleted === false &&
-      event.date <= today &&
+      !!eventDate && eventDate <= today &&
       !!event.subject &&
       semesterSubjectIds.includes(event.subject) &&
       !isCancelledStatus(record.status)
@@ -324,11 +354,12 @@ export async function getStudentProgressData(userId: number) {
   });
 
   const profileAttendanceRecords = (attendanceRecords ?? []).filter((record) => {
-    const event = record.calendar_event;
+    const event = record.calendar_event || record.bulk_calendar_events;
+    const eventDate = record.calendar_event ? record.calendar_event.date : record.bulk_calendar_events?.fromDate;
 
     return (
       !!event &&
-      event.date <= today &&
+      !!eventDate && eventDate <= today &&
       !!event.subject &&
       !isCancelledStatus(record.status)
     );
@@ -364,7 +395,8 @@ export async function getStudentProgressData(userId: number) {
   for (const record of validRecords) {
     if (!isConductedStatus(record.status)) continue;
 
-    const subjectId = record.calendar_event?.subject;
+    const event = record.calendar_event || record.bulk_calendar_events;
+    const subjectId = event?.subject;
     if (!subjectId) continue;
 
     const subjectStats = subjectAttendanceMap.get(subjectId) ?? {

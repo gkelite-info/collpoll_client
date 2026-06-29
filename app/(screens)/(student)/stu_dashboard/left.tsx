@@ -35,7 +35,7 @@ const formatTimeToAMPM = (time24: string) => {
 };
 
 interface UpcomingLecture {
-  calendarEventId: number;
+  calendarEventId: string | number;
   date: string;
   fromTime: string;
   toTime: string;

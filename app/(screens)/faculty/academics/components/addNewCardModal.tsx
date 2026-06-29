@@ -1134,7 +1134,7 @@ export default function AddNewCardModal({
             </div>
             <div>
               <label className="text-sm font-semibold text-[#282828]">
-                Unit
+                Unit <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"

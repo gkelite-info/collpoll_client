@@ -153,8 +153,8 @@ function ParentSubjectAttendanceDetailsClient() {
     {
       id: 3,
       icon: <Chalkboard size={30} weight="fill" />,
-      value: data?.headerStats.leave ?? 0,
-      label: t("Leave"),
+      value: data?.headerStats.absent ?? 0,
+      label: t("Missed"),
       style: "bg-[#E2DAFF] w-full h-full",
       iconBgColor: "#F62D2D",
       iconColor: "#EFEFEF",
@@ -187,7 +187,7 @@ function ParentSubjectAttendanceDetailsClient() {
   ];
 
   const tableData: AttendanceTableRow[] =
-    data?.rows.map((r) => ({
+    data?.rows.map((r: any) => ({
       date: r.date,
       time: r.time,
       rawStatus: r.status as AttendanceTableRow["rawStatus"],
