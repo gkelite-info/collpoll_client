@@ -49,26 +49,64 @@ export async function saveCalendarEventSections(
 ) {
     const now = new Date().toISOString();
 
-    const rows = payload.sectionIds.map((sectionId) => ({
-        calendarEventId,
-        collegeEducationId: payload.collegeEducationId,
-        collegeBranchId: payload.collegeBranchId,
-        collegeAcademicYearId: payload.collegeAcademicYearId,
-        collegeSemesterId: payload.collegeSemesterId,
-        collegeSectionId: sectionId,
-        createdAt: now,
-        updatedAt: now,
-        isActive: true,
-        deletedAt: null
-    }));
-
-    const { error } = await supabase
+    const { data: existingSections, error: fetchError } = await supabase
         .from("calendar_event_section")
-        .insert(rows);
+        .select("collegeSectionId")
+        .eq("calendarEventId", calendarEventId)
+        .is("deletedAt", null)
+        .eq("isActive", true);
 
-    if (error) {
-        console.error("saveCalendarEventSections error:", error);
-        return { success: false, error };
+    if (fetchError) {
+        console.error("fetch existing sections error:", fetchError);
+        return { success: false, error: fetchError };
+    }
+
+    const existingIds = existingSections.map((s) => s.collegeSectionId);
+    const targetIds = payload.sectionIds || [];
+
+    const toDelete = existingIds.filter((id) => !targetIds.includes(id));
+    const toInsert = targetIds.filter((id) => !existingIds.includes(id));
+
+    if (toDelete.length > 0) {
+        const { error: deleteError } = await supabase
+            .from("calendar_event_section")
+            .update({ 
+                isActive: false, 
+                deletedAt: now,
+                updatedAt: now 
+            })
+            .eq("calendarEventId", calendarEventId)
+            .in("collegeSectionId", toDelete)
+            .eq("isActive", true);
+
+        if (deleteError) {
+            console.error("delete sections error:", deleteError);
+            return { success: false, error: deleteError };
+        }
+    }
+
+    if (toInsert.length > 0) {
+        const inserts = toInsert.map((sectionId) => ({
+            calendarEventId,
+            collegeEducationId: payload.collegeEducationId,
+            collegeBranchId: payload.collegeBranchId,
+            collegeAcademicYearId: payload.collegeAcademicYearId,
+            collegeSemesterId: payload.collegeSemesterId,
+            collegeSectionId: sectionId,
+            createdAt: now,
+            updatedAt: now,
+            isActive: true,
+            deletedAt: null
+        }));
+
+        const { error: insertError } = await supabase
+            .from("calendar_event_section")
+            .insert(inserts);
+
+        if (insertError) {
+            console.error("insert sections error:", insertError);
+            return { success: false, error: insertError };
+        }
     }
 
     return { success: true };

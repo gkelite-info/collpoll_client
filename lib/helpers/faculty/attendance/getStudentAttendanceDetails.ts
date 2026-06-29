@@ -11,30 +11,22 @@ const safeGet = <T,>(data: T | T[] | null | undefined): T | null => {
   return Array.isArray(data) ? data[0] : data;
 };
 
+type EventType = {
+        subject: number | null;
+        type: string | null;
+        date?: string | null;
+        fromDate?: string | null;
+        is_deleted: boolean | null;
+        college_subjects:
+          | { subjectName?: string | null; subjectCode?: string | null }
+          | Array<{ subjectName?: string | null; subjectCode?: string | null }>
+          | null;
+      };
+
 type AttendanceRecordRow = {
   status: string;
-      event:
-    | {
-        subject: number | null;
-        type: string | null;
-        date: string | null;
-        is_deleted: boolean | null;
-        college_subjects:
-          | { subjectName?: string | null; subjectCode?: string | null }
-          | Array<{ subjectName?: string | null; subjectCode?: string | null }>
-          | null;
-      }
-    | Array<{
-        subject: number | null;
-        type: string | null;
-        date: string | null;
-        is_deleted: boolean | null;
-        college_subjects:
-          | { subjectName?: string | null; subjectCode?: string | null }
-          | Array<{ subjectName?: string | null; subjectCode?: string | null }>
-          | null;
-      }>
-    | null;
+  event: EventType | EventType[] | null;
+  bulk_event: EventType | EventType[] | null;
 };
 
 type UserRow = {
@@ -148,6 +140,13 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
         date,
         is_deleted,
         college_subjects (subjectName, subjectCode)
+      ),
+      bulk_event:bulk_calendar_events (
+        subject,
+        type,
+        fromDate,
+        is_deleted,
+        college_subjects (subjectName, subjectCode)
       )
     `,
     )
@@ -171,10 +170,14 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
   let totalLeave = 0;
   const today = new Date().toISOString().slice(0, 10);
 
-  (records as AttendanceRecordRow[] | null)?.forEach((r) => {
-    const event = safeGet(r.event);
+  (records as unknown as AttendanceRecordRow[] | null)?.forEach((r) => {
+    const singleEvent = safeGet(r.event);
+    const bulkEvent = safeGet(r.bulk_event);
+    const event = singleEvent || bulkEvent;
+    
     if (!event) return;
-    if (event.type !== "class" || event.is_deleted !== false || !event.date || event.date > today) {
+    const eventDate = singleEvent ? singleEvent.date : bulkEvent?.fromDate;
+    if (event.type !== "class" || event.is_deleted !== false || !eventDate || eventDate > today) {
       return;
     }
 

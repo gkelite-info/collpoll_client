@@ -92,13 +92,27 @@ export async function getStudentDashboardData(
   let sahQuery = supabase
     .from("student_academic_history")
     .select("studentId")
-    .eq("collegeAcademicYearId", collegeAcademicYearId)
-    .eq("collegeSectionsId", collegeSectionsId)
     .eq("isCurrent", true)
     .is("deletedAt", null);
 
-  if (!isInter && collegeSemesterId) {
-    sahQuery = sahQuery.eq("collegeSemesterId", collegeSemesterId);
+  if (collegeAcademicYearId !== null && collegeAcademicYearId !== undefined && String(collegeAcademicYearId) !== "null") {
+    sahQuery = sahQuery.eq("collegeAcademicYearId", collegeAcademicYearId);
+  } else {
+    sahQuery = sahQuery.is("collegeAcademicYearId", null);
+  }
+
+  if (collegeSectionsId !== null && collegeSectionsId !== undefined && String(collegeSectionsId) !== "null") {
+    sahQuery = sahQuery.eq("collegeSectionsId", collegeSectionsId);
+  } else {
+    sahQuery = sahQuery.is("collegeSectionsId", null);
+  }
+
+  if (!isInter) {
+    if (collegeSemesterId !== null && collegeSemesterId !== undefined && String(collegeSemesterId) !== "null") {
+      sahQuery = sahQuery.eq("collegeSemesterId", collegeSemesterId);
+    } else {
+      sahQuery = sahQuery.is("collegeSemesterId", null);
+    }
   }
 
   const { data: sahRows, error: sahErr } = await sahQuery;
@@ -107,14 +121,31 @@ export async function getStudentDashboardData(
   const sahStudentIds = (sahRows ?? []).map((r) => r.studentId);
   if (!sahStudentIds.length) return emptyDashboard();
 
-  const { data: classStudents, error: classErr } = await supabase
+  let classStudentsQuery = supabase
     .from("students")
     .select("studentId")
     .in("studentId", sahStudentIds)
-    .eq("collegeId", collegeId)
-    .eq("collegeEducationId", collegeEducationId)
-    .eq("collegeBranchId", collegeBranchId)
     .is("deletedAt", null);
+
+  if (collegeId !== null && collegeId !== undefined && String(collegeId) !== "null") {
+    classStudentsQuery = classStudentsQuery.eq("collegeId", collegeId);
+  } else {
+    classStudentsQuery = classStudentsQuery.is("collegeId", null);
+  }
+
+  if (collegeEducationId !== null && collegeEducationId !== undefined && String(collegeEducationId) !== "null") {
+    classStudentsQuery = classStudentsQuery.eq("collegeEducationId", collegeEducationId);
+  } else {
+    classStudentsQuery = classStudentsQuery.is("collegeEducationId", null);
+  }
+
+  if (collegeBranchId !== null && collegeBranchId !== undefined && String(collegeBranchId) !== "null") {
+    classStudentsQuery = classStudentsQuery.eq("collegeBranchId", collegeBranchId);
+  } else {
+    classStudentsQuery = classStudentsQuery.is("collegeBranchId", null);
+  }
+
+  const { data: classStudents, error: classErr } = await classStudentsQuery;
 
   if (classErr) throw classErr;
 
@@ -137,38 +168,75 @@ export async function getStudentDashboardData(
 
   if (semErr) throw semErr;
 
-  const eventIds = [...new Set((semAll ?? []).map((r) => r.calendarEventId))];
+  const eventIds = [
+    ...new Set(
+      (semAll ?? [])
+        .map((r) => r.calendarEventId)
+        .filter((id): id is number => id !== null && id !== undefined && String(id) !== "null"),
+    ),
+  ];
 
-  const { data: events, error: eventErr } = await supabase
-    .from("calendar_event")
-    .select("calendarEventId, subject, facultyId")
-    .in("calendarEventId", eventIds)
-    .eq("is_deleted", false);
+  const { data: events, error: eventErr } = eventIds.length
+    ? await supabase
+        .from("calendar_event")
+        .select("calendarEventId, subject, facultyId")
+        .in("calendarEventId", eventIds)
+        .eq("is_deleted", false)
+    : { data: [], error: null };
 
   if (eventErr) throw eventErr;
 
   const eventMap = new Map((events ?? []).map((e) => [e.calendarEventId, e]));
 
   const subjectIds = [
-    ...new Set((events ?? []).map((e) => e.subject).filter(Boolean)),
+    ...new Set(
+      (events ?? [])
+        .map((e) => e.subject)
+        .filter((id): id is number => id !== null && id !== undefined && String(id) !== "null"),
+    ),
   ];
 
-  const { data: subjects } = await supabase
+  let subjectsQuery = supabase
     .from("college_subjects")
     .select("collegeSubjectId, subjectName")
-    .eq("collegeId", collegeId)
     .in("collegeSubjectId", subjectIds);
+
+  if (collegeId !== null && collegeId !== undefined && String(collegeId) !== "null") {
+    subjectsQuery = subjectsQuery.eq("collegeId", collegeId);
+  } else {
+    subjectsQuery = subjectsQuery.is("collegeId", null);
+  }
+
+  const { data: subjects } = subjectIds.length
+    ? await subjectsQuery
+    : { data: [] };
 
   const subjectMap = new Map(
     (subjects ?? []).map((s) => [s.collegeSubjectId, s.subjectName]),
   );
 
-  const facultyIds = [...new Set((events ?? []).map((e) => e.facultyId))];
-  const { data: faculty } = await supabase
+  const facultyIds = [
+    ...new Set(
+      (events ?? [])
+        .map((e) => e.facultyId)
+        .filter((id): id is number => id !== null && id !== undefined && String(id) !== "null"),
+    ),
+  ];
+
+  let facultyQuery = supabase
     .from("faculty")
     .select("facultyId, fullName")
-    .eq("collegeId", collegeId)
     .in("facultyId", facultyIds);
+
+  if (collegeId !== null && collegeId !== undefined && String(collegeId) !== "null") {
+    facultyQuery = facultyQuery.eq("collegeId", collegeId);
+  } else {
+    facultyQuery = facultyQuery.is("collegeId", null);
+  }
+
+  const { data: faculty } = facultyIds.length
+    ? await facultyQuery
+    : { data: [] };
 
   const facultyMap = new Map(
     (faculty ?? []).map((f) => [f.facultyId, f.fullName]),

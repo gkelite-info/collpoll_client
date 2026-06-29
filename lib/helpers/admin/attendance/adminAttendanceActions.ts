@@ -303,12 +303,38 @@ export async function saveAttendance(
         adminMark: p.adminId ?? null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        attendanceRecordId: undefined as number | undefined,
       };
     });
 
+  if (dbRecords.length === 0) {
+    return { success: true };
+  }
+
+  const studentIds = dbRecords.map((r) => r.studentId);
+  const { data: existingRecords, error: fetchError } = await supabase
+    .from("attendance_record")
+    .select("attendanceRecordId, studentId")
+    .in("studentId", studentIds)
+    .eq("calendarEventId", parseInt(classId))
+    .is("deletedAt", null);
+
+  if (fetchError) {
+    console.error("fetch existing records error:", fetchError);
+    return { success: false, error: fetchError.message };
+  }
+
+  const recordMap = new Map(existingRecords?.map((r) => [r.studentId, r.attendanceRecordId]));
+  dbRecords.forEach((record) => {
+    const existingId = recordMap.get(record.studentId);
+    if (existingId) {
+      record.attendanceRecordId = existingId;
+    }
+  });
+
   const { error } = await supabase
     .from("attendance_record")
-    .upsert(dbRecords, { onConflict: "studentId,calendarEventId" });
+    .upsert(dbRecords);
 
   if (error) return { success: false, error: error.message };
   return { success: true };

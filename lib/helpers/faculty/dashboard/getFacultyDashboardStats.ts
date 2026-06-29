@@ -140,8 +140,7 @@ export async function getFacultyDashboardStats(facultyId: number) {
   let totalLessons = 0,
     completedLessons = 0;
 
-  // 1. Fetch all upcoming classes for this faculty
-  const { data: events } = await supabase
+  const { data: singleEvents } = await supabase
     .from("calendar_event")
     .select(
       `
@@ -155,27 +154,66 @@ export async function getFacultyDashboardStats(facultyId: number) {
     .eq("is_deleted", false)
     .is("deletedAt", null);
 
-  const eventIds: number[] = [];
+  const { data: bulkEvents } = await supabase
+    .from("bulk_calendar_events")
+    .select(
+      `
+      bulkCalendarEventId, fromTime, toTime,
+      bulk_calendar_event_sections ( collegeSectionId )
+    `,
+    )
+    .eq("facultyId", facultyId)
+    .eq("type", "class")
+    .lte("fromDate", today)
+    .gte("toDate", today)
+    .eq("is_deleted", false)
+    .is("deletedAt", null);
+
+  const isSunday = new Date().getDay() === 0;
+  const validSingleEvents = singleEvents || [];
+  const validBulkEvents = isSunday ? [] : (bulkEvents || []);
+
+  const mappedBulkEvents = validBulkEvents.map((be: any) => ({
+    calendarEventId: null,
+    bulkCalendarEventId: be.bulkCalendarEventId,
+    fromTime: be.fromTime,
+    toTime: be.toTime,
+    calendar_event_section: be.bulk_calendar_event_sections
+  }));
+
+  const events = [...validSingleEvents, ...mappedBulkEvents];
+
+  const singleEventIds: number[] = [];
+  const bulkEventIds: number[] = [];
   const sectionIds = new Set<number>();
 
   if (events && events.length > 0) {
-    const allEventIds = events.map((e: any) => e.calendarEventId);
+    events.forEach((e: any) => {
+        if (e.calendarEventId) singleEventIds.push(e.calendarEventId);
+        if (e.bulkCalendarEventId) bulkEventIds.push(e.bulkCalendarEventId);
+    });
     
-    const { data: sessionRecords } = await supabase
-      .from("faculty_class_sessions")
-      .select("calendarEventId, status")
-      .in("calendarEventId", allEventIds);
+    let allSessionRecords: any[] = [];
+    if (singleEventIds.length > 0 || bulkEventIds.length > 0) {
+      const orConditions = [];
+      if (singleEventIds.length > 0) orConditions.push(`calendarEventId.in.(${singleEventIds.join(",")})`);
+      if (bulkEventIds.length > 0) orConditions.push(`bulkCalendarEventId.in.(${bulkEventIds.join(",")})`);
       
-    const sessionMap = new Map<number, string>();
-    if (sessionRecords) {
-      sessionRecords.forEach((rec) => {
-        sessionMap.set(rec.calendarEventId, rec.status);
-      });
+      const { data: sessionRecords } = await supabase
+        .from("faculty_class_sessions")
+        .select("calendarEventId, bulkCalendarEventId, status")
+        .or(orConditions.join(","));
+      if (sessionRecords) allSessionRecords = sessionRecords;
     }
+      
+    const sessionMap = new Map<string, string>();
+    allSessionRecords.forEach((rec) => {
+      if (rec.calendarEventId) sessionMap.set(`single-${rec.calendarEventId}`, rec.status);
+      if (rec.bulkCalendarEventId) sessionMap.set(`bulk-${rec.bulkCalendarEventId}`, rec.status);
+    });
 
-    for (const ev of events) {
+    for (const ev of events as any[]) {
       totalClasses++;
-      eventIds.push(ev.calendarEventId);
 
       const from = new Date(`1970-01-01T${ev.fromTime}Z`);
       const to = new Date(`1970-01-01T${ev.toTime}Z`);
@@ -186,7 +224,7 @@ export async function getFacultyDashboardStats(facultyId: number) {
 
       totalHours += duration;
 
-      const isAccepted = sessionMap.get(ev.calendarEventId) === "Accepted";
+      const isAccepted = (ev.calendarEventId ? sessionMap.get(`single-${ev.calendarEventId}`) : sessionMap.get(`bulk-${ev.bulkCalendarEventId}`)) === "Accepted";
 
       if (isAccepted) {
         acceptedClasses++;
@@ -219,7 +257,7 @@ export async function getFacultyDashboardStats(facultyId: number) {
     }
 
     if (events) {
-      for (const ev of events) {
+      for (const ev of events as any[]) {
         const evSections = Array.isArray(ev.calendar_event_section)
           ? ev.calendar_event_section
           : [];
@@ -234,14 +272,19 @@ export async function getFacultyDashboardStats(facultyId: number) {
   }
 
   // 3. Calculate Present Students
-  if (eventIds.length > 0) {
-    const { data: attendance } = await supabase
+  if (singleEventIds.length > 0 || bulkEventIds.length > 0) {
+    let query = supabase
       .from("attendance_record")
-      .select("attendanceRecordId")
-      .in("calendarEventId", eventIds)
+      .select("attendanceRecordId", { count: 'exact' })
       .in("status", ["PRESENT", "LATE"]);
 
-    if (attendance) presentStudents = attendance.length;
+    const orConditions = [];
+    if (singleEventIds.length > 0) orConditions.push(`calendarEventId.in.(${singleEventIds.join(",")})`);
+    if (bulkEventIds.length > 0) orConditions.push(`bulkCalendarEventId.in.(${bulkEventIds.join(",")})`);
+
+    const { count } = await query.or(orConditions.join(","));
+
+    if (count !== null) presentStudents = count;
   }
 
   // 4. ---> NEW: CALCULATE TOTAL & COMPLETED LESSONS (TOPICS) <---

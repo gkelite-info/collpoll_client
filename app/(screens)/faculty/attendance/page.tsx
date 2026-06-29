@@ -58,9 +58,13 @@ function AttendanceContent() {
 
   const activeClassId = urlClassId || selectedClassId;
   const isTopicMode = !!urlClassId;
+  
+  const isBulk = activeClassId ? activeClassId.startsWith("bulk-") : false;
+  const eventId = activeClassId ? parseInt(isBulk ? activeClassId.split("-")[1] : activeClassId.split("-")[0]) : null;
 
   useAttendanceRealtime(
-    activeClassId ? parseInt(activeClassId.split("-")[0]) : null,
+    eventId,
+    isBulk,
     (payload) => {
       const newRecord = payload.new;
       if (newRecord && newRecord.studentId) {

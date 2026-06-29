@@ -45,20 +45,17 @@ type StudentAcademicHistoryRawRow = {
     | null;
 };
 
+type EventType = {
+  facultyId: number | null;
+  subject: number | null;
+};
+
 type AttendanceRecordRow = {
   studentId: number;
   status: string;
   markedAt?: string | null;
-  calendar_event:
-    | {
-        facultyId: number | null;
-        subject: number | null;
-      }
-    | {
-        facultyId: number | null;
-        subject: number | null;
-      }[]
-    | null;
+  calendar_event: EventType | EventType[] | null;
+  bulk_event: EventType | EventType[] | null;
 };
 
 type MarkedStudentSummary = {
@@ -793,6 +790,10 @@ export async function getFacultyStudentProgressSummary(
       calendar_event:calendarEventId (
         facultyId,
         subject
+      ),
+      bulk_event:bulkCalendarEventId (
+        facultyId,
+        subject
       )
     `,
     )
@@ -810,6 +811,10 @@ export async function getFacultyStudentProgressSummary(
       status,
       markedAt,
       calendar_event:calendarEventId (
+        facultyId,
+        subject
+      ),
+      bulk_event:bulkCalendarEventId (
         facultyId,
         subject
       )
@@ -968,9 +973,13 @@ export async function getFacultyStudentProgressSummary(
   >();
 
   for (const row of (allAttendanceRows ?? []) as AttendanceRecordRow[]) {
-    const event = Array.isArray(row.calendar_event)
+    const singleEvent = Array.isArray(row.calendar_event)
       ? row.calendar_event[0]
       : row.calendar_event;
+    const bulkEvent = Array.isArray(row.bulk_event)
+      ? row.bulk_event[0]
+      : row.bulk_event;
+    const event = singleEvent || bulkEvent;
 
     if (
       event?.facultyId !== scope.facultyId ||

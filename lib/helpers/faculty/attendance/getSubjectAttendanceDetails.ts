@@ -16,6 +16,7 @@ type FacultyRow = {
 
 type EventRow = {
   date?: string | null;
+  fromDate?: string | null;
   fromTime?: string | null;
   toTime?: string | null;
   faculty?: FacultyRow | FacultyRow[] | null;
@@ -27,6 +28,7 @@ type AttendanceRecordRow = {
   markedAt?: string | null;
   reason?: string | null;
   event?: EventRow | EventRow[] | null;
+  bulk_event?: EventRow | EventRow[] | null;
 };
 
 const safeGet = <T,>(
@@ -60,7 +62,34 @@ export async function getSubjectAttendanceDetails(
 
   const subjectId = subjectData.collegeSubjectId;
 
-  const { data: records, error: attendanceError } = await supabase
+  const { data: singleEvents } = await supabase
+    .from("calendar_event")
+    .select("calendarEventId")
+    .eq("subject", subjectId);
+  const singleIds = singleEvents?.map(e => e.calendarEventId) || [];
+
+  const { data: bulkEvents } = await supabase
+    .from("bulk_calendar_events")
+    .select("bulkCalendarEventId")
+    .eq("subject", subjectId);
+  const bulkIds = bulkEvents?.map(e => e.bulkCalendarEventId) || [];
+
+  if (singleIds.length === 0 && bulkIds.length === 0) {
+      return {
+        subjectName: subjectData.subjectName,
+        facultyName: "Unknown Faculty",
+        summary: {
+          totalClasses: 0,
+          attended: 0,
+          absent: 0,
+          leave: 0,
+          percentage: "0%",
+        },
+        records: []
+      };
+  }
+
+  let query = supabase
     .from("attendance_record")
     .select(
       `
@@ -68,19 +97,38 @@ export async function getSubjectAttendanceDetails(
       status,
       markedAt,
       reason,
-      event:calendar_event!inner (
+      calendarEventId,
+      bulkCalendarEventId,
+      event:calendar_event (
         date,
         fromTime,
         toTime,
         eventTopic,
         subject,
         faculty:faculty (fullName) 
+      ),
+      bulk_event:bulk_calendar_events (
+        fromDate,
+        fromTime,
+        toTime,
+        eventTopic,
+        subject,
+        faculty:faculty (fullName)
       )
     `,
     )
     .eq("studentId", studentId)
-    .eq("event.subject", subjectId)
     .order("markedAt", { ascending: false });
+
+  if (singleIds.length > 0 && bulkIds.length > 0) {
+    query = query.or(`calendarEventId.in.(${singleIds.join(",")}),bulkCalendarEventId.in.(${bulkIds.join(",")})`);
+  } else if (singleIds.length > 0) {
+    query = query.in("calendarEventId", singleIds);
+  } else if (bulkIds.length > 0) {
+    query = query.in("bulkCalendarEventId", bulkIds);
+  }
+
+  const { data: records, error: attendanceError } = await query;
 
   if (attendanceError) return null;
 
@@ -99,12 +147,14 @@ export async function getSubjectAttendanceDetails(
       if (r.status === "LEAVE") leave++;
     }
 
-    const event = safeGet(r.event);
+    const singleEvent = safeGet(r.event);
+    const bulkEvent = safeGet(r.bulk_event);
+    const event = singleEvent || bulkEvent;
     const faculty = safeGet(event?.faculty);
     const fName = faculty?.fullName || "Unknown Faculty";
     facultyNames.set(fName, (facultyNames.get(fName) || 0) + 1);
 
-    const eventDate = r.markedAt || event?.date || new Date().toISOString();
+    const eventDate = r.markedAt || singleEvent?.date || bulkEvent?.fromDate || new Date().toISOString();
     const dateObj = new Date(eventDate);
     const formattedDate = dateObj.toLocaleDateString("en-GB", {
       day: "2-digit",

@@ -14,6 +14,27 @@ export async function fetchEducations(collegeId: number) {
   return data ?? [];
 }
 
+export async function fetchAdminEducationTypes(adminId: number) {
+  const { data, error } = await supabase
+    .from("admin_education_types")
+    .select(`
+      collegeEducationId,
+      college_education:collegeEducationId (
+        collegeEducationType
+      )
+    `)
+    .eq("adminId", adminId)
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null);
+
+  if (error) throw error;
+  return data?.map((d: any) => ({
+    collegeEducationId: d.collegeEducationId,
+    collegeEducationType: d.college_education?.collegeEducationType
+  })) ?? [];
+}
+
 /* =========================
    BRANCHES
 ========================= */
@@ -45,7 +66,8 @@ export async function fetchAcademicYears(
     .select("collegeAcademicYearId, collegeAcademicYear")
     .eq("collegeId", collegeId)
     .eq("collegeEducationId", collegeEducationId)
-    .eq("collegeBranchId", collegeBranchId);
+    .eq("collegeBranchId", collegeBranchId)
+    .order("collegeAcademicYear", { ascending: true });
 
   if (error) throw error;
   return data ?? [];

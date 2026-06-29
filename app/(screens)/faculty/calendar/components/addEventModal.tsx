@@ -78,7 +78,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [meetingPassword, setMeetingPassword] = useState("");
 
   const [selectedType, setSelectedType] = useState("class");
+  const [calendarMode, setCalendarMode] = useState<"single" | "bulk">("single");
   const [date, setDate] = useState(getTodayDateString());
+  const [fromDate, setFromDate] = useState(getTodayDateString());
+  const [toDate, setToDate] = useState(getTodayDateString());
   const TODAY = getTodayDateString();
   const [startHour, setStartHour] = useState("09");
   const [startMinute, setStartMinute] = useState("00");
@@ -99,6 +102,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [degree, setDegree] = useState("");
   const [subject, setSubject] = useState("");
   const [topicId, setTopicId] = useState<number | null>(null);
+  const [unitIds, setUnitIds] = useState<number[]>([]);
+  const [isUnitOpen, setIsUnitOpen] = useState(false);
+  const unitDropdownRef = useRef<HTMLDivElement>(null);
   const [isDateInputFocused, setIsDateInputFocused] = useState(false);
   const [isSubjectFocused, setIsSubjectFocused] = useState(false);
   const [isTopicFocused, setIsTopicFocused] = useState(false);
@@ -106,7 +112,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const deptDropdownRef = useRef<HTMLDivElement>(null);
   const sectionDropdownRef = useRef<HTMLDivElement>(null);
   const { userId, collegeId, loading } = useUser();
-  const [topics, setTopics] = useState<TopicRow[]>([]);
+  const [topics, setTopics] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [facultyCtx, setFacultyCtx] = useState<any>(null);
   const [educationId, setEducationId] = useState<number | undefined>(undefined);
@@ -133,7 +140,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     setMeetingPassword("");
     setMeetingPlatform("meet");
     setSelectedType("class");
+    setCalendarMode("single");
     setDate(getTodayDateString());
+    setFromDate(getTodayDateString());
+    setToDate(getTodayDateString());
     setStartHour("09");
     setStartMinute("00");
     setStartPeriod("AM");
@@ -146,9 +156,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     setSelectedDepartments([]);
     setSelectedSections([]);
     setTopicId(null);
+    setUnitIds([]);
     setSectionIds([]);
     setIsDeptOpen(false);
     setIsSectionOpen(false);
+    setIsUnitOpen(false);
     setIsSemesterAuto(false);
   };
 
@@ -173,6 +185,14 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       ) {
         setIsSectionOpen(false);
       }
+
+      if (
+        isUnitOpen &&
+        unitDropdownRef.current &&
+        !unitDropdownRef.current.contains(target)
+      ) {
+        setIsUnitOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleDropdownClose);
@@ -180,7 +200,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     return () => {
       document.removeEventListener("mousedown", handleDropdownClose);
     };
-  }, [isOpen, isDeptOpen, isSectionOpen]);
+  }, [isOpen, isDeptOpen, isSectionOpen, isUnitOpen]);
 
   const dateInputRef = useRef<HTMLInputElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
@@ -423,6 +443,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     if (!subjectId) {
       return;
     }
+
+    // Fetch Topics
     supabase
       .from("college_subject_unit_topics")
       .select("collegeSubjectUnitTopicId, topicTitle")
@@ -431,7 +453,17 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       .then(({ data }) => {
         setTopics(data ?? []);
       });
-  }, [subjectId]);
+
+    // Fetch Units
+    supabase
+      .from("college_subject_units")
+      .select("collegeSubjectUnitId, unitTitle, unitNumber")
+      .eq("collegeSubjectId", subjectId)
+      .eq("collegeId", collegeId)
+      .then(({ data }) => {
+        setUnits(data ?? []);
+      });
+  }, [subjectId, collegeId]);
 
   const validateTimeRange = () => {
     const startTime = to24Hour(startHour, startMinute, startPeriod);
@@ -489,8 +521,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       return;
     }
 
-    if (!topicId) {
+    if (calendarMode === "single" && !topicId) {
       toast.error("Please select a topic");
+      return;
+    }
+
+    if (calendarMode === "bulk" && unitIds.length === 0) {
+      toast.error("Please select at least one unit");
       return;
     }
 
@@ -533,13 +570,17 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     const payload: CalendarEventPayload = {
       facultyId: userId!,
       subjectId: subjectId!,
-      eventTopic: topicId,
+      eventTopic: calendarMode === "single" ? topicId : null,
+      eventUnitIds: calendarMode === "bulk" ? unitIds : undefined,
 
       eventTitle:
         selectedType === "meeting" ? title.trim() || "Meeting" : subject,
 
       type: selectedType.toLowerCase() as any,
-      date,
+      calendarMode,
+      date: calendarMode === "single" ? date : "",
+      fromDate: calendarMode === "bulk" ? fromDate : undefined,
+      toDate: calendarMode === "bulk" ? toDate : undefined,
       fromTime: startTime,
       toTime: endTime,
       roomNo,
@@ -645,6 +686,17 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         setIsSemesterAuto(false);
       }
 
+      if (value.calendarMode) {
+        setCalendarMode(value.calendarMode);
+      }
+
+      if (value.fromDate) setFromDate(value.fromDate);
+      if (value.toDate) setToDate(value.toDate);
+      
+      if (Array.isArray(value.unitIds)) {
+        setUnitIds(value.unitIds);
+      }
+
       if (Array.isArray(value.sectionIds)) {
         setEditSectionIds(value.sectionIds);
       }
@@ -694,6 +746,26 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         <div className="p-5 space-y-5 overflow-y-auto flex-1">
           <div className="space-y-1">
             <label className="block text-gray-700 font-medium text-sm">
+              Calendar Mode
+            </label>
+            <div className="flex gap-2">
+              {["single", "bulk"].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setCalendarMode(mode as "single" | "bulk")}
+                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${calendarMode === mode
+                    ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
+                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                >
+                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-gray-700 font-medium text-sm">
               Type
             </label>
             <div className="flex gap-2">
@@ -737,105 +809,172 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             />
           </div> */}
 
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Subject <span className="text-red-500">*</span>
-            </label>
+          <div className={calendarMode === "bulk" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-5"}>
+            <div className="flex-1 space-y-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Subject <span className="text-red-500">*</span>
+              </label>
 
-            {subjects.length <= 1 ? (
-              <input
-                type="text"
-                readOnly
-                value={
-                  subjects.find((s) => s.collegeSubjectId === subjectId)
-                    ?.subjectName || subject || ""
-                }
-                className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9]
-        rounded-lg px-3 bg-gray-50 text-gray-900 cursor-not-allowed outline-none`}
-              />
-            ) : (
-              <div className="relative">
-                <select
-                  value={subjectId ?? ""}
-                  onChange={(e) => {
-                    const selected = subjects.find(
-                      (s) => s.collegeSubjectId === Number(e.target.value)
-                    );
-                    if (selected) {
-                      setSubjectId(selected.collegeSubjectId);
-                      setSubject(selected.subjectName);
-                      setTopicId(null);
-                    }
-                    e.currentTarget.blur();
-                  }}
-                  onMouseDown={() => setIsSubjectFocused((prev) => !prev)}
-                  onBlur={() => setIsSubjectFocused(false)}
+              {subjects.length <= 1 ? (
+                <input
+                  type="text"
+                  readOnly
+                  value={
+                    subjects.find((s) => s.collegeSubjectId === subjectId)
+                      ?.subjectName || subject || ""
+                  }
                   className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9]
-          rounded-lg pl-3 pr-10 text-sm bg-white cursor-pointer appearance-none
-          focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
-          outline-none transition-all
-          ${!subjectId ? "text-gray-400" : "text-gray-900"}`}
-                >
-                  <option value="" disabled>Select Subject</option>
-                  {subjects.map((s) => (
-                    <option key={s.collegeSubjectId} value={s.collegeSubjectId} className="text-[#282828] cursor-pointer">
-                      {s.subjectName}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                  <CaretDown
-                    size={16}
-                    weight="bold"
-                    className={`transition-transform duration-200 ${isSubjectFocused ? "rotate-180" : "rotate-0"
-                      }`}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Topic <span className="text-red-500">*</span>
-            </label>
-
-            <div className="relative">
-              <select
-                value={topicId ?? ""}
-                onChange={(e) => {
-                  setTopicId(Number(e.target.value));
-                  e.currentTarget.blur();
-                }}
-                onMouseDown={() => setIsTopicFocused((prev) => !prev)}
-                onBlur={() => setIsTopicFocused(false)}
-                className={`w-full h-[44px] border border-[#C9C9C9] rounded-lg pl-3 pr-10
-      bg-white text-gray-900 outline-none cursor-pointer appearance-none
-      focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
-      transition-all ${!topicId ? "text-gray-400" : "text-gray-900"}`}
-              >
-                <option value="" disabled>
-                  Select Topic
-                </option>
-
-                {topics.map((t) => (
-                  <option
-                    key={t.collegeSubjectUnitTopicId}
-                    value={t.collegeSubjectUnitTopicId}
-                  >
-                    {t.topicTitle}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                <CaretDown
-                  size={16}
-                  weight="bold"
-                  className={`transition-transform duration-200 ${isTopicFocused ? "rotate-180" : "rotate-0"
-                    }`}
+          rounded-lg px-3 bg-gray-50 text-gray-900 cursor-not-allowed outline-none`}
                 />
-              </div>
+              ) : (
+                <div className="relative">
+                  <select
+                    value={subjectId ?? ""}
+                    onChange={(e) => {
+                      const selected = subjects.find(
+                        (s) => s.collegeSubjectId === Number(e.target.value)
+                      );
+                      if (selected) {
+                        setSubjectId(selected.collegeSubjectId);
+                        setSubject(selected.subjectName);
+                        setTopicId(null);
+                      }
+                      e.currentTarget.blur();
+                    }}
+                    onMouseDown={() => setIsSubjectFocused((prev) => !prev)}
+                    onBlur={() => setIsSubjectFocused(false)}
+                    className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9]
+            rounded-lg pl-3 pr-10 text-sm bg-white cursor-pointer appearance-none
+            focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
+            outline-none transition-all
+            ${!subjectId ? "text-gray-400" : "text-gray-900"}`}
+                  >
+                    <option value="" disabled>Select Subject</option>
+                    {subjects.map((s) => (
+                      <option key={s.collegeSubjectId} value={s.collegeSubjectId} className="text-[#282828] cursor-pointer">
+                        {s.subjectName}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                    <CaretDown
+                      size={16}
+                      weight="bold"
+                      className={`transition-transform duration-200 ${isSubjectFocused ? "rotate-180" : "rotate-0"
+                        }`}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 space-y-1">
+              <label className="block text-sm font-medium text-gray-700">
+                {calendarMode === "bulk" ? "Unit" : "Topic"} <span className="text-red-500">*</span>
+              </label>
+
+              {calendarMode === "bulk" ? (
+                <div className="relative" ref={unitDropdownRef}>
+                  <div
+                    onClick={() => setIsUnitOpen((p) => !p)}
+                    className={`
+                    w-full ${INPUT_HEIGHT}
+                    border border-[#C9C9C9]
+                    rounded-lg px-3
+                    bg-white text-sm
+                    cursor-pointer
+                    flex items-center justify-between
+                    focus:ring-2 focus:ring-[#43C17A]
+                  `}
+                  >
+                    <span
+                      className={
+                        unitIds.length ? "text-gray-900" : "text-gray-400"
+                      }
+                    >
+                      {unitIds.length === 0
+                        ? "Select Units"
+                        : units
+                          .filter((u) => unitIds.includes(u.collegeSubjectUnitId))
+                          .map((u) => `Unit ${u.unitNumber}`)
+                          .join(", ")}
+                    </span>
+                    <CaretDown
+                      size={16}
+                      weight="bold"
+                      className={`text-gray-400 transition-transform duration-200 ${isUnitOpen ? "rotate-180" : "rotate-0"
+                        }`}
+                    />
+                  </div>
+
+                  {isUnitOpen && (
+                    <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-md max-h-48 overflow-y-auto">
+                      {units.map((u) => {
+                        const checked = unitIds.includes(u.collegeSubjectUnitId);
+
+                        return (
+                          <label
+                            key={u.collegeSubjectUnitId}
+                            className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setUnitIds((prev) =>
+                                  checked
+                                    ? prev.filter((id) => id !== u.collegeSubjectUnitId)
+                                    : [...prev, u.collegeSubjectUnitId],
+                                );
+                              }}
+                              className="accent-emerald-500"
+                            />
+                            <span className="text-sm text-gray-700">
+                              Unit {u.unitNumber}: {u.unitTitle}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="relative">
+                  <select
+                    value={topicId ?? ""}
+                    onChange={(e) => {
+                      setTopicId(Number(e.target.value));
+                      e.currentTarget.blur();
+                    }}
+                    onMouseDown={() => setIsTopicFocused((prev) => !prev)}
+                    onBlur={() => setIsTopicFocused(false)}
+                    className={`w-full h-[44px] border border-[#C9C9C9] rounded-lg pl-3 pr-10
+        bg-white text-gray-900 outline-none cursor-pointer appearance-none
+        focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
+        transition-all ${!topicId ? "text-gray-400" : "text-gray-900"}`}
+                  >
+                    <option value="" disabled>
+                      Select Topic
+                    </option>
+                    {topics.map((t) => (
+                      <option
+                        key={t.collegeSubjectUnitTopicId}
+                        value={t.collegeSubjectUnitTopicId}
+                      >
+                        {t.topicTitle}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                    <CaretDown
+                      size={16}
+                      weight="bold"
+                      className={`transition-transform duration-200 ${isTopicFocused ? "rotate-180" : "rotate-0"
+                        }`}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -936,121 +1075,188 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
           )}
 
           <div>
-            <div className="flex flex-col md:flex-row gap-4 items-start">
-              <div className="flex-1 w-full min-w-0">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={date}
-                  min={TODAY}
-                  onChange={(e) => setDate(e.target.value)}
-                  className={`w-full cursor-pointer border border-[#C9C9C9] rounded-lg px-3 ${INPUT_HEIGHT} outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white`}
-                />
-              </div>
-
-            <div className="flex-1 w-full min-w-0">
-               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Room No. {selectedType === "class" && <span className="text-red-500">*</span>}
-              </label>
-              <RoomSelectDropdown
-                value={roomNo}
-                onChange={(rNo, rId) => { setRoomNo(rNo); setCollegeRoomId(rId); }}
-                collegeId={collegeId || 0}
-                placeholder="Select Room No. / Room Name"
-              />
-            </div>
-          </div>
-
-            <div className="bg-red-00 flex flex-col space-y-1 mt-3">
-              <label className="block text-gray-700 font-medium text-sm">
-                Time
-              </label>
-
-              <div className="bg-green-00 flex flex-col landscape:flex-row md:flex md:flex-row lg:flex lg:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="flex gap-0.5">
-                    <span className="block text-gray-500 text-xs mb-1">
-                      From
-                    </span>
-                    <span className="text-red-500 -mt-1">*</span>
-                  </div>
-                  <div className="flex gap-1.5">
-                    <select
-                      value={startHour}
-                      onChange={(e) => setStartHour(e.target.value)}
-                      className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-14 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-                    >
-                      {Array.from({ length: 12 }, (_, i) => {
-                        const h = String(i + 1).padStart(2, "0");
-                        return <option key={h}>{h}</option>;
-                      })}
-                    </select>
-
-                    <select
-                      value={startMinute}
-                      onChange={(e) => setStartMinute(e.target.value)}
-                      className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-                    >
-                      {Array.from({ length: 12 }, (_, i) => {
-                        const m = String(i * 5).padStart(2, "0");
-                        return <option key={m}>{m}</option>;
-                      })}
-                    </select>
-
-                    <select
-                      value={startPeriod}
-                      onChange={(e) =>
-                        setStartPeriod(e.target.value as "AM" | "PM")
-                      }
-                      className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-                    >
-                      <option>AM</option>
-                      <option>PM</option>
-                    </select>
+            {calendarMode === "single" ? (
+              <div className="flex flex-col md:flex-row gap-4 items-start">
+                <div className="flex-1 w-full min-w-0">
+                  <label className="block text-gray-700 font-medium text-sm mb-1">
+                    Date <span className="text-red-500">*</span>
+                  </label>
+                  <div
+                    className={`relative flex items-center border rounded-xl overflow-hidden transition-colors ${isDateInputFocused
+                      ? "border-primary ring-1 ring-primary"
+                      : "border-gray-300"
+                      }`}
+                  >
+                    <input
+                      type="date"
+                      ref={dateInputRef}
+                      value={date}
+                      min={TODAY}
+                      onChange={(e) => setDate(e.target.value)}
+                      onFocus={() => setIsDateInputFocused(true)}
+                      onBlur={() => setIsDateInputFocused(false)}
+                      className={`w-full ${INPUT_HEIGHT} px-4 focus:outline-none bg-transparent cursor-pointer`}
+                    />
                   </div>
                 </div>
 
-                <div className="flex-1">
-                  <div className="flex gap-0.5">
-                    <span className="block text-gray-500 text-xs mb-1">To</span>
-                    <span className="text-red-500 -mt-1">*</span>
+                <div className="flex-1 w-full min-w-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Room No. {selectedType === "class" && <span className="text-red-500">*</span>}
+                  </label>
+                  <RoomSelectDropdown
+                    value={roomNo}
+                    onChange={(rNo, rId) => { setRoomNo(rNo); setCollegeRoomId(rId); }}
+                    collegeId={collegeId || 0}
+                    placeholder="Select Room No. / Room Name"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex-1 relative">
+                    <label className="block text-gray-700 font-medium text-sm mb-1">
+                      From Date <span className="text-red-500">*</span>
+                    </label>
+                    <div
+                      className={`relative flex items-center border rounded-xl overflow-hidden transition-colors ${isDateInputFocused
+                        ? "border-primary ring-1 ring-primary"
+                        : "border-gray-300"
+                        }`}
+                    >
+                      <input
+                        type="date"
+                        value={fromDate}
+                        min={TODAY}
+                        onChange={(e) => setFromDate(e.target.value)}
+                        onFocus={() => setIsDateInputFocused(true)}
+                        onBlur={() => setIsDateInputFocused(false)}
+                        className={`w-full ${INPUT_HEIGHT} px-4 focus:outline-none bg-transparent cursor-pointer`}
+                      />
+                    </div>
                   </div>
-                  <div className="flex gap-1.5">
-                    <select
-                      value={endHour}
-                      onChange={(e) => setEndHour(e.target.value)}
-                      className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-14 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-                    >
-                      {Array.from({ length: 12 }, (_, i) => {
-                        const h = String(i + 1).padStart(2, "0");
-                        return <option key={h}>{h}</option>;
-                      })}
-                    </select>
-
-                    <select
-                      value={endMinute}
-                      onChange={(e) => setEndMinute(e.target.value)}
-                      className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-                    >
-                      {Array.from({ length: 12 }, (_, i) => {
-                        const m = String(i * 5).padStart(2, "0");
-                        return <option key={m}>{m}</option>;
-                      })}
-                    </select>
-
-                    <select
-                      value={endPeriod}
-                      onChange={(e) =>
-                        setEndPeriod(e.target.value as "AM" | "PM")
-                      }
-                      className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-                    >
-                      <option>AM</option>
-                      <option>PM</option>
-                    </select>
+                  <div className="flex-1 relative">
+                    <label className="block text-gray-700 font-medium text-sm mb-1">
+                      To Date <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative flex items-center border rounded-xl overflow-hidden transition-colors border-gray-300">
+                      <input
+                        type="date"
+                        value={toDate}
+                        min={fromDate || TODAY}
+                        onChange={(e) => setToDate(e.target.value)}
+                        className={`w-full ${INPUT_HEIGHT} px-4 focus:outline-none bg-transparent cursor-pointer`}
+                      />
+                    </div>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex-1 w-full min-w-0">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Room No. {selectedType === "class" && <span className="text-red-500">*</span>}
+                    </label>
+                    <RoomSelectDropdown
+                      value={roomNo}
+                      onChange={(rNo, rId) => { setRoomNo(rNo); setCollegeRoomId(rId); }}
+                      collegeId={collegeId || 0}
+                      placeholder="Select Room No. / Room Name"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-red-00 flex flex-col space-y-1 mt-3">
+
+            <label className="block text-gray-700 font-medium text-sm">
+              Time
+            </label>
+
+            <div className="bg-green-00 flex flex-col landscape:flex-row md:flex md:flex-row lg:flex lg:flex-row gap-4">
+              <div className="flex-1">
+                <div className="flex gap-0.5">
+                  <span className="block text-gray-500 text-xs mb-1">
+                    From
+                  </span>
+                  <span className="text-red-500 -mt-1">*</span>
+                </div>
+                <div className="flex gap-1.5">
+                  <select
+                    value={startHour}
+                    onChange={(e) => setStartHour(e.target.value)}
+                    className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-14 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const h = String(i + 1).padStart(2, "0");
+                      return <option key={h}>{h}</option>;
+                    })}
+                  </select>
+
+                  <select
+                    value={startMinute}
+                    onChange={(e) => setStartMinute(e.target.value)}
+                    className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const m = String(i * 5).padStart(2, "0");
+                      return <option key={m}>{m}</option>;
+                    })}
+                  </select>
+
+                  <select
+                    value={startPeriod}
+                    onChange={(e) =>
+                      setStartPeriod(e.target.value as "AM" | "PM")
+                    }
+                    className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
+                  >
+                    <option>AM</option>
+                    <option>PM</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex-1">
+                <div className="flex gap-0.5">
+                  <span className="block text-gray-500 text-xs mb-1">To</span>
+                  <span className="text-red-500 -mt-1">*</span>
+                </div>
+                <div className="flex gap-1.5">
+                  <select
+                    value={endHour}
+                    onChange={(e) => setEndHour(e.target.value)}
+                    className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-14 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const h = String(i + 1).padStart(2, "0");
+                      return <option key={h}>{h}</option>;
+                    })}
+                  </select>
+
+                  <select
+                    value={endMinute}
+                    onChange={(e) => setEndMinute(e.target.value)}
+                    className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const m = String(i * 5).padStart(2, "0");
+                      return <option key={m}>{m}</option>;
+                    })}
+                  </select>
+
+                  <select
+                    value={endPeriod}
+                    onChange={(e) =>
+                      setEndPeriod(e.target.value as "AM" | "PM")
+                    }
+                    className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
+                  >
+                    <option>AM</option>
+                    <option>PM</option>
+                  </select>
                 </div>
               </div>
             </div>

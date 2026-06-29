@@ -313,8 +313,8 @@ export default function StuDashLeft() {
       );
 
       setAttendancePercent(res?.cards?.percentage ?? 0);
-    } catch (err) {
-      console.error("Failed to load attendance percent", err);
+    } catch (err: any) {
+      console.error("Failed to load attendance percent", err?.message || err);
     }
   };
 

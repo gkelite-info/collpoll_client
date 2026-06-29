@@ -33,17 +33,38 @@ async function fetchStudentName(userId: number) {
 async function fetchMinAttendance(context: StudentAttendanceContext) {
   if (!context.collegeSemesterId) return null;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("college_attendance_policies")
     .select("minAttendance")
-    .eq("collegeEducationId", context.collegeEducationId)
-    .eq("collegeBranchId", context.collegeBranchId)
-    .eq("collegeAcademicYearId", context.collegeAcademicYearId)
-    .eq("collegeSemesterId", context.collegeSemesterId)
     .eq("isActive", true)
     .eq("is_deleted", false)
-    .is("deletedAt", null)
-    .maybeSingle();
+    .is("deletedAt", null);
+
+  if (context.collegeEducationId !== null && context.collegeEducationId !== undefined && String(context.collegeEducationId) !== "null") {
+    query = query.eq("collegeEducationId", context.collegeEducationId);
+  } else {
+    query = query.is("collegeEducationId", null);
+  }
+
+  if (context.collegeBranchId !== null && context.collegeBranchId !== undefined && String(context.collegeBranchId) !== "null") {
+    query = query.eq("collegeBranchId", context.collegeBranchId);
+  } else {
+    query = query.is("collegeBranchId", null);
+  }
+
+  if (context.collegeAcademicYearId !== null && context.collegeAcademicYearId !== undefined && String(context.collegeAcademicYearId) !== "null") {
+    query = query.eq("collegeAcademicYearId", context.collegeAcademicYearId);
+  } else {
+    query = query.is("collegeAcademicYearId", null);
+  }
+
+  if (context.collegeSemesterId !== null && context.collegeSemesterId !== undefined && String(context.collegeSemesterId) !== "null") {
+    query = query.eq("collegeSemesterId", context.collegeSemesterId);
+  } else {
+    query = query.is("collegeSemesterId", null);
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     console.error("Student attendance policy fetch error:", error);

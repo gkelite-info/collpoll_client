@@ -51,6 +51,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   mode,
 }) => {
   const [selectedType, setSelectedType] = useState("class");
+  const [calendarMode, setCalendarMode] = useState<"single" | "bulk">("single");
+  const [fromDate, setFromDate] = useState(TODAY);
+  const [toDate, setToDate] = useState(TODAY);
+  const [units, setUnits] = useState<any[]>([]);
+  const [unitIds, setUnitIds] = useState<number[]>([]);
+  const [isUnitOpen, setIsUnitOpen] = useState(false);
+  const unitDropdownRef = useRef<HTMLDivElement>(null);
   const [date, setDate] = useState(TODAY);
   const [startHour, setStartHour] = useState("09");
   const [startMinute, setStartMinute] = useState("00");
@@ -86,7 +93,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [sections, setSections] = useState<FacultySection[]>([]);
   const [semesterLabel, setSemesterLabel] = useState<number | null>(null);
 
-  // 🟢 Platform & Meeting States
   const [meetingTitle, setMeetingTitle] = useState("");
   const [meetingLink, setMeetingLink] = useState("");
   const [meetingPlatform, setMeetingPlatform] = useState<
@@ -199,6 +205,15 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       .then(({ data }) => {
         setTopics(data ?? []);
       });
+    supabase
+      .from("college_subject_units")
+      .select("collegeSubjectUnitId, unitTitle, unitNumber")
+      .eq("collegeId", collegeId)
+      .eq("collegeSubjectId", subjectId)
+      .order("unitNumber", { ascending: true })
+      .then(({ data }) => {
+        setUnits(data ?? []);
+      });
   }, [subjectId, collegeId]);
 
   useEffect(() => {
@@ -249,6 +264,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       setYear("");
       setSemester(undefined);
       setSemesterLabel(null);
+      setCalendarMode("single");
+      setFromDate(TODAY);
+      setToDate(TODAY);
+      setUnitIds([]);
+      setIsUnitOpen(false);
       setSelectedType("class");
       setDate(getTodayDateString());
       setStartHour("09");
@@ -287,6 +307,23 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       if (isEditMode && typeof value.semester === "number") {
         setSemester(value.semester);
       }
+      if (isEditMode && typeof value.semesterId === "number") {
+        setSemester(value.semesterId);
+      }
+
+      // Restore bulk-specific fields
+      if (value.calendarMode) {
+        setCalendarMode(value.calendarMode);
+      }
+      if (value.fromDate) {
+        setFromDate(value.fromDate);
+      }
+      if (value.toDate) {
+        setToDate(value.toDate);
+      }
+      if (Array.isArray(value.unitIds) && value.unitIds.length > 0) {
+        setUnitIds(value.unitIds);
+      }
 
       setMeetingTitle(value.title ?? "");
       setMeetingLink(value.meetingLink ?? "");
@@ -298,7 +335,15 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         setMeetingPlatform("meet");
       else setMeetingPlatform("others");
 
-      if (value.startTime && value.endTime) {
+      // Restore time components: prefer 12h fields, fallback to 24h parsing
+      if (value.startHour && value.startMinute && value.startPeriod) {
+        setStartHour(value.startHour);
+        setStartMinute(value.startMinute);
+        setStartPeriod(value.startPeriod);
+        setEndHour(value.endHour);
+        setEndMinute(value.endMinute);
+        setEndPeriod(value.endPeriod);
+      } else if (value.startTime && value.endTime) {
         const start = parse24HourTo12Hour(value.startTime);
         const end = parse24HourTo12Hour(value.endTime);
         setStartHour(start.hour);
@@ -414,13 +459,24 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       return;
     }
 
-    if (!topicId) {
-      toast.error(
-        topics.length === 0
-          ? "No topics exist for this subject. Please add them in Academic Setup first."
-          : "Please select an Event Topic.",
-      );
-      return;
+    if (calendarMode === "bulk") {
+      if (unitIds.length === 0) {
+        toast.error(
+          units.length === 0
+            ? "No units exist for this subject. Please add them in Academic Setup first."
+            : "Please select at least one Unit.",
+        );
+        return;
+      }
+    } else {
+      if (!topicId) {
+        toast.error(
+          topics.length === 0
+            ? "No topics exist for this subject. Please add them in Academic Setup first."
+            : "Please select an Event Topic.",
+        );
+        return;
+      }
     }
 
     if (selectedType === "class" && !roomNo.trim()) {
@@ -428,13 +484,24 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       return;
     }
 
-    if (!date) {
-      toast.error("Please select a Date.");
-      return;
-    }
-    if (date < TODAY) {
-      toast.error("Past dates are not allowed.");
-      return;
+    if (calendarMode === "bulk") {
+      if (!fromDate || !toDate) {
+        toast.error("Please select both From Date and To Date.");
+        return;
+      }
+      if (fromDate > toDate) {
+        toast.error("From Date cannot be later than To Date.");
+        return;
+      }
+    } else {
+      if (!date) {
+        toast.error("Please select a Date.");
+        return;
+      }
+      if (date < TODAY) {
+        toast.error("Past dates are not allowed.");
+        return;
+      }
     }
 
     const startTime = to24Hour(startHour, startMinute, startPeriod);
@@ -479,6 +546,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       eventTopic: topicId ?? null,
 
       type: selectedType.toLowerCase(),
+      calendarMode,
+      fromDate,
+      toDate,
+      eventUnitIds: unitIds,
       date,
       roomNo: roomNo.trim(),
       collegeRoomId: collegeRoomId ?? null,
@@ -498,11 +569,21 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (
         modalContentRef.current &&
-        !modalContentRef.current.contains(event.target as Node)
+        !modalContentRef.current.contains(target) &&
+        (!unitDropdownRef.current || !unitDropdownRef.current.contains(target))
       ) {
         onClose();
+      }
+      
+      if (
+        isUnitOpen &&
+        unitDropdownRef.current &&
+        !unitDropdownRef.current.contains(target)
+      ) {
+        setIsUnitOpen(false);
       }
     };
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -571,6 +652,26 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         <div className="p-5 space-y-5 overflow-y-auto flex-1">
           <div className="space-y-1">
             <label className="block text-gray-700 font-medium text-sm">
+              Event Mode
+            </label>
+            <div className="flex gap-2">
+              {["single", "bulk"].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setCalendarMode(mode as "single" | "bulk")}
+                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${calendarMode === mode
+                    ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
+                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                >
+                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-gray-700 font-medium text-sm">
               Type
             </label>
             <div className="flex gap-2">
@@ -579,8 +680,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   key={type}
                   onClick={() => setSelectedType(type)}
                   className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${selectedType === type
-                      ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
-                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                    ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
+                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
                     }`}
                 >
                   {formatLabel(type)}
@@ -611,8 +712,57 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
           <div className="space-y-1">
             <label className="block text-sm font-medium text-gray-700">
-              Event Topic <span className="text-red-600">*</span>
+              {calendarMode === "bulk" ? "Unit" : "Event Topic"} <span className="text-red-600">*</span>
             </label>
+            {calendarMode === "bulk" ? (
+                <div className="relative" ref={unitDropdownRef}>
+                  <div
+                    onClick={() => setIsUnitOpen((p) => !p)}
+                    className={`
+                      w-full cursor-pointer h-11 border border-[#C9C9C9] rounded-lg px-3
+                      flex items-center justify-between
+                      bg-white text-sm
+                      focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
+                    `}
+                  >
+                    <span className={unitIds.length ? "text-gray-900" : "text-gray-400"}>
+                      {unitIds.length === 0
+                        ? "Select Units"
+                        : units
+                            .filter((u) => unitIds.includes(u.collegeSubjectUnitId))
+                            .map((u) => `Unit ${u.unitNumber}`)
+                            .join(", ")}
+                    </span>
+                    <CaretDown size={16} weight="bold" className={`text-gray-400 transition-transform duration-200 ${isUnitOpen ? "rotate-180" : "rotate-0"}`} />
+                  </div>
+                  {isUnitOpen && (
+                    <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-md max-h-48 overflow-y-auto">
+                      {units.map((u) => {
+                        const checked = unitIds.includes(u.collegeSubjectUnitId);
+                        return (
+                          <label key={u.collegeSubjectUnitId} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setUnitIds((prev) =>
+                                  checked
+                                    ? prev.filter((id) => id !== u.collegeSubjectUnitId)
+                                    : [...prev, u.collegeSubjectUnitId],
+                                );
+                              }}
+                              className="accent-emerald-500"
+                            />
+                            <span className="text-sm text-gray-700">
+                              Unit {u.unitNumber}: {u.unitTitle}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+            ) : (
             <div className="relative">
               <select
                 value={topicId ?? ""}
@@ -650,6 +800,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 />
               </div>
             </div>
+            )}
           </div>
 
           {isMeeting && (
@@ -752,20 +903,51 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             </>
           )}
           <div>
-            <div className="flex flex-col md:flex-row gap-4 items-start">
-              <div className="flex-1 w-full min-w-0">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date <span className="text-red-600">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={date}
-                  min={TODAY}
-                  onChange={handleDateChange}
-                  onBlur={handleDateBlur}
-                  className={`w-full cursor-pointer border border-[#C9C9C9] rounded-lg px-3 ${INPUT_HEIGHT} outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white`}
-                />
-              </div>
+            <div className={calendarMode === "bulk" ? "grid grid-cols-1 md:grid-cols-[1fr,1fr,1fr] gap-4 items-start" : "flex flex-col md:flex-row gap-4 items-start"}>
+              {calendarMode === "bulk" ? (
+                <>
+                  <div className="flex-1 w-full min-w-0">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      From Date <span className="text-red-600">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={fromDate}
+                      onChange={(e) => {
+                        setFromDate(e.target.value);
+                        if (e.target.value > toDate) setToDate(e.target.value);
+                      }}
+                      className={`w-full cursor-pointer border border-[#C9C9C9] rounded-lg px-3 ${INPUT_HEIGHT} outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white`}
+                    />
+                  </div>
+                  <div className="flex-1 w-full min-w-0">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      To Date <span className="text-red-600">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      min={fromDate}
+                      value={toDate}
+                      onChange={(e) => setToDate(e.target.value)}
+                      className={`w-full cursor-pointer border border-[#C9C9C9] rounded-lg px-3 ${INPUT_HEIGHT} outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white`}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 w-full min-w-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={date}
+                    min={TODAY}
+                    onChange={handleDateChange}
+                    onBlur={handleDateBlur}
+                    className={`w-full cursor-pointer border border-[#C9C9C9] rounded-lg px-3 ${INPUT_HEIGHT} outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white`}
+                  />
+                </div>
+              )}
               <div className="flex-1 w-full min-w-0">
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-sm font-medium text-gray-700">
