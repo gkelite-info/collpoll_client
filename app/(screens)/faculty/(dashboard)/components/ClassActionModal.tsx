@@ -2,6 +2,7 @@ import { UpcomingLesson } from "@/lib/helpers/faculty/attendance/getClasses";
 import { X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 interface ActionModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
   >("initial");
   const [reason, setReason] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (isOpen) {
@@ -111,16 +113,15 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
             <div className="px-5 py-4 flex gap-3">
               <button
                 onClick={() => {
-                  if (!isAccepted) setStep("confirm_accept");
+                  if (isAccepted) {
+                    router.push(`/faculty/attendance?classId=${lesson.id}`);
+                  } else {
+                    setStep("confirm_accept");
+                  }
                 }}
-                disabled={isAccepted}
-                className={`flex-1 font-medium py-2.5 rounded-md text-sm transition-colors ${
-                  isAccepted
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "cursor-pointer bg-[#3FC27B] hover:bg-[#36a86a] text-white"
-                }`}
+                className="flex-1 font-medium py-2.5 rounded-md text-sm transition-colors cursor-pointer bg-[#3FC27B] hover:bg-[#36a86a] text-white"
               >
-                {isAccepted ? "Accepted" : "Accept"}
+                {isAccepted ? "Mark Attendance" : "Accept"}
               </button>
               <button
                 onClick={() => {

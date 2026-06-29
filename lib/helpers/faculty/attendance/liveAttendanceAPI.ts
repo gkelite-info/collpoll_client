@@ -30,6 +30,7 @@ export function recalculateAttendancePercentage(
 
 export function useAttendanceRealtime(
   calendarEventId: number | null,
+  isBulk: boolean,
   onAttendanceMarked: (payload: any) => void
 ) {
   const callbackRef = useRef(onAttendanceMarked);
@@ -41,9 +42,11 @@ export function useAttendanceRealtime(
   useEffect(() => {
     if (!calendarEventId) return;
 
+    const columnName = isBulk ? "bulkCalendarEventId" : "calendarEventId";
+    
     // Subscribe to INSERT or UPDATE on attendance_record for this specific class
     const channel = supabase
-      .channel(`public:attendance_record:eventId=${calendarEventId}`, {
+      .channel(`public:attendance_record:${isBulk ? 'bulk-' : ''}eventId=${calendarEventId}`, {
         config: { broadcast: { self: false, ack: false } },
       })
       .on(
@@ -52,7 +55,7 @@ export function useAttendanceRealtime(
           event: "*", // Listen to INSERT and UPDATE
           schema: "public",
           table: "attendance_record",
-          filter: `"calendarEventId"=eq.${calendarEventId}`,
+          filter: `"${columnName}"=eq.${calendarEventId}`,
         },
         (payload) => {
           callbackRef.current(payload);

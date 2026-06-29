@@ -69,9 +69,14 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
 
   const { adminId } = useAdmin();
 
+  const isBulk = selectedClassId.startsWith("bulk-");
+  const eventIdPart = isBulk ? selectedClassId.split("-")[1] : selectedClassId.split("-")[0];
+  const parsedEventId = eventIdPart ? parseInt(eventIdPart) : null;
+
   useAttendanceRealtime(
-    selectedClassId ? parseInt(selectedClassId.split("-")[0]) : null,
-    (payload) => {
+    parsedEventId,
+    isBulk,
+    (payload: any) => {
       const newRecord = payload.new;
       if (newRecord && newRecord.studentId) {
         let matchedStudentName = "";

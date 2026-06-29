@@ -111,11 +111,16 @@ async function upsertDeviceClassSession(payload: {
 
 export async function activateDeviceSessionForClass(params: {
   calendarEventId: number;
+  isBulk?: boolean;
   facultyClassSessionsId: number;
   collegeId: number;
 }): Promise<ActivationResult> {
   try {
-    const { calendarEventId, facultyClassSessionsId, collegeId } = params;
+    const { calendarEventId, isBulk, facultyClassSessionsId, collegeId } = params;
+
+    if (isBulk) {
+      return { success: true, skipped: true, skipReason: "BulkEventBiometricsNotSupported" };
+    }
 
     const { data: evt, error: evtErr } = await adminSupabase
       .from("calendar_event")
@@ -176,8 +181,10 @@ export async function activateDeviceSessionForClass(params: {
 export async function deactivateSessionsForEvent(
   calendarEventId: number,
   reason: string = "ClassCancelled",
+  isBulk?: boolean,
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    if (isBulk) return { success: true };
     const now = new Date().toISOString();
     const { error } = await adminSupabase
       .from("device_class_sessions")

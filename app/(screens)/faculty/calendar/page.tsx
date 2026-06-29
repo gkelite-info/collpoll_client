@@ -11,7 +11,7 @@ import CalendarHeader from "./components/calendarHeader";
 import CalendarGrid from "./components/calenderGrid";
 import CalendarToolbar from "./components/calenderToolbar";
 import { CalendarEvent } from "./types";
-import { combineDateAndTime, getWeekDays, hasTimeConflict } from "./utils";
+import { getWeekDays } from "./utils";
 
 import { useUser } from "@/app/utils/context/UserContext";
 import {
@@ -25,6 +25,16 @@ import {
   saveCalendarEventSections,
   softDeleteCalendarEventSection,
 } from "@/lib/helpers/calendar/calendarEventSectionsAPI";
+import {
+  saveBulkCalendarEvent,
+  saveBulkCalendarEventSections,
+  saveBulkCalendarEventUnits,
+  fetchBulkCalendarEvents,
+  fetchBulkCalendarEventSections,
+  fetchBulkCalendarEventUnits,
+  softDeleteBulkCalendarEventSection,
+  deleteBulkCalendarEvent,
+} from "@/lib/helpers/calendar/bulkCalendarEventAPI";
 import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
 import { getFacultyIdByUserId } from "@/lib/helpers/faculty/facultyAPI";
 import { Loader } from "../../(student)/calendar/right/timetable";
@@ -37,6 +47,7 @@ import {
 import HolidayCalendar from "@/app/(screens)/hr/calendar/components/HolidayCalendar";
 import HolidayCalendarShimmer from "@/app/(screens)/hr/calendar/components/HolidayCalendarShimmer";
 import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/holidayAPI";
+import { fetchFacultyContextAdmin } from "@/app/utils/context/faculty/facultyContextAPI";
 
 export type CalendarEventPayload = {
   facultyId: number;
@@ -44,6 +55,7 @@ export type CalendarEventPayload = {
 
   eventTitle: string;
   eventTopic: number | null;
+  eventUnitIds?: number[];
   type: "class" | "meeting" | "exam" | "quiz";
 
   date: string;
@@ -60,6 +72,10 @@ export type CalendarEventPayload = {
   collegeAcademicYearId: number;
   collegeSemesterId: number;
   sectionIds: number[];
+
+  calendarMode?: "single" | "bulk";
+  fromDate?: string;
+  toDate?: string;
 };
 
 const convertTo24Hour = (time12h: string) => {
@@ -191,31 +207,55 @@ function PageContent() {
       const startStr = new Date(year, month, -7).toISOString().split('T')[0];
       const endStr = new Date(year, month + 1, 7).toISOString().split('T')[0];
 
-      const rows = await fetchCalendarEvents({
-        facultyId,
-        startDate: startStr,
-        endDate: endStr
-      });
+      const [rows, bulkRows] = await Promise.all([
+        fetchCalendarEvents({
+          facultyId,
+          startDate: startStr,
+          endDate: endStr
+        }),
+        fetchBulkCalendarEvents({
+          facultyId,
+          startDate: startStr,
+          endDate: endStr
+        })
+      ]);
 
       if (currentFetchId !== fetchIdRef.current) return;
 
-      if (!rows || rows.length === 0) {
+      if ((!rows || rows.length === 0) && (!bulkRows || bulkRows.length === 0)) {
         setEvents([]);
         return;
       }
 
-      const firstEventSections = await fetchCalendarEventSections(
-        rows[0].calendarEventId,
-      );
+      let educationId = null;
+      let branchId = null;
+      let academicYearId = null;
 
-      if (!firstEventSections || firstEventSections.length === 0) {
-        setEvents([]);
-        return;
+      try {
+        const facultyCtx = await fetchFacultyContextAdmin({ facultyId });
+        educationId = facultyCtx?.collegeEducationId;
+        branchId = facultyCtx?.collegeBranchId;
+        academicYearId = facultyCtx?.academicYearIds?.[0];
+      } catch (err) {
+        console.warn("Failed to fetch faculty context:", err);
       }
 
-      const educationId = firstEventSections[0].collegeEducationId;
-      const branchId = firstEventSections[0].collegeBranchId;
-      const academicYearId = firstEventSections[0].collegeAcademicYearId;
+      if (!educationId || !branchId || !academicYearId) {
+        const firstEventSections = rows.length > 0
+          ? await fetchCalendarEventSections(rows[0].calendarEventId)
+          : bulkRows.length > 0
+            ? await fetchBulkCalendarEventSections(bulkRows[0].bulkCalendarEventId)
+            : [];
+
+        if (!firstEventSections || firstEventSections.length === 0) {
+          setEvents([]);
+          return;
+        }
+
+        educationId = firstEventSections[0].collegeEducationId;
+        branchId = firstEventSections[0].collegeBranchId;
+        academicYearId = firstEventSections[0].collegeAcademicYearId;
+      }
 
       const branches = await fetchAcademicDropdowns({
         type: "branch",
@@ -267,6 +307,19 @@ function PageContent() {
         }),
       );
 
+      const bulkSectionMap = new Map<number, number[]>();
+      await Promise.all(
+        bulkRows.map(async (row: any) => {
+          const sections = await fetchBulkCalendarEventSections(
+            row.bulkCalendarEventId,
+          );
+          bulkSectionMap.set(
+            row.bulkCalendarEventId,
+            (sections ?? []).map((s: any) => s.collegeSectionId),
+          );
+        }),
+      );
+
       const expandedEvents: CalendarEvent[] = [];
 
       rows.forEach((row: any) => {
@@ -312,7 +365,7 @@ function PageContent() {
             rawFormData: {
               subjectId: row.subject,
               topicId: row.eventTopic,
-              topicTitle: safelyExtractedTopic, // 🟢 Passed perfectly down to Details Modal
+              topicTitle: safelyExtractedTopic,
               roomNo: row.college_rooms?.roomNo ?? "",
               collegeRoomId: row.collegeRoomId,
               meetingLink: row.meetingLink,
@@ -321,6 +374,67 @@ function PageContent() {
             },
           });
         });
+      });
+
+      bulkRows.forEach((row: any) => {
+        const fromDateObj = new Date(row.fromDate);
+        const toDateObj = new Date(row.toDate);
+        const sectionIds = bulkSectionMap.get(row.bulkCalendarEventId) ?? [];
+
+        const units = row.bulk_calendar_event_units?.map((u: any) =>
+          u.college_subject_units?.unitTitle
+        ).filter(Boolean).join(", ") || "-";
+
+        for (let d = new Date(fromDateObj); d <= toDateObj; d.setDate(d.getDate() + 1)) {
+          if (d.getDay() === 0) continue;
+
+          const dateStr = d.toISOString().split('T')[0];
+          const startTime = `${dateStr}T${row.fromTime}`;
+          const endTime = `${dateStr}T${row.toTime}`;
+
+          sectionIds.forEach((sectionId) => {
+            expandedEvents.push({
+              id: `bulk-${row.bulkCalendarEventId}-${sectionId}-${dateStr}`,
+
+              title:
+                row.type === "meeting"
+                  ? row.meetingTitle || "Meeting"
+                  : units,
+
+              type: row.type,
+              subjectName: row.college_subjects?.subjectName ?? "-",
+              subjectKey: row.college_subjects?.subjectKey ?? "",
+
+              day: new Date(dateStr)
+                .toLocaleDateString("en-US", { weekday: "short" })
+                .toUpperCase(),
+
+              startTime,
+              endTime,
+
+              branch: branchMap.get(branchId) ?? "",
+              year: yearMap.get(academicYearId) ?? "",
+              section: sectionNameMap.get(sectionId) ?? "",
+
+              calendarEventId: row.bulkCalendarEventId,
+
+              sectionId: sectionId,
+
+              rawFormData: {
+                subjectId: row.subject,
+                topicId: null,
+                topicTitle: null,
+                roomNo: row.college_rooms?.roomNo ?? "",
+                collegeRoomId: row.collegeRoomId,
+                meetingLink: row.meetingLink,
+                meetingId: row.meetingId,
+                meetingPassword: row.meetingPassword,
+                fromDate: row.fromDate,
+                toDate: row.toDate,
+              },
+            });
+          });
+        }
       });
 
       setEvents(expandedEvents);
@@ -359,7 +473,9 @@ function PageContent() {
 
     const conflicts = await checkSectionConflict({
       collegeId,
-      date: payload.date,
+      date: payload.calendarMode === "bulk" ? undefined : payload.date,
+      fromDate: payload.calendarMode === "bulk" ? payload.fromDate : undefined,
+      toDate: payload.calendarMode === "bulk" ? payload.toDate : undefined,
       fromTime: payload.fromTime,
       toTime: payload.toTime,
       collegeEducationId: payload.collegeEducationId,
@@ -367,7 +483,8 @@ function PageContent() {
       collegeAcademicYearId: payload.collegeAcademicYearId,
       collegeSemesterId: payload.collegeSemesterId,
       sectionIds: payload.sectionIds,
-      ignoreEventId,
+      ignoreEventId: payload.calendarMode === "bulk" ? undefined : ignoreEventId,
+      ignoreBulkEventId: payload.calendarMode === "bulk" ? ignoreEventId : undefined,
     });
 
     if (conflicts.length > 0) {
@@ -400,6 +517,61 @@ function PageContent() {
     setIsSaving(true);
 
     try {
+      if (payload.calendarMode === "bulk") {
+        const eventRes = await saveBulkCalendarEvent({
+          bulkCalendarEventId: editingEventId ? Number(editingEventId) : undefined,
+          facultyId,
+          subjectId: payload.subjectId ?? null,
+          eventTitle: payload.eventTitle,
+          type: payload.type as any,
+          fromDate: payload.fromDate!,
+          toDate: payload.toDate!,
+          collegeRoomId: payload.collegeRoomId ?? null,
+          fromTime: payload.fromTime,
+          toTime: payload.toTime,
+          meetingLink: payload.meetingLink ?? null,
+          meetingId: payload.meetingId ?? null,
+          meetingPassword: payload.meetingPassword ?? null,
+        });
+
+        if (!eventRes.success) {
+          toast.error("Failed to save bulk event");
+          return { success: false };
+        }
+
+        const bulkCalendarEventId = eventRes.bulkCalendarEventId!;
+
+        const sectionRes = await saveBulkCalendarEventSections(bulkCalendarEventId, {
+          collegeEducationId: payload.collegeEducationId,
+          collegeBranchId: payload.collegeBranchId,
+          collegeAcademicYearId: payload.collegeAcademicYearId,
+          collegeSemesterId: payload.collegeSemesterId,
+          sectionIds: payload.sectionIds,
+        });
+
+        if (!sectionRes.success) {
+          toast.error("Failed to save sections for bulk event");
+          return { success: false };
+        }
+
+        const unitRes = await saveBulkCalendarEventUnits(
+          bulkCalendarEventId,
+          payload.eventUnitIds ?? []
+        );
+
+        if (!unitRes.success) {
+          toast.error("Failed to save units for bulk event");
+          return { success: false };
+        }
+
+        setIsModalOpen(false);
+        setEditingEventId(null);
+        setEventForm(null);
+        setFormMode("create");
+        await loadCalendarEvents(currentMonth, currentYear);
+        return { success: true };
+      }
+
       const eventRes = await saveCalendarEvent({
         calendarEventId: editingEventId ? Number(editingEventId) : undefined,
         facultyId,
@@ -423,15 +595,6 @@ function PageContent() {
 
       const calendarEventId = eventRes.calendarEventId;
 
-      if (editingEventId) {
-        const existingSections =
-          await fetchCalendarEventSections(calendarEventId);
-        await Promise.all(
-          (existingSections ?? []).map((s: any) =>
-            softDeleteCalendarEventSection(calendarEventId, s.collegeSectionId),
-          ),
-        );
-      }
 
       await saveCalendarEventSections(calendarEventId, {
         collegeEducationId: payload.collegeEducationId,
@@ -534,15 +697,35 @@ function PageContent() {
   const handleDeleteEvent = async (event: CalendarEvent) => {
     setIsDeleteLoading(true);
     try {
-      const calendarEventId = event.calendarEventId;
-      const sectionId = event.sectionId;
+      const isBulk = event.id.startsWith("bulk-");
 
-      await softDeleteCalendarEventSection(calendarEventId, sectionId);
+      if (isBulk) {
+        const bulkCalendarEventId = event.calendarEventId;
+        const sectionId = event.sectionId;
 
-      const remaining = await fetchCalendarEventSections(calendarEventId);
+        await softDeleteBulkCalendarEventSection(bulkCalendarEventId, sectionId);
 
-      if (!remaining || remaining.length === 0) {
-        await deleteCalendarEvent(calendarEventId);
+        const remaining = await fetchBulkCalendarEventSections(bulkCalendarEventId);
+
+        // Exclude the one we just soft deleted which has isActive = false or deletedAt != null
+        // But fetchBulkCalendarEventSections currently doesn't filter by deletedAt?
+        // Wait, supabase query `is("deletedAt", null)` needs to be added if it isn't.
+        // If there are no more active sections, delete the event
+        const activeRemaining = remaining.filter((r: any) => !r.deletedAt);
+        if (!activeRemaining || activeRemaining.length === 0) {
+          await deleteBulkCalendarEvent(bulkCalendarEventId);
+        }
+      } else {
+        const calendarEventId = event.calendarEventId;
+        const sectionId = event.sectionId;
+
+        await softDeleteCalendarEventSection(calendarEventId, sectionId);
+
+        const remaining = await fetchCalendarEventSections(calendarEventId);
+
+        if (!remaining || remaining.length === 0) {
+          await deleteCalendarEvent(calendarEventId);
+        }
       }
 
       await loadCalendarEvents(currentMonth, currentYear);
@@ -589,14 +772,25 @@ function PageContent() {
     const start = parse24To12(start24);
     const end = parse24To12(end24);
 
+    const isBulk = event.id.startsWith("bulk-");
+
     let dbSectionIds: number[] = [];
     let semesterId: number | null = null;
+    let dbUnitIds: number[] = [];
     try {
-      const rows = await fetchCalendarEventSections(event.calendarEventId);
-      dbSectionIds = (rows ?? []).map((r: any) => r.collegeSectionId);
-      semesterId = rows?.[0]?.collegeSemesterId ?? null;
+      if (isBulk) {
+        const rows = await fetchBulkCalendarEventSections(event.calendarEventId);
+        dbSectionIds = (rows ?? []).map((r: any) => r.collegeSectionId);
+        semesterId = rows?.[0]?.collegeSemesterId ?? null;
+        const units = await fetchBulkCalendarEventUnits(event.calendarEventId);
+        dbUnitIds = (units ?? []).map((u: any) => u.collegeSubjectUnitId);
+      } else {
+        const rows = await fetchCalendarEventSections(event.calendarEventId);
+        dbSectionIds = (rows ?? []).map((r: any) => r.collegeSectionId);
+        semesterId = rows?.[0]?.collegeSemesterId ?? null;
+      }
     } catch (err) {
-      console.warn("⚠️ Sections fetch failed", err);
+      console.warn("⚠️ Sections/Units fetch failed", err);
     }
 
     setEventForm({
@@ -610,6 +804,8 @@ function PageContent() {
       meetingPassword: event.rawFormData?.meetingPassword ?? "",
 
       date: startDate,
+      fromDate: event.rawFormData?.fromDate ?? startDate,
+      toDate: event.rawFormData?.toDate ?? startDate,
 
       startHour: start.hour,
       startMinute: start.minute,
@@ -621,8 +817,10 @@ function PageContent() {
 
       sectionIds: dbSectionIds,
       semesterId,
+      unitIds: dbUnitIds,
 
       type: event.type,
+      calendarMode: isBulk ? "bulk" : "single",
     });
 
     setIsModalOpen(true);

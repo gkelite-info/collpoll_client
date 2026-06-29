@@ -108,7 +108,7 @@ export async function getFacultyClasses(
     .from("faculty_class_sessions")
     .select("calendarEventId")
     .in("calendarEventId", eventIds)
-    .eq("status", "Accepted");
+    .eq("status", "accepted");
 
   const acceptedEventIds = new Set(
     acceptedSessions?.map((s) => s.calendarEventId) || []
@@ -162,27 +162,57 @@ export async function getStudentsForClass(
 ): Promise<UIStudent[]> {
   const supabase = await createClient();
 
-  const [eventIdStr, sectionNameFilter] = classId.split("-");
-  const eventId = parseInt(eventIdStr);
+  const isBulk = classId.startsWith("bulk-");
+  let eventId: number;
+  let sectionNameFilter: string | undefined;
+
+  if (isBulk) {
+    const parts = classId.split("-");
+    eventId = parseInt(parts[1]);
+    sectionNameFilter = parts[2] !== "undefined" ? parts[2] : undefined;
+  } else {
+    const parts = classId.split("-");
+    eventId = parseInt(parts[0]);
+    sectionNameFilter = parts[1] !== "undefined" ? parts[1] : undefined;
+  }
 
   let targetSectionIds: number[] = [];
 
   if (sectionFilterId) {
     targetSectionIds = [parseInt(sectionFilterId)];
   } else if (sectionNameFilter) {
-    const { data: eventSections } = await supabase
-      .from("calendar_event_section")
-      .select("collegeSectionId, college_sections!inner(collegeSections)")
-      .eq("calendarEventId", eventId)
-      .eq("college_sections.collegeSections", sectionNameFilter);
-
-    targetSectionIds = eventSections?.map((s) => s.collegeSectionId) || [];
+    if (isBulk) {
+       const { data: eventSections } = await supabase
+        .from("bulk_calendar_event_sections")
+        .select("collegeSectionId")
+        .eq("bulkCalendarEventId", eventId);
+       // Needs manual mapping if we only have name, but sectionFilterId is usually provided or we just query sections directly
+       if (eventSections && eventSections.length > 0) {
+         const { data: sections } = await supabase.from("college_sections").select("collegeSectionsId").in("collegeSectionsId", eventSections.map(s => s.collegeSectionId)).eq("collegeSections", sectionNameFilter);
+         targetSectionIds = sections?.map((s) => s.collegeSectionsId) || [];
+       }
+    } else {
+      const { data: eventSections } = await supabase
+        .from("calendar_event_section")
+        .select("collegeSectionId, college_sections!inner(collegeSections)")
+        .eq("calendarEventId", eventId)
+        .eq("college_sections.collegeSections", sectionNameFilter);
+      targetSectionIds = eventSections?.map((s) => s.collegeSectionId) || [];
+    }
   } else {
-    const { data: eventSections } = await supabase
-      .from("calendar_event_section")
-      .select("collegeSectionId")
-      .eq("calendarEventId", eventId);
-    targetSectionIds = eventSections?.map((s) => s.collegeSectionId) || [];
+    if (isBulk) {
+       const { data: eventSections } = await supabase
+        .from("bulk_calendar_event_sections")
+        .select("collegeSectionId")
+        .eq("bulkCalendarEventId", eventId);
+       targetSectionIds = eventSections?.map((s) => s.collegeSectionId) || [];
+    } else {
+      const { data: eventSections } = await supabase
+        .from("calendar_event_section")
+        .select("collegeSectionId")
+        .eq("calendarEventId", eventId);
+      targetSectionIds = eventSections?.map((s) => s.collegeSectionId) || [];
+    }
   }
 
   if (targetSectionIds.length === 0) return [];
@@ -197,10 +227,14 @@ export async function getStudentsForClass(
   if (ids.length === 0) return [];
 
   const { data: eventData } = await supabase
-    .from("calendar_event")
-    .select("subject")
-    .eq("calendarEventId", eventId)
+    .from(isBulk ? "bulk_calendar_events" : "calendar_event")
+    .select(isBulk ? "subject, fromDate" : "subject, date")
+    .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId)
     .single();
+
+  const eventDate = isBulk 
+    ? new Date().toLocaleDateString("en-CA") // "YYYY-MM-DD" local timezone format
+    : (eventData as any)?.date;
 
   const subjectId = eventData?.subject;
   const statsMap = new Map<number, { present: number; total: number }>();
@@ -208,12 +242,12 @@ export async function getStudentsForClass(
   if (subjectId) {
     const { data: allRecords } = await supabase
       .from("attendance_record")
-      .select(`studentId, status, event:calendar_event!inner(subject)`)
-      .in("studentId", ids)
-      .eq("event.subject", subjectId);
-
+      .select(`studentId, status, event:calendar_event(subject), bulk_event:bulk_calendar_events(subject)`)
+      .in("studentId", ids);
+      
     allRecords?.forEach((r: any) => {
-      if (["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
+      const recSubjectId = r.event?.subject || r.bulk_event?.subject;
+      if (recSubjectId === subjectId && ["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
         const s = statsMap.get(r.studentId) || { present: 0, total: 0 };
         s.total++;
         if (r.status === "PRESENT" || r.status === "LATE") s.present++;
@@ -225,10 +259,11 @@ export async function getStudentsForClass(
   const { data: students, error } = await supabase
     .from("students")
     .select(
-      `studentId, user:users (fullName, gender, user_profile(profileUrl)), student_pins(pinNumber), attendance_record (status, reason, calendarEventId)`,
+      `studentId, user:users (fullName, gender, user_profile(profileUrl)), student_pins(pinNumber), attendance_record (status, reason, calendarEventId, bulkCalendarEventId)`,
     )
     .in("studentId", ids)
-    .eq("attendance_record.calendarEventId", eventId)
+    .eq(isBulk ? "attendance_record.bulkCalendarEventId" : "attendance_record.calendarEventId", eventId)
+    .eq("attendance_record.markedAt", eventDate)
     .order("studentId");
 
   if (error) return [];
@@ -290,13 +325,18 @@ export async function getStudentsForClass(
 export async function saveAttendance(classId: string, payload: any[]) {
   const supabase = await createClient();
 
-  const eventId = parseInt(classId.split("-")[0]);
+  const isBulk = classId.startsWith("bulk-");
+  const eventId = parseInt(isBulk ? classId.split("-")[1] : classId.split("-")[0]);
 
   const { data } = await supabase
-    .from("calendar_event")
-    .select("date")
-    .eq("calendarEventId", eventId)
+    .from(isBulk ? "bulk_calendar_events" : "calendar_event")
+    .select(isBulk ? "fromDate" : "date")
+    .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId)
     .single();
+
+  const eventDate = isBulk 
+    ? new Date().toLocaleDateString("en-CA") // "YYYY-MM-DD" local timezone format
+    : (data as any)?.date;
 
   const dbRecords = payload
     .filter((p) => p.status !== "Not Marked")
@@ -309,21 +349,65 @@ export async function saveAttendance(classId: string, payload: any[]) {
 
       return {
         studentId: parseInt(p.studentId),
-        calendarEventId: eventId,
+        calendarEventId: isBulk ? null : eventId,
+        bulkCalendarEventId: isBulk ? eventId : null,
         status: dbStatus,
         reason: p.reason || null,
-        markedAt: data?.date,
+        markedAt: eventDate,
         facultyMark: p.facultyId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        attendanceRecordId: undefined as number | undefined,
       };
     });
 
-  const { error } = await supabase
-    .from("attendance_record")
-    .upsert(dbRecords, { onConflict: "studentId,calendarEventId" });
+  if (dbRecords.length === 0) {
+    return { success: true };
+  }
 
-  if (error) return { success: false, error: error.message };
+  const studentIds = dbRecords.map((r) => r.studentId);
+  const { data: existingRecords, error: fetchError } = await supabase
+    .from("attendance_record")
+    .select("attendanceRecordId, studentId")
+    .in("studentId", studentIds)
+    .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId)
+    .eq("markedAt", eventDate)
+    .is("deletedAt", null);
+
+  if (fetchError) {
+    console.error("fetch existing records error:", fetchError);
+    return { success: false, error: fetchError.message };
+  }
+
+  const recordMap = new Map(existingRecords?.map((r) => [r.studentId, r.attendanceRecordId]));
+  const updates: any[] = [];
+  const inserts: any[] = [];
+
+  dbRecords.forEach((record) => {
+    const existingId = recordMap.get(record.studentId);
+    if (existingId) {
+      record.attendanceRecordId = existingId;
+      updates.push(record);
+    } else {
+      delete record.attendanceRecordId;
+      inserts.push(record);
+    }
+  });
+
+  if (updates.length > 0) {
+    const { error: updateError } = await supabase
+      .from("attendance_record")
+      .upsert(updates);
+    if (updateError) return { success: false, error: updateError.message };
+  }
+
+  if (inserts.length > 0) {
+    const { error: insertError } = await supabase
+      .from("attendance_record")
+      .insert(inserts);
+    if (insertError) return { success: false, error: insertError.message };
+  }
+
   return { success: true };
 }
 
@@ -335,15 +419,24 @@ export async function handleMissionClassStatus(
   collegeId?: number,
 ) {
   const supabase = await createClient();
-  const eventId = parseInt(classIdStr.split("-")[0]);
+  const isBulk = classIdStr.startsWith("bulk-");
+  const eventId = parseInt(isBulk ? classIdStr.split("-")[1] : classIdStr.split("-")[0]);
   const timeNow = new Date().toTimeString().split(" ")[0];
 
   let facultyClassSessionsId: number | undefined;
 
+  const { data: eventData } = await supabase
+    .from(isBulk ? "bulk_calendar_events" : "calendar_event")
+    .select("collegeRoomId")
+    .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId)
+    .single();
+  
+  const collegeRoomId = eventData?.collegeRoomId;
+
   const { data: existingSessions } = await supabase
     .from("faculty_class_sessions")
     .select("facultyClassSessionsId")
-    .eq("calendarEventId", eventId)
+    .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId)
     .eq("facultyId", facultyId)
     .is("deletedAt", null);
 
@@ -363,7 +456,8 @@ export async function handleMissionClassStatus(
     await supabase
       .from("faculty_class_sessions")
       .update({
-        status: status,
+        collegeRoomId: collegeRoomId,
+        status: status.toLowerCase(),
         acceptedAt: status === "Accepted" ? timeNow : undefined,
         updatedAt: new Date().toISOString(),
       })
@@ -372,9 +466,11 @@ export async function handleMissionClassStatus(
     const { data: inserted } = await supabase
       .from("faculty_class_sessions")
       .insert({
-        calendarEventId: eventId,
+        calendarEventId: isBulk ? null : eventId,
+        bulkCalendarEventId: isBulk ? eventId : null,
         facultyId: facultyId,
-        status: status,
+        collegeRoomId: collegeRoomId,
+        status: status.toLowerCase(),
         acceptedAt: status === "Accepted" ? timeNow : "00:00:00",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -389,6 +485,7 @@ export async function handleMissionClassStatus(
     // Non-blocking — device session failure must NOT break accept flow
     activateDeviceSessionForClass({
       calendarEventId: eventId,
+      isBulk,
       facultyClassSessionsId,
       collegeId,
     }).catch((err) => {
@@ -398,19 +495,22 @@ export async function handleMissionClassStatus(
 
   if (status === "Cancel") {
     // ── Phase 1 Hook: Deactivate device session on cancel ──
-    deactivateSessionsForEvent(eventId, reason ?? "ClassCancelledByFaculty").catch((err) => {
+    deactivateSessionsForEvent(eventId, reason ?? "ClassCancelledByFaculty", isBulk).catch((err) => {
       console.error("[handleMissionClassStatus] Device session deactivation failed:", err);
     });
 
     const { data: eventData } = await supabase
-      .from("calendar_event")
-      .select("date")
-      .eq("calendarEventId", eventId)
+      .from(isBulk ? "bulk_calendar_events" : "calendar_event")
+      .select(isBulk ? "fromDate" : "date")
+      .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId)
       .single();
+      
+    const eventDate = isBulk ? (eventData as any)?.fromDate : (eventData as any)?.date;
+    
     const { data: sections } = await supabase
-      .from("calendar_event_section")
+      .from(isBulk ? "bulk_calendar_event_sections" : "calendar_event_section")
       .select("collegeSectionId")
-      .eq("calendarEventId", eventId);
+      .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId);
 
     const sectionIds = sections?.map((s) => s.collegeSectionId) || [];
 
@@ -426,17 +526,18 @@ export async function handleMissionClassStatus(
       if (studentIds.length > 0) {
         const attendanceRecords = studentIds.map((sId) => ({
           studentId: sId,
-          calendarEventId: eventId,
+          calendarEventId: isBulk ? null : eventId,
+          bulkCalendarEventId: isBulk ? eventId : null,
           status: "CLASS_CANCEL",
           reason: reason || "Cancelled by faculty",
-          markedAt: eventData?.date,
+          markedAt: eventDate,
           facultyMark: facultyId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         }));
 
         await supabase.from("attendance_record").upsert(attendanceRecords, {
-          onConflict: "studentId,calendarEventId",
+          onConflict: isBulk ? "studentId,bulkCalendarEventId" : "studentId,calendarEventId",
         });
       }
     }

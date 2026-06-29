@@ -80,24 +80,19 @@ type ParentRow = {
     | null;
 };
 
+type EventType = {
+  subject: number | null;
+  facultyId: number | null;
+  type: string | null;
+  date?: string | null;
+  fromDate?: string | null;
+  is_deleted: boolean | null;
+};
+
 type AttendanceRecordRow = {
   status: string;
-  calendar_event:
-    | {
-        subject: number | null;
-        facultyId: number | null;
-        type: string | null;
-        date: string | null;
-        is_deleted: boolean | null;
-      }
-    | {
-        subject: number | null;
-        facultyId: number | null;
-        type: string | null;
-        date: string | null;
-        is_deleted: boolean | null;
-      }[]
-    | null;
+  calendar_event: EventType | EventType[] | null;
+  bulk_event: EventType | EventType[] | null;
 };
 
 type SubjectRow = {
@@ -546,6 +541,13 @@ export async function getFacultyStudentProgressDetails(
           type,
           date,
           is_deleted
+        ),
+        bulk_event:bulkCalendarEventId (
+          subject,
+          facultyId,
+          type,
+          fromDate,
+          is_deleted
         )
       `,
       )
@@ -696,7 +698,15 @@ export async function getFacultyStudentProgressDetails(
 
   const relevantAttendance = ((attendanceResult.data ?? []) as AttendanceRecordRow[]).filter(
     (record) => {
-      const event = getFirst(record.calendar_event);
+      const singleEvent = Array.isArray(record.calendar_event)
+        ? record.calendar_event[0]
+        : record.calendar_event;
+      const bulkEvent = Array.isArray(record.bulk_event)
+        ? record.bulk_event[0]
+        : record.bulk_event;
+        
+      const event = singleEvent || bulkEvent;
+      const eventDate = singleEvent ? singleEvent.date : bulkEvent?.fromDate;
 
       return (
         !!event &&
@@ -705,8 +715,8 @@ export async function getFacultyStudentProgressDetails(
         scope.subjectIds.includes(event.subject) &&
         event.type === "class" &&
         event.is_deleted === false &&
-        !!event.date &&
-        event.date <= today &&
+        !!eventDate &&
+        eventDate <= today &&
         !isCancelledStatus(record.status) &&
         isConductedStatus(record.status)
       );
@@ -720,7 +730,14 @@ export async function getFacultyStudentProgressDetails(
   const attendanceBySubject = new Map<number, { attended: number; total: number }>();
 
   for (const record of relevantAttendance) {
-    const event = getFirst(record.calendar_event);
+    const singleEvent = Array.isArray(record.calendar_event)
+      ? record.calendar_event[0]
+      : record.calendar_event;
+    const bulkEvent = Array.isArray(record.bulk_event)
+      ? record.bulk_event[0]
+      : record.bulk_event;
+    const event = singleEvent || bulkEvent;
+    
     if (!event?.subject) continue;
 
     const subjectStats = attendanceBySubject.get(event.subject) ?? {

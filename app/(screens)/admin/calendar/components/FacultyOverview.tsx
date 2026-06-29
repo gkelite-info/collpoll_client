@@ -4,7 +4,7 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard"
 import FacultyCard from "./FacultyCard"
 import { fetchFilteredFaculties } from "@/lib/helpers/admin/calender/fetchFacultyCalendar"
 import { useUser } from "@/app/utils/context/UserContext"
-import { fetchAcademicYears, fetchBranches, fetchSemesters, fetchSubjects } from "@/lib/helpers/admin/academics/academicDropdowns"
+import { fetchAcademicYears, fetchBranches, fetchSemesters, fetchSubjects, fetchAdminEducationTypes } from "@/lib/helpers/admin/academics/academicDropdowns"
 import toast from "react-hot-toast"
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable"
 import { useAdmin } from "@/app/utils/context/admin/useAdmin"
@@ -42,8 +42,24 @@ export default function FacultyOverview({ onSelect }: Props) {
     const [totalCount, setTotalCount] = useState(0);
     const itemsPerPage = 9;
 
-    const { collegeId } = useUser();
-    const { collegeEducationId, collegeEducationType } = useAdmin()
+    const { collegeId, adminId, collegeEducationId, collegeEducationType } = useAdmin();
+    const [educationTypes, setEducationTypes] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!adminId) return;
+        fetchAdminEducationTypes(adminId)
+            .then(res => {
+                if (res.length > 0) {
+                    setEducationTypes(res);
+                } else if (collegeEducationId && collegeEducationType) {
+                    setEducationTypes([{
+                        collegeEducationId,
+                        collegeEducationType
+                    }]);
+                }
+            })
+            .catch(() => toast.error("Failed to load education types"));
+    }, [adminId, collegeEducationId, collegeEducationType]);
 
     useEffect(() => {
         if (collegeEducationId) {
@@ -90,12 +106,12 @@ export default function FacultyOverview({ onSelect }: Props) {
     }, [collegeId, educationId, branchId, academicYearId, semesterId, currentPage]);
 
     const loadFaculty = async () => {
-        if (!collegeId || !collegeEducationId) return
+        if (!collegeId || !educationId) return;
         setLoading(true);
         try {
             const { data, total } = await fetchFilteredFaculties({
                 collegeId,
-                collegeEducationId: collegeEducationId ?? undefined,
+                collegeEducationId: educationId,
                 collegeBranchId: branchId ?? undefined,
                 collegeAcademicYearId: academicYearId ?? undefined,
                 collegeSubjectId: subjectId ?? undefined,
@@ -138,12 +154,34 @@ export default function FacultyOverview({ onSelect }: Props) {
             <section className="bg-white rounded-xl p-4 flex gap-4 mb-6">
                 <div className="flex-1">
                     <label className="text-xs text-[#282828]">Education Type</label>
-                    <input
-                        type="text"
-                        value={collegeEducationType || ""}
-                        disabled
-                        className="w-full mt-1 outline-none border border-[#CCCCCC] text-[#282828] rounded-md px-3 py-2 text-sm bg-gray-100 cursor-not-allowed"
-                    />
+                    <select
+                        value={educationId ?? ""}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setEducationId(val ? Number(val) : null);
+                            setBranchId(null);
+                            setAcademicYearId(null);
+                            setSemesterId(null);
+                            setSubjectId(null);
+                            setBranches([]);
+                            setAcademicYears([]);
+                            setSemesters([]);
+                            setSubjects([]);
+                        }}
+                        className="w-full mt-1 outline-none cursor-pointer border border-[#CCCCCC] text-[#282828] rounded-md px-3 py-2 text-sm"
+                    >
+                        {educationTypes.length === 0 && (
+                            <option disabled>No data available</option>
+                        )}
+                        {educationTypes.map((et) => (
+                            <option
+                                key={et.collegeEducationId}
+                                value={et.collegeEducationId}
+                            >
+                                {et.collegeEducationType}
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 <div className="flex-1">
