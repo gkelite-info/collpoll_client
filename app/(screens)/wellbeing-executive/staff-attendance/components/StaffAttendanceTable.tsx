@@ -132,6 +132,7 @@ function StatusSelect({
         <option value="present">Present</option>
         <option value="absent">Absent</option>
         <option value="late">Late</option>
+        <option value="not_marked">Not Marked</option>
       </select>
       <span className={`pointer-events-none absolute left-4 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full ${meta.dot}`} />
       <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-current">

@@ -3,10 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
-import { staffAttendanceRecords, type StaffAttendanceRecord } from "../data";
+import type { StaffAttendanceRecord } from "../data";
 import GroundStaffMembersScreen from "./list/GroundStaffMembersScreen";
 import StaffAttendanceListScreen from "./list/StaffAttendanceListScreen";
 import StaffProfileScreen from "./profile/StaffProfileScreen";
+import {
+  fetchGroundStaffMembers,
+  type GroundStaffMemberListItem,
+} from "@/lib/helpers/wellbeing/wellbeingExecutiveAPI";
 
 type ProfileSection = "profile" | "history";
 
@@ -27,11 +31,55 @@ const isStaffAttendanceCategory = (categoryName: string | null | undefined) =>
   isSafetyAndSecurityCategory(categoryName) ||
   normalizeCategoryName(categoryName) === "infrastructure";
 
+const formatJoiningDate = (value: string | null) => {
+  if (!value) {
+    return "-";
+  }
+
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(parsed);
+};
+
+const mapGroundStaffToAttendanceRecord = (
+  staff: GroundStaffMemberListItem,
+  index: number,
+): StaffAttendanceRecord => ({
+  id: staff.groundStaffId,
+  staffId: staff.staffId,
+  name: staff.name,
+  role: "Ground Staff",
+  status: "not_marked",
+  designation: staff.designation,
+  department: "Safety and Security",
+  shift: "Morning Shift",
+  joiningDate: formatJoiningDate(staff.dateOfJoining),
+  reportingTo: "Safety Executive",
+  phone: staff.phone,
+  email: staff.email,
+  address: "Campus",
+  totalWorkingDays: 0,
+  presentDays: 0,
+  absentDays: 0,
+  lateDays: 0,
+  attendanceRate: 0,
+  imageSeed: (index % 70) + 1,
+  image: staff.image,
+  history: [],
+});
+
 export default function StaffAttendancePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { loading, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
-  const [records, setRecords] = useState<StaffAttendanceRecord[]>(staffAttendanceRecords);
+  const { loading, collegeId, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
+  const [records, setRecords] = useState<StaffAttendanceRecord[]>([]);
   const canViewStaffAttendance = [wellBeingCategoryName, ...wellBeingCategoryNames].some(
     isStaffAttendanceCategory,
   );
@@ -41,6 +89,30 @@ export default function StaffAttendancePage() {
       router.replace("/wellbeing-executive");
     }
   }, [canViewStaffAttendance, loading, router]);
+
+  useEffect(() => {
+    if (loading || !canViewStaffAttendance || !collegeId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    fetchGroundStaffMembers(collegeId)
+      .then((groundStaff) => {
+        if (cancelled) return;
+
+        if (groundStaff.length) {
+          setRecords(groundStaff.map(mapGroundStaffToAttendanceRecord));
+        }
+      })
+      .catch((error) => {
+        console.error("Ground staff fetch failed:", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canViewStaffAttendance, collegeId, loading]);
 
   const selectedStaffId = Number(searchParams.get("staffId") ?? records[0]?.id);
   const selectedStaff = useMemo(

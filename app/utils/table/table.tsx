@@ -33,7 +33,7 @@ import TableBody from "./tableBody";
 import TableHead from "./tableHead";
 
 type Column = {
-  title: string;
+  title: ReactNode;
   key: string;
 };
 

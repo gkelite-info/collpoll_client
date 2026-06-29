@@ -4,7 +4,7 @@ import { ReactNode } from "react";
 import TableShimmer from "./tableShimmer";
 
 type Column = {
-  title: string;
+  title: ReactNode;
   key: string;
 };
 

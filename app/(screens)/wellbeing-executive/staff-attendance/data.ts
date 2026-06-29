@@ -1,4 +1,4 @@
-export type StaffAttendanceStatus = "present" | "absent" | "late";
+export type StaffAttendanceStatus = "present" | "absent" | "late" | "not_marked";
 
 export type StaffAttendanceLog = {
   date: string;
@@ -14,7 +14,7 @@ export type StaffAttendanceRecord = {
   name: string;
   role: string;
   status: StaffAttendanceStatus;
-  designation: "Watchman" | "Security Guard" | "Bouncer";
+  designation: string;
   department: "Safety and Security";
   shift: string;
   joiningDate: string;
@@ -28,6 +28,7 @@ export type StaffAttendanceRecord = {
   lateDays: number;
   attendanceRate: number;
   imageSeed: number;
+  image?: string;
   history: StaffAttendanceLog[];
 };
 

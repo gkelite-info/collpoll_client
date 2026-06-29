@@ -71,8 +71,10 @@ export type GroundStaffPayload = {
 };
 
 type UserProfileRow = {
+  userId?: number | null;
   profileUrl?: string | null;
   is_deleted?: boolean | null;
+  deletedAt?: string | null;
 };
 
 type EmployeeIdRow = {
@@ -108,8 +110,79 @@ type WellbeingExecutiveListItem = {
   categoryId: number;
 };
 
+export type GroundStaffMemberListItem = {
+  id: number;
+  groundStaffId: number;
+  userId: number;
+  name: string;
+  email: string;
+  phone: string;
+  staffId: string;
+  designation: string;
+  dateOfJoining: string | null;
+  image: string;
+  categoryId: number;
+  subCategoryId: number;
+};
+
 const getSingleRelation = <T,>(relation: T | T[] | null | undefined) =>
   Array.isArray(relation) ? relation[0] : relation;
+
+type GroundStaffUserRelation = {
+  userId?: number | null;
+  fullName?: string | null;
+  email?: string | null;
+  mobile?: string | null;
+  dateOfJoining?: string | null;
+  isActive?: boolean | null;
+  is_deleted?: boolean | null;
+  user_profile?: UserProfileRow | UserProfileRow[] | null;
+  employee_ids?: EmployeeIdRow | EmployeeIdRow[] | null;
+};
+
+type GroundStaffSubCategoryRelation = {
+  subCategoryName?: string | null;
+};
+
+type GroundStaffBaseRow = {
+  groundStaffId: number;
+  userId: number;
+  categoryId: number;
+  subCategoryId: number;
+  users?: GroundStaffUserRelation | GroundStaffUserRelation[] | null;
+  wellbeing_sub_categories?: GroundStaffSubCategoryRelation | GroundStaffSubCategoryRelation[] | null;
+};
+
+const getEmployeeId = (employeeIds: EmployeeIdRow | EmployeeIdRow[] | null | undefined) =>
+  Array.isArray(employeeIds) ? employeeIds[0]?.employeeId ?? "" : employeeIds?.employeeId ?? "";
+
+const fetchProfileUrlsByUserIds = async (userIds: number[]) => {
+  const uniqueUserIds = Array.from(new Set(userIds.filter(Boolean)));
+
+  if (!uniqueUserIds.length) {
+    return new Map<number, string>();
+  }
+
+  const { data, error } = await supabase
+    .from("user_profile")
+    .select("userId, profileUrl, is_deleted, deletedAt")
+    .in("userId", uniqueUserIds)
+    .eq("is_deleted", false)
+    .is("deletedAt", null);
+
+  if (error) {
+    console.error("fetchProfileUrlsByUserIds error:", error);
+    return new Map<number, string>();
+  }
+
+  return ((data ?? []) as UserProfileRow[]).reduce((map, row) => {
+    if (row.userId && row.profileUrl) {
+      map.set(row.userId, row.profileUrl);
+    }
+
+    return map;
+  }, new Map<number, string>());
+};
 
 const fetchAssignedCategoriesByWellBeingIds = async (wellBeingIds: number[]) => {
   if (!wellBeingIds.length) {
@@ -585,6 +658,76 @@ export async function fetchWellbeingExecutives(collegeId: number) {
       image: profileUrl ?? "",
       categoryId,
     }));
+  });
+}
+
+export async function fetchGroundStaffMembers(
+  collegeId: number,
+): Promise<GroundStaffMemberListItem[]> {
+  const { data, error } = await supabase
+    .from("ground_staff")
+    .select(`
+      groundStaffId,
+      userId,
+      categoryId,
+      subCategoryId,
+      users:userId (
+        userId,
+        fullName,
+        email,
+        mobile,
+        dateOfJoining,
+        isActive,
+        is_deleted,
+        employee_ids (
+          employeeId
+        )
+      ),
+      wellbeing_sub_categories:subCategoryId (
+        subCategoryName
+      )
+    `)
+    .eq("collegeId", collegeId)
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null)
+    .order("createdAt", { ascending: false });
+
+  if (error) {
+    console.error("fetchGroundStaffMembers error:", error);
+    throw error;
+  }
+
+  const rows = (data ?? []) as GroundStaffBaseRow[];
+  const profileUrlsByUserId = await fetchProfileUrlsByUserIds(
+    rows.map((row) => row.userId),
+  );
+
+  return rows.flatMap((row) => {
+    const user = getSingleRelation(row.users);
+
+    if (!user || user.is_deleted || user.isActive === false) {
+      return [];
+    }
+
+    const subCategory = getSingleRelation(row.wellbeing_sub_categories);
+
+    return [
+      {
+        id: row.groundStaffId,
+        groundStaffId: row.groundStaffId,
+        userId: row.userId,
+        name: user.fullName ?? "Ground Staff",
+        email: user.email ?? "",
+        phone: user.mobile ?? "",
+        staffId: getEmployeeId(user.employee_ids) || `GS${String(row.groundStaffId).padStart(3, "0")}`,
+        designation: subCategory?.subCategoryName ?? "Ground Staff",
+        dateOfJoining: user.dateOfJoining ?? null,
+        image: profileUrlsByUserId.get(row.userId) ?? "",
+        categoryId: row.categoryId,
+        subCategoryId: row.subCategoryId,
+      },
+    ];
   });
 }
 
