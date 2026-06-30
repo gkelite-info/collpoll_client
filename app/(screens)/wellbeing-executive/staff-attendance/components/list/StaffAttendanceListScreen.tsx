@@ -927,6 +927,7 @@ export default function StaffAttendanceListScreen({
             return next;
           });
           setEditingRowId((current) => (current === deleteRecord.id ? null : current));
+          toast.success(`${deleteRecord.name} deleted successfully.`);
           setDeleteRecord(null);
         }}
       />
@@ -956,7 +957,7 @@ function StatCard({
 
   return (
     <CardComponent
-      icon={<span className={`grid h-12 w-12 place-items-center rounded-lg ${toneClass}`}>{icon}</span>}
+      icon={<span className={`grid place-items-center rounded-md px-2 py-2 ${toneClass}`}>{icon}</span>}
       value={<span className="text-[10px] font-extrabold uppercase tracking-wide text-[#34425E]">{title}</span>}
       label={<span className="text-[22px] font-extrabold leading-none text-[#08244A]">{value}</span>}
       style="min-h-[112px] !h-[112px] border border-[#D2DAE7] bg-white px-6 py-4 shadow-sm"
@@ -974,11 +975,13 @@ function StaffAttendanceListShimmer() {
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
-            className="h-[112px] rounded-lg border border-[#D2DAE7] bg-white p-5"
+            className="flex h-[112px] flex-col rounded-lg border border-[#D2DAE7] bg-white p-5"
           >
-            <div className="h-10 w-10 rounded-lg bg-[#EAF0F7]" />
-            <div className="mt-4 h-3 w-24 rounded bg-[#EAF0F7]" />
-            <div className="mt-3 h-6 w-12 rounded bg-[#DDE5F0]" />
+            <div className="h-[38px] w-[38px] rounded-md bg-[#EAF0F7]" />
+            <div className="mt-4 space-y-3">
+              <div className="h-3 w-24 rounded bg-[#EAF0F7]" />
+              <div className="h-5 w-12 rounded bg-[#DDE5F0]" />
+            </div>
           </div>
         ))}
       </div>

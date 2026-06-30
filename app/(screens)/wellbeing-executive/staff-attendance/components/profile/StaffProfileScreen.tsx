@@ -1,7 +1,8 @@
 "use client";
 
 import {
-  ArrowLeft,
+  CalendarBlank,
+  CaretLeft,
   ChartLineUp,
   CheckCircle,
   Clock,
@@ -54,6 +55,25 @@ const toDateInputValue = (date: Date) => {
   const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+};
+
+const toMonthInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `${year}-${month}`;
+};
+
+const parseMonthInputValue = (value: string) => {
+  const [yearValue, monthValue] = value.split("-");
+  const year = Number(yearValue);
+  const monthIndex = Number(monthValue) - 1;
+
+  if (!year || Number.isNaN(monthIndex)) {
+    return new Date();
+  }
+
+  return new Date(year, monthIndex, 1);
 };
 
 const formatDisplayDate = (date: string) => {
@@ -120,7 +140,9 @@ export default function StaffProfileScreen({
   const [isMonthlyExporting, setIsMonthlyExporting] = useState(false);
   const [isWeeklyExporting, setIsWeeklyExporting] = useState(false);
   const today = useMemo(() => new Date(), []);
-  const monthWindow = useMemo(() => getMonthWindow(today), [today]);
+  const [selectedMonth, setSelectedMonth] = useState(() => toMonthInputValue(new Date()));
+  const selectedMonthDate = useMemo(() => parseMonthInputValue(selectedMonth), [selectedMonth]);
+  const monthWindow = useMemo(() => getMonthWindow(selectedMonthDate), [selectedMonthDate]);
   const weekWindow = useMemo(() => getWeekWindow(today), [today]);
   const monthLabel = useMemo(
     () =>
@@ -314,10 +336,10 @@ export default function StaffProfileScreen({
           <button
             type="button"
             onClick={onBack}
-            className="grid h-10 w-10 cursor-pointer place-items-center rounded-full bg-[#F3F6FA] text-[#08244A] transition-colors hover:bg-[#08244A] hover:text-white"
+            className="grid h-10 w-10 cursor-pointer place-items-center text-[#08244A] transition-colors hover:text-[#123A6D]"
             title="Back to attendance"
           >
-            <ArrowLeft size={20} weight="bold" />
+            <CaretLeft size={22} weight="bold" />
           </button>
           <h1 className="text-[28px] font-extrabold text-[#08244A]">Security Staff Profile</h1>
         </div>
@@ -362,10 +384,22 @@ export default function StaffProfileScreen({
             </div>
 
             <div className="mt-4 rounded-md border border-[#D7DFEC] bg-white p-5">
-              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                <h2 className="shrink-0 text-[16px] font-extrabold text-[#1F2937]">Monthly Attendance - {monthLabel}</h2>
-                <div className="flex flex-wrap items-center gap-3 xl:flex-nowrap">
-                  <div className="flex flex-wrap gap-4 text-[11px] font-bold text-[#64748B] xl:flex-nowrap">
+              <div className="flex flex-col gap-3 2xl:flex-row 2xl:items-center 2xl:justify-between">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <h2 className="text-[16px] font-extrabold text-[#1F2937]">Monthly Attendance -</h2>
+                  <label className="relative inline-flex h-9 max-w-full items-center rounded-md border border-[#D7DFEC] bg-white pl-3 pr-2 text-[12px] font-extrabold text-[#34425E] transition-colors hover:border-[#B8C4D6] focus-within:border-[#43C17A] focus-within:ring-1 focus-within:ring-[#43C17A]">
+                    <CalendarBlank size={15} weight="fill" className="mr-2 text-[#43C17A]" />
+                    <input
+                      type="month"
+                      value={selectedMonth}
+                      onChange={(event) => setSelectedMonth(event.target.value)}
+                      aria-label="Select monthly attendance month"
+                      className="h-full w-[150px] cursor-pointer bg-transparent text-[12px] font-extrabold text-[#34425E] outline-none"
+                    />
+                  </label>
+                </div>
+                <div className="flex min-w-0 flex-wrap items-center gap-3">
+                  <div className="flex min-w-0 flex-wrap gap-4 text-[11px] font-bold text-[#64748B]">
                     <Legend color="bg-[#18B978]" label="Present" />
                     <Legend color="bg-[#EF4444]" label="Absent" />
                     <Legend color="bg-[#F59E0B]" label="Late" />
@@ -375,7 +409,7 @@ export default function StaffProfileScreen({
                     type="button"
                     onClick={exportMonthlyAttendance}
                     disabled={isMonthlyExporting}
-                    className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-md border border-[#D7DFEC] px-3 text-[11px] font-bold text-[#34425E] transition-colors hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-70"
+                    className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-md border border-[#D7DFEC] px-3 text-[11px] font-bold text-[#34425E] transition-colors hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     <DownloadSimple
                       size={15}
@@ -490,7 +524,7 @@ function ProfileStat({
 
   return (
     <CardComponent
-      icon={<span className={`grid h-10 w-10 place-items-center rounded-md ${toneClass}`}>{icon}</span>}
+      icon={<span className={`grid place-items-center rounded-md px-2 py-2 ${toneClass}`}>{icon}</span>}
       value={<span className="text-[10px] font-bold uppercase tracking-wide text-[#64748B]">{label}</span>}
       label={<span className="text-[28px] font-extrabold text-[#08244A]">{value}</span>}
       style="min-h-[138px] !h-[138px] border border-[#D7DFEC] bg-white p-5 shadow-sm"
@@ -508,10 +542,10 @@ function StaffProfileShimmer({ onBack }: { onBack: () => void }) {
           <button
             type="button"
             onClick={onBack}
-            className="grid h-10 w-10 cursor-pointer place-items-center rounded-full bg-[#F3F6FA] text-[#08244A]"
+            className="grid h-10 w-10 cursor-pointer place-items-center text-[#08244A]"
             title="Back to attendance"
           >
-            <ArrowLeft size={20} weight="bold" />
+            <CaretLeft size={22} weight="bold" />
           </button>
           <div className="h-8 w-64 rounded bg-[#DDE5F0]" />
         </div>
@@ -534,22 +568,40 @@ function StaffProfileShimmer({ onBack }: { onBack: () => void }) {
           <div className="min-w-0">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="h-[92px] rounded-lg border border-[#D2DAE7] bg-white p-4">
-                  <div className="h-8 w-8 rounded-lg bg-[#EAF0F7]" />
-                  <div className="mt-3 h-3 w-20 rounded bg-[#EAF0F7]" />
-                  <div className="mt-2 h-5 w-10 rounded bg-[#DDE5F0]" />
+                <div key={index} className="flex h-[138px] flex-col justify-between rounded-lg border border-[#D2DAE7] bg-white p-5">
+                  <div className="h-[38px] w-[38px] rounded-md bg-[#EAF0F7]" />
+                  <div className="space-y-3">
+                    <div className="h-3 w-24 rounded bg-[#EAF0F7]" />
+                    <div className="h-7 w-14 rounded bg-[#DDE5F0]" />
+                  </div>
                 </div>
               ))}
             </div>
 
             <div className="mt-4 rounded-md border border-[#D7DFEC] bg-white p-5">
-              <div className="flex justify-between">
-                <div className="h-5 w-56 rounded bg-[#DDE5F0]" />
-                <div className="h-8 w-28 rounded bg-[#EAF0F7]" />
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="h-5 w-44 rounded bg-[#DDE5F0]" />
+                  <div className="h-9 w-36 rounded-md bg-[#EAF0F7]" />
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap gap-4">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <div className="h-2.5 w-2.5 rounded-full bg-[#DDE5F0]" />
+                        <div className="h-3 w-12 rounded bg-[#EAF0F7]" />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="h-8 w-28 rounded-md bg-[#EAF0F7]" />
+                </div>
               </div>
-              <div className="mt-6 grid grid-cols-7 gap-x-5 gap-y-3">
+              <div className="mt-6 grid grid-cols-7 justify-items-center gap-x-5 gap-y-3">
+                {Array.from({ length: 7 }).map((_, index) => (
+                  <div key={`day-${index}`} className="h-3 w-8 rounded bg-[#DDE5F0]" />
+                ))}
                 {Array.from({ length: 35 }).map((_, index) => (
-                  <div key={index} className="mx-auto h-9 w-9 rounded-lg bg-[#EAF0F7]" />
+                  <div key={`date-${index}`} className="h-9 w-9 rounded-md bg-[#EAF0F7]" />
                 ))}
               </div>
             </div>

@@ -1,6 +1,19 @@
 import type { Executive } from "./types";
 
-export const months = ["January", "February", "March", "April", "May", "June"];
+export const months = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 export const executives: Executive[] = [
   {

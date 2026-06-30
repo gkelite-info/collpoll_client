@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
-import type { StaffAttendanceRecord } from "../data";
+import type { StaffAttendanceRecord, StaffAttendanceStatus } from "../data";
 import GroundStaffMembersScreen from "./list/GroundStaffMembersScreen";
 import StaffAttendanceListScreen from "./list/StaffAttendanceListScreen";
 import StaffProfileScreen from "./profile/StaffProfileScreen";
@@ -18,6 +18,15 @@ const STAFF_ATTENDANCE_PATH = "/wellbeing-executive/staff-attendance";
 
 const getProfileSection = (value: string | null): ProfileSection =>
   value === "history" ? "history" : "profile";
+
+const getDirectoryStatus = (value: string | null): StaffAttendanceStatus | null =>
+  value === "present" ||
+  value === "absent" ||
+  value === "late" ||
+  value === "leave" ||
+  value === "not_marked"
+    ? value
+    : null;
 
 const normalizeCategoryName = (categoryName: string | null | undefined) =>
   categoryName?.toLowerCase().replace(/[^a-z]/g, "") ?? "";
@@ -102,7 +111,29 @@ export default function StaffAttendancePage() {
 
     try {
       const groundStaff = await fetchGroundStaffMembers(collegeId, searchQuery);
-      setRecords(groundStaff.map(mapGroundStaffToAttendanceRecord));
+      setRecords((currentRecords) => {
+        const existingRecordsByUserId = new Map(
+          currentRecords.map((record) => [record.userId, record]),
+        );
+
+        return groundStaff.map((staff, index) => {
+          const mappedRecord = mapGroundStaffToAttendanceRecord(staff, index);
+          const existingRecord = existingRecordsByUserId.get(mappedRecord.userId);
+
+          return existingRecord
+            ? {
+                ...mappedRecord,
+                status: existingRecord.status,
+                history: existingRecord.history,
+                totalWorkingDays: existingRecord.totalWorkingDays,
+                presentDays: existingRecord.presentDays,
+                absentDays: existingRecord.absentDays,
+                lateDays: existingRecord.lateDays,
+                attendanceRate: existingRecord.attendanceRate,
+              }
+            : mappedRecord;
+        });
+      });
       setRecordsLoadVersion((current) => current + 1);
     } catch (error) {
       console.error("Ground staff fetch failed:", error);
@@ -125,6 +156,7 @@ export default function StaffAttendancePage() {
     [records, selectedStaffId],
   );
   const view = searchParams.get("view");
+  const directoryStatus = getDirectoryStatus(searchParams.get("status"));
   const profileSection = getProfileSection(searchParams.get("section"));
 
   if (loading || !canViewStaffAttendance) {
@@ -155,8 +187,8 @@ export default function StaffAttendancePage() {
     return (
       <GroundStaffMembersScreen
         records={records}
+        activeStatus={directoryStatus}
         isLoading={isRecordsLoading}
-        onSearchRecords={loadGroundStaffRecords}
         onBack={() => router.push(STAFF_ATTENDANCE_PATH)}
         onViewProfile={(record) => openProfile(record, "profile")}
       />
