@@ -48,8 +48,16 @@ import { getStaffPolicy } from "../Hr/attendance/staffPolicyAPI";
 
 // Removed hardcoded SHIFT_START, SHIFT_END, LATE_THRESHOLD_MIN
 
-function timeToMinutes(time: string): number {
-  const [h, m] = time.split(":").map(Number);
+function timeToMinutes(timeStr: string): number {
+  if (!timeStr) return 0;
+  const str = timeStr.trim().toLowerCase();
+  const isPM = str.includes("pm");
+  const isAM = str.includes("am");
+  const parts = str.replace(/(am|pm)/g, "").trim().split(":");
+  let h = parseInt(parts[0], 10) || 0;
+  const m = parseInt(parts[1], 10) || 0;
+  if (isPM && h !== 12) h += 12;
+  if (isAM && h === 12) h = 0;
   return h * 60 + m;
 }
 
@@ -325,16 +333,7 @@ async function processStaffAttendance(
       // E.g., if threshold is 30 mins, and they left 31 mins early. But usually, any minute early is "earlyOut", and the policy defines the penalty in payroll.
     }
 
-    if (totalMinutes > 0 && effectiveShiftMins > 0) {
-      const workedPercent = (totalMinutes / effectiveShiftMins) * 100;
-      if (workedPercent < policy.halfDayMinPercent) {
-        status = "Absent"; // Less than half day minimum
-      } else if (workedPercent >= policy.halfDayMinPercent && workedPercent < policy.fullDayMinPercent) {
-        status = "HalfDay";
-      }
-    } else if (totalMinutes === 0 && !firstCheckInStr) {
-      status = "Absent";
-    }
+    // The EOD Cron or HR Manual Trigger handles the conversion to HalfDay / Absent based on total working hours.
   }
 
   const { data: existing } = await adminSupabase
@@ -353,7 +352,6 @@ async function processStaffAttendance(
         totalMinutes,
         lateByMinutes: lateBy,
         earlyOutMinutes: earlyOut,
-        status,
         updatedAt: now,
       })
       .eq("attendanceDailyId", existing.attendanceDailyId);

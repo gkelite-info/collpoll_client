@@ -14,6 +14,7 @@ import AttendanceToolbar from "./components/AttendanceToolbar";
 
 import AttendanceTable from "./components/AttendanceTable";
 import PolicyTab from "./components/PolicyTab";
+import LogsTab from "./components/LogsTab";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import {
   getAttendanceStaff,
@@ -144,15 +145,16 @@ function FacultyAttendanceDashboard() {
   const [staffList, setStaffList] = useState<AttendanceStaffRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
 
-  const urlView = (searchParams.get("view") === "policy") ? "policy" : "overview";
-  const [mainView, setMainView] = useState<"overview" | "policy">(urlView);
+  const urlView = (searchParams.get("view") === "policy") ? "policy" : (searchParams.get("view") === "logs" ? "logs" : "overview");
+  const [mainView, setMainView] = useState<"overview" | "policy" | "logs">(urlView);
 
   // Sync state to URL and vice-versa
   useEffect(() => {
-    setMainView(searchParams.get("view") === "policy" ? "policy" : "overview");
+    const view = searchParams.get("view");
+    setMainView(view === "policy" ? "policy" : (view === "logs" ? "logs" : "overview"));
   }, [searchParams]);
 
-  const handleSetMainView = (view: "overview" | "policy") => {
+  const handleSetMainView = (view: "overview" | "policy" | "logs") => {
     setMainView(view);
     const newParams = new URLSearchParams(searchParams.toString());
     newParams.set("view", view);
@@ -537,7 +539,7 @@ function FacultyAttendanceDashboard() {
         <div className="flex flex-col justify-start">
           <div className="flex items-center gap-6">
             <h1 className="text-xl font-bold text-[#282828] whitespace-nowrap min-w-[280px]">
-              {mainView === "overview" ? "Attendance Management" : "Attendance Policy Settings"}
+              {mainView === "overview" ? "Attendance Management" : (mainView === "policy" ? "Attendance Policy Settings" : "Finalization Logs")}
             </h1>
             <div className="flex bg-gray-200 p-1 rounded-xl shadow-inner gap-1">
               <button
@@ -569,12 +571,29 @@ function FacultyAttendanceDashboard() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 <span className="z-10">Policy Settings</span>
               </button>
+
+              <button
+                onClick={() => handleSetMainView("logs")}
+                className={`relative px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-300 cursor-pointer overflow-hidden flex items-center gap-2 ${
+                  mainView === "logs"
+                    ? "text-white shadow-md transform scale-[1.02]"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-300/50"
+                }`}
+              >
+                {mainView === "logs" && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#6C20CA] to-[#8C3BEA] -z-10 rounded-lg"></div>
+                )}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                <span className="z-10">Logs</span>
+              </button>
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-1">
             {mainView === "overview"
               ? "Stay organized and on track with staff attendance insights"
-              : "Configure dynamic attendance rules, grace periods, and thresholds"}
+              : mainView === "policy"
+              ? "Configure dynamic attendance rules, grace periods, and thresholds"
+              : "Monitor daily cron executions and errors"}
           </p>
         </div>
         <div className="w-[320px] shrink-0">
@@ -586,6 +605,8 @@ function FacultyAttendanceDashboard() {
         <div className="w-[68%] flex flex-col gap-6">
           {mainView === "policy" ? (
             <PolicyTab />
+          ) : mainView === "logs" ? (
+            <LogsTab />
           ) : (
             <>
               <AttendanceStatCards

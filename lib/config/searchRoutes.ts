@@ -125,6 +125,7 @@ export const ROLE_BASED_ROUTES: Record<string, SearchRoute[]> = {
     { label: "Calendar", subLabel: "Holiday Calendar", path: "/hr/calendar?tab=Holidays", category: "Academics", keywords: ["holidays", "calendar", "weekoffs", "events", "schedule"] },
     { label: "Attendance", subLabel: "Overview", path: "/hr/attendance?view=overview", category: "Management", keywords: ["staff attendance overview", "attendance", "staff"] },
     { label: "Attendance", subLabel: "Policy Settings", path: "/hr/attendance?view=policy", category: "Management", keywords: ["staff attendance policy settings", "policy", "rules"] },
+    { label: "Attendance", subLabel: "Finalization Logs", path: "/hr/attendance?view=logs", category: "Management", keywords: ["finalization logs", "cron logs", "attendance logs", "eod logs"] },
     { label: "Leave Requests", path: "/hr/leaveRequests", category: "Requests", keywords: ["leave", "permission"] },
     { label: "Drive", path: "/hr/drive", category: "Resources", keywords: ["files", "documents", "storage"] },
     { label: "Meetings", subLabel: "Upcoming Meetings", path: "/hr/meetings?type=upcoming", category: "Collaboration", keywords: ["upcoming meetings", "new meetings"] },
