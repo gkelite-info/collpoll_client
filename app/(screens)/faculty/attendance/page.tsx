@@ -51,6 +51,8 @@ function AttendanceContent() {
   const [sectionOptions, setSectionOptions] = useState<SectionOption[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [selectedSectionId, setSelectedSectionId] = useState<string>("");
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(new Date());
+  const [selectedCalendarType, setSelectedCalendarType] = useState<"Single" | "Bulk">("Single");
 
   const [isEditing, setIsEditing] = useState(false);
   const [isCancellingMode, setIsCancellingMode] = useState(false);
@@ -58,7 +60,7 @@ function AttendanceContent() {
 
   const activeClassId = urlClassId || selectedClassId;
   const isTopicMode = !!urlClassId;
-  
+
   const isBulk = activeClassId ? activeClassId.startsWith("bulk-") : false;
   const eventId = activeClassId ? parseInt(isBulk ? activeClassId.split("-")[1] : activeClassId.split("-")[0]) : null;
 
@@ -77,7 +79,7 @@ function AttendanceContent() {
               if (newRecord.status === "PRESENT") status = "Present";
               else if (newRecord.status === "LATE") status = "Late";
               else if (newRecord.status === "ABSENT") status = "Absent";
-              
+
               if (s.attendance !== status) {
                 matchedStudentName = s.name;
               }
@@ -93,7 +95,7 @@ function AttendanceContent() {
                 newPercentage = recalc.newPercentage;
                 newStats = recalc.newStats;
               }
-              
+
               return {
                 ...s,
                 attendance: status as any,
@@ -159,46 +161,59 @@ function AttendanceContent() {
       setSelectedClassId(urlClassId);
       loadStudents(urlClassId).finally(() => setInitialized(true));
       setIsEditing(true);
-    } else {
-      if (contextLoading || !facultyId) return;
-      async function initFilters() {
-        try {
-          setLoading(true);
-
-          const classes = await getFacultyClasses(facultyId!);
-          setClassOptions(classes);
-
-          if (classes.length === 0) {
-            setStudentsList([]);
-            return;
-          }
-
-          const firstClass = classes[0];
-          setSelectedClassId(firstClass.id);
-
-          const sections = await getClassSections(firstClass.id);
-          setSectionOptions(sections);
-
-          const firstSec = sections.length > 0 ? sections[0].id : "";
-          setSelectedSectionId(firstSec);
-
-          await loadStudents(firstClass.id, firstSec);
-        } catch (e) {
-          console.error(e);
-        } finally {
-          setLoading(false);
-          setInitialized(true);
-        }
-      }
-      initFilters();
     }
-  }, [urlClassId, facultyId, contextLoading]);
+  }, [urlClassId]);
+
+  useEffect(() => {
+    if (urlClassId) return;
+    if (contextLoading || !facultyId) return;
+
+    async function loadClassesForDate() {
+      try {
+        setLoading(true);
+        const dateStr = `${selectedCalendarDate.getFullYear()}-${String(selectedCalendarDate.getMonth() + 1).padStart(2, "0")}-${String(selectedCalendarDate.getDate()).padStart(2, "0")}`;
+        const classes = await getFacultyClasses(facultyId!, dateStr);
+        setClassOptions(classes);
+
+        const filteredClasses = classes.filter(c => selectedCalendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-"));
+
+        if (filteredClasses.length === 0) {
+          setStudentsList([]);
+          setSelectedClassId("");
+          setSelectedSectionId("");
+          setSectionOptions([]);
+          setClassData(null);
+          return;
+        }
+
+        const firstClass = filteredClasses[0];
+        setSelectedClassId(firstClass.id);
+
+        const sections = await getClassSections(firstClass.id);
+        setSectionOptions(sections);
+
+        const firstSec = sections.length > 0 ? sections[0].id : "";
+        setSelectedSectionId(firstSec);
+
+        await loadStudents(firstClass.id, firstSec);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+        setInitialized(true);
+      }
+    }
+
+    loadClassesForDate();
+  }, [selectedCalendarDate, facultyId, contextLoading, urlClassId, selectedCalendarType]);
 
   const handleFilterChange = async (
-    type: "class" | "section",
+    type: "class" | "section" | "calendarType",
     value: string,
   ) => {
-    if (type === "class") {
+    if (type === "calendarType") {
+      setSelectedCalendarType(value as "Single" | "Bulk");
+    } else if (type === "class") {
       setSelectedClassId(value);
       const sections = await getClassSections(value);
       setSectionOptions(sections);
@@ -348,7 +363,11 @@ function AttendanceContent() {
           ))}
         </div>
         <div className="hidden lg:block lg:flex-[1] shrink-0 min-w-0">
-          <WorkWeekCalendar style="h-full bg-white rounded-xl shadow-sm" />
+          <WorkWeekCalendar
+            activeDate={selectedCalendarDate}
+            onDateSelect={(date) => setSelectedCalendarDate(date)}
+            style="h-full bg-white rounded-xl shadow-sm"
+          />
         </div>
       </section>
 
@@ -403,9 +422,9 @@ function AttendanceContent() {
 
       <section className="w-full min-w-0">
         {tableLoading ||
-        urlClassId ||
-        classOptions.length > 0 ||
-        sectionOptions.length > 0 ? (
+          urlClassId ||
+          classOptions.length > 0 ||
+          sectionOptions.length > 0 ? (
           <StuAttendanceTable
             students={studentsList}
             setStudents={setStudentsList}
@@ -420,10 +439,11 @@ function AttendanceContent() {
             loadingFilters={tableLoading}
             isEditing={isEditing}
             onEditClick={() => setIsEditing(true)}
+            calendarType={selectedCalendarType}
           />
         ) : (
-          <div className="flex justify-center items-center py-16 text-gray-500">
-            No students found
+          <div className="flex justify-center items-center py-16 text-gray-500 font-medium">
+            No scheduled or accepted classes found for this date.
           </div>
         )}
       </section>
