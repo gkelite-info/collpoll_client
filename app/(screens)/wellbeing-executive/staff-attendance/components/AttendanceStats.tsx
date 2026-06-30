@@ -153,6 +153,11 @@ export const statusMeta: Record<
     dot: "bg-[#F59E0B]",
     className: "bg-[#FFF7E5] text-[#D97706]",
   },
+  leave: {
+    label: "Leave",
+    dot: "bg-[#2563EB]",
+    className: "bg-[#EAF0FF] text-[#2563EB]",
+  },
   not_marked: {
     label: "Not Marked",
     dot: "bg-[#94A3B8]",

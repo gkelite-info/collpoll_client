@@ -125,6 +125,45 @@ export type GroundStaffMemberListItem = {
   subCategoryId: number;
 };
 
+export type GroundStaffAttendanceStatus = "present" | "absent" | "late" | "leave";
+
+export type GroundStaffAttendanceListItem = {
+  groundStaffAttendanceId: number;
+  staffId: number;
+  date: string;
+  status: GroundStaffAttendanceStatus;
+  checkIn: string;
+  checkOut: string;
+  workHours: string;
+};
+
+export type GroundStaffAttendancePayload = {
+  staffId: number;
+  date: string;
+  status: GroundStaffAttendanceStatus;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  workHours?: string | null;
+  markedBy?: number | null;
+};
+
+export type CollegeTimingBreak = {
+  breakId: number;
+  startTime: string;
+  endTime: string;
+};
+
+export type CollegeTimingForDate = {
+  collegeTimingId: number;
+  dayOfWeek: string;
+  isOpen: boolean;
+  openAt: string | null;
+  lunchFrom: string | null;
+  lunchTo: string | null;
+  closeAt: string | null;
+  breaks: CollegeTimingBreak[];
+};
+
 const getSingleRelation = <T,>(relation: T | T[] | null | undefined) =>
   Array.isArray(relation) ? relation[0] : relation;
 
@@ -207,6 +246,24 @@ const fetchAssignedCategoriesByWellBeingIds = async (wellBeingIds: number[]) => 
     map.set(row.wellBeingId, existing);
     return map;
   }, new Map<number, number[]>());
+};
+
+const getDayOfWeekFromDate = (date: string) => {
+  const parsed = new Date(`${date}T00:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ][parsed.getDay()];
 };
 
 const insertAssignedCategory = async (
@@ -663,6 +720,7 @@ export async function fetchWellbeingExecutives(collegeId: number) {
 
 export async function fetchGroundStaffMembers(
   collegeId: number,
+  searchQuery = "",
 ): Promise<GroundStaffMemberListItem[]> {
   const { data, error } = await supabase
     .from("ground_staff")
@@ -703,6 +761,8 @@ export async function fetchGroundStaffMembers(
     rows.map((row) => row.userId),
   );
 
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+
   return rows.flatMap((row) => {
     const user = getSingleRelation(row.users);
 
@@ -712,15 +772,26 @@ export async function fetchGroundStaffMembers(
 
     const subCategory = getSingleRelation(row.wellbeing_sub_categories);
 
+    const staffId = getEmployeeId(user.employee_ids) || `GS${String(row.groundStaffId).padStart(3, "0")}`;
+    const name = user.fullName ?? "Ground Staff";
+
+    if (
+      normalizedSearch &&
+      !name.toLowerCase().includes(normalizedSearch) &&
+      !staffId.toLowerCase().includes(normalizedSearch)
+    ) {
+      return [];
+    }
+
     return [
       {
         id: row.groundStaffId,
         groundStaffId: row.groundStaffId,
         userId: row.userId,
-        name: user.fullName ?? "Ground Staff",
+        name,
         email: user.email ?? "",
         phone: user.mobile ?? "",
-        staffId: getEmployeeId(user.employee_ids) || `GS${String(row.groundStaffId).padStart(3, "0")}`,
+        staffId,
         designation: subCategory?.subCategoryName ?? "Ground Staff",
         dateOfJoining: user.dateOfJoining ?? null,
         image: profileUrlsByUserId.get(row.userId) ?? "",
@@ -729,6 +800,187 @@ export async function fetchGroundStaffMembers(
       },
     ];
   });
+}
+
+export async function fetchGroundStaffAttendancesByDate(
+  staffIds: number[],
+  date: string,
+): Promise<GroundStaffAttendanceListItem[]> {
+  const uniqueStaffIds = Array.from(new Set(staffIds.filter(Boolean)));
+
+  if (!uniqueStaffIds.length || !date) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("ground_staff_attendances")
+    .select("groundStaffAttendanceId, staffId, date, status, checkIn, checkOut, workHours")
+    .in("staffId", uniqueStaffIds)
+    .eq("date", date)
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null);
+
+  if (error) {
+    console.error("fetchGroundStaffAttendancesByDate error:", error);
+    throw error;
+  }
+
+  return ((data ?? []) as {
+    groundStaffAttendanceId: number;
+    staffId: number;
+    date: string;
+    status: GroundStaffAttendanceStatus;
+    checkIn?: string | null;
+    checkOut?: string | null;
+    workHours?: string | null;
+  }[]).map((row) => ({
+    groundStaffAttendanceId: row.groundStaffAttendanceId,
+    staffId: row.staffId,
+    date: row.date,
+    status: row.status,
+    checkIn: row.checkIn ?? "",
+    checkOut: row.checkOut ?? "",
+    workHours: row.workHours ?? "",
+  }));
+}
+
+export async function fetchGroundStaffAttendancesForStaff(
+  staffId: number,
+  fromDate: string,
+  toDate: string,
+): Promise<GroundStaffAttendanceListItem[]> {
+  if (!staffId || !fromDate || !toDate) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("ground_staff_attendances")
+    .select("groundStaffAttendanceId, staffId, date, status, checkIn, checkOut, workHours")
+    .eq("staffId", staffId)
+    .gte("date", fromDate)
+    .lte("date", toDate)
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null)
+    .order("date", { ascending: false });
+
+  if (error) {
+    console.error("fetchGroundStaffAttendancesForStaff error:", error);
+    throw error;
+  }
+
+  return ((data ?? []) as {
+    groundStaffAttendanceId: number;
+    staffId: number;
+    date: string;
+    status: GroundStaffAttendanceStatus;
+    checkIn?: string | null;
+    checkOut?: string | null;
+    workHours?: string | null;
+  }[]).map((row) => ({
+    groundStaffAttendanceId: row.groundStaffAttendanceId,
+    staffId: row.staffId,
+    date: row.date,
+    status: row.status,
+    checkIn: row.checkIn ?? "",
+    checkOut: row.checkOut ?? "",
+    workHours: row.workHours ?? "",
+  }));
+}
+
+export async function fetchCollegeTimingForDate(
+  collegeId: number,
+  date: string,
+): Promise<CollegeTimingForDate | null> {
+  const dayOfWeek = getDayOfWeekFromDate(date);
+
+  if (!collegeId || !dayOfWeek) {
+    return null;
+  }
+
+  const { data: timing, error: timingError } = await supabase
+    .from("college_timings")
+    .select("collegeTimingId, dayOfWeek, isOpen, openAt, lunchFrom, lunchTo, closeAt")
+    .eq("collegeId", collegeId)
+    .eq("dayOfWeek", dayOfWeek)
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null)
+    .maybeSingle();
+
+  if (timingError) {
+    console.error("fetchCollegeTimingForDate error:", timingError);
+    throw timingError;
+  }
+
+  if (!timing) {
+    return null;
+  }
+
+  const { data: breaks, error: breaksError } = await supabase
+    .from("college_break_timings")
+    .select("breakId, startTime, endTime")
+    .eq("collegeTimingId", timing.collegeTimingId)
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null);
+
+  if (breaksError) {
+    console.error("fetchCollegeTimingForDate breaks error:", breaksError);
+    throw breaksError;
+  }
+
+  return {
+    collegeTimingId: timing.collegeTimingId,
+    dayOfWeek: timing.dayOfWeek,
+    isOpen: timing.isOpen,
+    openAt: timing.openAt ?? null,
+    lunchFrom: timing.lunchFrom ?? null,
+    lunchTo: timing.lunchTo ?? null,
+    closeAt: timing.closeAt ?? null,
+    breaks: ((breaks ?? []) as CollegeTimingBreak[]).map((item) => ({
+      breakId: item.breakId,
+      startTime: item.startTime,
+      endTime: item.endTime,
+    })),
+  };
+}
+
+export async function upsertGroundStaffAttendances(
+  payloads: GroundStaffAttendancePayload[],
+) {
+  if (!payloads.length) {
+    return [];
+  }
+
+  const timestamp = new Date().toISOString();
+  const rows = payloads.map((payload) => ({
+    staffId: payload.staffId,
+    date: payload.date,
+    status: payload.status,
+    checkIn: payload.checkIn || null,
+    checkOut: payload.checkOut || null,
+    workHours: payload.workHours || null,
+    markedBy: payload.markedBy ?? null,
+    isActive: true,
+    is_deleted: false,
+    deletedAt: null,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }));
+
+  const { data, error } = await supabase
+    .from("ground_staff_attendances")
+    .upsert(rows, { onConflict: "staffId,date" })
+    .select("groundStaffAttendanceId, staffId, date, status, checkIn, checkOut, workHours");
+
+  if (error) {
+    console.error("upsertGroundStaffAttendances error:", error);
+    throw error;
+  }
+
+  return data ?? [];
 }
 
 export async function fetchPaginatedWellbeingExecutives(
