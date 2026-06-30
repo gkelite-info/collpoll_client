@@ -184,9 +184,10 @@ export async function getStudentsForClass(
   let sectionNameFilter: string | undefined;
 
   if (isBulk) {
-    const parts = classId.split("-");
-    eventId = parseInt(parts[1]);
-    sectionNameFilter = parts[2] !== "undefined" ? parts[2] : undefined;
+    const parts = classId.split("-"); // ["bulk", "123_2026_06_29_SectionA_0"]
+    const subparts = parts[1].split("_"); // ["123", "2026", "06", "29", "SectionA", "0"]
+    eventId = parseInt(subparts[0]);
+    sectionNameFilter = subparts[4] !== "undefined" ? subparts[4] : undefined;
   } else {
     const parts = classId.split("-");
     eventId = parseInt(parts[0]);
@@ -343,7 +344,7 @@ export async function saveAttendance(classId: string, payload: any[]) {
   const supabase = await createClient();
 
   const isBulk = classId.startsWith("bulk-");
-  const eventId = parseInt(isBulk ? classId.split("-")[1] : classId.split("-")[0]);
+  const eventId = parseInt(isBulk ? classId.split("-")[1].split("_")[0] : classId.split("-")[0]);
 
   const { data } = await supabase
     .from(isBulk ? "bulk_calendar_events" : "calendar_event")
@@ -351,9 +352,17 @@ export async function saveAttendance(classId: string, payload: any[]) {
     .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId)
     .single();
 
-  const eventDate = isBulk 
+  let eventDate = isBulk 
     ? new Date().toLocaleDateString("en-CA") // "YYYY-MM-DD" local timezone format
     : (data as any)?.date;
+
+  if (isBulk) {
+    const parts = classId.split("-");
+    const subparts = parts[1].split("_");
+    if (subparts.length >= 4) {
+      eventDate = `${subparts[1]}-${subparts[2]}-${subparts[3]}`;
+    }
+  }
 
   const dbRecords = payload
     .filter((p) => p.status !== "Not Marked")
@@ -437,7 +446,7 @@ export async function handleMissionClassStatus(
 ) {
   const supabase = await createClient();
   const isBulk = classIdStr.startsWith("bulk-");
-  const eventId = parseInt(isBulk ? classIdStr.split("-")[1] : classIdStr.split("-")[0]);
+  const eventId = parseInt(isBulk ? classIdStr.split("-")[1].split("_")[0] : classIdStr.split("-")[0]);
   const timeNow = new Date().toTimeString().split(" ")[0];
 
   let facultyClassSessionsId: number | undefined;
@@ -450,12 +459,31 @@ export async function handleMissionClassStatus(
   
   const collegeRoomId = eventData?.collegeRoomId;
 
-  const { data: existingSessions } = await supabase
+  // Let's parse the target date if it's bulk!
+  let targetDateStr = new Date().toISOString().split("T")[0]; // default to today
+  if (isBulk) {
+    const parts = classIdStr.split("-")[1].split("_");
+    if (parts.length >= 4) {
+      targetDateStr = `${parts[1]}-${parts[2]}-${parts[3]}`;
+    }
+  }
+
+  let query = supabase
     .from("faculty_class_sessions")
     .select("facultyClassSessionsId")
-    .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId)
     .eq("facultyId", facultyId)
     .is("deletedAt", null);
+
+  if (isBulk) {
+    query = query
+      .eq("bulkCalendarEventId", eventId)
+      .gte("createdAt", `${targetDateStr}T00:00:00.000Z`)
+      .lte("createdAt", `${targetDateStr}T23:59:59.999Z`);
+  } else {
+    query = query.eq("calendarEventId", eventId);
+  }
+
+  const { data: existingSessions } = await query;
 
   if (existingSessions && existingSessions.length > 0) {
     const [primary, ...duplicates] = existingSessions;
@@ -489,7 +517,7 @@ export async function handleMissionClassStatus(
         collegeRoomId: collegeRoomId,
         status: status.toLowerCase(),
         acceptedAt: status === "Accepted" ? timeNow : "00:00:00",
-        createdAt: new Date().toISOString(),
+        createdAt: isBulk ? `${targetDateStr}T${new Date().toISOString().split("T")[1]}` : new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
       .select("facultyClassSessionsId")
