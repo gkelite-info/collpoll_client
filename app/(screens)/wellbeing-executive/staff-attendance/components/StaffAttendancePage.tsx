@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
 import type { StaffAttendanceRecord } from "../data";
@@ -53,6 +53,7 @@ const mapGroundStaffToAttendanceRecord = (
   index: number,
 ): StaffAttendanceRecord => ({
   id: staff.groundStaffId,
+  userId: staff.userId,
   staffId: staff.staffId,
   name: staff.name,
   role: "Ground Staff",
@@ -78,8 +79,10 @@ const mapGroundStaffToAttendanceRecord = (
 export default function StaffAttendancePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { loading, collegeId, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
+  const { loading, collegeId, wellBeingId, wellBeingCategoryName, wellBeingCategoryNames } = useUser();
   const [records, setRecords] = useState<StaffAttendanceRecord[]>([]);
+  const [isRecordsLoading, setIsRecordsLoading] = useState(false);
+  const [recordsLoadVersion, setRecordsLoadVersion] = useState(0);
   const canViewStaffAttendance = [wellBeingCategoryName, ...wellBeingCategoryNames].some(
     isStaffAttendanceCategory,
   );
@@ -90,29 +93,31 @@ export default function StaffAttendancePage() {
     }
   }, [canViewStaffAttendance, loading, router]);
 
+  const loadGroundStaffRecords = useCallback(async (searchQuery = "") => {
+    if (!collegeId) {
+      return;
+    }
+
+    setIsRecordsLoading(true);
+
+    try {
+      const groundStaff = await fetchGroundStaffMembers(collegeId, searchQuery);
+      setRecords(groundStaff.map(mapGroundStaffToAttendanceRecord));
+      setRecordsLoadVersion((current) => current + 1);
+    } catch (error) {
+      console.error("Ground staff fetch failed:", error);
+    } finally {
+      setIsRecordsLoading(false);
+    }
+  }, [collegeId]);
+
   useEffect(() => {
     if (loading || !canViewStaffAttendance || !collegeId) {
       return;
     }
 
-    let cancelled = false;
-
-    fetchGroundStaffMembers(collegeId)
-      .then((groundStaff) => {
-        if (cancelled) return;
-
-        if (groundStaff.length) {
-          setRecords(groundStaff.map(mapGroundStaffToAttendanceRecord));
-        }
-      })
-      .catch((error) => {
-        console.error("Ground staff fetch failed:", error);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [canViewStaffAttendance, collegeId, loading]);
+    void loadGroundStaffRecords();
+  }, [canViewStaffAttendance, collegeId, loadGroundStaffRecords, loading]);
 
   const selectedStaffId = Number(searchParams.get("staffId") ?? records[0]?.id);
   const selectedStaff = useMemo(
@@ -150,17 +155,20 @@ export default function StaffAttendancePage() {
     return (
       <GroundStaffMembersScreen
         records={records}
+        isLoading={isRecordsLoading}
+        onSearchRecords={loadGroundStaffRecords}
         onBack={() => router.push(STAFF_ATTENDANCE_PATH)}
         onViewProfile={(record) => openProfile(record, "profile")}
       />
     );
   }
 
-  if (view === "profile" && selectedStaff) {
+  if (view === "profile" && (selectedStaff || isRecordsLoading)) {
     return (
       <StaffProfileScreen
         staff={selectedStaff}
         activeSection={profileSection}
+        isLoading={isRecordsLoading}
         onBack={() => router.push(STAFF_ATTENDANCE_PATH)}
       />
     );
@@ -174,6 +182,11 @@ export default function StaffAttendancePage() {
       onViewHistory={(record) => openProfile(record, "history")}
       onViewAllStaff={() => openDirectory()}
       onViewStatusStaff={(status) => openDirectory(status)}
+      markedBy={wellBeingId}
+      collegeId={collegeId}
+      isRecordsLoading={isRecordsLoading}
+      recordsLoadVersion={recordsLoadVersion}
+      onSearchRecords={loadGroundStaffRecords}
     />
   );
 }

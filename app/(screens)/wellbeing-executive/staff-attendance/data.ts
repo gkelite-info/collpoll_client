@@ -1,4 +1,4 @@
-export type StaffAttendanceStatus = "present" | "absent" | "late" | "not_marked";
+export type StaffAttendanceStatus = "present" | "absent" | "late" | "leave" | "not_marked";
 
 export type StaffAttendanceLog = {
   date: string;
@@ -10,6 +10,7 @@ export type StaffAttendanceLog = {
 
 export type StaffAttendanceRecord = {
   id: number;
+  userId: number;
   staffId: string;
   name: string;
   role: string;
@@ -43,6 +44,7 @@ const securityHistory: StaffAttendanceLog[] = [
 export const staffAttendanceRecords: StaffAttendanceRecord[] = [
   {
     id: 1,
+    userId: 1,
     staffId: "SEC001",
     name: "Ravi Kumar",
     role: "Ground Staff",
@@ -65,6 +67,7 @@ export const staffAttendanceRecords: StaffAttendanceRecord[] = [
   },
   {
     id: 2,
+    userId: 2,
     staffId: "SEC002",
     name: "Ramesh",
     role: "Ground Staff",
@@ -87,6 +90,7 @@ export const staffAttendanceRecords: StaffAttendanceRecord[] = [
   },
   {
     id: 3,
+    userId: 3,
     staffId: "SEC003",
     name: "Suresh",
     role: "Ground Staff",
@@ -109,6 +113,7 @@ export const staffAttendanceRecords: StaffAttendanceRecord[] = [
   },
   {
     id: 4,
+    userId: 4,
     staffId: "SEC004",
     name: "Mahesh",
     role: "Ground Staff",
@@ -131,6 +136,7 @@ export const staffAttendanceRecords: StaffAttendanceRecord[] = [
   },
   {
     id: 5,
+    userId: 5,
     staffId: "SEC005",
     name: "Naresh",
     role: "Ground Staff",

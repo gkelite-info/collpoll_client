@@ -6,22 +6,30 @@ import {
   MagnifyingGlass,
 } from "@phosphor-icons/react";
 import Image from "next/image";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import TableComponent from "@/app/utils/table/table";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getInitials, type StaffAttendanceRecord } from "../../data";
 
 type GroundStaffMembersScreenProps = {
   records: StaffAttendanceRecord[];
+  isLoading?: boolean;
+  onSearchRecords?: (searchQuery: string) => Promise<void>;
   onBack: () => void;
   onViewProfile: (record: StaffAttendanceRecord) => void;
 };
 
+const DIRECTORY_ITEMS_PER_PAGE = 5;
+
 export default function GroundStaffMembersScreen({
   records,
+  isLoading = false,
+  onSearchRecords,
   onBack,
   onViewProfile,
 }: GroundStaffMembersScreenProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const directoryRows = records;
   const filteredRows = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -37,6 +45,24 @@ export default function GroundStaffMembersScreen({
       );
     });
   }, [directoryRows, searchQuery]);
+  const paginatedRows = filteredRows.slice(
+    (currentPage - 1) * DIRECTORY_ITEMS_PER_PAGE,
+    currentPage * DIRECTORY_ITEMS_PER_PAGE,
+  );
+
+  useEffect(() => {
+    if (!onSearchRecords) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCurrentPage(1);
+      void onSearchRecords(searchQuery);
+    }, 400);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [onSearchRecords, searchQuery]);
+
   const columns = [
     { title: "STAFF NAME", key: "image" },
     { title: "EMPLOYEE ID", key: "employeeId" },
@@ -45,7 +71,7 @@ export default function GroundStaffMembersScreen({
     { title: "JOINING DATE", key: "joiningDate" },
     { title: "ACTIONS", key: "actions" },
   ];
-  const tableData = filteredRows.map((record) => ({
+  const tableData = paginatedRows.map((record) => ({
     image: (
       <div className="flex min-w-[170px] items-center gap-3 text-left">
         {record.image ? (
@@ -97,46 +123,73 @@ export default function GroundStaffMembersScreen({
           </div>
         </div>
 
-        <div className="mt-6 rounded-lg border border-[#D7DFEC] bg-white">
-          <div className="border-b border-[#E4E9F1] p-4">
-            <div className="flex h-10 max-w-[540px] items-center gap-2 rounded-md border border-[#D7DFEC] px-3 text-[12px] font-semibold text-[#8A9AB5]">
-              <MagnifyingGlass size={16} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search by name or employee ID"
-                className="h-full flex-1 bg-transparent text-[#34425E] outline-none placeholder:text-[#8A9AB5]"
+        {isLoading ? (
+          <GroundStaffDirectoryShimmer />
+        ) : (
+          <div className="mt-6 rounded-lg border border-[#D7DFEC] bg-white">
+            <div className="border-b border-[#E4E9F1] p-4">
+              <div className="flex h-10 max-w-[540px] items-center gap-2 rounded-md border border-[#D7DFEC] px-3 text-[12px] font-semibold text-[#8A9AB5]">
+                <MagnifyingGlass size={16} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search by name or employee ID"
+                  className="h-full flex-1 bg-transparent text-[#34425E] outline-none placeholder:text-[#8A9AB5]"
+                />
+              </div>
+            </div>
+
+            <div className="[&>div]:mt-0 [&>div>div]:rounded-none [&>div>div]:shadow-none [&_th]:bg-[#F3F6FA] [&_th]:py-4 [&_th]:text-[10px] [&_th]:font-extrabold [&_th]:uppercase [&_th]:text-[#34425E] [&_td]:py-4 [&_td]:text-[12px]">
+              <TableComponent
+                columns={columns}
+                tableData={tableData}
+                tableClassName="min-w-[860px] table-fixed"
+                height="none"
+                stickyHeader={false}
               />
             </div>
-          </div>
 
-          <div className="[&>div]:mt-0 [&>div>div]:rounded-none [&>div>div]:shadow-none [&_th]:bg-[#F3F6FA] [&_th]:py-4 [&_th]:text-[10px] [&_th]:font-extrabold [&_th]:uppercase [&_th]:text-[#34425E] [&_td]:py-4 [&_td]:text-[12px]">
-            <TableComponent columns={columns} tableData={tableData} tableClassName="min-w-[860px] table-fixed" height="none" stickyHeader={false} />
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredRows.length}
+              itemsPerPage={DIRECTORY_ITEMS_PER_PAGE}
+              onPageChange={setCurrentPage}
+            />
           </div>
-
-          <div className="flex items-center justify-between border-t border-[#E4E9F1] px-5 py-4 text-[11px] text-[#6B7280]">
-            <span>
-              Showing {filteredRows.length ? 1 : 0} to {filteredRows.length} of {directoryRows.length} staff members
-            </span>
-            <div className="flex items-center gap-2">
-              {["<", "1", "2", "3", "...", "12", ">"].map((item) => (
-                <button
-                  key={item}
-                  className={`h-7 min-w-7 rounded border px-2 text-[11px] font-bold ${
-                    item === "1"
-                      ? "border-[#08244A] bg-[#08244A] text-white"
-                      : "border-[#D7DFEC] bg-white text-[#64748B]"
-                  }`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        )}
       </section>
     </main>
+  );
+}
+
+function GroundStaffDirectoryShimmer() {
+  return (
+    <div className="mt-6 animate-pulse overflow-hidden rounded-lg border border-[#D7DFEC] bg-white">
+      <div className="border-b border-[#E4E9F1] p-4">
+        <div className="h-10 max-w-[540px] rounded-md bg-[#EAF0F7]" />
+      </div>
+      <div className="h-14 bg-[#F3F6FA]" />
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div
+          key={index}
+          className="grid grid-cols-[1.5fr_1fr_1fr_1.2fr_1fr_80px] items-center gap-5 border-b border-[#E4E9F1] px-6 py-5"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-[#DDE5F0]" />
+            <div className="h-4 w-28 rounded bg-[#EAF0F7]" />
+          </div>
+          {Array.from({ length: 5 }).map((__, cellIndex) => (
+            <div key={cellIndex} className="h-4 rounded bg-[#EAF0F7]" />
+          ))}
+        </div>
+      ))}
+      <div className="flex justify-end gap-2 px-5 py-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="h-7 w-7 rounded-full bg-[#EAF0F7]" />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -148,6 +201,8 @@ function StatusBadge({ status }: { status: StaffAttendanceRecord["status"] }) {
         ? "Absent"
         : status === "late"
           ? "Late"
+          : status === "leave"
+            ? "Leave"
           : "Not Marked";
   const className =
     status === "present"
@@ -156,6 +211,8 @@ function StatusBadge({ status }: { status: StaffAttendanceRecord["status"] }) {
         ? "bg-[#FFF2F2] text-[#EF4444]"
         : status === "late"
           ? "bg-[#FFF4DF] text-[#D97706]"
+          : status === "leave"
+            ? "bg-[#EAF0FF] text-[#2563EB]"
           : "bg-[#EEF1F5] text-[#64748B]";
 
   return (
