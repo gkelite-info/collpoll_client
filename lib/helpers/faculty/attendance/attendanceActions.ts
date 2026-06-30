@@ -79,9 +79,10 @@ export interface UIStudent {
 
 export async function getFacultyClasses(
   facultyId: number,
+  dateStr?: string,
 ): Promise<ClassOption[]> {
   const supabase = await createClient();
-  const today = new Date().toISOString().split("T")[0];
+  const targetDate = dateStr || new Date().toISOString().split("T")[0];
 
   const { data: events, error } = await supabase
     .from("calendar_event")
@@ -94,7 +95,7 @@ export async function getFacultyClasses(
     )
     .eq("facultyId", facultyId)
     .eq("is_deleted", false)
-    .eq("date", today)
+    .eq("date", targetDate)
     .order("fromTime", { ascending: true });
 
   const { data: bulkEvents } = await supabase
@@ -106,22 +107,59 @@ export async function getFacultyClasses(
     `,
     )
     .eq("facultyId", facultyId)
-    .lte("fromDate", today)
-    .gte("toDate", today)
+    .lte("fromDate", targetDate)
+    .gte("toDate", targetDate)
     .is("deletedAt", null)
     .or("is_deleted.eq.false,is_deleted.is.null")
     .order("fromTime", { ascending: true });
 
-  const isSunday = new Date().getDay() === 0;
+  const isSunday = new Date(targetDate).getDay() === 0;
   const validBulkEvents = isSunday ? [] : (bulkEvents || []);
+
+  const singleEventIds = (events || []).map((e: any) => e.calendarEventId);
+  const bulkEventIds = validBulkEvents.map((e: any) => e.bulkCalendarEventId);
+
+  const orConditions = [];
+  if (singleEventIds.length > 0) orConditions.push(`calendarEventId.in.(${singleEventIds.join(",")})`);
+  if (bulkEventIds.length > 0) orConditions.push(`bulkCalendarEventId.in.(${bulkEventIds.join(",")})`);
+
+  let acceptedSessions: any[] = [];
+  if (orConditions.length > 0) {
+    const { data } = await supabase
+      .from("faculty_class_sessions")
+      .select("calendarEventId, bulkCalendarEventId, status, createdAt")
+      .eq("status", "accepted")
+      .is("deletedAt", null)
+      .or(orConditions.join(","));
+    if (data) acceptedSessions = data;
+  }
+
+  const acceptedSingleEventIds = new Set(
+    acceptedSessions
+      .filter((s: any) => s.calendarEventId !== null)
+      .map((s: any) => s.calendarEventId)
+  );
+
+  const filteredSingleEvents = (events || []).filter((e: any) =>
+    acceptedSingleEventIds.has(e.calendarEventId)
+  );
+
+  const filteredBulkEvents = validBulkEvents.filter((e: any) => {
+    return acceptedSessions.some((s: any) => {
+      if (s.bulkCalendarEventId !== e.bulkCalendarEventId) return false;
+      const recDate = new Date(s.createdAt);
+      const recDateStr = `${recDate.getFullYear()}-${String(recDate.getMonth() + 1).padStart(2, "0")}-${String(recDate.getDate()).padStart(2, "0")}`;
+      return recDateStr === targetDate;
+    });
+  });
 
   const allClasses: any[] = [];
 
-  (events || []).forEach((e: any) => {
+  filteredSingleEvents.forEach((e: any) => {
     allClasses.push({ ...e, isBulk: false });
   });
 
-  validBulkEvents.forEach((e: any) => {
+  filteredBulkEvents.forEach((e: any) => {
     allClasses.push({ ...e, isBulk: true });
   });
 
@@ -135,11 +173,12 @@ export async function getFacultyClasses(
     const topic = topicObj?.topicTitle || "General Session";
     const time = e.fromTime ? e.fromTime.slice(0, 5) : "";
 
-    const idStr = e.isBulk ? `bulk-${e.bulkCalendarEventId}` : String(e.calendarEventId);
+    const idStr = e.isBulk ? `bulk-${e.bulkCalendarEventId}_${targetDate.replace(/-/g, "_")}` : String(e.calendarEventId);
+    const labelStr = e.isBulk ? `${time} • ${subj}` : `${time} • ${subj} • ${topic}`;
 
     return {
       id: idStr,
-      label: `${time} • ${subj} • ${topic}`,
+      label: labelStr,
     };
   });
 }

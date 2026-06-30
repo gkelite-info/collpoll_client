@@ -31,8 +31,9 @@ interface Props {
   sections?: SectionOption[];
   selectedClass?: string;
   selectedSection?: string;
-  onFilterChange?: (type: "class" | "section", value: string) => void;
+  onFilterChange?: (type: "class" | "section" | "calendarType", value: string) => void;
   loadingFilters?: boolean;
+  calendarType?: "Single" | "Bulk";
 }
 
 // 🟢 CUSTOM DROPDOWN COMPONENT for Production-Grade UX
@@ -194,6 +195,7 @@ export default function StuAttendanceTable({
   selectedSection = "",
   onFilterChange,
   loadingFilters = false,
+  calendarType = "Single",
 }: Props) {
   const router = useRouter();
   const [sort, setSort] = useState<string>("All");
@@ -268,29 +270,50 @@ export default function StuAttendanceTable({
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {!isTopicMode && onFilterChange && (
-            <div className="relative">
-              <select
-                value={selectedClass}
-                onChange={(e) => onFilterChange("class", e.target.value)}
-                className="appearance-none rounded-full bg-[#43C17A1C] pl-4 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm min-w-[180px]"
-                disabled={loadingFilters}
-              >
-                {classes.length > 0 ? (
-                  classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">No Classes Today</option>
-                )}
-              </select>
-              <CaretDown
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
-                size={12}
-                weight="bold"
-              />
-            </div>
+            <>
+              {/* Calendar Type Dropdown */}
+              <div className="relative">
+                <select
+                  value={calendarType}
+                  onChange={(e) => onFilterChange("calendarType", e.target.value)}
+                  className="appearance-none rounded-full bg-[#43C17A1C] pl-4 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm min-w-[100px]"
+                  disabled={loadingFilters}
+                >
+                  <option value="Single">Single</option>
+                  <option value="Bulk">Bulk</option>
+                </select>
+                <CaretDown
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
+                  size={12}
+                  weight="bold"
+                />
+              </div>
+
+              {/* Class Dropdown */}
+              <div className="relative">
+                <select
+                  value={selectedClass}
+                  onChange={(e) => onFilterChange("class", e.target.value)}
+                  className="appearance-none rounded-full bg-[#43C17A1C] pl-4 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm min-w-[180px]"
+                  disabled={loadingFilters || !selectedClass}
+                >
+                  {classes.filter(c => (calendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-"))).length > 0 ? (
+                    classes.filter(c => (calendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-"))).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No Classes Found</option>
+                  )}
+                </select>
+                <CaretDown
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
+                  size={12}
+                  weight="bold"
+                />
+              </div>
+            </>
           )}
 
           {!isTopicMode && onFilterChange && (
