@@ -116,9 +116,17 @@ export function capitalise(s: string): string {
 
 export function timeToMinutes(timeStr: string | null): number | null {
   if (!timeStr) return null;
-  const parts = timeStr.split(":");
+  const str = timeStr.trim().toLowerCase();
+  const isPM = str.includes("pm");
+  const isAM = str.includes("am");
+  const timePart = str.replace(/(am|pm)/g, "").trim();
+  const parts = timePart.split(":");
   if (parts.length < 2) return null;
-  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  let h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (isPM && h !== 12) h += 12;
+  if (isAM && h === 12) h = 0;
+  return h * 60 + m;
 }
 
 export function calcDerivedFields(
