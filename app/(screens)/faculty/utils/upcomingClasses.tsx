@@ -536,6 +536,9 @@ export default function UpcomingClasses({
     );
     if (res.success) {
       toast.success("Class Accepted! Redirecting...");
+      setLocalLessons((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, sessionStatus: "Accepted" } : l)),
+      );
       router.push(`/faculty/attendance?classId=${id}`);
     } else {
       toast.error("Failed to accept class");

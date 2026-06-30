@@ -115,6 +115,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
                 onClick={() => {
                   if (isAccepted) {
                     router.push(`/faculty/attendance?classId=${lesson.id}`);
+                    onClose();
                   } else {
                     setStep("confirm_accept");
                   }

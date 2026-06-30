@@ -91,9 +91,7 @@ export async function getUpcomingClasses(
 
   const today = new Date().toISOString().split("T")[0];
 
-  const endDate = new Date();
-  endDate.setDate(endDate.getDate() + 7);
-  const endDateStr = endDate.toISOString().split("T")[0];
+  const endDateStr = today;
 
   const { data: events, error: eventsError } = await supabase
     .from("calendar_event")
@@ -310,20 +308,31 @@ calendar_event_section (
           for (let d = new Date(eventStart); d <= eventEnd; d.setDate(d.getDate() + 1)) {
             if (d.getDay() === 0) continue; // Skip Sunday
 
+            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+            // Find if there is a session record accepted/cancelled/scheduled for this specific date
+            const daySession = sessionRecords.find((rec: any) => {
+              const recDate = new Date(rec.createdAt);
+              const recDateStr = `${recDate.getFullYear()}-${String(recDate.getMonth() + 1).padStart(2, "0")}-${String(recDate.getDate()).padStart(2, "0")}`;
+              return recDateStr === dateStr;
+            });
+
+            const dayStatus = daySession ? daySession.status : "scheduled";
+
             occurrences.push({
-              id: `bulk-${event.bulkCalendarEventId}-${sectionName ?? sectionIndex}-${sectionIndex}`,
+              id: `bulk-${event.bulkCalendarEventId}_${dateStr.replace(/-/g, "_")}_${sectionName ?? sectionIndex}_${sectionIndex}`,
               title: subjectName,
               description: "Class",
               fromTime: convertTo12HourFormat(event.fromTime),
               toTime: convertTo12HourFormat(event.toTime),
-              date: formatDate(d.toISOString().split("T")[0]),
+              date: formatDate(dateStr),
               roomNo: safeGet(event.college_rooms, "roomNo"),
               section: sectionName,
               semester: [semester],
               department: [{ name: department }],
               degree,
               year,
-              sessionStatus: sessionStatus.charAt(0).toUpperCase() + sessionStatus.slice(1),
+              sessionStatus: dayStatus.charAt(0).toUpperCase() + dayStatus.slice(1),
             });
           }
           
@@ -350,7 +359,7 @@ export async function getClassDetails(
 
   const isBulk = classId.startsWith("bulk-");
   const eventId = isBulk
-    ? parseInt(classId.split("-")[1])
+    ? parseInt(classId.split("-")[1].split("_")[0])
     : parseInt(classId.split("-")[0]);
 
   if (isBulk) {
@@ -439,13 +448,22 @@ export async function getClassDetails(
 
     const description = `Class for ${sectionNames}`;
 
+    let occurrenceDate = event.fromDate;
+    const parts = classId.split("-");
+    if (parts.length > 1) {
+      const subparts = parts[1].split("_");
+      if (subparts.length >= 4) {
+        occurrenceDate = `${subparts[1]}-${subparts[2]}-${subparts[3]}`;
+      }
+    }
+
     return {
       id: classId,
       title: subjectName,
       description: description,
       fromTime: convertTo12HourFormat(event.fromTime),
       toTime: convertTo12HourFormat(event.toTime),
-      date: formatDate(event.fromDate),
+      date: formatDate(occurrenceDate),
       roomNo: safeGet(event.college_rooms, "roomNo"),
       section: sectionNames,
       semester: semesters as string[],

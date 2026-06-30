@@ -19,6 +19,10 @@ import {
   createFinanceManager,
   upsertFinanceManagerEducationTypes,
 } from "@/lib/helpers/admin/registrations/finance/financeManagerRegistration";
+import {
+  createAccountant,
+  upsertAccountantEducationTypes,
+} from "@/lib/helpers/admin/registrations/finance/accountantRegistration";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import {
   upsertAdminEducationTypes,
@@ -151,7 +155,7 @@ const AddUserModal: React.FC<{
   >([]);
 
   const [isSuccess, setIsSuccess] = useState(false);
-  const { collegeEducationId, collegeEducationType } = useAdmin();
+  const { collegeEducationId, collegeEducationType, userId: adminUserId } = useAdmin();
 
   const ENTRY_TYPES = ["Regular", "Lateral", "Transfer"];
   const INTER_ENTRY = ["Regular", "Transfer"];
@@ -544,7 +548,8 @@ const AddUserModal: React.FC<{
   const isParent = basicData.role === "Parent";
   const isFinance = basicData.role === "Finance";
   const isFinanceManager = basicData.role === "FinanceManager";
-  const showFinanceFields = isFinance || isFinanceManager;
+  const isAccountant = basicData.role === "Accountant";
+  const showFinanceFields = isFinance || isFinanceManager || isAccountant;
   const isHR = basicData.role === "CollegeHr";
   const isPlacement = basicData.role === "PlacementOfficer";
   const isWellbeing = basicData.role === "WellbeingManager";
@@ -733,8 +738,11 @@ const AddUserModal: React.FC<{
     if (isParent && !basicData.studentId)
       return toast.error("Student pin number is required.");
 
-    if (showFinanceFields && !selectedFinanceEducationTypes.length)
-      return toast.error("Select Education Type for Finance.");
+    if (showFinanceFields && !user && !isAccountant) {
+      if (!selectedFinanceEducationTypes.length) {
+        return toast.error("Select Education Type for Finance.");
+      }
+    }
 
     if (isPlacement && !collegeEducationId)
       return toast.error("Select Education Type for Placement Officer.");
@@ -768,6 +776,7 @@ const AddUserModal: React.FC<{
     setLoading(true);
     let createdUserId: number | null = null;
     let createdStudentId: number | null = null;
+    let createdAccountantId: number | null = null;
 
     try {
       const timestamp = new Date().toISOString();
@@ -888,25 +897,45 @@ const AddUserModal: React.FC<{
           )
           .map((education) => education.collegeEducationId);
 
-        if (!financeEducationIds.length) {
+        if (!isAccountant && !financeEducationIds.length) {
           throw new Error("Select Education Type for Finance.");
         }
 
-        const financeManagerId = await createFinanceManager({
-          userId: targetUserId,
-          collegeId: basicData.collegeIntId,
-          collegeEducationId: financeEducationIds[0],
-          createdBy: basicData.adminId,
-          type: isFinanceManager ? "manager" : "executive",
-          isActive: true,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        });
+        if (isAccountant) {
+          const accountantId = await createAccountant({
+            userId: targetUserId,
+            collegeId: basicData.collegeIntId,
+            collegeEducationId: financeEducationIds.length > 0 ? financeEducationIds[0] : null,
+            createdBy: adminUserId!,
+            isActive: true,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          });
+          createdAccountantId = accountantId;
 
-        await upsertFinanceManagerEducationTypes({
-          financeManagerId,
-          collegeEducationIds: financeEducationIds,
-        });
+          if (financeEducationIds.length > 0) {
+            await upsertAccountantEducationTypes({
+              accountantId,
+              collegeEducationIds: financeEducationIds,
+            });
+          }
+        } else {
+          const financeManagerId = await createFinanceManager({
+            userId: targetUserId,
+            collegeId: basicData.collegeIntId,
+            collegeEducationId: financeEducationIds[0],
+            createdBy: basicData.adminId,
+            type: isFinanceManager ? "manager" : "executive",
+            isActive: true,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          });
+
+          await upsertFinanceManagerEducationTypes({
+            financeManagerId,
+            collegeEducationIds: financeEducationIds,
+          });
+        }
       }
 
       if (isHR && targetUserId) {
@@ -1154,6 +1183,17 @@ const AddUserModal: React.FC<{
           .eq("studentId", createdStudentId);
       }
 
+      if (createdAccountantId && !user) {
+        await supabase
+          .from("accountant_education_types")
+          .delete()
+          .eq("accountantId", createdAccountantId);
+        await supabase
+          .from("accountants")
+          .delete()
+          .eq("accountantId", createdAccountantId);
+      }
+
       if (createdUserId && !user) {
         await supabase.from("users").delete().eq("userId", createdUserId);
       }
@@ -1280,9 +1320,8 @@ const AddUserModal: React.FC<{
                     <option value="Parent">Parent</option>
                     <option value="Finance">Finance</option>
                     <option value="FinanceManager">Finance Manager</option>
-                    {/* <option value="CollegeHr">College HR</option> */}
+                    <option value="Accountant">Accountant</option>
                     <option value="CollegeHr">College HR</option>
-                    {/* ✅ NEW: Placement Officer option */}
                     <option value="PlacementOfficer">Placement Officer</option>
                     <option value="WellbeingManager">Wellbeing Manager</option>
                   </select>
@@ -1310,6 +1349,7 @@ const AddUserModal: React.FC<{
                   placeholder="Select Education Type"
                   options={degreeOptions}
                   selectedValues={selectedFinanceEducationTypes}
+                  required={!isAccountant}
                   onChange={(value) =>
                     toggleMultiSelectValue(value, setSelectedFinanceEducationTypes)
                   }

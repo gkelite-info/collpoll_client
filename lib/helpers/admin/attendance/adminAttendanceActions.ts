@@ -233,8 +233,9 @@ export async function getStudentsForClass(
 
   if (isBulk) {
     const parts = classId.split("-");
-    eventId = parseInt(parts[1]);
-    sectionNameFilter = parts[2] !== "undefined" ? parts[2] : undefined;
+    const subparts = parts[1].split("_");
+    eventId = parseInt(subparts[0]);
+    sectionNameFilter = subparts[4] !== "undefined" ? subparts[4] : undefined;
   } else {
     const parts = classId.split("-");
     eventId = parseInt(parts[0]);
@@ -393,7 +394,7 @@ export async function saveAttendance(
   const supabase = await createClient();
 
   const isBulk = classId.startsWith("bulk-");
-  const eventId = parseInt(isBulk ? classId.split("-")[1] : classId.split("-")[0]);
+  const eventId = parseInt(isBulk ? classId.split("-")[1].split("_")[0] : classId.split("-")[0]);
 
   const { data } = await supabase
     .from(isBulk ? "bulk_calendar_events" : "calendar_event")
@@ -401,9 +402,17 @@ export async function saveAttendance(
     .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId)
     .single();
 
-  const eventDate = isBulk 
+  let eventDate = isBulk 
     ? new Date().toLocaleDateString("en-CA") // "YYYY-MM-DD" local timezone format
     : (data as any)?.date;
+
+  if (isBulk) {
+    const parts = classId.split("-");
+    const subparts = parts[1].split("_");
+    if (subparts.length >= 4) {
+      eventDate = `${subparts[1]}-${subparts[2]}-${subparts[3]}`;
+    }
+  }
 
   const dbRecords = payload
     .filter((p) => p.status !== "Not Marked")

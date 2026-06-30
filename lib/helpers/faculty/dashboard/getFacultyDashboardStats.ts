@@ -201,15 +201,23 @@ export async function getFacultyDashboardStats(facultyId: number) {
       
       const { data: sessionRecords } = await supabase
         .from("faculty_class_sessions")
-        .select("calendarEventId, bulkCalendarEventId, status")
+        .select("calendarEventId, bulkCalendarEventId, status, createdAt")
         .or(orConditions.join(","));
       if (sessionRecords) allSessionRecords = sessionRecords;
     }
       
     const sessionMap = new Map<string, string>();
     allSessionRecords.forEach((rec) => {
-      if (rec.calendarEventId) sessionMap.set(`single-${rec.calendarEventId}`, rec.status);
-      if (rec.bulkCalendarEventId) sessionMap.set(`bulk-${rec.bulkCalendarEventId}`, rec.status);
+      if (rec.calendarEventId) {
+        sessionMap.set(`single-${rec.calendarEventId}`, rec.status);
+      }
+      if (rec.bulkCalendarEventId) {
+        const recDate = new Date(rec.createdAt);
+        const recDateStr = `${recDate.getFullYear()}-${String(recDate.getMonth() + 1).padStart(2, "0")}-${String(recDate.getDate()).padStart(2, "0")}`;
+        if (recDateStr === today) {
+          sessionMap.set(`bulk-${rec.bulkCalendarEventId}`, rec.status);
+        }
+      }
     });
 
     for (const ev of events as any[]) {
