@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CalendarDotsIcon,
   CaretDown,
@@ -46,6 +46,25 @@ export default function ExecutiveProfileCard({
   onMonthChange: (month: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const monthMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        monthMenuRef.current &&
+        !monthMenuRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
 
   return (
     <section className="rounded-lg bg-white p-4 shadow-sm">
@@ -78,17 +97,13 @@ export default function ExecutiveProfileCard({
         </div>
 
         <div className="flex flex-col items-start gap-2 lg:items-end">
-          <p className="text-[12px] font-bold text-[#282828]">
-            Performance -{" "}
-            <span className="text-[#43C17A]">{executive.status}</span>
-          </p>
           <p className="flex items-center gap-2 text-[12px] font-bold text-[#16284F]">
             <span className="rounded-full bg-[#43C17A26] p-1 text-[#43C17A]">
               <EnvelopeSimple size={13} weight="fill" />
             </span>
             Email - {executive.email}
           </p>
-          <div className="relative">
+          <div ref={monthMenuRef} className="relative">
             <button
               onClick={() => setOpen((value) => !value)}
               className="flex items-center gap-1 rounded-full bg-[#43C17A] px-3 py-1.5 text-[11px] font-bold text-white"

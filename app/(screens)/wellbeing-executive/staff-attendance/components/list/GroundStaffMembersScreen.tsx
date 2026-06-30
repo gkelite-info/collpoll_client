@@ -1,20 +1,20 @@
 "use client";
 
 import {
-  ArrowLeft,
+  CaretLeft,
   Eye,
   MagnifyingGlass,
 } from "@phosphor-icons/react";
 import Image from "next/image";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import TableComponent from "@/app/utils/table/table";
-import { useEffect, useMemo, useState } from "react";
-import { getInitials, type StaffAttendanceRecord } from "../../data";
+import { useMemo, useState } from "react";
+import { getInitials, type StaffAttendanceRecord, type StaffAttendanceStatus } from "../../data";
 
 type GroundStaffMembersScreenProps = {
   records: StaffAttendanceRecord[];
+  activeStatus?: StaffAttendanceStatus | null;
   isLoading?: boolean;
-  onSearchRecords?: (searchQuery: string) => Promise<void>;
   onBack: () => void;
   onViewProfile: (record: StaffAttendanceRecord) => void;
 };
@@ -23,14 +23,21 @@ const DIRECTORY_ITEMS_PER_PAGE = 5;
 
 export default function GroundStaffMembersScreen({
   records,
+  activeStatus = null,
   isLoading = false,
-  onSearchRecords,
   onBack,
   onViewProfile,
 }: GroundStaffMembersScreenProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const directoryRows = records;
+  const isInitialLoading = isLoading && !records.length && !searchQuery.trim();
+  const directoryRows = useMemo(
+    () =>
+      activeStatus
+        ? records.filter((record) => record.status === activeStatus)
+        : records,
+    [activeStatus, records],
+  );
   const filteredRows = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -49,19 +56,6 @@ export default function GroundStaffMembersScreen({
     (currentPage - 1) * DIRECTORY_ITEMS_PER_PAGE,
     currentPage * DIRECTORY_ITEMS_PER_PAGE,
   );
-
-  useEffect(() => {
-    if (!onSearchRecords) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setCurrentPage(1);
-      void onSearchRecords(searchQuery);
-    }, 400);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [onSearchRecords, searchQuery]);
 
   const columns = [
     { title: "STAFF NAME", key: "image" },
@@ -92,7 +86,7 @@ export default function GroundStaffMembersScreen({
     ),
     employeeId: <span className="font-semibold">{record.staffId}</span>,
     status: <StatusBadge status={record.status} />,
-    contact: record.phone.replace(/\d(?=\d{2})/g, "X"),
+    contact: record.phone,
     joiningDate: record.joiningDate,
     actions: (
       <button type="button" onClick={() => onViewProfile(record)} title="View profile" className="cursor-pointer text-[#64748B] transition-colors hover:text-[#0B66C3]">
@@ -109,10 +103,10 @@ export default function GroundStaffMembersScreen({
             <button
               type="button"
               onClick={onBack}
-              className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-full bg-[#08244A] text-white transition-colors hover:bg-[#123A6D]"
+              className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center text-[#08244A] transition-colors hover:text-[#123A6D]"
               title="Back to attendance"
             >
-              <ArrowLeft size={22} weight="bold" />
+              <CaretLeft size={24} weight="bold" />
             </button>
             <div>
               <h1 className="text-[25px] font-extrabold text-[#08244A]">Security Staff Directory</h1>
@@ -123,7 +117,7 @@ export default function GroundStaffMembersScreen({
           </div>
         </div>
 
-        {isLoading ? (
+        {isInitialLoading ? (
           <GroundStaffDirectoryShimmer />
         ) : (
           <div className="mt-6 rounded-lg border border-[#D7DFEC] bg-white">
@@ -133,7 +127,10 @@ export default function GroundStaffMembersScreen({
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value);
+                    setCurrentPage(1);
+                  }}
                   placeholder="Search by name or employee ID"
                   className="h-full flex-1 bg-transparent text-[#34425E] outline-none placeholder:text-[#8A9AB5]"
                 />
@@ -144,6 +141,7 @@ export default function GroundStaffMembersScreen({
               <TableComponent
                 columns={columns}
                 tableData={tableData}
+                isLoading={isLoading}
                 tableClassName="min-w-[860px] table-fixed"
                 height="none"
                 stickyHeader={false}

@@ -40,6 +40,8 @@ type WellbeingExecutiveRightProps = {
   announcementHeight?: string;
   showHeaderCards?: boolean;
   showCourseScheduleCard?: boolean;
+  activeCalendarDate?: Date;
+  onCalendarDateSelect?: (date: Date) => void;
 };
 
 function AlertIcon() {
@@ -63,6 +65,8 @@ export default function WellbeingExecutiveRight({
   announcementHeight = "360px",
   showHeaderCards = true,
   showCourseScheduleCard = false,
+  activeCalendarDate,
+  onCalendarDateSelect,
 }: WellbeingExecutiveRightProps) {
   const { collegeId, userId, role } = useUser();
   const [announcements, setAnnouncements] =
@@ -162,7 +166,10 @@ export default function WellbeingExecutiveRight({
 
       {showCalendar ? (
         <div className="shrink-0">
-          <WorkWeekCalendar />
+          <WorkWeekCalendar
+            activeDate={activeCalendarDate}
+            onDateSelect={onCalendarDateSelect}
+          />
         </div>
       ) : null}
 
@@ -177,7 +184,7 @@ export default function WellbeingExecutiveRight({
 
       <div
         className={children ? "-mt-2 shrink-0" : bounded ? "shrink-0" : "min-h-[360px] flex-1"}
-        style={bounded ? { minHeight: announcementHeight } : undefined}
+        style={bounded ? { height: announcementHeight, minHeight: announcementHeight } : undefined}
       >
         <AnnouncementsCard
           announceCard={announcements}
