@@ -32,6 +32,7 @@ type UserContextType = {
   studentId: number | null;
   adminId: number | null;
   financeManagerId: number | null;
+  accountantId: number | null;
   facultyId: number | null;
   collegeAdminId: number | null;
   parentId: number | null;
@@ -117,6 +118,7 @@ const UserContext = createContext<UserContextType>({
   studentId: null,
   adminId: null,
   financeManagerId: null,
+  accountantId: null,
   facultyId: null,
   collegeAdminId: null,
   parentId: null,
@@ -154,6 +156,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [studentId, setStudentId] = useState<number | null>(null);
   const [adminId, setAdminId] = useState<number | null>(null);
   const [financeManagerId, setFinanceManagerId] = useState<number | null>(null);
+  const [accountantId, setAccountantId] = useState<number | null>(null);
   const [facultyId, setFacultyId] = useState<number | null>(null);
   const [collegeAdminId, setCollegeAdminId] = useState<number | null>(null);
   const [parentId, setParentId] = useState<number | null>(null);
@@ -192,6 +195,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     setStudentId,
     setAdminId,
     setFinanceManagerId,
+    setAccountantId,
     setFacultyId,
     setCollegeAdminId,
     setParentId,
@@ -228,6 +232,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     s.setStudentId(null);
     s.setAdminId(null);
     s.setFinanceManagerId(null);
+    s.setAccountantId(null);
     s.setFacultyId(null);
     s.setCollegeAdminId(null);
     s.setParentId(null);
@@ -447,6 +452,60 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       s.setFinanceManagerId(financeData.data?.financeManagerId ?? null);
       s.setCollegeEducationType(financeCtx?.collegeEducationType ?? null);
       s.setIdentifierId(empId ?? null);
+    },
+
+    Accountant: async (uid, cid) => {
+      const s = settersRef.current;
+      const [{ data }, empId] = await Promise.all([
+        supabase
+          .from("accountants")
+          .select(`
+            accountantId,
+            collegeEducationId,
+            college_education:collegeEducationId (
+              collegeEducationType
+            )
+          `)
+          .eq("userId", uid)
+          .eq("collegeId", cid)
+          .eq("isActive", true)
+          .eq("is_deleted", false)
+          .is("deletedAt", null)
+          .maybeSingle(),
+        getEmployeeEmpId(uid, cid),
+      ]);
+
+      s.setAccountantId(data?.accountantId ?? null);
+      s.setIdentifierId(empId ?? (data?.accountantId ? String(data.accountantId) : null));
+
+      if (!data?.accountantId) {
+        s.setCollegeEducationType(null);
+        return;
+      }
+
+      const { data: educationTypes } = await supabase
+        .from("accountant_education_types")
+        .select(`
+          collegeEducationId,
+          college_education:collegeEducationId (
+            collegeEducationType
+          )
+        `)
+        .eq("accountantId", data.accountantId)
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .is("deletedAt", null);
+
+      const educationTypeFromMapping = uniqueJoinedValues(
+        (educationTypes ?? []).map(
+          (education) => getCollegeEducationType(education.college_education),
+        ),
+      );
+
+      s.setCollegeEducationType(
+        educationTypeFromMapping ||
+        getCollegeEducationType(data.college_education),
+      );
     },
 
     Faculty: async (uid, cid) => {
@@ -749,6 +808,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       studentId,
       adminId,
       financeManagerId,
+      accountantId,
       facultyId,
       collegeAdminId,
       parentId,
@@ -785,6 +845,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       studentId,
       adminId,
       financeManagerId,
+      accountantId,
       facultyId,
       collegeAdminId,
       parentId,

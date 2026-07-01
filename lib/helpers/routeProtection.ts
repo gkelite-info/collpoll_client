@@ -69,7 +69,7 @@ export const isStaffRole = (role: string | null): boolean => {
     if (!role) return false;
     
     const normalized = normalizeRole(role);
-    const staffRoles = ["Admin", "Super-Admin", "College-Admin", "Faculty", "Finance", "FinanceManager", "HR", "Placement", "Parent"];
+    const staffRoles = ["Admin", "Super-Admin", "College-Admin", "Faculty", "Finance", "FinanceManager", "Accountant", "HR", "Placement", "Parent"];
     
     return staffRoles.includes(normalized!);
 };
@@ -174,6 +174,7 @@ export const canAccessFeature = (
         "College-Admin": ["all"],
         "Finance": ["profile", "payments", "fees", "reports"],
         "FinanceManager": ["profile", "payments", "fees", "reports"],
+        "Accountant": ["profile", "payments", "fees", "reports"],
         "HR": ["profile", "Staff", "payroll", "attendance"],
         "Placement": ["profile", "placements", "companies", "jobs"],
         "Parent": ["profile", "student-progress", "attendance", "grades"],

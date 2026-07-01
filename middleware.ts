@@ -226,6 +226,25 @@ export async function middleware(request: NextRequest) {
                 }
             }
 
+            if (normalizedRole === "Accountant") {
+                const { data: accountantRows, error: accountantError } = await supabase
+                    .from("accountants")
+                    .select("accountantId")
+                    .eq("userId", userProfile.userId)
+                    .eq("collegeId", userProfile.collegeId)
+                    .eq("isActive", true)
+                    .eq("is_deleted", false)
+                    .is("deletedAt", null)
+                    .limit(1);
+
+                if (accountantError || !accountantRows?.length) {
+                    const url = request.nextUrl.clone();
+                    url.pathname = "/construction";
+                    url.searchParams.set("error", "accountant_access_inactive");
+                    return NextResponse.redirect(url);
+                }
+            }
+
             if (!pathname.startsWith(userLandingPage)) {
                 const url = request.nextUrl.clone();
                 url.pathname = userLandingPage;

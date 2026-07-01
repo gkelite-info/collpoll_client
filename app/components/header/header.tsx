@@ -67,6 +67,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
     studentId,
     adminId,
     financeManagerId,
+    accountantId,
     facultyId,
     collegeAdminId,
     collegeHrId,
@@ -93,6 +94,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
       Admin: adminId,
       Finance: financeManagerId,
       FinanceManager: financeManagerId,
+      Accountant: accountantId,
       CollegeAdmin: collegeAdminId,
       CollegeHr: collegeHrId,
       Parent: parentId,
@@ -106,6 +108,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
       facultyId,
       adminId,
       financeManagerId,
+      accountantId,
       collegeAdminId,
       collegeHrId,
       parentId,
@@ -116,6 +119,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
   );
   const displayRoleMap: Record<string, string> = {
     FinanceManager: "Finance Manager",
+    Accountant: "Accountant",
     CollegeAdmin: "College Admin",
     CollegeHr: "College HR",
     PlacementOfficer: "Placement Officer",
