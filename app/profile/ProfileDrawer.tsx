@@ -53,6 +53,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     facultyId,
     adminId,
     financeManagerId,
+    accountantId,
     collegeAdminId,
     collegeHrId,
     placementEmployeeId,
@@ -71,6 +72,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     Admin: adminId,
     Finance: financeManagerId,
     FinanceManager: financeManagerId,
+    Accountant: accountantId,
     CollegeAdmin: collegeAdminId,
     CollegeHr: collegeHrId,
     Parent: parentId,
@@ -81,6 +83,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
   };
   const displayRoleMap: Record<string, string> = {
     FinanceManager: "Finance Manager",
+    Accountant: "Accountant",
     CollegeAdmin: "College Admin",
     CollegeHr: "College HR",
     PlacementOfficer: "Placement Officer",
@@ -94,6 +97,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     Admin: "/admin",
     Finance: "/finance",
     FinanceManager: "/finance-manager",
+    Accountant: "/accountant",
     CollegeAdmin: "/college-admin",
     CollegeHr: "/hr",
     Parent: "/parent",

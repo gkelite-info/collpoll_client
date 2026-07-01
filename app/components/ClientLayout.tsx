@@ -11,6 +11,7 @@ import FacultyNavbar from "./navbar/facultyNavbar";
 import SuperAdminNavbar from "./navbar/superAdminNavbar";
 import FinanceNavbar from "./navbar/financeNavbar";
 import FinanceManagerNavbar from "./navbar/financeManagerNavbar";
+import AccountantNavbar from "./navbar/accountantNavbar";
 import CollegeAdminNavbar from "./navbar/collegeAdminNavbar";
 import PlacementNavbar from "./navbar/placementNav";
 import HrNavbar from "./navbar/hrNavbar";
@@ -347,6 +348,8 @@ export default function ClientLayout({
             return <HrNavbar />;
           case "Finance":
             return <FinanceNavbar />;
+          case "Accountant":
+            return <AccountantNavbar onClose={onClose} />;
           case "FinanceManager":
             return <FinanceManagerNavbar onClose={onClose} />;
           case "CollegeAdmin":
@@ -379,6 +382,8 @@ export default function ClientLayout({
       if (pathname.startsWith("/super-admin")) return <SuperAdminNavbar />;
       if (pathname.startsWith("/finance-manager"))
         return <FinanceManagerNavbar onClose={onClose} />;
+      if (pathname.startsWith("/accountant"))
+        return <AccountantNavbar onClose={onClose} />;
       if (pathname.startsWith("/finance")) return <FinanceNavbar />;
       if (pathname.startsWith("/college-admin"))
         return <CollegeAdminNavbar onClose={onClose} />;
