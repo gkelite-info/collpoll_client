@@ -22,6 +22,7 @@ import { useTranslations } from "next-intl";
 import ConfirmLogoutModal from "../modals/logoutModal";
 import { logoutUser } from "@/lib/helpers/logoutUser";
 import toast from "react-hot-toast";
+import { useUser } from "@/app/utils/context/UserContext";
 
 type NavItem = {
   icon: (isActive: boolean) => ReactNode;
@@ -41,86 +42,97 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
   const [loading, setLoading] = useState(false);
   const t = useTranslations("Navbars");
 
-  const items: NavItem[] = useMemo(() => [
-    {
-      icon: (isActive) => (
-        <House size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: t("Home"),
-      path: "/college-admin",
-    },
-    {
-      icon: (isActive) => (
-        <GraduationCap size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: t("Admissions"),
-      path: "/college-admin/admissions",
-    },
-    {
-      icon: (isActive) => (
-        <BuildingApartmentIcon
-          size={18}
-          weight={isActive ? "fill" : "regular"}
-        />
-      ),
-      label: t("Institution Management"),
-      path: "/college-admin/institution-management",
-    },
-    {
-      icon: (isActive) => (
-        <PlusCircle size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: t("Add Admin"),
-      path: "/college-admin/add-admin",
-    },
-    {
-      icon: (isActive) => (
-        <Calendar size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: t("Calendar"),
-      path: "/college-admin/calendar",
-    },
-    {
-      icon: (isActive) => (
-        <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: t("Club"),
-      path: "/college-admin/clubs",
-    },
-    {
-      icon: (isActive) => (
-        <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: "Leave Requests",
-      path: "/college-admin/leave-request",
-    },
-    {
-      icon: (isActive) => (
-        <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: t("Drive"),
-      path: "/college-admin/drive",
-    },
-    {
-      icon: (isActive) => (
-        <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: t("My Attendance"),
-      path: "/college-admin/my-attendance",
-    },
-    {
-      icon: (isActive) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Wellbeing"),
-      path: "/college-admin/wellbeing",
-    },
-    {
-      icon: (isActive) => (
-        <Gear size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: t("Settings"),
-      path: "/college-admin/settings",
-    },
-  ], [t]);
+  const { collegeCode } = useUser();
+
+  const items: NavItem[] = useMemo(() => {
+    const isAdmissionsAllowed = ["bcca", "bcpgc", "bjcg"].includes(collegeCode?.toLowerCase() || "");
+
+    const allItems = [
+      {
+        icon: (isActive: boolean) => (
+          <House size={18} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: t("Home"),
+        path: "/college-admin",
+      },
+      {
+        icon: (isActive: boolean) => (
+          <GraduationCap size={18} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: t("Admissions"),
+        path: "/college-admin/admissions",
+      },
+      {
+        icon: (isActive: boolean) => (
+          <BuildingApartmentIcon
+            size={18}
+            weight={isActive ? "fill" : "regular"}
+          />
+        ),
+        label: t("Institution Management"),
+        path: "/college-admin/institution-management",
+      },
+      {
+        icon: (isActive: boolean) => (
+          <PlusCircle size={18} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: t("Add Admin"),
+        path: "/college-admin/add-admin",
+      },
+      {
+        icon: (isActive: boolean) => (
+          <Calendar size={18} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: t("Calendar"),
+        path: "/college-admin/calendar",
+      },
+      {
+        icon: (isActive: boolean) => (
+          <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: t("Club"),
+        path: "/college-admin/clubs",
+      },
+      {
+        icon: (isActive: boolean) => (
+          <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: "Leave Requests",
+        path: "/college-admin/leave-request",
+      },
+      {
+        icon: (isActive: boolean) => (
+          <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: t("Drive"),
+        path: "/college-admin/drive",
+      },
+      {
+        icon: (isActive: boolean) => (
+          <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: t("My Attendance"),
+        path: "/college-admin/my-attendance",
+      },
+      {
+        icon: (isActive: boolean) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Wellbeing"),
+        path: "/college-admin/wellbeing",
+      },
+      {
+        icon: (isActive: boolean) => (
+          <Gear size={18} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: t("Settings"),
+        path: "/college-admin/settings",
+      },
+    ];
+
+    return allItems.filter(item => {
+      if (item.label === t("Admissions") && !isAdmissionsAllowed) return false;
+      return true;
+    });
+  }, [t, collegeCode]);
 
   useEffect(() => {
     const current = items.find((item) => item.path === pathname);

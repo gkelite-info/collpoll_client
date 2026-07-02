@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, ReactNode, Fragment } from "react";
 import Link from "next/link";
-import { CaretLeft, MagnifyingGlass, CaretDown, Check } from "@phosphor-icons/react";
+import { CaretLeft, MagnifyingGlass, CaretDown, Check, FunnelSimple } from "@phosphor-icons/react";
 import { Listbox, Transition } from "@headlessui/react";
 import TableComponent from "@/app/utils/table/table";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
@@ -11,6 +11,7 @@ import { downloadCSV } from "@/app/utils/downloadCSV";
 import toast from "react-hot-toast";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useUser } from "@/app/utils/context/UserContext";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -35,15 +36,17 @@ type AppRecord = {
 };
 
 export default function ApplicationsPage() {
+  const { collegeCode } = useUser();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
   
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 50;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const [liveData, setLiveData] = useState<AppRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,6 +71,15 @@ export default function ApplicationsPage() {
   const [loadingTop, setLoadingTop] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isConfirmEmailOpen, setIsConfirmEmailOpen] = useState(false);
+  
+  const [pgRankLimit, setPgRankLimit] = useState<string>("");
+  const debouncedPgRankLimit = useDebounce(pgRankLimit, 500);
+  
+  const [minGradePercent, setMinGradePercent] = useState<string>("92");
+  const debouncedMinGradePercent = useDebounce(minGradePercent, 500);
+  
+  const [topCurrentPage, setTopCurrentPage] = useState(1);
+  const [topItemsPerPage, setTopItemsPerPage] = useState(10);
 
   const updateQueryParams = (params: Record<string, string>) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
@@ -98,9 +110,9 @@ export default function ApplicationsPage() {
 
   const getCoursesForLevel = (level: string) => {
     switch (level) {
-      case "Inter": return ["All", "MPC", "MEC", "CEC", "BiPC"];
-      case "Degree": return ["All", "BSC", "B.Com", "BA", "BBA"];
-      case "PG": return ["All", "MBA", "MCA", "M.Tech"];
+      case "Inter": return ["All", "CEC", "MEC", "ACE"];
+      case "Degree": return ["All", "B.Com", "BBA"];
+      case "PG": return ["All", "MBA"];
       default: return ["All"];
     }
   };
@@ -116,7 +128,7 @@ export default function ApplicationsPage() {
   useEffect(() => {
     const fetchApplications = async () => {
       setLoading(true);
-      const data = await getAllApplications(statusFilter);
+      const data = await getAllApplications(statusFilter, collegeCode || null, sortOrder);
 
       if (data) {
         const formatted = data.map(app => {
@@ -138,7 +150,7 @@ export default function ApplicationsPage() {
     };
 
     fetchApplications();
-  }, [statusFilter]);
+  }, [statusFilter, collegeCode, sortOrder]);
 
   // Fetch Top Applications when Top tab is active
   useEffect(() => {
@@ -147,13 +159,18 @@ export default function ApplicationsPage() {
         setLoadingTop(true);
         // We need to import getTopApplications, let's make sure it's in the import list at the top.
         const { getTopApplications } = await import("@/lib/api/gkeliteApi");
-        const data = await getTopApplications(activeLevelTab, activeCourseTab);
+        
+        // Parse debounced values, default to null if empty
+        const parsedRank = debouncedPgRankLimit ? Number(debouncedPgRankLimit) : null;
+        const parsedGrade = debouncedMinGradePercent ? Number(debouncedMinGradePercent) : null;
+        
+        const data = await getTopApplications(activeLevelTab, activeCourseTab, collegeCode || null, parsedRank, parsedGrade);
         setTopApplications(data);
         setLoadingTop(false);
       };
       fetchTop();
     }
-  }, [activePrimaryTab, activeLevelTab, activeCourseTab]);
+  }, [activePrimaryTab, activeLevelTab, activeCourseTab, collegeCode, debouncedPgRankLimit, debouncedMinGradePercent]);
 
   const toggleSelection = (id: string) => {
     const newSet = new Set(selectedIds);
@@ -195,11 +212,52 @@ export default function ApplicationsPage() {
     return data;
   }, [liveData, debouncedSearch, dateFrom, dateTo]);
 
+  const filteredTopData = useMemo(() => {
+    let data = topApplications;
+
+    if (debouncedSearch) {
+      const lowerSearch = debouncedSearch.toLowerCase();
+      data = data.filter(item => 
+        `${item.firstName} ${item.lastName}`.toLowerCase().includes(lowerSearch) ||
+        (item.emailId || '').toLowerCase().includes(lowerSearch) ||
+        (item.contactNo || '').toLowerCase().includes(lowerSearch) ||
+        (item.applicationNumber || `APP-${item.applicationId}`).toLowerCase().includes(lowerSearch)
+      );
+    }
+    
+    if (dateFrom) {
+      const from = new Date(dateFrom).getTime();
+      data = data.filter(item => new Date(item.createdAt).getTime() >= from);
+    }
+    if (dateTo) {
+      const to = new Date(dateTo).getTime();
+      data = data.filter(item => new Date(item.createdAt).getTime() <= to + 86400000);
+    }
+
+    if (statusFilter !== "All") {
+      data = data.filter(item => item.computedStatus === statusFilter);
+    }
+    
+    if (sortOrder === "desc") {
+      data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } else {
+      data.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }
+
+    return data;
+  }, [topApplications, debouncedSearch, dateFrom, dateTo, statusFilter, sortOrder, activeLevelTab, pgRankLimit, minGradePercent]);
+
   const totalItems = filteredData.length;
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredData.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredData, currentPage, itemsPerPage]);
+
+  const totalTopItems = filteredTopData.length;
+  const paginatedTopData = useMemo(() => {
+    const startIndex = (topCurrentPage - 1) * topItemsPerPage;
+    return filteredTopData.slice(startIndex, startIndex + topItemsPerPage);
+  }, [filteredTopData, topCurrentPage, topItemsPerPage]);
 
   const handleExportCSV = async () => {
     setIsExporting(true);
@@ -224,7 +282,8 @@ export default function ApplicationsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, dateFrom, dateTo]);
+    setTopCurrentPage(1);
+  }, [debouncedSearch, dateFrom, dateTo, statusFilter, pgRankLimit, minGradePercent, sortOrder]);
 
   const columns = [
     { title: "Application ID", key: "id" },
@@ -288,9 +347,11 @@ export default function ApplicationsPage() {
     status: getStatusBadge(item.status),
   }));
 
-  const topTableData: Record<string, ReactNode>[] = topApplications.map((item, idx) => {
+  const topTableData: Record<string, ReactNode>[] = paginatedTopData.map((item, idx) => {
     const id = item.applicationNumber || `APP-${item.applicationId}`;
     const dateObj = new Date(item.createdAt);
+    const globalRank = (topCurrentPage - 1) * topItemsPerPage + idx + 1;
+    
     return {
       select: (
         <input 
@@ -300,7 +361,7 @@ export default function ApplicationsPage() {
           onChange={() => toggleSelection(id)}
         />
       ),
-      rank: <span className="font-bold text-gray-700">#{idx + 1}</span>,
+      rank: <span className="font-bold text-gray-700">#{globalRank}</span>,
       name: <span className="font-semibold text-gray-800">{item.firstName} {item.lastName}</span>,
       course: item.course,
       score: (
@@ -418,10 +479,10 @@ export default function ApplicationsPage() {
           </div>
         )}
 
-        {activePrimaryTab === "All" && (
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between w-full relative z-10">
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap gap-4 items-center justify-start w-full relative z-10">
           
-          <div className="relative w-full lg:w-96 shrink-0 z-0">
+          {/* Search */}
+          <div className="relative w-full sm:w-auto flex-1 min-w-[200px] shrink-0">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <MagnifyingGlass size={18} className="text-gray-400" />
             </div>
@@ -430,106 +491,160 @@ export default function ApplicationsPage() {
               placeholder="Search name, email, phone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-400"
+              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-400 cursor-text"
+            />
+          </div>
+          
+          {/* Sort */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-sm font-medium text-gray-700">Sort:</span>
+            <button
+              onClick={() => setSortOrder(prev => prev === "desc" ? "asc" : "desc")}
+              className="p-2 rounded-lg border transition-colors flex items-center justify-center bg-white border-gray-300 text-gray-600 hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
+              title={sortOrder === "desc" ? "Sort Oldest First" : "Sort Newest First"}
+            >
+              <FunnelSimple size={20} weight="bold" className={`transition-transform duration-300 ${sortOrder === "asc" ? "rotate-180 text-blue-600" : "text-gray-600"}`} />
+            </button>
+          </div>
+
+          {/* From Date */}
+          <div className="flex items-center gap-2 shrink-0">
+            <label className="text-sm font-medium text-gray-700">From:</label>
+            <input
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="px-3 py-2 w-32 sm:w-36 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
+            />
+          </div>
+          
+          {/* To Date */}
+          <div className="flex items-center gap-2 shrink-0">
+            <label className="text-sm font-medium text-gray-700">To:</label>
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="px-3 py-2 w-32 sm:w-36 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row w-full lg:w-auto items-start sm:items-center gap-4 mb-0">
-            <div className="flex flex-col min-[400px]:flex-row w-full sm:w-auto gap-4">
-              <div className="flex flex-col min-[400px]:items-center min-[400px]:flex-row gap-1 sm:gap-2 w-full sm:w-auto">
-                <label className="text-sm font-medium text-gray-700 shrink-0">From:</label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  max={dateTo || undefined}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="px-3 py-2 w-full sm:w-36 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
-                />
-              </div>
-              
-              <div className="flex flex-col min-[400px]:items-center min-[400px]:flex-row gap-1 sm:gap-2 w-full sm:w-auto">
-                <label className="text-sm font-medium text-gray-700 shrink-0">To:</label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  min={dateFrom || undefined}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="px-3 py-2 w-full sm:w-36 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer text-gray-700"
-                />
-              </div>
-
-              <div className="flex flex-col min-[400px]:items-center min-[400px]:flex-row gap-1 sm:gap-2 w-full sm:w-auto z-10 relative">
-                <label className="text-sm font-medium text-gray-700 shrink-0">Status:</label>
-                <div className="relative w-full sm:w-36">
-                  <Listbox value={statusFilter} onChange={setStatusFilter}>
-                    {({ open }) => (
-                      <>
-                        <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-white py-2 pl-3 pr-10 text-left border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 sm:text-sm">
-                          <span className="block truncate text-gray-700">{statusFilter}</span>
-                          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400">
-                            <CaretDown
-                              size={16}
-                              weight="bold"
-                              className={`transition-transform duration-200 ${open ? "rotate-180 text-green-500" : ""}`}
-                            />
-                          </span>
-                        </Listbox.Button>
-                        <Transition
-                          show={open}
-                          as={Fragment}
-                          leave="transition ease-in duration-100"
-                          leaveFrom="opacity-100"
-                          leaveTo="opacity-0"
-                        >
-                          <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
-                            {["All", "Success", "Pending", "Failed"].map((status) => (
-                              <Listbox.Option
-                                key={status}
-                                className={({ active }) =>
-                                  `relative cursor-pointer select-none py-2 pl-10 pr-4 ${
-                                    active ? "bg-green-50 text-green-900" : "text-gray-900"
-                                  }`
-                                }
-                                value={status}
-                              >
-                                {({ selected }) => (
-                                  <>
-                                    <span
-                                      className={`block truncate ${
-                                        selected ? "font-medium text-green-700" : "font-normal"
-                                      }`}
-                                    >
-                                      {status}
-                                    </span>
-                                    {selected ? (
-                                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-green-600">
-                                        <Check size={16} weight="bold" />
-                                      </span>
-                                    ) : null}
-                                  </>
-                                )}
-                              </Listbox.Option>
-                            ))}
-                          </Listbox.Options>
-                        </Transition>
-                      </>
-                    )}
-                  </Listbox>
-                </div>
-              </div>
+          {/* Status */}
+          <div className="flex items-center gap-2 shrink-0 z-10 relative">
+            <label className="text-sm font-medium text-gray-700">Status:</label>
+            <div className="relative w-32 sm:w-36">
+              <Listbox value={statusFilter} onChange={setStatusFilter}>
+                {({ open }) => (
+                  <>
+                    <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-white py-2 pl-3 pr-10 text-left border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 sm:text-sm">
+                      <span className="block truncate text-gray-700">{statusFilter}</span>
+                      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400">
+                        <CaretDown
+                          size={16}
+                          weight="bold"
+                          className={`transition-transform duration-200 ${open ? "rotate-180 text-green-500" : ""}`}
+                        />
+                      </span>
+                    </Listbox.Button>
+                    <Transition
+                      show={open}
+                      as={Fragment}
+                      leave="transition ease-in duration-100"
+                      leaveFrom="opacity-100"
+                      leaveTo="opacity-0"
+                    >
+                      <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50">
+                        {["All", "Success", "Pending", "Failed"].map((status) => (
+                          <Listbox.Option
+                            key={status}
+                            className={({ active }) =>
+                              `relative cursor-pointer select-none py-2 pl-10 pr-4 ${
+                                active ? "bg-green-50 text-green-900" : "text-gray-900"
+                              }`
+                            }
+                            value={status}
+                          >
+                            {({ selected }) => (
+                              <>
+                                <span
+                                  className={`block truncate ${
+                                    selected ? "font-medium text-green-700" : "font-normal"
+                                  }`}
+                                >
+                                  {status}
+                                </span>
+                                {selected ? (
+                                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-green-600">
+                                    <Check size={16} weight="bold" />
+                                  </span>
+                                ) : null}
+                              </>
+                            )}
+                          </Listbox.Option>
+                        ))}
+                      </Listbox.Options>
+                    </Transition>
+                  </>
+                )}
+              </Listbox>
             </div>
-            
-            {(search || dateFrom || dateTo || statusFilter !== "All") && (
-              <button 
-                onClick={() => { setSearch(""); setDateFrom(""); setDateTo(""); setStatusFilter("All"); }}
-                className="text-sm text-red-500 hover:text-red-700 font-medium whitespace-nowrap mt-1 sm:mt-0 self-end sm:self-center cursor-pointer shrink-0"
-              >
-                Clear Filters
-              </button>
-            )}
           </div>
+          
+          {/* Top Candidates Limits */}
+          {activePrimaryTab === "Top" && (
+            <div className="flex items-center gap-2 border-l border-gray-300 pl-4 shrink-0">
+              {activeLevelTab === "PG" ? (
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">Max Rank:</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 500"
+                    value={pgRankLimit} 
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      setPgRankLimit(val);
+                    }}
+                    className="w-20 px-2 py-2 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 text-blue-700 font-semibold placeholder-gray-400 cursor-text"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">Min Grade (%):</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 92"
+                    value={minGradePercent} 
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      if (val) {
+                        const num = Number(val);
+                        if (num > 100) {
+                          setMinGradePercent("100");
+                          return;
+                        }
+                      }
+                      setMinGradePercent(val);
+                    }}
+                    className="w-20 px-2 py-2 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 text-blue-700 font-semibold placeholder-gray-400 cursor-text"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Clear Filters (pushed to end) */}
+          {(search || dateFrom || dateTo || statusFilter !== "All" || sortOrder !== "desc" || pgRankLimit !== "" || minGradePercent !== "") && (
+            <button 
+              onClick={() => { setSearch(""); setDateFrom(""); setDateTo(""); setStatusFilter("All"); setSortOrder("desc"); setPgRankLimit(""); setMinGradePercent(""); }}
+              className="text-sm px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium whitespace-nowrap cursor-pointer shrink-0 border border-red-200 transition-colors ml-auto"
+            >
+              Clear Filters
+            </button>
+          )}
+          
         </div>
-        )}
 
         <div className=" flex flex-col overflow-hidden w-full -mt-3">
           <div className="overflow-x-auto w-full custom-scrollbar min-h-[300px]">
@@ -555,6 +670,28 @@ export default function ApplicationsPage() {
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
               roundedBottom="rounded-b-xl"
+              itemsPerPageOptions={[10, 20, 50, 100]}
+              onItemsPerPageChange={(items) => {
+                setItemsPerPage(items);
+                setCurrentPage(1);
+              }}
+              disabled={loading}
+            />
+          )}
+          
+          {activePrimaryTab === "Top" && totalTopItems > 0 && (
+            <Pagination
+              currentPage={topCurrentPage}
+              totalItems={totalTopItems}
+              itemsPerPage={topItemsPerPage}
+              onPageChange={setTopCurrentPage}
+              roundedBottom="rounded-b-xl"
+              itemsPerPageOptions={[10, 20, 50, 100]}
+              onItemsPerPageChange={(items) => {
+                setTopItemsPerPage(items);
+                setTopCurrentPage(1);
+              }}
+              disabled={loadingTop}
             />
           )}
         </div>

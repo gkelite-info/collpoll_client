@@ -2,16 +2,26 @@ import { gkeliteSupabase } from "@/lib/gkeliteSupabaseClient";
 import toast from "react-hot-toast";
 
 // --- KPI Data Fetching ---
-export async function getKpiCounts() {
+export async function getKpiCounts(collegeFilter: string | null = null) {
   try {
+    let submissionsQuery = gkeliteSupabase.from('lead_applications').select('*', { count: 'exact', head: true });
+    let visitorsQuery = gkeliteSupabase.from('application_analytics_logs').select('visitorId').eq('eventType', 'SITE_VISIT');
+    let opensQuery = gkeliteSupabase.from('application_analytics_logs').select('visitorId').eq('eventType', 'FORM_OPEN');
+    
+    if (collegeFilter) {
+      submissionsQuery = submissionsQuery.ilike('college', collegeFilter);
+      visitorsQuery = visitorsQuery.ilike('college', collegeFilter);
+      opensQuery = opensQuery.ilike('college', collegeFilter);
+    }
+
     const [
       { data: visitorsData, error: vErr }, 
       { data: opensData, error: oErr }, 
       { count: submissions, error: sErr }
     ] = await Promise.all([
-      gkeliteSupabase.from('application_analytics_logs').select('visitorId').eq('eventType', 'SITE_VISIT'),
-      gkeliteSupabase.from('application_analytics_logs').select('visitorId').eq('eventType', 'FORM_OPEN'),
-      gkeliteSupabase.from('lead_applications').select('*', { count: 'exact', head: true })
+      visitorsQuery,
+      opensQuery,
+      submissionsQuery
     ]);
     
     if (vErr) toast.error("Failed to fetch visitors data", { id: "kpi-error-visitors" });
@@ -35,13 +45,19 @@ export async function getKpiCounts() {
 }
 
 // --- Recent Applications ---
-export async function getRecentApplications(limit = 5) {
+export async function getRecentApplications(limit = 5, collegeFilter: string | null = null) {
   try {
-    const { data, error } = await gkeliteSupabase
+    let query = gkeliteSupabase
       .from('lead_applications')
       .select('*, lead_payments(paymentStatus, createdAt)')
       .order('createdAt', { ascending: false })
       .limit(limit);
+      
+    if (collegeFilter) {
+      query = query.ilike('college', collegeFilter);
+    }
+
+    const { data, error } = await query;
       
     if (error) {
       toast.error("Failed to fetch recent applications", { id: "recent-apps-error" });
@@ -55,16 +71,22 @@ export async function getRecentApplications(limit = 5) {
 }
 
 // --- Chart Data ---
-export async function getApplicationsByYear(year: number) {
+export async function getApplicationsByYear(year: number, collegeFilter: string | null = null) {
   try {
     const start = `${year}-01-01T00:00:00.000Z`;
     const end = `${year}-12-31T23:59:59.999Z`;
 
-    const { data, error } = await gkeliteSupabase
+    let query = gkeliteSupabase
       .from('lead_applications')
       .select('createdAt')
       .gte('createdAt', start)
       .lte('createdAt', end);
+      
+    if (collegeFilter) {
+      query = query.ilike('college', collegeFilter);
+    }
+
+    const { data, error } = await query;
       
     if (error) {
       toast.error("Failed to fetch chart data", { id: "chart-data-error" });
@@ -78,12 +100,18 @@ export async function getApplicationsByYear(year: number) {
 }
 
 // --- All Applications (Inner Page) ---
-export async function getAllApplications(statusFilter: string = "All") {
+export async function getAllApplications(statusFilter: string = "All", collegeFilter: string | null = null, sortOrder: "asc" | "desc" = "desc") {
   try {
-    const { data, error } = await gkeliteSupabase
+    let query = gkeliteSupabase
       .from('lead_applications')
       .select('*, lead_payments(paymentStatus, createdAt)')
-      .order('createdAt', { ascending: false });
+      .order('createdAt', { ascending: sortOrder === "asc" });
+      
+    if (collegeFilter) {
+      query = query.ilike('college', collegeFilter);
+    }
+
+    const { data, error } = await query;
       
     if (error) {
       toast.error("Failed to fetch applications", { id: "all-apps-error" });
@@ -137,12 +165,18 @@ export function parseGradeToPercentage(gradeStr: string | null | undefined): num
   return Math.min(num, 100);
 }
 
-export async function getTopApplications(levelTab: string, courseFilter: string = "All") {
+export async function getTopApplications(levelTab: string, courseFilter: string = "All", collegeFilter: string | null = null, rankLimit: number | null = null, minGradePercent: number | null = null) {
   try {
-    const { data, error } = await gkeliteSupabase
+    let query = gkeliteSupabase
       .from('lead_applications')
-      .select('*, education_qualifications(*), entrance_exams(*)')
+      .select('*, education_qualifications(*), entrance_exams(*), lead_payments(paymentStatus, createdAt)')
       .order('createdAt', { ascending: true }); // Base tie-breaker: older applies first
+      
+    if (collegeFilter) {
+      query = query.ilike('college', collegeFilter);
+    }
+
+    const { data, error } = await query;
       
     if (error) {
       toast.error("Failed to fetch top applications", { id: "top-apps-error" });
@@ -197,10 +231,20 @@ export async function getTopApplications(levelTab: string, courseFilter: string 
         });
       }
 
+      let paymentStatus = "Pending";
+      const payments = app.lead_payments || [];
+      if (payments.length > 0) {
+        payments.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const status = payments[0].paymentStatus?.toLowerCase();
+        if (status === "success") paymentStatus = "Success";
+        else if (status === "failed") paymentStatus = "Failed";
+      }
+
       return {
         ...app,
         computedScore: finalScore,
-        computedRank: finalRank
+        computedRank: finalRank,
+        computedStatus: paymentStatus
       };
     });
 
@@ -222,8 +266,15 @@ export async function getTopApplications(levelTab: string, courseFilter: string 
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     });
 
-    // Return Top 10
-    return processed.slice(0, 10);
+    let finalProcessed = processed;
+    if (levelTab === "PG" && rankLimit !== null) {
+      finalProcessed = finalProcessed.filter(app => app.computedRank <= rankLimit);
+    } else if (levelTab !== "PG" && minGradePercent !== null) {
+      finalProcessed = finalProcessed.filter(app => app.computedScore >= minGradePercent);
+    }
+
+    // Return all processed and filtered apps
+    return finalProcessed;
   } catch (err) {
     toast.error("Failed to process top applications", { id: "top-apps-error" });
     return [];
@@ -231,10 +282,13 @@ export async function getTopApplications(levelTab: string, courseFilter: string 
 }
 
 // --- Realtime Subscriptions ---
-export function subscribeToAnalytics(onVisit: (visitorId: string) => void, onOpen: (visitorId: string) => void) {
+export function subscribeToAnalytics(collegeFilter: string | null, onVisit: (visitorId: string) => void, onOpen: (visitorId: string) => void) {
   return gkeliteSupabase
     .channel('analytics-channel')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'application_analytics_logs' }, (payload) => {
+      if (collegeFilter && payload.new.college && payload.new.college.toLowerCase() !== collegeFilter.toLowerCase()) {
+         return;
+      }
       if (payload.new.eventType === 'SITE_VISIT') onVisit(payload.new.visitorId);
       if (payload.new.eventType === 'FORM_OPEN') onOpen(payload.new.visitorId);
     })
