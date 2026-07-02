@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getRecentApplications, subscribeToSubmissions, subscribeToPayments, unsubscribeChannel } from "@/lib/api/gkeliteApi";
 import { RecentSubmissionsSkeleton } from "./Skeletons";
+import { useUser } from "@/app/utils/context/UserContext";
 
 type Submission = {
   id: string;
@@ -20,11 +21,12 @@ export default function RecentSubmissions() {
   const router = useRouter();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
+  const { collegeCode } = useUser();
 
   useEffect(() => {
     const fetchRecent = async () => {
       setLoading(true);
-      const data = await getRecentApplications(5);
+      const data = await getRecentApplications(5, collegeCode || null);
 
       if (data && data.length > 0) {
         const formatted = data.map(app => {
@@ -101,7 +103,7 @@ export default function RecentSubmissions() {
       unsubscribeChannel(sub);
       unsubscribeChannel(paymentSub);
     };
-  }, []);
+  }, [collegeCode]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {

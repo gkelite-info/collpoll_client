@@ -1,11 +1,17 @@
 "use client";
 
+import { Fragment } from "react";
+import { Listbox, Transition } from "@headlessui/react";
+import { CaretDown, Check } from "@phosphor-icons/react";
 interface PaginationProps {
   currentPage: number;
   totalItems: number;
   itemsPerPage: number;
   onPageChange: (page: number) => void;
   roundedBottom?: string;
+  itemsPerPageOptions?: number[];
+  onItemsPerPageChange?: (items: number) => void;
+  disabled?: boolean;
 }
 
 export function Pagination({
@@ -13,7 +19,10 @@ export function Pagination({
   totalItems,
   itemsPerPage,
   onPageChange,
-  roundedBottom
+  roundedBottom,
+  itemsPerPageOptions,
+  onItemsPerPageChange,
+  disabled
 }: PaginationProps) {
   if (totalItems <= itemsPerPage) return null;
 
@@ -42,9 +51,67 @@ export function Pagination({
   const visiblePages = getPageNumbers();
 
   return (
-    <div className={`flex items-center justify-between px-2 py-4 sm:px-4 bg-white border-t border-gray-200 mt-auto ${roundedBottom || ""}`}>
+    <div className={`flex items-center justify-between px-2 py-4 sm:px-4 bg-white border-t border-gray-200 mt-auto ${roundedBottom || ""} ${disabled ? "opacity-50 pointer-events-none" : "transition-opacity duration-200"}`}>
       <div className="flex flex-col gap-4 w-full md:flex-row md:items-center md:justify-between">
-        <div className="flex justify-center md:justify-start w-full md:w-auto shrink-0">
+        <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 md:gap-6 w-full md:w-auto shrink-0">
+          {itemsPerPageOptions && onItemsPerPageChange && (
+            <div className="flex items-center gap-2 relative z-50">
+              <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Items per page:</span>
+              <div className="relative w-20">
+                <Listbox value={itemsPerPage} onChange={onItemsPerPageChange} disabled={disabled}>
+                  {({ open }) => (
+                    <>
+                      <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-white py-1.5 pl-3 pr-8 text-left border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 sm:text-sm">
+                        <span className="block truncate text-gray-700 font-medium">{itemsPerPage}</span>
+                        <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400">
+                          <CaretDown
+                            size={14}
+                            weight="bold"
+                            className={`transition-transform duration-200 ${open ? "rotate-180 text-green-500" : ""}`}
+                          />
+                        </span>
+                      </Listbox.Button>
+                      <Transition
+                        show={open}
+                        as={Fragment}
+                        leave="transition ease-in duration-100"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                      >
+                        <Listbox.Options className="absolute bottom-full mb-1 max-h-60 w-full overflow-auto rounded-lg bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-[100]">
+                          {itemsPerPageOptions.map((option) => (
+                            <Listbox.Option
+                              key={option}
+                              className={({ active, selected }) =>
+                                `relative cursor-pointer select-none py-2 px-3 ${
+                                  selected
+                                    ? "bg-green-100 text-green-800 font-bold"
+                                    : active
+                                    ? "bg-green-50 text-green-900"
+                                    : "text-gray-900"
+                                }`
+                              }
+                              value={option}
+                            >
+                              {({ selected }) => (
+                                <span
+                                  className={`block truncate ${
+                                    selected ? "font-bold text-green-700" : "font-normal"
+                                  }`}
+                                >
+                                  {option}
+                                </span>
+                              )}
+                            </Listbox.Option>
+                          ))}
+                        </Listbox.Options>
+                      </Transition>
+                    </>
+                  )}
+                </Listbox>
+              </div>
+            </div>
+          )}
           <p className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">
             Showing <span className="font-medium">{startIndex + 1}</span> to{" "}
             <span className="font-medium">{endIndex}</span> of{" "}
@@ -59,7 +126,7 @@ export function Pagination({
             {/* First Page */}
             <button
               onClick={() => onPageChange(1)}
-              disabled={currentPage === 1}
+              disabled={disabled || currentPage === 1}
               className="relative inline-flex items-center rounded-l-md px-1.5 sm:px-3 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <span className="sr-only">First</span>
@@ -71,7 +138,7 @@ export function Pagination({
             {/* Previous Page */}
             <button
               onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
-              disabled={currentPage === 1}
+              disabled={disabled || currentPage === 1}
               className="relative inline-flex items-center px-1.5 sm:px-3 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <span className="sr-only">Previous</span>
@@ -100,6 +167,7 @@ export function Pagination({
                 <button
                   key={page}
                   onClick={() => onPageChange(page as number)}
+                  disabled={disabled}
                   className={`relative inline-flex items-center px-2.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold focus:z-20 cursor-pointer ${
                     isCurrent
                       ? "z-10 bg-[#16284F] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#43C17A]"
@@ -114,7 +182,7 @@ export function Pagination({
             {/* Next Page */}
             <button
               onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
-              disabled={currentPage === totalPages}
+              disabled={disabled || currentPage === totalPages}
               className="relative inline-flex items-center px-1.5 sm:px-3 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <span className="sr-only">Next</span>
@@ -126,7 +194,7 @@ export function Pagination({
             {/* Last Page */}
             <button
               onClick={() => onPageChange(totalPages)}
-              disabled={currentPage === totalPages}
+              disabled={disabled || currentPage === totalPages}
               className="relative inline-flex items-center rounded-r-md px-1.5 sm:px-3 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <span className="sr-only">Last</span>

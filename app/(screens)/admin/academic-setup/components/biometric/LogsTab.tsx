@@ -11,7 +11,7 @@ import { getDeviceAttendanceLogs, DeviceAttendanceLogRow } from "@/lib/helpers/d
 import { getBiometricDevices, BiometricDeviceRow } from "@/lib/helpers/devices/biometricDeviceAPI";
 import CustomSelect from "./ui/CustomSelect";
 
-const ITEMS_PER_PAGE = 50;
+// const ITEMS_PER_PAGE = 50; (moved to state)
 
 const columns = [
   { title: "User Info", key: "user" },
@@ -52,6 +52,7 @@ export default function LogsTab() {
   const initialPage = Number(searchParams.get("logPage")) || 1;
 
   const [currentPage, setCurrentPage] = useState(initialPage);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [category, setCategory] = useState<"Gate" | "Classroom" | "">(initialCategory);
   const [deviceId, setDeviceId] = useState<string>(initialDeviceId);
   const [fromDate, setFromDate] = useState<string>(initialFromDate);
@@ -110,7 +111,7 @@ export default function LogsTab() {
     if (toDate) filters.toDate = `${toDate}T23:59:59.999Z`;
     if (debouncedSearchQuery) filters.searchQuery = debouncedSearchQuery;
 
-    const res = await getDeviceAttendanceLogs(collegeId, currentPage, ITEMS_PER_PAGE, filters);
+    const res = await getDeviceAttendanceLogs(collegeId, currentPage, itemsPerPage, filters);
 
     if (res.success) {
       setLogs(res.data);
@@ -119,7 +120,7 @@ export default function LogsTab() {
       toast.error(res.error || "Failed to fetch logs", { id: "fetch-logs-error" });
     }
     setIsLoading(false);
-  }, [collegeId, currentPage, category, deviceId, fromDate, toDate, debouncedSearchQuery]);
+  }, [collegeId, currentPage, itemsPerPage, category, deviceId, fromDate, toDate, debouncedSearchQuery]);
 
   useEffect(() => {
     if (fromDate && toDate) {
@@ -393,14 +394,20 @@ export default function LogsTab() {
           height="75vh"
           emptyStateMessage="No attendance logs found for the selected filters. Please note that these logs only reflect raw biometric device scans."
         />
-        {!(isLoading || userLoading) && totalItems > 0 && (
+        {totalItems > 0 && (
           <div className="mt-1 border-t rounded-lg">
             <Pagination
               currentPage={currentPage}
               totalItems={totalItems}
-              itemsPerPage={ITEMS_PER_PAGE}
+              itemsPerPage={itemsPerPage}
               onPageChange={handlePageChange}
               roundedBottom="rounded-lg"
+              itemsPerPageOptions={[10, 20, 50, 100]}
+              onItemsPerPageChange={(items) => {
+                setItemsPerPage(items);
+                setCurrentPage(1);
+              }}
+              disabled={isLoading || userLoading}
             />
           </div>
         )}

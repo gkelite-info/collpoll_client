@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { TrendUp, CaretDown, SpinnerGap } from "@phosphor-icons/react";
 import { formatKpiNumber } from "@/lib/helpers/numberFormatter";
 import { getApplicationsByYear, subscribeToSubmissions, unsubscribeChannel } from "@/lib/api/gkeliteApi";
+import { useUser } from "@/app/utils/context/UserContext";
 
 export default function AdmissionsChart() {
   const currentYear = new Date().getFullYear();
@@ -21,12 +22,13 @@ export default function AdmissionsChart() {
   
   const [monthlyData, setMonthlyData] = useState<number[]>(new Array(12).fill(0));
   const [loading, setLoading] = useState(true);
+  const { collegeCode } = useUser();
 
   useEffect(() => {
     const fetchMonthlyData = async () => {
       setLoading(true);
       
-      const data = await getApplicationsByYear(selectedYear);
+      const data = await getApplicationsByYear(selectedYear, collegeCode || null);
         
       if (data) {
         const counts = new Array(12).fill(0);
@@ -56,7 +58,7 @@ export default function AdmissionsChart() {
     });
 
     return () => unsubscribeChannel(sub);
-  }, [selectedYear]);
+  }, [selectedYear, collegeCode]);
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const maxVal = Math.max(...monthlyData, 1); // Avoid division by zero

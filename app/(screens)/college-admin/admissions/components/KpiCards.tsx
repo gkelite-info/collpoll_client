@@ -5,6 +5,7 @@ import { Users, FileText, CheckCircle } from "@phosphor-icons/react";
 import { formatKpiNumber } from "@/lib/helpers/numberFormatter";
 import { getKpiCounts, subscribeToAnalytics, subscribeToSubmissions, unsubscribeChannel } from "@/lib/api/gkeliteApi";
 import { KpiCardsSkeleton } from "./Skeletons";
+import { useUser } from "@/app/utils/context/UserContext";
 
 type KpiData = {
   title: string;
@@ -18,6 +19,7 @@ export default function KpiCards() {
   const [opens, setOpens] = useState<number>(0);
   const [submissions, setSubmissions] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const { collegeCode } = useUser();
 
   // Keep track of sets to maintain distinct counts
   const visitorIdsSet = useRef<Set<string>>(new Set());
@@ -30,7 +32,7 @@ export default function KpiCards() {
     // 1. Initial Fetch
     const fetchInitialData = async () => {
       setLoading(true);
-      const counts = await getKpiCounts();
+      const counts = await getKpiCounts(collegeCode || null);
       setVisitors(counts.visitors);
       setOpens(counts.opens);
       setSubmissions(counts.submissions);
@@ -57,6 +59,7 @@ export default function KpiCards() {
 
     // 3. Setup Supabase Realtime Subscriptions via API
     const analyticsSub = subscribeToAnalytics(
+      collegeCode || null,
       (visitorId: string) => { 
         if (!visitorIdsSet.current.has(visitorId)) {
           visitorIdsSet.current.add(visitorId);
@@ -80,7 +83,7 @@ export default function KpiCards() {
       unsubscribeChannel(analyticsSub);
       unsubscribeChannel(submissionsSub);
     };
-  }, []);
+  }, [collegeCode]);
 
   const kpis: KpiData[] = [
     {

@@ -29,6 +29,7 @@ type UserContextType = {
   role: string | null;
   collegePublicId: string | null;
   collegeId: number | null;
+  collegeCode: string | null;
   studentId: number | null;
   adminId: number | null;
   financeManagerId: number | null;
@@ -115,6 +116,7 @@ const UserContext = createContext<UserContextType>({
   role: null,
   collegePublicId: null,
   collegeId: null,
+  collegeCode: null,
   studentId: null,
   adminId: null,
   financeManagerId: null,
@@ -153,6 +155,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [role, setRole] = useState<string | null>(null);
   const [collegePublicId, setCollegePublicId] = useState<string | null>(null);
   const [collegeId, setCollegeId] = useState<number | null>(null);
+  const [collegeCode, setCollegeCode] = useState<string | null>(null);
   const [studentId, setStudentId] = useState<number | null>(null);
   const [adminId, setAdminId] = useState<number | null>(null);
   const [financeManagerId, setFinanceManagerId] = useState<number | null>(null);
@@ -192,6 +195,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     setRole,
     setCollegePublicId,
     setCollegeId,
+    setCollegeCode,
     setStudentId,
     setAdminId,
     setFinanceManagerId,
@@ -229,6 +233,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     s.setRole(null);
     s.setCollegePublicId(null);
     s.setCollegeId(null);
+    s.setCollegeCode(null);
     s.setStudentId(null);
     s.setAdminId(null);
     s.setFinanceManagerId(null);
@@ -706,7 +711,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         const { data: userData, error } = await supabase
           .from("users")
           .select(
-            "userId, fullName, mobile, email, gender, role, collegePublicId, collegeId, dateOfJoining, professionalExperienceYears"
+            "userId, fullName, mobile, email, gender, role, collegePublicId, collegeId, dateOfJoining, professionalExperienceYears, colleges(collegeCode)"
           )
           .eq("auth_id", user.id)
           .maybeSingle();
@@ -722,6 +727,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         s.setRole(userData.role);
         s.setCollegePublicId(userData.collegePublicId);
         s.setCollegeId(userData.collegeId);
+        s.setCollegeCode((userData as any).colleges?.collegeCode ?? null);
         s.setDateOfJoining(userData.dateOfJoining ?? null);
         s.setProfessionalExperienceYears(userData.professionalExperienceYears ?? null);
         try {
@@ -805,6 +811,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       role,
       collegePublicId,
       collegeId,
+      collegeCode,
       studentId,
       adminId,
       financeManagerId,
@@ -842,6 +849,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       role,
       collegePublicId,
       collegeId,
+      collegeCode,
       studentId,
       adminId,
       financeManagerId,

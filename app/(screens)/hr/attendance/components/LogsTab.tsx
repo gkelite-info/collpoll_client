@@ -11,7 +11,7 @@ import { MagnifyingGlass, CalendarDots, WarningCircle, ClockCounterClockwise } f
 import TableComponent from "@/app/utils/table/table";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
-const ITEMS_PER_PAGE = 50;
+// const ITEMS_PER_PAGE = 50; // moved to state
 
 const columns = [
   { title: "Target Date", key: "targetDate" },
@@ -37,6 +37,7 @@ export default function LogsTab() {
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(initialPage);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [triggering, setTriggering] = useState(false);
   
   const [fromDate, setFromDate] = useState<string>(initialFromDate);
@@ -58,7 +59,7 @@ export default function LogsTab() {
     const { success, data, totalCount: count, error } = await getFinalizationLogs({
       collegeId,
       page: currentPage,
-      limit: ITEMS_PER_PAGE,
+      limit: itemsPerPage,
       fromDate: fromDate || undefined,
       toDate: toDate || undefined,
       searchQuery: debouncedSearchQuery || undefined,
@@ -71,7 +72,7 @@ export default function LogsTab() {
       toast.error("Failed to fetch logs", { id: "fetch-logs-error" });
     }
     setLoading(false);
-  }, [collegeId, currentPage, fromDate, toDate, debouncedSearchQuery]);
+  }, [collegeId, currentPage, itemsPerPage, fromDate, toDate, debouncedSearchQuery]);
 
   useEffect(() => {
     if (fromDate && toDate) {
@@ -347,14 +348,20 @@ export default function LogsTab() {
           height="50vh"
           emptyStateMessage="No finalization logs found for the selected filters."
         />
-        {!loading && totalCount > 0 && (
+        {totalCount > 0 && (
           <div className="mt-1 border-t rounded-lg">
             <Pagination
               currentPage={currentPage}
               totalItems={totalCount}
-              itemsPerPage={ITEMS_PER_PAGE}
+              itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
               roundedBottom="rounded-lg"
+              itemsPerPageOptions={[10, 20, 50, 100]}
+              onItemsPerPageChange={(items) => {
+                setItemsPerPage(items);
+                setCurrentPage(1);
+              }}
+              disabled={loading}
             />
           </div>
         )}
