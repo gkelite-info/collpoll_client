@@ -15,6 +15,8 @@ type UserInfoCardProps = {
   image?: string;
   top?: string;
   imageHeight?: number
+  description?: string;
+  suppressHonorific?: boolean;
 };
 
 type UserInfoProps = {
@@ -43,7 +45,7 @@ export function AdminInfoCard({ cardProps }: UserInfoProps) {
                 Welcome Back,
               </span>
               <span className="text-sm landscape:text-lg md:text-lg lg:text-lg font-semibold text-[#089144] leading-tight">
-                {!item.show && `${gender === "Male" ? " Mr." : " Ms. "}`} {item.user}
+                {!item.show && !item.suppressHonorific && `${gender === "Male" ? " Mr." : " Ms. "}`} {item.user}
               </span>
             </div>
             <div className="bg-red-00 flex items-baseline flex-wrap gap-2">
@@ -56,14 +58,14 @@ export function AdminInfoCard({ cardProps }: UserInfoProps) {
                 {item.activeFacultyTasks} active faculty tasks and
               </span>{" "}
               {!item.show && `${item.pendingApprovals} pending approvals`} */}
-              Everything is clear at the moment.
+              {item.description ?? "Everything is clear at the moment."}
             </p>
           </div>
 
-          {cardProps[0].image &&
+          {(item.image || adminImage) &&
             <div className="absolute -right-3 md:-right-0 lg:right-10 bottom-0 h-[95%] w-[180px] md:h-[100%] md:w-[180px] lg:h-[105%] lg:w-[180px]">
               <Image
-                src={adminImage!}
+                src={(item.image || adminImage)!}
                 alt="Avatar"
                 fill
                 className="object-contain object-bottom pointer-events-none"
