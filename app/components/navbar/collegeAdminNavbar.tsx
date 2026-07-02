@@ -8,6 +8,7 @@ import {
   ClipboardText,
   FolderOpen,
   Gear,
+  GraduationCap,
   House,
   PlusCircle,
   UsersThreeIcon,
@@ -47,6 +48,13 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
       ),
       label: t("Home"),
       path: "/college-admin",
+    },
+    {
+      icon: (isActive) => (
+        <GraduationCap size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: t("Admissions"),
+      path: "/college-admin/admissions",
     },
     {
       icon: (isActive) => (
