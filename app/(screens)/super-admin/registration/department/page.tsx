@@ -104,8 +104,8 @@ export default function Department() {
     try {
       const eduId = Number(educationId);
 
-      if (!eduId || eduId < 1) {
-        toast.error("Education ID must be 1 or greater");
+      if (!eduId) {
+        toast.error("Education type is required");
         return;
       }
 
@@ -145,7 +145,7 @@ export default function Department() {
       <div className="grid grid-cols-2 gap-[32px]">
         <div className="flex flex-col">
           <label className="text-[#282828] font-semibold text-[15px] mb-1.5">
-            Education Type
+            Education Type <span className="text-red-500">*</span>
           </label>
 
           <select
@@ -169,6 +169,7 @@ export default function Department() {
           name="departmentName"
           placeholder="Enter Department Name"
           value={departmentName}
+          required={true}
           onChange={(e: any) => setDepartmentName(e.target.value)}
         />
       </div>
@@ -179,6 +180,7 @@ export default function Department() {
           name="departmentCode"
           placeholder="Enter Department Code"
           value={departmentCode}
+          required={true}
           onChange={(e: any) => setDepartmentCode(e.target.value)}
         />
 
@@ -262,7 +264,7 @@ export default function Department() {
             }
     `}
         >
-          {loading ? "Saving..." : "Save Departments"}
+          {loading ? "Saving..." : "Save"}
         </button>
       </div>
     </motion.div>

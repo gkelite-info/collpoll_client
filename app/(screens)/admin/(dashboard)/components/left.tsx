@@ -100,7 +100,7 @@ export default function AdminDashLeft({
     },
   ];
 
-  const adminImage = gender && (gender === "Male" ? "/admin-f.png" : "/male-admin1.png");
+  const adminImage = gender && (gender === "Female" ? "/admin-f.png" : "/male-admin2.png");
 
   const card = [
     {

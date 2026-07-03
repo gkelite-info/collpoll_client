@@ -124,7 +124,7 @@ export default function EducationalType() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className="block mb-1 text-sm font-medium text-gray-700">
-                        Education Name
+                        Education Name <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
@@ -139,7 +139,7 @@ export default function EducationalType() {
 
                 <div>
                     <label className="block mb-1 text-sm font-medium text-gray-700">
-                        Education Code
+                        Education Code <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
@@ -156,7 +156,7 @@ export default function EducationalType() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className="block mb-1 text-sm font-medium text-gray-700">
-                        Education Level
+                        Education Level <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
@@ -171,7 +171,7 @@ export default function EducationalType() {
 
                 <div>
                     <label className="block mb-1 text-sm font-medium text-gray-700">
-                        Duration (Years)
+                        Duration (Years) <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"

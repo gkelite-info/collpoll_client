@@ -135,7 +135,16 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
   }, [t, collegeCode]);
 
   useEffect(() => {
-    const current = items.find((item) => item.path === pathname);
+    let current = items.find((item) => item.path === pathname);
+    if (!current) {
+      const sortedItems = [...items].sort((a, b) => b.path.length - a.path.length);
+      current = sortedItems.find((item) => {
+        if (item.path === "/college-admin") {
+          return pathname === "/college-admin";
+        }
+        return pathname.startsWith(item.path);
+      });
+    }
     if (current) setActive(current.label);
   }, [pathname, items]);
 
