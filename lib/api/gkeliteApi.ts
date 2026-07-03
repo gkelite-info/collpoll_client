@@ -320,3 +320,38 @@ export function unsubscribeChannel(channel: any) {
     gkeliteSupabase.removeChannel(channel);
   }
 }
+
+// --- Single Application Details ---
+export async function getApplicationById(applicationId: number) {
+  try {
+    const { data, error } = await gkeliteSupabase
+      .from('lead_applications')
+      .select('*, education_qualifications(*), entrance_exams(*), lead_payments(paymentStatus, createdAt, amount, transactionId, paymentMethod)')
+      .eq('applicationId', applicationId)
+      .single();
+
+    if (error) {
+      console.error("Error fetching application details:", error);
+      toast.error("Failed to fetch application details", { id: "app-detail-error" });
+      return null;
+    }
+
+    if (data) {
+      let paymentStatus = "Pending";
+      const payments = data.lead_payments || [];
+      if (payments.length > 0) {
+        payments.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const status = payments[0].paymentStatus?.toLowerCase();
+        if (status === "success") paymentStatus = "Success";
+        else if (status === "failed") paymentStatus = "Failed";
+      }
+      return { ...data, computedStatus: paymentStatus };
+    }
+
+    return null;
+  } catch (err) {
+    console.error("Error fetching application details:", err);
+    toast.error("Failed to fetch application details", { id: "app-detail-error" });
+    return null;
+  }
+}
