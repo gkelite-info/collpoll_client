@@ -2,6 +2,7 @@
 
 import { ReactNode, useMemo } from "react";
 import {
+  Alarm,
   CalendarCheck,
   CalendarDots,
   ChartLine,
@@ -10,7 +11,6 @@ import {
   Gear,
   Headset,
   House,
-  Laptop,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -19,6 +19,7 @@ type NavItem = {
   icon: (isActive: boolean) => ReactNode;
   label: string;
   path: string;
+  activePaths?: string[];
 };
 
 type AccountantNavbarProps = {
@@ -57,8 +58,16 @@ export default function AccountantNavbar({ onClose }: AccountantNavbarProps) {
         icon: (isActive) => (
           <CalendarDots size={iconSize} weight={isActive ? "fill" : "regular"} />
         ),
-        label: "Calendar",
+        label: "Calendar / Meeting",
         path: `${base}/calendar`,
+        activePaths: [`${base}/calendar`, `${base}/meetings`],
+      },
+      {
+        icon: (isActive) => (
+          <Alarm size={iconSize} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: "Reminder",
+        path: `${base}/reminder`,
       },
       {
         icon: (isActive) => (
@@ -76,13 +85,6 @@ export default function AccountantNavbar({ onClose }: AccountantNavbarProps) {
         ),
         label: "Drive",
         path: `${base}/drive`,
-      },
-      {
-        icon: (isActive) => (
-          <Laptop size={iconSize} weight={isActive ? "fill" : "regular"} />
-        ),
-        label: "Meetings",
-        path: `${base}/meetings`,
       },
       {
         icon: (isActive) => (
@@ -110,7 +112,11 @@ export default function AccountantNavbar({ onClose }: AccountantNavbarProps) {
   );
 
   const isActivePath = (itemPath: string) => {
+    const item = items.find((entry) => entry.path === itemPath);
     if (itemPath === base) return pathname === base || pathname.startsWith("/profile");
+    if (item?.activePaths) {
+      return item.activePaths.some((activePath) => pathname.startsWith(activePath));
+    }
     return pathname.startsWith(itemPath);
   };
 
@@ -123,7 +129,9 @@ export default function AccountantNavbar({ onClose }: AccountantNavbarProps) {
       <div className="flex min-h-0 flex-1 flex-col items-start gap-2.75 overflow-y-auto w-full pt-4 pl-4 pb-5">
         {items.map((item) => {
           const active = isActivePath(item.path);
-          const canWrap = item.label === "Well being / Support";
+          const canWrap =
+            item.label === "Well being / Support" ||
+            item.label === "Calendar / Meeting";
 
           return (
             <Link
