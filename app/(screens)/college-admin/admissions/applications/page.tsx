@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo, ReactNode, Fragment } from "react";
 import Link from "next/link";
-import { CaretLeft, MagnifyingGlass, CaretDown, Check, FunnelSimple, Envelope, X, PaperPlane, Warning, Info, CheckCircle } from "@phosphor-icons/react";
+import { CaretLeft, MagnifyingGlass, CaretDown, Check, FunnelSimple, Envelope, X, PaperPlane, Warning, Info, CheckCircle, Eye } from "@phosphor-icons/react";
 import { Listbox, Transition } from "@headlessui/react";
 import TableComponent from "@/app/utils/table/table";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { getAllApplications } from "@/lib/api/gkeliteApi";
+import ApplicationViewModal from "./ApplicationViewModal";
 import { downloadCSV } from "@/app/utils/downloadCSV";
 import toast from "react-hot-toast";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
@@ -75,6 +76,9 @@ export default function ApplicationsPage() {
   const [loadingTop, setLoadingTop] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isConfirmEmailOpen, setIsConfirmEmailOpen] = useState(false);
+  
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewApplicationId, setViewApplicationId] = useState<number | null>(null);
 
   const [pgRankLimit, setPgRankLimit] = useState<string>("");
   const debouncedPgRankLimit = useDebounce(pgRankLimit, 500);
@@ -341,6 +345,7 @@ export default function ApplicationsPage() {
     { title: "Date", key: "date" },
     { title: "Payment Status", key: "status" },
     { title: "Admission Status", key: "admissionStatus" },
+    { title: "Action", key: "action" },
   ];
 
   const topColumns = [
@@ -356,13 +361,16 @@ export default function ApplicationsPage() {
       key: "select",
       width: "50px"
     },
+    { title: "Application ID", key: "id" },
     { title: "Rank", key: "rank" },
     { title: "Applicant Name", key: "name" },
     { title: "Course", key: "course" },
+    { title: "Contact", key: "contact" },
     { title: "Score/Rank", key: "score" },
     { title: "Applied On", key: "date" },
     { title: "Payment Status", key: "paymentStatus" },
     { title: "Admission Status", key: "admissionStatus" },
+    { title: "Action", key: "action" },
   ];
 
   const getStatusBadge = (status: string) => {
@@ -431,6 +439,18 @@ export default function ApplicationsPage() {
     date: <span className="text-sm text-gray-600">{item.date}</span>,
     status: getStatusBadge(item.status),
     admissionStatus: getAdmissionStatusBadge(item.admissionStatus),
+    action: (
+      <button
+        onClick={() => {
+          setViewApplicationId(item.applicationId);
+          setIsViewModalOpen(true);
+        }}
+        className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors cursor-pointer"
+        title="View Application"
+      >
+        <Eye size={18} weight="bold" />
+      </button>
+    ),
   }));
 
   const topTableData: Record<string, ReactNode>[] = paginatedTopData.map((item, idx) => {
@@ -447,9 +467,16 @@ export default function ApplicationsPage() {
           onChange={() => toggleSelection(id)}
         />
       ),
+      id: <span className="font-mono text-sm text-gray-600">{id}</span>,
       rank: <span className="font-bold text-gray-700">#{globalRank}</span>,
       name: <span className="font-semibold text-gray-800">{item.firstName} {item.lastName}</span>,
       course: item.course,
+      contact: (
+        <div className="flex flex-col">
+          <span className="text-sm">{item.emailId || ''}</span>
+          <span className="text-xs text-gray-500">{item.contactNo || ''}</span>
+        </div>
+      ),
       score: (
         <div className="flex flex-col">
           {activeLevelTab === "PG" && item.computedRank !== 9999999 ? (
@@ -462,6 +489,18 @@ export default function ApplicationsPage() {
       date: <span className="text-sm text-gray-600">{new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(dateObj)}</span>,
       paymentStatus: getStatusBadge(item.computedStatus || "Pending"),
       admissionStatus: getAdmissionStatusBadge(item.admissionStatus),
+      action: (
+        <button
+          onClick={() => {
+            setViewApplicationId(item.applicationId);
+            setIsViewModalOpen(true);
+          }}
+          className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors cursor-pointer"
+          title="View Application"
+        >
+          <Eye size={18} weight="bold" />
+        </button>
+      ),
     };
   });
 
@@ -555,10 +594,10 @@ export default function ApplicationsPage() {
           </div>
         )}
 
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap gap-4 items-center justify-start w-full relative z-10">
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row md:flex-wrap gap-4 items-start md:items-center justify-start w-full relative z-10">
 
           {/* Search */}
-          <div className="relative w-full sm:w-auto flex-1 min-w-[200px] shrink-0">
+          <div className="relative w-full md:w-auto md:flex-1 min-w-0 md:min-w-[200px] shrink-0">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <MagnifyingGlass size={18} className="text-gray-400" />
             </div>
@@ -586,7 +625,7 @@ export default function ApplicationsPage() {
           )}
 
           {/* From Date */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-between sm:justify-start">
             <label className="text-sm font-medium text-gray-700">From:</label>
             <input
               type="date"
@@ -598,7 +637,7 @@ export default function ApplicationsPage() {
           </div>
 
           {/* To Date */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-between sm:justify-start">
             <label className="text-sm font-medium text-gray-700">To:</label>
             <input
               type="date"
@@ -610,9 +649,9 @@ export default function ApplicationsPage() {
           </div>
 
           {/* Status */}
-          <div className="flex items-center gap-2 shrink-0 z-10 relative">
-            <label className="text-sm font-medium text-gray-700">Payment Status:</label>
-            <div className="relative w-32 sm:w-36">
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 z-10 relative justify-between sm:justify-start">
+            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Payment Status:</label>
+            <div className="relative w-full sm:w-36">
               <Listbox value={statusFilter} onChange={setStatusFilter}>
                 {({ open }) => (
                   <>
@@ -669,9 +708,9 @@ export default function ApplicationsPage() {
           </div>
 
           {/* Admission Status */}
-          <div className="flex items-center gap-2 shrink-0 z-10 relative">
-            <label className="text-sm font-medium text-gray-700">Admission Status:</label>
-            <div className="relative w-32 sm:w-36">
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 z-10 relative justify-between sm:justify-start">
+            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Admission Status:</label>
+            <div className="relative w-full sm:w-36">
               <Listbox value={admissionStatusFilter} onChange={setAdmissionStatusFilter}>
                 {({ open }) => (
                   <>
@@ -727,9 +766,9 @@ export default function ApplicationsPage() {
 
           {/* Top Candidates Limits */}
           {activePrimaryTab === "Top" && (
-            <div className="flex items-center gap-2 border-l border-gray-300 pl-4 shrink-0">
+            <div className="flex items-center gap-2 md:border-l border-gray-300 md:pl-4 shrink-0 w-full md:w-auto justify-between md:justify-start">
               {activeLevelTab === "PG" ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full justify-between sm:justify-start">
                   <label className="text-sm font-medium text-gray-700">Max Rank:</label>
                   <input
                     type="text"
@@ -743,8 +782,8 @@ export default function ApplicationsPage() {
                   />
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Min Grade (%):</label>
+                <div className="flex items-center gap-2 w-full justify-between sm:justify-start">
+                  <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Min Grade (%):</label>
                   <input
                     type="text"
                     placeholder="e.g. 92"
@@ -768,7 +807,7 @@ export default function ApplicationsPage() {
           )}
 
           {/* Clear Filters (pushed to end) */}
-          <div className="ml-auto flex items-center gap-3">
+          <div className="md:ml-auto w-full md:w-auto flex flex-col sm:flex-row items-center gap-3 mt-2 md:mt-0">
             {activePrimaryTab === "Top" && (
               <button
                 disabled={selectedIds.size === 0}
@@ -790,7 +829,7 @@ export default function ApplicationsPage() {
                 setMinGradePercent("92");
               }}
               disabled={!hasActiveFilters}
-              className={`text-sm px-4 py-2 font-medium whitespace-nowrap shrink-0 border transition-colors rounded-lg ${hasActiveFilters
+              className={`text-sm px-4 py-2 w-full sm:w-auto font-medium whitespace-nowrap shrink-0 border transition-colors rounded-lg ${hasActiveFilters
                 ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100 cursor-pointer"
                 : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60"
                 }`}
@@ -863,6 +902,15 @@ export default function ApplicationsPage() {
           setSelectedIds(new Set());
           setRefreshTrigger(prev => prev + 1);
         }}
+      />
+
+      <ApplicationViewModal
+        isOpen={isViewModalOpen}
+        onClose={() => {
+          setIsViewModalOpen(false);
+          setViewApplicationId(null);
+        }}
+        applicationId={viewApplicationId}
       />
     </div>
   );
