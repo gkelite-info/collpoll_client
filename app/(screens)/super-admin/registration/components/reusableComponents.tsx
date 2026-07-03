@@ -11,6 +11,7 @@ type InputFieldProps = {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   disabled?: boolean;
   rightIcon?: React.ReactNode;
+  required?: boolean;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 };
 
@@ -25,11 +26,13 @@ export const InputField = ({
   className = "",
   rightIcon,
   uppercase,
+  required,
   onKeyDown
 }: InputFieldProps) => (
   <div className={`flex flex-col w-full ${className}`}>
     <label className="text-[#282828] font-semibold text-[15px] mb-1.5">
       {label}
+      {required && <span className="text-red-500 ml-1">*</span>}
     </label>
     <div className="relative flex items-center justify-center">
       <input

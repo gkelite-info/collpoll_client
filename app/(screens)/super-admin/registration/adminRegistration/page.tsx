@@ -120,6 +120,7 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
       .single();
 
     if (error || !data) {
+      setIsLoading(false);
       return { success: false };
     }
 
@@ -146,16 +147,19 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
       }
       if (!form.email.trim()) {
         toast.error("Email address is required");
+        setIsLoading(false);
         return;
       }
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(normalizedEmail)) {
         toast.error("Invalid email format");
+        setIsLoading(false);
         return
       }
 
       if (!form.mobile.trim()) {
         toast.error("Mobile number is required");
+        setIsLoading(false);
         return;
       }
 
@@ -167,15 +171,15 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
 
       if (!form.gender) {
         toast.error("Please select gender");
+        setIsLoading(false);
         return;
       }
 
       if (!form.password) {
         toast.error("Password is required");
+        setIsLoading(false);
         return;
       }
-
-
 
       const passwordRegex =
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -190,11 +194,13 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
 
       if (!form.confirmPassword) {
         toast.error("Confirm password is required");
+        setIsLoading(false);
         return;
       }
 
       if (form.password !== form.confirmPassword) {
         toast.error("Passwords do not match");
+        setIsLoading(false);
         return;
       }
 
@@ -275,6 +281,7 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
       <InputField
         label="Full Name"
         name="fullName"
+        required={true}
         placeholder='e.g., "Admin Mallareddy"'
         value={form.fullName}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -289,6 +296,7 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
         <InputField
           label="Email address"
           name="email"
+          required={true}
           placeholder='e.g., "admin.mallareddy@gmail.com"'
           value={form.email}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -299,7 +307,7 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
 
         <div className="flex flex-col">
           <label className="text-[#333] font-semibold text-[15px] mb-1.5">
-            Mobile
+            Mobile <span className="text-red-500">*</span>
           </label>
           <div className="flex gap-2">
             <input
@@ -331,7 +339,7 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col">
           <label className="text-[#333] font-semibold text-[15px] mb-1.5">
-            College
+            College <span className="text-red-500">*</span>
           </label>
 
           <select
@@ -351,7 +359,7 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
         </div>
         <div className="flex flex-col">
           <label className="text-[#333] font-semibold text-[15px] mb-1.5">
-            Role
+            Role <span className="text-red-500">*</span>
           </label>
           <div className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-gray-100 text-gray-600 cursor-not-allowed">
             College Admin
@@ -374,7 +382,7 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
 
       <div className="flex flex-col">
         <label className="text-[#333] font-semibold text-[15px] mb-2">
-          Gender
+          Gender <span className="text-red-500">*</span>
         </label>
 
         <div className="flex gap-6">
@@ -417,6 +425,7 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
             type={showPassword ? "text" : "password"}
             placeholder="Enter password..."
             value={form.password}
+            required={true}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               handleChange("password", e.target.value)
             }
@@ -447,6 +456,7 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
             type={showConfirmPassword ? "text" : "password"}
             placeholder="Re-enter password..."
             value={form.confirmPassword}
+            required={true}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               handleChange("confirmPassword", e.target.value)
             }

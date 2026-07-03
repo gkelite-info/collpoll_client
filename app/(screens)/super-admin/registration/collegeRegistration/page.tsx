@@ -125,6 +125,12 @@ export default function CollegeRegistration() {
       return;
     }
 
+    if (name === "collegeName") {
+      const formatted = value ? value.charAt(0).toUpperCase() + value.slice(1) : "";
+      setFormData({ ...formData, [name]: formatted });
+      return;
+    }
+
     setFormData({ ...formData, [name]: value });
   };
 
@@ -212,10 +218,21 @@ export default function CollegeRegistration() {
     if (!collegeName.trim()) return toast.error("College Name is required");
     if (!/^\S+@\S+\.\S+$/.test(email))
       return toast.error("Enter a valid email address");
+
     if (!countryCode.startsWith("+") || countryCode.length < 2)
       return toast.error("Invalid Country Code");
-    if (!/^\d{10}$/.test(phone))
+
+    if (phone.length === 0) {
+      return toast.error("Phone is required");
+    }
+    else if (!/^\d{10}$/.test(phone))
       return toast.error("Phone must be exactly 10 digits");
+
+    if (!selectedFile) return toast.error("Please upload a verification proof");
+
+    if (formData.educationType.length === 0)
+      return toast.error("Select at least one Education Type");
+
     if (!country.trim()) return toast.error("Please enter a Country");
     if (!state.trim()) return toast.error("Please enter a State");
     if (!formData.city.trim()) return toast.error("Please enter a City");
@@ -235,9 +252,7 @@ export default function CollegeRegistration() {
     }
 
     if (!formData.address.trim()) return toast.error("Address cannot be empty");
-    if (!selectedFile) return toast.error("Please upload a verification proof");
-    if (formData.educationType.length === 0)
-      return toast.error("Select at least one Education Type");
+
 
     const loadingToast = toast.loading("Saving college details...");
 
@@ -279,7 +294,7 @@ export default function CollegeRegistration() {
       }
     } catch (error: any) {
       toast.dismiss(loadingToast);
-      
+
       console.error("FULL ERROR:", error);
 
       let message = "Something went wrong. Please try again.";
@@ -326,10 +341,12 @@ export default function CollegeRegistration() {
           value={formData.collegeName}
           onChange={handleChange}
           placeholder="Enter the full official name of the institution."
+          required
         />
         <InputField
           label="College Code"
           name="collegeCode"
+          required={true}
           value={formData.collegeCode.toUpperCase()}
           onChange={handleChange}
           placeholder="eg:- MRIT"
@@ -344,10 +361,12 @@ export default function CollegeRegistration() {
           value={formData.email}
           onChange={handleChange}
           placeholder='e.g., "admin@stjosephs.edu"'
+          required
         />
         <div className="flex flex-col">
           <label className="text-[#333] font-semibold text-[15px] mb-1.5">
             Mobile
+            <span className="text-red-500 ml-1">*</span>
           </label>
           <div className="flex gap-2">
             <input
@@ -382,6 +401,7 @@ export default function CollegeRegistration() {
           <div className="flex flex-col gap-1.5">
             <label className="text-[#333] font-semibold text-[14px]">
               Proof
+              <span className="text-red-500 ml-1">*</span>
             </label>
 
             <div className="flex gap-3">
@@ -408,6 +428,7 @@ export default function CollegeRegistration() {
           <div className="flex flex-col gap-1.5">
             <label className="text-[#333] font-semibold text-[14px]">
               Education Type
+              <span className="text-red-500 ml-1">*</span>
             </label>
 
             <div className="relative" ref={dropdownRef}>
@@ -507,6 +528,7 @@ export default function CollegeRegistration() {
             value={formData.country}
             onChange={handleLocationChange}
             placeholder="Enter Country"
+            required
           />
           <InputField
             label="State"
@@ -514,6 +536,7 @@ export default function CollegeRegistration() {
             value={formData.state}
             onChange={handleLocationChange}
             placeholder="Enter State"
+            required
           />
         </div>
         <div className="grid grid-cols-2 gap-4 mb-4">
@@ -523,6 +546,7 @@ export default function CollegeRegistration() {
             value={formData.city}
             onChange={handleLocationChange}
             placeholder='e.g., "Hyderabad"'
+            required
           />
           <InputField
             label="Zip / Pincode"
@@ -530,6 +554,7 @@ export default function CollegeRegistration() {
             value={formData.zip}
             onChange={handleZipChange}
             placeholder='e.g., "500081"'
+            required
           />
         </div>
 
@@ -541,6 +566,7 @@ export default function CollegeRegistration() {
             onChange={handleAddressChange}
             placeholder='e.g., "Hyderabad"'
             className="flex-[3]"
+            required
           />
           <button
             onClick={handleSave}

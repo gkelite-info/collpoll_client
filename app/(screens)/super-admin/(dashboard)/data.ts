@@ -157,14 +157,14 @@ export const MOCK_REGISTRATIONS: UserRegistrationData[] = [
 ];
 
 export const MOCK_EVENTS: EventData[] = [
-  { title: "CollPoll System Update", date: "Jan 14, 3:00 PM" },
+  { title: "Tekton Campus System Update", date: "Jan 14, 3:00 PM" },
   { title: "2 Colleges Pending Verification", date: "Jan 27, 1:00 PM" },
   { title: "New College Onboarding – GRIET", date: "Jan 27, 2:00 PM" },
   { title: "Monthly Reports Due", date: "Jan 14, 3:00 PM" },
-  { title: "CollPoll Maintenance Window", date: "Jan 27, 2:00 PM" },
+  { title: "Tekton Campus Maintenance Window", date: "Jan 27, 2:00 PM" },
   { title: "Monthly Reports Due", date: "Jan 27, 3:00 PM" },
-  { title: "CollPoll Maintenance Window", date: "Jan 27, 4:00 PM" },
-  { title: "CollPoll Maintenance Window", date: "Jan 27, 4:00 PM" },
+  { title: "Tekton Campus Maintenance Window", date: "Jan 27, 4:00 PM" },
+  { title: "Tekton Campus Maintenance Window", date: "Jan 27, 4:00 PM" },
 ];
 
 // --- TYPES ---
