@@ -17,6 +17,11 @@ import {
   Wallet,
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import RecordNewTransactionModal from "../modal/RecordNewTransactionModal";
+import TransactionDetailsModal, {
+  type TransactionDetails,
+} from "../modal/TransactionDetailsModal";
 
 const transactionStats = [
   {
@@ -131,10 +136,15 @@ function CategoryBadge({
   );
 }
 
-function RowActions() {
+function RowActions({ onView }: { onView: () => void }) {
   return (
     <div className="flex items-center justify-center gap-4 text-[#282828]">
-      <button type="button" aria-label="View transaction" className="cursor-pointer">
+      <button
+        type="button"
+        aria-label="View transaction"
+        onClick={onView}
+        className="cursor-pointer"
+      >
         <Eye size={14} weight="bold" />
       </button>
       <button type="button" aria-label="Edit transaction" className="cursor-pointer">
@@ -178,6 +188,10 @@ function Pagination() {
 
 export default function TransactionsPage() {
   const router = useRouter();
+  const [isRecordTransactionOpen, setIsRecordTransactionOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<TransactionDetails | null>(null);
+
   const tableData = transactionRecords.map((record) => ({
     id: (
       <span className="text-[12px] font-bold text-[#147A3D]">{record.id}</span>
@@ -194,7 +208,7 @@ export default function TransactionsPage() {
     amount: (
       <span className="text-[12px] font-bold text-[#282828]">{record.amount}</span>
     ),
-    actions: <RowActions />,
+    actions: <RowActions onView={() => setSelectedTransaction(record)} />,
   }));
 
   return (
@@ -222,6 +236,7 @@ export default function TransactionsPage() {
 
           <button
             type="button"
+            onClick={() => setIsRecordTransactionOpen(true)}
             className="flex h-10 cursor-pointer items-center gap-2 rounded-full bg-[#43C17A] px-6 text-[12px] font-bold text-white"
           >
             <PlusCircle size={15} weight="bold" />
@@ -342,6 +357,19 @@ export default function TransactionsPage() {
           </div>
         </section>
       </div>
+      <RecordNewTransactionModal
+        isOpen={isRecordTransactionOpen}
+        onClose={() => setIsRecordTransactionOpen(false)}
+      />
+      <TransactionDetailsModal
+        transaction={selectedTransaction}
+        isOpen={selectedTransaction !== null}
+        onClose={() => setSelectedTransaction(null)}
+        onEdit={() => {
+          setSelectedTransaction(null);
+          setIsRecordTransactionOpen(true);
+        }}
+      />
     </main>
   );
 }
