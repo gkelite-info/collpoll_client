@@ -361,6 +361,7 @@ export default function ApplicationsPage() {
       key: "select",
       width: "50px"
     },
+    { title: "Application ID", key: "id" },
     { title: "Rank", key: "rank" },
     { title: "Applicant Name", key: "name" },
     { title: "Course", key: "course" },
@@ -466,6 +467,7 @@ export default function ApplicationsPage() {
           onChange={() => toggleSelection(id)}
         />
       ),
+      id: <span className="font-mono text-sm text-gray-600">{id}</span>,
       rank: <span className="font-bold text-gray-700">#{globalRank}</span>,
       name: <span className="font-semibold text-gray-800">{item.firstName} {item.lastName}</span>,
       course: item.course,
