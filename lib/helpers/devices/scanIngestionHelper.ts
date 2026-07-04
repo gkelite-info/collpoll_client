@@ -45,6 +45,7 @@ export interface LogUpdatePayload {
   attendanceRecordId?: number | null;
   gateScanLogId?: number | null;
   attendanceDailyId?: number | null;
+  logType?: "classattendance" | "gateentry" | "gateexit";
 }
 
 
@@ -216,6 +217,8 @@ export async function updateLogStatus(
   if (rest.gateScanLogId !== undefined) patch.gateScanLogId = rest.gateScanLogId;
   if (rest.attendanceDailyId !== undefined)
     patch.attendanceDailyId = rest.attendanceDailyId;
+  if (rest.logType !== undefined)
+    patch.logType = rest.logType;
 
   await adminSupabase
     .from("device_attendance_logs")

@@ -90,7 +90,12 @@ export const runAttendanceFinalization = async (targetDate?: string, specificCol
         });
       }
       
-      const effectiveShiftMins = totalShiftMins - totalBreakMins;
+      let effectiveShiftMins = totalShiftMins - totalBreakMins;
+      
+      // SaaS Robustness: Prevent division by zero if timings are misconfigured
+      if (effectiveShiftMins <= 0) {
+        effectiveShiftMins = 480; // Fallback to standard 8-hour shift
+      }
 
       // Fallback defaults if no policy set
       const halfDayMinPercent = policy?.halfDayMinPercent ?? 50;
@@ -113,11 +118,12 @@ export const runAttendanceFinalization = async (targetDate?: string, specificCol
       for (const staff of staffList) {
         const record = attendanceMap.get(staff.userId);
 
-        if (record && record.isManual) {
+        if (record && (record.isManual || ['Present', 'Late', 'Leave', 'HalfDay'].includes(record.status))) {
           skippedManual++;
           if (record.status === 'Present') presentCount++;
           else if (record.status === 'Absent') absentCount++;
           else if (record.status === 'HalfDay') halfDayCount++;
+          else if (record.status === 'Late') lateCount++;
           continue;
         }
 
@@ -162,10 +168,10 @@ export const runAttendanceFinalization = async (targetDate?: string, specificCol
         }
       }
 
-      // Execute inserts in batches of 100
+      // Execute inserts in batches of 100 (using upsert to prevent rare race conditions)
       for (let i = 0; i < inserts.length; i += 100) {
         const batch = inserts.slice(i, i + 100);
-        const { error } = await supabase.from("attendance_daily").insert(batch);
+        const { error } = await supabase.from("attendance_daily").upsert(batch, { onConflict: "userId,attendanceDate" });
         if (error) throw error;
       }
 
@@ -197,7 +203,7 @@ export const runAttendanceFinalization = async (targetDate?: string, specificCol
     } catch (err: any) {
       totalErrors++;
       errorCount++;
-      await logFinalization({ collegeId, dateStr, errorCount, triggeredBy: targetDate ? "manual" : "cron" });
+      await logFinalization({ collegeId, dateStr, errorCount, errorMessage: err.message, triggeredBy: targetDate ? "manual" : "cron" });
       results.push({ collegeId, status: "Error", message: err.message });
     }
   }
@@ -231,6 +237,7 @@ const logFinalization = async (params: {
   skippedHoliday?: boolean;
   skippedManualOverride?: number;
   errorCount?: number;
+  errorMessage?: string;
   triggeredBy: string;
 }) => {
   await supabase.from("staff_attendance_finalization_logs").insert({
@@ -244,6 +251,7 @@ const logFinalization = async (params: {
     skippedHoliday: params.skippedHoliday || false,
     skippedManualOverride: params.skippedManualOverride || 0,
     errorCount: params.errorCount || 0,
+    errorMessage: params.errorMessage || null,
     triggeredBy: params.triggeredBy,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
