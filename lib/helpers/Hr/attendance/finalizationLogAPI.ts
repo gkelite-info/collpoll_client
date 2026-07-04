@@ -10,6 +10,7 @@ export interface FinalizationLogData {
   lateCount: number;
   skippedHoliday: boolean;
   errorCount: number;
+  errorMessage?: string;
   triggeredBy: string;
   createdAt: string;
 }

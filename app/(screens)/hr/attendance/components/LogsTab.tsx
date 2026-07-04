@@ -45,6 +45,7 @@ export default function LogsTab() {
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(initialSearch);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [errorModalContent, setErrorModalContent] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -226,10 +227,13 @@ export default function LogsTab() {
     issues: (
       <div className="flex justify-center whitespace-nowrap">
         {log.errorCount > 0 ? (
-          <span className="inline-flex items-center gap-1 text-red-600 font-medium">
+          <button 
+            onClick={() => setErrorModalContent(log.errorMessage || "An unknown error occurred during finalization. Please check server logs.")}
+            className="inline-flex items-center gap-1 text-red-600 font-medium hover:text-red-700 hover:bg-red-50 px-2 py-0.5 rounded transition-colors cursor-pointer"
+          >
             <WarningCircle size={16} />
-            {log.errorCount} Errors
-          </span>
+            {log.errorCount} Error{log.errorCount > 1 ? "s" : ""}
+          </button>
         ) : (
           <span className="text-gray-400">-</span>
         )}
@@ -378,6 +382,33 @@ export default function LogsTab() {
         actionType="accept"
         isDeleting={triggering}
       />
+
+      {errorModalContent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-scale-in">
+            <div className="p-5 border-b border-gray-100 flex items-center gap-3 bg-red-50/50">
+              <div className="bg-red-100 p-2 rounded-full">
+                <WarningCircle size={24} className="text-red-600" weight="fill" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Execution Error</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-600 mb-2 font-medium">Error Details:</p>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm font-mono text-gray-800 whitespace-pre-wrap max-h-[300px] overflow-y-auto">
+                {errorModalContent}
+              </div>
+            </div>
+            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setErrorModalContent(null)}
+                className="px-5 py-2.5 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

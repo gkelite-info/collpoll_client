@@ -18,12 +18,12 @@ export const dynamic = "force-dynamic";
 
 const lastScanMap = new Map<string, number>();
 
-function isRateLimited(userId: number, collegeId: number): boolean {
+function isRateLimited(userId: number, collegeId: number, scanTimestamp: string): boolean {
   const key = `${userId}-${collegeId}`;
-  const now = Date.now();
+  const scanTime = new Date(scanTimestamp).getTime();
   const last = lastScanMap.get(key);
-  if (last && now - last < 20000) return true;
-  lastScanMap.set(key, now);
+  if (last && Math.abs(scanTime - last) < 20000) return true;
+  lastScanMap.set(key, scanTime);
 
   // Prevent unbounded growth (cap at 10k entries — ~600KB worst case)
   if (lastScanMap.size > 10_000) {
@@ -219,7 +219,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 8. Rate limit check & 20-second Debounce (SaaS Level Deduplication)
-    if (isRateLimited(userId, device.collegeId)) {
+    if (isRateLimited(userId, device.collegeId, scanTimestamp)) {
       if (deviceAttendanceLogId) {
         await updateLogStatus({
           deviceAttendanceLogId,
@@ -346,6 +346,7 @@ export async function POST(req: NextRequest) {
             attendanceDailyId:
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (gateResult.data as any)?.attendanceDailyId ?? null,
+            logType: gateResult.success && gateResult.data?.scanType === "Exit" ? "gateexit" : "gateentry",
           });
         }
 

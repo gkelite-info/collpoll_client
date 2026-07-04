@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import toast from "react-hot-toast";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { ClockCounterClockwise, CalendarDots, WarningCircle, CheckCircle, CaretDown, MagnifyingGlass } from "@phosphor-icons/react";
+import { ClockCounterClockwise, CalendarDots, WarningCircle, CheckCircle, CaretDown, MagnifyingGlass, ArrowsClockwise } from "@phosphor-icons/react";
 import TableComponent from "@/app/utils/table/table";
 import { Pagination } from "../pagination";
 import { getDeviceAttendanceLogs, DeviceAttendanceLogRow } from "@/lib/helpers/devices/deviceAttendanceLogAPI";
@@ -301,12 +301,23 @@ export default function LogsTab() {
               <MagnifyingGlass className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             </div>
 
-            <button
-              onClick={handleResetFilters}
-              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors cursor-pointer whitespace-nowrap"
-            >
-              Reset Filters
-            </button>
+            <div className="flex items-center justify-between md:justify-start gap-4 w-full md:w-auto">
+              <button
+                onClick={fetchLogs}
+                disabled={isLoading}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-emerald-600 transition-all cursor-pointer whitespace-nowrap shadow-sm ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <ArrowsClockwise size={16} className={isLoading ? "animate-spin" : ""} />
+                Refresh
+              </button>
+
+              <button
+                onClick={handleResetFilters}
+                className="text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors cursor-pointer whitespace-nowrap"
+              >
+                Reset Filters
+              </button>
+            </div>
           </div>
         </div>
 
