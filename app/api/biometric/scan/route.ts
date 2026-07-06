@@ -152,9 +152,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Dynamic IP update: if the device payload gives us an IP and it's different from what we have, update it!
-    if (body.ipAddress && device.deviceIp !== body.ipAddress && body.ipAddress !== "0.0.0.0") {
-      await updateDeviceIp(device.deviceId, body.ipAddress);
+    // Dynamic IP update & Heartbeat: if the device payload gives us an IP and it's different from what we have, update it!
+    // We ALSO update lastHeartbeat and isOnline: true here because a successful scan proves the device is online,
+    // which serves as a passive heartbeat for cloud deployments where active pinging of local IPs fails.
+    if (device.deviceId) {
+      const updatePayload: any = {
+        isOnline: true,
+        lastHeartbeat: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      if (body.ipAddress && device.deviceIp !== body.ipAddress && body.ipAddress !== "0.0.0.0") {
+        updatePayload.deviceIp = body.ipAddress;
+      }
+      
+      await adminSupabase
+        .from("biometric_devices")
+        .update(updatePayload)
+        .eq("deviceId", device.deviceId);
     }
 
     // 4. Lookup user
