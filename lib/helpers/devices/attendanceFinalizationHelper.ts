@@ -290,7 +290,15 @@ const logFinalization = async (params: {
   errorMessage?: string;
   triggeredBy: string;
 }) => {
-  await supabase.from("staff_attendance_finalization_logs").insert({
+  // 1. Check if a finalization log already exists for this college and date
+  const { data: existingLog } = await supabase
+    .from("staff_attendance_finalization_logs")
+    .select("logId")
+    .eq("collegeId", params.collegeId)
+    .eq("finalizationDate", params.dateStr)
+    .maybeSingle();
+
+  const payload = {
     collegeId: params.collegeId,
     finalizationDate: params.dateStr,
     totalStaff: params.totalStaff || 0,
@@ -303,7 +311,20 @@ const logFinalization = async (params: {
     errorCount: params.errorCount || 0,
     errorMessage: params.errorMessage || null,
     triggeredBy: params.triggeredBy,
-    createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
-  });
+  };
+
+  if (existingLog) {
+    // 2. Update existing tally (e.g., when HR triggers a manual recalculation)
+    await supabase
+      .from("staff_attendance_finalization_logs")
+      .update(payload)
+      .eq("logId", existingLog.logId);
+  } else {
+    // 3. Insert new tally
+    await supabase.from("staff_attendance_finalization_logs").insert({
+      ...payload,
+      createdAt: new Date().toISOString()
+    });
+  }
 };
