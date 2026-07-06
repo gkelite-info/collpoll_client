@@ -101,13 +101,27 @@ export async function GET(request: Request) {
       } else {
         // Normal active ping (works for public IPs, or if server is hosted locally)
         try {
-          const url = `http://${device.deviceIp}:${device.devicePort}/ISAPI/System/status`;
-          await fetch(url, { 
-            signal: AbortSignal.timeout(5000), 
-            method: "GET" 
+          // Attempt 1: Fast TCP Ping (Bulletproof for Hikvision which often drops unauthenticated HTTP sockets)
+          const tcpPing = () => new Promise<boolean>((resolve) => {
+            const net = require("net");
+            const socket = new net.Socket();
+            socket.setTimeout(1500); // 1.5s is plenty for local networks, prevents Vercel timeouts at scale
+            socket.on("connect", () => { socket.destroy(); resolve(true); });
+            socket.on("timeout", () => { socket.destroy(); resolve(false); });
+            socket.on("error", () => { socket.destroy(); resolve(false); });
+            socket.connect(device.devicePort, device.deviceIp);
           });
-          isActuallyOnline = true;
+          
+          isActuallyOnline = await tcpPing();
+          
+          // Attempt 2: HTTP Fallback if TCP module is restricted (e.g., specific cloud environments)
+          if (!isActuallyOnline) {
+            const url = `http://${device.deviceIp}:${device.devicePort}/`;
+            await fetch(url, { signal: AbortSignal.timeout(1500), method: "GET" });
+            isActuallyOnline = true;
+          }
         } catch (err: any) {
+          // If both TCP and HTTP fail, it's genuinely offline
           isActuallyOnline = false;
         }
       }
@@ -120,9 +134,17 @@ export async function GET(request: Request) {
       };
     };
 
-    const results = await Promise.all(devices.map(pingDevice));
+    // 3. Ping each device in controlled batches (SaaS Scalability: prevents Node.js socket exhaustion)
+    const PING_BATCH_SIZE = 150;
+    const results = [];
+    
+    for (let i = 0; i < devices.length; i += PING_BATCH_SIZE) {
+      const batch = devices.slice(i, i + PING_BATCH_SIZE);
+      const batchResults = await Promise.all(batch.map(pingDevice));
+      results.push(...batchResults);
+    }
 
-    // 3. Prepare database updates
+    // 4. Prepare database updates (using variables declared above)
     for (const res of results) {
       if (res.isNowOnline) {
         onlineCount++;
@@ -150,9 +172,10 @@ export async function GET(request: Request) {
       }
     }
 
-    // 4. Execute updates concurrently
-    if (updates.length > 0) {
-      await Promise.all(updates);
+    // 5. Execute DB updates in controlled batches to prevent Supabase connection pool exhaustion
+    const DB_BATCH_SIZE = 50;
+    for (let i = 0; i < updates.length; i += DB_BATCH_SIZE) {
+      await Promise.all(updates.slice(i, i + DB_BATCH_SIZE));
     }
 
     return NextResponse.json({
