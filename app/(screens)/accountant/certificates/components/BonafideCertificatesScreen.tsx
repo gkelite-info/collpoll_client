@@ -7,8 +7,23 @@ import {
   Plus,
   SealCheck,
 } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
+
+import { useUser } from "@/app/utils/context/UserContext";
+import {
+  fetchBonafideCertificates,
+  type BonafideCertificateRecord,
+  type BonafideSummary,
+} from "@/lib/helpers/accountant/bonafideCertificatesAPI";
 import { BonafideCreateForm } from "./BonafideCreateForm";
 import { BonafidePreviewScreen } from "./BonafidePreviewScreen";
 import {
@@ -20,84 +35,49 @@ import {
   type BonafideCertificate,
 } from "./BonafideCertificatesTable";
 
-const summaryCards: BonafideSummaryCardItem[] = [
-  {
-    label: "Total Bonafides",
-    value: "1,248",
-    helper: "All time",
-    icon: SealCheck,
-    tone: "blue",
-  },
-  {
-    label: "Issued This Month",
-    value: "132",
-    helper: "May 2025",
-    icon: CalendarDots,
-    tone: "green",
-  },
-  {
-    label: "Issued Today",
-    value: "14",
-    helper: "Today",
-    icon: CalendarDot,
-    tone: "orange",
-  },
-  {
-    label: "Pending / Draft",
-    value: "18",
-    helper: "Not yet generated",
-    icon: Hourglass,
-    tone: "amber",
-  },
-];
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("en-IN").format(value);
+}
 
-const bonafideCertificates: BonafideCertificate[] = [
-  {
-    bonafideNo: "BF/24-25/01248",
-    studentName: "Arun Kumar",
-    educationType: "B.Tech",
-    branch: "CSE",
-    purpose: "Education Loan",
-    dateIssued: "20 May 2025",
-    status: "Issued",
-  },
-  {
-    bonafideNo: "BF/24-25/01247",
-    studentName: "Sneha Reddy",
-    educationType: "B.Tech",
-    branch: "IT",
-    purpose: "Higher Studies",
-    dateIssued: "19 May 2025",
-    status: "Issued",
-  },
-  {
-    bonafideNo: "BF/24-25/01246",
-    studentName: "Vikram Singh",
-    educationType: "B.Tech",
-    branch: "ME",
-    purpose: "Visa",
-    dateIssued: "19 May 2025",
-    status: "Issued",
-  },
-  {
-    bonafideNo: "BF/24-25/01245",
-    studentName: "Pooja Nair",
-    educationType: "B.Tech",
-    branch: "ECE",
-    purpose: "Bank Account",
-    dateIssued: "18 May 2025",
-    status: "Draft",
-  },
-  {
-    bonafideNo: "BF/24-25/01244",
-    studentName: "Karthik Babu",
-    educationType: "B.Tech",
-    branch: "CSE",
-    purpose: "Scholarship",
-    dateIssued: "18 May 2025",
-    status: "Issued",
-  },
-];
+function getCurrentMonthLabel() {
+  return new Date().toLocaleDateString("en-IN", {
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function buildSummaryCards(summary: BonafideSummary): BonafideSummaryCardItem[] {
+  return [
+    {
+      label: "Total Bonafides",
+      value: formatNumber(summary.total),
+      helper: "All time",
+      icon: SealCheck,
+      tone: "blue",
+    },
+    {
+      label: "Issued This Month",
+      value: formatNumber(summary.issuedThisMonth),
+      helper: getCurrentMonthLabel(),
+      icon: CalendarDots,
+      tone: "green",
+    },
+    {
+      label: "Issued Today",
+      value: formatNumber(summary.issuedToday),
+      helper: "Today",
+      icon: CalendarDot,
+      tone: "orange",
+    },
+    {
+      label: "Pending / Draft",
+      value: formatNumber(summary.pendingDraft),
+      helper: "Not yet generated",
+      icon: Hourglass,
+      tone: "amber",
+    },
+  ];
+}
 
 export function BonafideCertificatesScreen({
   onSelectTransferCertificate,
@@ -105,12 +85,93 @@ export function BonafideCertificatesScreen({
   onSelectTransferCertificate: () => void;
 }) {
   const [activeView, setActiveView] = useState<"list" | "create" | "preview">("list");
+  const { collegeId, loading: userLoading } = useUser();
+  const [certificates, setCertificates] = useState<BonafideCertificateRecord[]>([]);
+  const [academicYears, setAcademicYears] = useState<string[]>([]);
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState("All");
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
+  const [status, setStatus] = useState<"All" | "Issued" | "Draft">("All");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [summary, setSummary] = useState<BonafideSummary>({
+    total: 0,
+    issuedThisMonth: 0,
+    issuedToday: 0,
+    pendingDraft: 0,
+  });
+  const [selectedCertificate, setSelectedCertificate] =
+    useState<BonafideCertificate | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (userLoading) return;
+
+    let isActive = true;
+
+    async function loadBonafides() {
+      if (!collegeId) {
+        setCertificates([]);
+        setSummary({
+          total: 0,
+          issuedThisMonth: 0,
+          issuedToday: 0,
+          pendingDraft: 0,
+        });
+        setAcademicYears([]);
+        setError("College context is unavailable for this account.");
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const result = await fetchBonafideCertificates({
+          collegeId,
+          academicYear: selectedAcademicYear,
+          search: debouncedSearch,
+          status,
+          dateIssued: selectedDate || undefined,
+        });
+
+        if (!isActive) return;
+
+        setCertificates(result.certificates);
+        setSummary(result.summary);
+        setAcademicYears(result.academicYears);
+      } catch (err) {
+        if (!isActive) return;
+
+        console.error("Failed to load bonafide certificates", err);
+        setError("Unable to load bonafide certificates right now.");
+      } finally {
+        if (isActive) setIsLoading(false);
+      }
+    }
+
+    const timeoutId = window.setTimeout(loadBonafides, 0);
+
+    return () => {
+      isActive = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [collegeId, refreshKey, selectedAcademicYear, debouncedSearch, status, selectedDate, userLoading]);
+
+  const summaryCards = useMemo(() => buildSummaryCards(summary), [summary]);
+  const filteredCertificates = certificates;
 
   if (activeView === "create") {
     return (
       <BonafideCreateForm
+        initialCertificate={selectedCertificate}
         onCancel={() => setActiveView("list")}
-        onSave={() => setActiveView("list")}
+        onSave={() => {
+          setRefreshKey((key) => key + 1);
+          setActiveView("list");
+        }}
       />
     );
   }
@@ -118,6 +179,7 @@ export function BonafideCertificatesScreen({
   if (activeView === "preview") {
     return (
       <BonafidePreviewScreen
+        certificate={selectedCertificate}
         onBackToEdit={() => setActiveView("create")}
         onCancel={() => setActiveView("list")}
       />
@@ -155,7 +217,10 @@ export function BonafideCertificatesScreen({
 
         <button
           type="button"
-          onClick={() => setActiveView("create")}
+          onClick={() => {
+            setSelectedCertificate(null);
+            setActiveView("create");
+          }}
           className="flex h-10 cursor-pointer items-center gap-2 rounded-md bg-[#43C17A] px-5 text-[13px] font-bold text-white shadow-[0_8px_18px_rgba(67,193,122,0.18)]"
         >
           <Plus size={16} weight="bold" />
@@ -165,14 +230,32 @@ export function BonafideCertificatesScreen({
 
       <section className="flex flex-wrap gap-5">
         {summaryCards.map((item) => (
-          <BonafideSummaryCard key={item.label} item={item} />
+          <BonafideSummaryCard key={item.label} item={item} isLoading={isLoading || userLoading} />
         ))}
       </section>
 
       <BonafideCertificatesTable
-        certificates={bonafideCertificates}
-        onViewCertificate={() => setActiveView("preview")}
-        onEditCertificate={() => setActiveView("create")}
+        academicYears={academicYears}
+        certificates={filteredCertificates as BonafideCertificate[]}
+        error={error}
+        isLoading={isLoading || userLoading}
+        search={search}
+        selectedAcademicYear={selectedAcademicYear}
+        status={status}
+        dateIssued={selectedDate}
+        onAcademicYearChange={setSelectedAcademicYear}
+        onSearchChange={setSearch}
+        onStatusChange={setStatus}
+        onDateChange={setSelectedDate}
+        onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
+        onViewCertificate={(certificate) => {
+          setSelectedCertificate(certificate);
+          setActiveView("preview");
+        }}
+        onEditCertificate={(certificate) => {
+          setSelectedCertificate(certificate);
+          setActiveView("create");
+        }}
       />
     </div>
   );
