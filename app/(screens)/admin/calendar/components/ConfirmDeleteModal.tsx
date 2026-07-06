@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle, Trash, X, XCircle } from "@phosphor-icons/react";
+import { CheckCircle, Trash, XCircle, WarningCircle } from "@phosphor-icons/react";
 
 interface Props {
   open: boolean;
@@ -24,7 +24,7 @@ export default function ConfirmDeleteModal({
   isDeleting = false,
   title = "Delete",
   confirmText = "Yes, Delete",
-  loadingText = "Deleting...",
+  loadingText = "Processing...",
   name = "event",
   itemName,
   customDescription,
@@ -32,86 +32,127 @@ export default function ConfirmDeleteModal({
 }: Props) {
   const isAccept = actionType === "accept";
   const isRemove = actionType === "remove";
-  const IconComponent = isAccept ? CheckCircle : isRemove ? Trash : XCircle;
-  const iconColor = isAccept ? "text-[#43C17A]" : isRemove ? "text-red-600" : "text-[#FF2A2A]";
-  const ringColor = isAccept ? "bg-green-50 ring-green-50/50" : isRemove ? "bg-gray-100 ring-gray-50" : "bg-red-50 ring-red-50/50";
-  const btnColor = isAccept
-    ? "bg-[#43C17A] hover:bg-green-600 shadow-green-200"
-    : isRemove
-      ? "bg-[#16284F] hover:bg-opacity-90 shadow-slate-200"
-      : "bg-[#FF2A2A] hover:bg-red-700 shadow-red-200";
+  const isReject = actionType === "reject";
+  const isDefault = !isAccept && !isRemove && !isReject;
 
+  const IconComponent = isAccept ? CheckCircle : isRemove ? Trash : isReject ? XCircle : WarningCircle;
+
+  // Modern Top-Banner Theming for ALL actions
+  const theme = isAccept
+    ? {
+        banner: "bg-gradient-to-br from-emerald-400 via-teal-500 to-emerald-600",
+        icon: "text-emerald-500",
+        btn: "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/25",
+        lightGlow: "bg-emerald-400/20",
+      }
+    : isRemove
+      ? {
+          banner: "bg-gradient-to-br from-rose-400 via-red-500 to-rose-600",
+          icon: "text-rose-500",
+          btn: "bg-rose-500 hover:bg-rose-600 shadow-rose-500/25",
+          lightGlow: "bg-rose-400/20",
+        }
+      : isReject
+        ? {
+            banner: "bg-gradient-to-br from-indigo-400 via-violet-500 to-indigo-600",
+            icon: "text-indigo-500",
+            btn: "bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/25",
+            lightGlow: "bg-indigo-400/20",
+          }
+        : {
+            // Default Neutral/Primary theme (Used for EOD Finalization, etc.)
+            banner: "bg-gradient-to-br from-emerald-400 via-emerald-500 to-green-600",
+            icon: "text-emerald-500",
+            btn: "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/25",
+            lightGlow: "bg-emerald-400/20",
+          };
 
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
+          {/* Subtle Blur Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
             onClick={!isDeleting ? onCancel : undefined}
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
           />
+
+          {/* Modal Container */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="relative bg-white rounded-2xl w-full max-w-[400px] p-8 shadow-2xl border border-gray-100"
+            transition={{ type: "spring", duration: 0.5, bounce: 0.4 }}
+            className="relative w-full max-w-[420px] bg-white rounded-3xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] overflow-hidden"
           >
+            {/* Top Banner Section */}
+            <div className={`relative h-32 ${theme.banner} flex items-center justify-center`}>
+              {/* Animated overlay pattern for futuristic feel */}
+              <motion.div 
+                animate={{ backgroundPosition: ["0% 0%", "100% 100%"] }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0 opacity-200 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] pointer-events-none" 
+              />
+              {/* Soft glow inside banner */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
-            {/* <button
-              onClick={onCancel}
-              disabled={isDeleting}
-              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50 cursor-pointer"
-            >
-              <X size={20} weight="bold" />
-            </button> */}
+              {/* Floating Icon positioned on the edge */}
+              <motion.div 
+                initial={{ scale: 0, rotate: -20 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", delay: 0.1, bounce: 0.6 }}
+                className="absolute -bottom-10 w-20 h-20 bg-white rounded-full p-1 shadow-xl flex items-center justify-center z-10"
+              >
+                <div className={`w-full h-full rounded-full flex items-center justify-center ${theme.lightGlow}`}>
+                  <IconComponent size={36} weight="fill" className={theme.icon} />
+                </div>
+              </motion.div>
+            </div>
 
-            <div className="flex flex-col items-center text-center mt-2">
-              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-5 ring-8 ring-red-50/50">
-                {/* <Trash size={32} weight="duotone" className="text-red-500" /> */}
-                <IconComponent size={32} weight="duotone" className={iconColor} />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                {title} {name}?
-              </h3>
+            {/* Content Section */}
+            <div className="pt-16 pb-8 px-8 flex flex-col items-center text-center bg-white relative z-0">
+              <motion.h3 
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                className="text-[22px] font-bold text-slate-900 tracking-tight mb-2"
+              >
+                {title} <span className="opacity-80">{name}?</span>
+              </motion.h3>
 
-              {/* <p className="text-[15px] text-gray-500 mb-8 leading-relaxed">
-                {customDescription ? (
-                  customDescription
-                ) : (
-                  <>
-                    Are you sure you want to {title.toLowerCase()} <span className="font-semibold text-gray-700">{name}</span>?
-                    {actionType === "remove" && "This action cannot be undone and will permanently remove the data."}
-                  </>
-                )}
-              </p> */}
-
-              <p className="text-[15px] text-gray-500 mb-8 leading-relaxed">
+              <motion.p 
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                className="text-[15px] text-slate-500 mb-8 leading-relaxed font-medium"
+              >
                 {customDescription ? (
                   customDescription
                 ) : actionType === "accept" ? (
                   <>
-                    Please confirm if you would like to approve the request for <span className="font-semibold text-gray-700">{name}</span>. They will be officially added to your club members list.
+                    Confirm approval for <span className="font-bold text-slate-800">{name}</span>. They will be officially added to your active members list.
                   </>
                 ) : actionType === "reject" ? (
                   <>
-                    Please confirm if you would like to decline the request for <span className="font-semibold text-gray-700">{name}</span>. This will clear them from your pending approvals.
+                    Confirm decline for <span className="font-bold text-slate-800">{name}</span>. This will clear them from your pending queue.
                   </>
                 ) : (
                   <>
-                    Are you sure you want to {title.toLowerCase()} <span className="font-semibold text-gray-700">{name}</span>?
-                    {actionType === "remove" && " This action cannot be undone and will permanently remove the data."}
+                    Are you sure you want to {title.toLowerCase()} <span className="font-bold text-slate-800">{name}</span>?
+                    {actionType === "remove" && " This action is permanent and cannot be undone."}
                   </>
                 )}
-              </p>
+              </motion.p>
 
-              <div className="flex gap-3 w-full">
+              {/* Action Buttons */}
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+                className="flex flex-col sm:flex-row gap-3 w-full"
+              >
                 <button
                   onClick={onCancel}
                   disabled={isDeleting}
-                  className="flex-1 px-4 py-3 text-gray-700 font-semibold bg-white border border-gray-300 hover:bg-gray-50 rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+                  className="flex-1 px-4 py-3 text-[15px] text-slate-700 font-semibold bg-slate-100 hover:bg-slate-200 rounded-2xl transition-all duration-200 disabled:opacity-50 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -119,30 +160,25 @@ export default function ConfirmDeleteModal({
                 <button
                   onClick={onConfirm}
                   disabled={isDeleting}
-                  // className="flex-1 flex disabled:cursor-not-allowed items-center justify-center px-4 py-3 font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all disabled:opacity-70 shadow-sm shadow-red-200 cursor-pointer"
-                  className={`flex-1 flex disabled:cursor-not-allowed items-center justify-center px-4 py-3 font-semibold text-white rounded-xl transition-all disabled:opacity-70 shadow-sm cursor-pointer ${btnColor}`}
-
+                  className={`flex-1 flex relative items-center justify-center px-4 py-3 text-[15px] font-bold text-white rounded-2xl transition-all duration-300 disabled:opacity-70 cursor-pointer shadow-lg overflow-hidden group ${theme.btn}`}
                 >
                   {isDeleting ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <div className="flex items-center space-x-2">
+                      <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      {/* Deleting... */}
-                      {loadingText}
-                    </>
+                      <span>{loadingText}</span>
+                    </div>
                   ) : (
-                    // "Yes, Delete"
-                    confirmText
+                    <span className="relative z-10 tracking-wide">{confirmText}</span>
                   )}
                 </button>
-              </div>
+              </motion.div>
             </div>
           </motion.div>
         </div>
       )}
     </AnimatePresence>
   );
-
 }

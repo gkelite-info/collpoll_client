@@ -83,45 +83,54 @@ export async function GET(request: Request) {
       let pingAttempted = true;
       
       const isPrivateIp = /^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(device.deviceIp);
-      const isCloudEnv = process.env.VERCEL || process.env.NEXT_PUBLIC_APP_URL?.includes("https://");
+      
+      // Determine if the server executing this code is running in the cloud vs locally
+      const host = request.headers.get("host") || "";
+      const isCloudEnv = !host.includes("localhost") && !host.includes("127.0.0.1");
 
-      // If we are in the cloud and the device is on a private network, active ping will ALWAYS fail.
-      // We skip the ping and rely on passive heartbeats (scans/syncs) to prevent false 'Offline' flags.
-      if (isCloudEnv && isPrivateIp) {
-        pingAttempted = false;
+      // 1. ALWAYS attempt the ping first. This supports advanced SaaS edge cases 
+      // like Site-to-Site VPNs where a cloud server *can* actually ping a private IP.
+      try {
+        const tcpPing = () => new Promise<boolean>((resolve) => {
+          const net = require("net");
+          const socket = new net.Socket();
+          socket.setTimeout(1500); // 1.5s timeout prevents Vercel lambda exhaustion
+          socket.on("connect", () => { socket.destroy(); resolve(true); });
+          socket.on("timeout", () => { socket.destroy(); resolve(false); });
+          socket.on("error", () => { socket.destroy(); resolve(false); });
+          socket.connect(device.devicePort, device.deviceIp);
+        });
         
-        // Passive fallback check: if it hasn't synced or scanned in 24 hours, assume offline.
-        // Otherwise, assume it's still online (so we don't break the UI status randomly).
-        if (device.lastHeartbeat) {
-          const hoursSinceLastHeartbeat = (new Date().getTime() - new Date(device.lastHeartbeat).getTime()) / (1000 * 60 * 60);
-          isActuallyOnline = hoursSinceLastHeartbeat < 24;
-        } else {
-          isActuallyOnline = device.isOnline; // Keep previous state if no heartbeat recorded
+        isActuallyOnline = await tcpPing();
+        
+        if (!isActuallyOnline) {
+          const url = `http://${device.deviceIp}:${device.devicePort}/`;
+          await fetch(url, { signal: AbortSignal.timeout(1500), method: "GET" }).catch(() => {});
+          // If fetch doesn't throw, it's technically reachable, but Hikvision might drop it
+          // We won't strictly rely on fetch success if TCP failed, but this handles weird proxies.
         }
-      } else {
-        // Normal active ping (works for public IPs, or if server is hosted locally)
-        try {
-          // Attempt 1: Fast TCP Ping (Bulletproof for Hikvision which often drops unauthenticated HTTP sockets)
-          const tcpPing = () => new Promise<boolean>((resolve) => {
-            const net = require("net");
-            const socket = new net.Socket();
-            socket.setTimeout(1500); // 1.5s is plenty for local networks, prevents Vercel timeouts at scale
-            socket.on("connect", () => { socket.destroy(); resolve(true); });
-            socket.on("timeout", () => { socket.destroy(); resolve(false); });
-            socket.on("error", () => { socket.destroy(); resolve(false); });
-            socket.connect(device.devicePort, device.deviceIp);
-          });
+      } catch (err: any) {
+        isActuallyOnline = false;
+      }
+
+      // 2. Intelligently Handle Ping Failures
+      if (!isActuallyOnline) {
+        // If a ping to a Private IP fails from a Cloud Server, the failure is AMBIGUOUS.
+        // It might be turned off, OR the cloud just can't route to it due to NAT.
+        const isAmbiguousFailure = isPrivateIp && isCloudEnv;
+
+        if (isAmbiguousFailure) {
+          pingAttempted = false; // We can't trust this ping attempt
           
-          isActuallyOnline = await tcpPing();
-          
-          // Attempt 2: HTTP Fallback if TCP module is restricted (e.g., specific cloud environments)
-          if (!isActuallyOnline) {
-            const url = `http://${device.deviceIp}:${device.devicePort}/`;
-            await fetch(url, { signal: AbortSignal.timeout(1500), method: "GET" });
-            isActuallyOnline = true;
+          // Passive fallback: rely on the last successful heartbeat push or local sync
+          if (device.lastHeartbeat) {
+            const hoursSinceLastHeartbeat = (new Date().getTime() - new Date(device.lastHeartbeat).getTime()) / (1000 * 60 * 60);
+            isActuallyOnline = hoursSinceLastHeartbeat < 24;
+          } else {
+            isActuallyOnline = device.isOnline; // Retain previous state
           }
-        } catch (err: any) {
-          // If both TCP and HTTP fail, it's genuinely offline
+        } else {
+          // If it's a Public IP, OR if the server is running on Localhost, a failed ping means it's truly offline.
           isActuallyOnline = false;
         }
       }
