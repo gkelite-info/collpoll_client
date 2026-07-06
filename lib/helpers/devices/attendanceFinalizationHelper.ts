@@ -97,9 +97,11 @@ export const runAttendanceFinalization = async (targetDate?: string, specificCol
         effectiveShiftMins = 480; // Fallback to standard 8-hour shift
       }
 
-      // Fallback defaults if no policy set
+      // Extract policy settings with fallback defaults
+      const graceMinutes = policy?.graceMinutes ?? 15;
       const halfDayMinPercent = policy?.halfDayMinPercent ?? 50;
       const fullDayMinPercent = policy?.fullDayMinPercent ?? 75;
+      const earlyOutThresholdMin = policy?.earlyOutThresholdMin ?? 30;
 
       const attendanceMap = new Map();
       if (attendanceRecords) {
@@ -118,7 +120,7 @@ export const runAttendanceFinalization = async (targetDate?: string, specificCol
       for (const staff of staffList) {
         const record = attendanceMap.get(staff.userId);
 
-        if (record && (record.isManual || ['Present', 'Late', 'Leave', 'HalfDay'].includes(record.status))) {
+        if (record && (record.isManual || record.status === 'Leave')) {
           skippedManual++;
           if (record.status === 'Present') presentCount++;
           else if (record.status === 'Absent') absentCount++;
@@ -127,22 +129,60 @@ export const runAttendanceFinalization = async (targetDate?: string, specificCol
           continue;
         }
 
-        const workedMins = record?.totalMinutes || 0;
+        let calculatedTotalMins = 0;
+        let lateBy = 0;
+        let earlyOut = 0;
         let newStatus = "Absent";
 
-        if (workedMins > 0) {
-          const workedPercent = (workedMins / effectiveShiftMins) * 100;
+        if (record?.checkIn && record?.checkOut) {
+          const checkInMins = timeToMinutes(record.checkIn);
+          const checkOutMins = timeToMinutes(record.checkOut);
+          
+          let rawMins = Math.max(0, checkOutMins - checkInMins);
+          
+          let deductedBreaks = 0;
+          if (timings.lunchFrom && timings.lunchTo) {
+            const lFrom = timeToMinutes(timings.lunchFrom);
+            const lTo = timeToMinutes(timings.lunchTo);
+            const overlapStart = Math.max(checkInMins, lFrom);
+            const overlapEnd = Math.min(checkOutMins, lTo);
+            if (overlapEnd > overlapStart) deductedBreaks += (overlapEnd - overlapStart);
+          }
+          if (breaks) {
+            breaks.forEach((b) => {
+              const bFrom = timeToMinutes(b.startTime);
+              const bTo = timeToMinutes(b.endTime);
+              const overlapStart = Math.max(checkInMins, bFrom);
+              const overlapEnd = Math.min(checkOutMins, bTo);
+              if (overlapEnd > overlapStart) deductedBreaks += (overlapEnd - overlapStart);
+            });
+          }
+          
+          calculatedTotalMins = Math.max(0, rawMins - deductedBreaks);
+          
+          if (checkInMins > shiftStart + graceMinutes) {
+            lateBy = checkInMins - shiftStart;
+          }
+          
+          if (checkOutMins < shiftEnd) {
+            earlyOut = shiftEnd - checkOutMins;
+          }
+
+          const workedPercent = (calculatedTotalMins / effectiveShiftMins) * 100;
+          
           if (workedPercent >= fullDayMinPercent) {
-            newStatus = record?.lateByMinutes > 0 ? "Late" : "Present";
+            newStatus = lateBy > 0 ? "Late" : "Present";
           } else if (workedPercent >= halfDayMinPercent) {
             newStatus = "HalfDay";
           } else {
-            newStatus = "LessThanHalfDay"; // Treated as LOP usually
+            newStatus = "Absent";
           }
+        } else if (record?.checkIn && !record?.checkOut) {
+          newStatus = "Absent";
         }
 
         if (newStatus === 'Present') presentCount++;
-        else if (newStatus === 'Absent' || newStatus === 'LessThanHalfDay') absentCount++;
+        else if (newStatus === 'Absent') absentCount++;
         else if (newStatus === 'HalfDay') halfDayCount++;
         else if (newStatus === 'Late') lateCount++;
 
@@ -152,19 +192,29 @@ export const runAttendanceFinalization = async (targetDate?: string, specificCol
             userId: staff.userId,
             attendanceDate: dateStr,
             status: newStatus,
-            totalMinutes: 0,
-            lateByMinutes: 0,
-            earlyOutMinutes: 0,
+            totalMinutes: calculatedTotalMins,
+            lateByMinutes: lateBy,
+            earlyOutMinutes: earlyOut,
             isManual: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           });
-        } else if (record.status !== newStatus) {
-          updates.push({
-            ...record,
-            status: newStatus,
-            updatedAt: new Date().toISOString()
-          });
+        } else {
+          if (
+            record.status !== newStatus ||
+            record.totalMinutes !== calculatedTotalMins ||
+            record.lateByMinutes !== lateBy ||
+            record.earlyOutMinutes !== earlyOut
+          ) {
+            updates.push({
+              ...record,
+              status: newStatus,
+              totalMinutes: calculatedTotalMins,
+              lateByMinutes: lateBy,
+              earlyOutMinutes: earlyOut,
+              updatedAt: new Date().toISOString()
+            });
+          }
         }
       }
 

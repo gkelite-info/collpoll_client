@@ -21,36 +21,27 @@ export async function GET(request: Request) {
     const now = new Date();
     const formatterHour = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", hour: "2-digit", hour12: false });
     const formatterMinute = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Kolkata", minute: "2-digit" });
+    const formatterDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" });
     
     let currentHourStr = formatterHour.format(now).replace(/^24$/, "00");
-    let currentMin = parseInt(formatterMinute.format(now), 10);
+    let currentMinStr = formatterMinute.format(now);
+    const todayDateStr = formatterDate.format(now);
 
-    // Round to nearest 15 minutes to accommodate slight trigger delays
-    if (currentMin >= 0 && currentMin < 8) currentMin = 0;
-    else if (currentMin >= 8 && currentMin < 23) currentMin = 15;
-    else if (currentMin >= 23 && currentMin < 38) currentMin = 30;
-    else if (currentMin >= 38 && currentMin < 53) currentMin = 45;
-    else { 
-        currentMin = 0; 
-        currentHourStr = String((parseInt(currentHourStr, 10) + 1) % 24).padStart(2, '0'); 
-    }
+    const currentTargetTime = `${currentHourStr.padStart(2, "0")}:${currentMinStr.padStart(2, "0")}`;
 
-    const currentTargetTime = `${currentHourStr.padStart(2, "0")}:${String(currentMin).padStart(2, "0")}`;
-
-    // 1. Fetch colleges scheduled for this hour
+    // 1. Fetch all active colleges with their cron timings
     const { data: scheduledColleges, error: fetchErr } = await supabase
       .from("college_cron_timings")
-      .select("collegeId")
+      .select("collegeId, finalizeTime")
       .eq("isActive", true)
-      .eq("is_deleted", false)
-      .eq("finalizeTime", currentTargetTime);
+      .eq("is_deleted", false);
 
     // If table doesn't exist yet (42P01), fallback to running for ALL colleges at 19:00 (7 PM) for backward compatibility
     let targetCollegeIds: number[] = [];
     
     if (fetchErr) {
         if (fetchErr.code === '42P01') {
-            if (currentTargetTime === "19:00") {
+            if (currentTargetTime >= "19:00") {
                 const { data: allColleges } = await supabase.from("colleges").select("collegeId");
                 targetCollegeIds = allColleges?.map(c => c.collegeId) || [];
             }
@@ -58,7 +49,24 @@ export async function GET(request: Request) {
             throw fetchErr;
         }
     } else if (scheduledColleges) {
-        targetCollegeIds = scheduledColleges.map(c => c.collegeId);
+        // Filter colleges where finalizeTime has passed or is current
+        const dueColleges = scheduledColleges.filter(c => c.finalizeTime <= currentTargetTime);
+        
+        if (dueColleges.length > 0) {
+            // Exclude colleges that already successfully ran today via cron
+            const { data: todayLogs } = await supabase
+                .from("staff_attendance_finalization_logs")
+                .select("collegeId")
+                .eq("finalizationDate", todayDateStr)
+                .eq("triggeredBy", "cron")
+                .eq("errorCount", 0);
+
+            const completedCollegeIds = new Set(todayLogs?.map(l => l.collegeId) || []);
+            
+            targetCollegeIds = dueColleges
+                .filter(c => !completedCollegeIds.has(c.collegeId))
+                .map(c => c.collegeId);
+        }
     }
 
     if (targetCollegeIds.length === 0) {

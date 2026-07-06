@@ -63,7 +63,7 @@ export async function GET(request: Request) {
     // 1. Fetch all active devices
     const { data: devices, error } = await supabase
       .from("biometric_devices")
-      .select("deviceId, deviceIp, devicePort, isOnline")
+      .select("deviceId, deviceIp, devicePort, isOnline, lastHeartbeat")
       .eq("isActive", true)
       .eq("is_deleted", false);
 
@@ -78,29 +78,45 @@ export async function GET(request: Request) {
     const updates = [];
 
     // 2. Ping each device concurrently
-    // We use a lightweight fetch (no digest auth) to optimize for scale.
-    // If the device's web server responds at all (even with 401/403), it is physically online.
     const pingDevice = async (device: any) => {
       let isActuallyOnline = false;
-      try {
-        // Use a standard ISAPI endpoint. Some firmware drops root '/' connections abruptly
-        const url = `http://${device.deviceIp}:${device.devicePort}/ISAPI/System/status`;
-        // Fast timeout: if it doesn't respond in 4 seconds on a local network, it's offline/power cut.
-        await fetch(url, { 
-          signal: AbortSignal.timeout(4000), 
-          method: "GET" 
-        });
-        // Any HTTP response (even 401 Unauthorized) means the web server is alive
-        isActuallyOnline = true;
-      } catch (err: any) {
-        // Network Error or AbortError (Timeout) -> Offline
-        isActuallyOnline = false;
+      let pingAttempted = true;
+      
+      const isPrivateIp = /^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(device.deviceIp);
+      const isCloudEnv = process.env.VERCEL || process.env.NEXT_PUBLIC_APP_URL?.includes("https://");
+
+      // If we are in the cloud and the device is on a private network, active ping will ALWAYS fail.
+      // We skip the ping and rely on passive heartbeats (scans/syncs) to prevent false 'Offline' flags.
+      if (isCloudEnv && isPrivateIp) {
+        pingAttempted = false;
+        
+        // Passive fallback check: if it hasn't synced or scanned in 24 hours, assume offline.
+        // Otherwise, assume it's still online (so we don't break the UI status randomly).
+        if (device.lastHeartbeat) {
+          const hoursSinceLastHeartbeat = (new Date().getTime() - new Date(device.lastHeartbeat).getTime()) / (1000 * 60 * 60);
+          isActuallyOnline = hoursSinceLastHeartbeat < 24;
+        } else {
+          isActuallyOnline = device.isOnline; // Keep previous state if no heartbeat recorded
+        }
+      } else {
+        // Normal active ping (works for public IPs, or if server is hosted locally)
+        try {
+          const url = `http://${device.deviceIp}:${device.devicePort}/ISAPI/System/status`;
+          await fetch(url, { 
+            signal: AbortSignal.timeout(5000), 
+            method: "GET" 
+          });
+          isActuallyOnline = true;
+        } catch (err: any) {
+          isActuallyOnline = false;
+        }
       }
 
       return {
         deviceId: device.deviceId,
         wasOnline: device.isOnline,
-        isNowOnline: isActuallyOnline
+        isNowOnline: isActuallyOnline,
+        pingAttempted
       };
     };
 
@@ -115,15 +131,18 @@ export async function GET(request: Request) {
       }
 
       // To minimize DB load, we only update if the online status CHANGED
-      // OR if it IS currently online (so we can bump the lastHeartbeat timestamp).
+      // OR if it IS currently online AND we actively pinged it (so we can bump the lastHeartbeat timestamp).
       // We don't need to constantly update offline devices if their status hasn't changed.
-      if (res.wasOnline !== res.isNowOnline || res.isNowOnline) {
+      const statusChanged = res.wasOnline !== res.isNowOnline;
+      const shouldBumpHeartbeat = res.isNowOnline && res.pingAttempted;
+      
+      if (statusChanged || shouldBumpHeartbeat) {
         updates.push(
           supabase
             .from("biometric_devices")
             .update({
               isOnline: res.isNowOnline,
-              ...(res.isNowOnline ? { lastHeartbeat: now } : {}),
+              ...(shouldBumpHeartbeat ? { lastHeartbeat: now } : {}),
               updatedAt: now,
             })
             .eq("deviceId", res.deviceId)
