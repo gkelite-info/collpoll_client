@@ -17,6 +17,7 @@ import {
 } from "@/lib/helpers/admin/academicSetup/subjectImageStorageAPI";
 import BiometricStructure from "./components/BiometricStructure";
 import CollegeTimingsStructure from "./components/collegetimings/CollegeTimingsStructure";
+import CollegeMediaStructure from "./components/collegemedia/CollegeMediaStructure";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Suspense } from "react";
 
@@ -27,7 +28,8 @@ type Tab =
   | "add-subject"
   | "attendance-eligibility"
   | "biometric-structure"
-  | "college-timings";
+  | "college-timings"
+  | "college-media";
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "Something went wrong";
@@ -83,24 +85,29 @@ function AcademicSetupContent() {
   const pageHeader =
     activeTab === "attendance-eligibility"
       ? {
-          title: "Attendance Eligibility Criteria",
-          description:
-            "Configure minimum overall attendance criteria for students.",
-        }
+        title: "Attendance Eligibility Criteria",
+        description:
+          "Configure minimum overall attendance criteria for students.",
+      }
       : activeTab === "biometric-structure"
-      ? {
+        ? {
           title: "Biometric Structure",
           description: "Manage rooms and biometric devices in your institution.",
         }
-      : activeTab === "college-timings"
-      ? {
-          title: "College Timings Structure",
-          description: "Configure college operational hours and shifts.",
-        }
-      : {
-          title: "Academic Structure",
-          description: "Add new academic structures for your institution.",
-        };
+        : activeTab === "college-timings"
+          ? {
+            title: "College Timings Structure",
+            description: "Configure college operational hours and shifts.",
+          }
+          : activeTab === "college-media"
+            ? {
+              title: "College Media",
+              description: "Upload and manage college logo and banner.",
+            }
+            : {
+              title: "Academic Structure",
+              description: "Add new academic structures for your institution.",
+            };
 
   const handleEdit = (row: AcademicViewData) => {
     const sanitizedData: AcademicData = {
@@ -247,53 +254,61 @@ function AcademicSetupContent() {
           </div>
         )}
 
-        {/* Structure Selection Header */}
         <div className="mb-6 border-b border-gray-100 pb-1">
           <div className="flex flex-row items-center gap-2 sm:gap-3 text-base sm:text-lg md:text-xl font-bold w-full overflow-x-auto custom-scrollbar whitespace-nowrap pb-3">
-          <button
-            onClick={() => {
-              setActiveTab("view");
-              setEditSubject(null);
-              setEditData(null);
-            }}
-            className={`transition-all duration-200 cursor-pointer flex-shrink-0 ${
-              activeTab !== "biometric-structure" && activeTab !== "college-timings"
+            <button
+              onClick={() => {
+                setActiveTab("view");
+                setEditSubject(null);
+                setEditData(null);
+              }}
+              className={`transition-all duration-200 cursor-pointer flex-shrink-0 ${activeTab !== "biometric-structure" && activeTab !== "college-timings" && activeTab !== "college-media"
                 ? "text-[#43C17A]"
                 : "text-[#282828] hover:text-[#16284F]"
-            }`}
-          >
-            Academic Structure
-          </button>
-          <span className="text-gray-300 font-light text-xl md:text-2xl flex-shrink-0">/</span>
-          <button
-            onClick={() => {
-              setActiveTab("biometric-structure");
-            }}
-            className={`transition-all duration-200 cursor-pointer flex-shrink-0 ${
-              activeTab === "biometric-structure"
+                }`}
+            >
+              Academic Structure
+            </button>
+            <span className="text-gray-300 font-light text-xl md:text-2xl flex-shrink-0">/</span>
+            <button
+              onClick={() => {
+                setActiveTab("biometric-structure");
+              }}
+              className={`transition-all duration-200 cursor-pointer flex-shrink-0 ${activeTab === "biometric-structure"
                 ? "text-[#43C17A]"
                 : "text-[#282828] hover:text-[#16284F]"
-            }`}
-          >
-            Biometric Structure
-          </button>
-          <span className="text-gray-300 font-light text-xl md:text-2xl flex-shrink-0">/</span>
-          <button
-            onClick={() => {
-              setActiveTab("college-timings");
-            }}
-            className={`transition-all duration-200 cursor-pointer flex-shrink-0 ${
-              activeTab === "college-timings"
+                }`}
+            >
+              Biometric Structure
+            </button>
+            <span className="text-gray-300 font-light text-xl md:text-2xl flex-shrink-0">/</span>
+            <button
+              onClick={() => {
+                setActiveTab("college-timings");
+              }}
+              className={`transition-all duration-200 cursor-pointer flex-shrink-0 ${activeTab === "college-timings"
                 ? "text-[#43C17A]"
                 : "text-[#282828] hover:text-[#16284F]"
-            }`}
-          >
-            College Timings Structure
-          </button>
+                }`}
+            >
+              College Timings Structure
+            </button>
+            <span className="text-gray-300 font-light text-xl md:text-2xl flex-shrink-0">/</span>
+            <button
+              onClick={() => {
+                setActiveTab("college-media");
+              }}
+              className={`transition-all duration-200 cursor-pointer flex-shrink-0 ${activeTab === "college-media"
+                ? "text-[#43C17A]"
+                : "text-[#282828] hover:text-[#16284F]"
+                }`}
+            >
+              College Media
+            </button>
           </div>
         </div>
 
-        {activeTab !== "biometric-structure" && activeTab !== "college-timings" ? (
+        {activeTab !== "biometric-structure" && activeTab !== "college-timings" && activeTab !== "college-media" ? (
           <>
             {pageHeader.title !== "Academic Structure" && (
               <h1 className="text-xl font-bold text-[#282828] mb-1">
@@ -318,11 +333,10 @@ function AcademicSetupContent() {
                         setEditData(null);
                       }
                     }}
-                    className={`relative cursor-pointer px-6 py-2 text-sm font-semibold z-10 ${
-                      activeTab === tab.id
-                        ? "text-white"
-                        : "text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={`relative cursor-pointer px-6 py-2 text-sm font-semibold z-10 ${activeTab === tab.id
+                      ? "text-white"
+                      : "text-gray-500 hover:text-gray-700"
+                      }`}
                   >
                     {tab.label}
                     {activeTab === tab.id && (
@@ -362,13 +376,17 @@ function AcademicSetupContent() {
           />
         )}
         {activeTab === "attendance-eligibility" && <AttendanceEligibility />}
-        
+
         {activeTab === "biometric-structure" && (
           <BiometricStructure />
         )}
-        
+
         {activeTab === "college-timings" && (
           <CollegeTimingsStructure />
+        )}
+
+        {activeTab === "college-media" && (
+          <CollegeMediaStructure />
         )}
       </div>
     </section>

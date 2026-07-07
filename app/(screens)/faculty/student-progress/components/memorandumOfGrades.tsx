@@ -5,11 +5,6 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import {
   ArrowLeft,
-  NotePencil,
-  FloppyDisk,
-  PaperPlaneRight,
-  DownloadSimple,
-  FunnelSimple,
   SpinnerGap,
 } from "@phosphor-icons/react";
 import ResultsDropdown from "./resultsDropdown";
@@ -41,6 +36,9 @@ export default function MemorandumOfGrades() {
   const semester = searchParams.get("semester") || "I Semester";
   const subjectParam = searchParams.get("subject") || "N/A";
   const [collegeName, setCollegeName] = useState("St. Xavier's College of Excellence");
+  const [bannerUrl, setBannerUrl] = useState("/college_banner.png");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState(false);
 
   const collegeAbbreviation = useMemo(() => {
     if (!collegeName) return "CO";
@@ -64,7 +62,8 @@ export default function MemorandumOfGrades() {
     collegeEducationId,
     collegeBranchId,
     college_branch,
-    sections: facultySections
+    sections: facultySections,
+    loading: facultyLoading
   } = useFaculty();
 
   const branchParam = searchParams.get("branch") || college_branch || "N/A";
@@ -90,6 +89,8 @@ export default function MemorandumOfGrades() {
   }, [facultySections]);
 
   useEffect(() => {
+    if (facultyLoading) return; // Wait until faculty context is loaded
+
     if (!collegeId || !collegeEducationId) {
       setLoading(false);
       return;
@@ -107,6 +108,17 @@ export default function MemorandumOfGrades() {
             .maybeSingle();
           if (colData?.collegeName) {
             setCollegeName(colData.collegeName);
+          }
+
+          const { data: mediaData } = await supabase
+            .from("college_media")
+            .select("bannerUrl, logoUrl")
+            .eq("collegeId", collegeId)
+            .is("deletedAt", null)
+            .maybeSingle();
+          if (mediaData) {
+            if (mediaData.bannerUrl) setBannerUrl(mediaData.bannerUrl);
+            if (mediaData.logoUrl) setLogoUrl(mediaData.logoUrl);
           }
         }
         const sectionId = searchParams.get("sectionId");
@@ -263,7 +275,7 @@ export default function MemorandumOfGrades() {
     }
 
     loadData();
-  }, [collegeId, collegeEducationId, collegeBranchId, searchParams, facultySections]);
+  }, [facultyLoading, collegeId, collegeEducationId, collegeBranchId, searchParams, facultySections]);
 
   const filteredGrades = useMemo(() => {
     let data = gradesList;
@@ -355,29 +367,55 @@ export default function MemorandumOfGrades() {
 
   return (
     <div className="w-full space-y-6">
-      <div className="relative w-full h-56 rounded-2xl overflow-hidden shadow-sm">
-        <Image
-          src="/college_banner.png"
-          alt="College Campus Banner"
-          fill
-          className="object-cover"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent flex items-center p-6 md:p-8">
-          <div className="flex items-center gap-4">
-            <div className="border-[4px] border-[#43C17A] rounded-[18px] bg-black/30 w-16 h-16 flex items-center justify-center text-white font-extrabold text-xl shrink-0">
-              {collegeAbbreviation}
-            </div>
-            <div className="text-white">
-              <h2 className="text-lg md:text-2xl font-extrabold tracking-wide leading-tight">
-                {collegeName}
-              </h2>
-              <p className="text-xs md:text-sm text-green-300 font-medium mt-1">
-                Faculty of {subjectParam} • Branch of {branchParam}
-              </p>
+      <div className="relative w-full h-56 rounded-2xl overflow-hidden shadow-sm bg-gray-100">
+        {loading ? (
+          <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center p-6 md:p-8 z-20">
+            <div className="flex items-center gap-4 w-full">
+              <div className="w-16 h-16 rounded-[18px] bg-gray-300 shrink-0" />
+              <div className="space-y-3 flex-1 max-w-md">
+                <div className="h-6 w-3/4 bg-gray-300 rounded" />
+                <div className="h-4 w-1/2 bg-gray-300 rounded" />
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <>
+            <Image
+              src={bannerUrl}
+              alt="College Campus Banner"
+              fill
+              className="object-cover"
+              priority
+              unoptimized
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent flex items-center p-6 md:p-8">
+              <div className="flex items-center gap-4">
+                <div className="border-[4px] border-[#43C17A] rounded-[18px] bg-black/30 w-16 h-16 flex items-center justify-center text-white font-extrabold text-xl shrink-0 overflow-hidden relative">
+                  {logoUrl && !logoError ? (
+                    <Image
+                      src={logoUrl}
+                      alt="College Logo"
+                      fill
+                      className="object-contain p-0.5"
+                      onError={() => setLogoError(true)}
+                      unoptimized
+                    />
+                  ) : (
+                    collegeAbbreviation
+                  )}
+                </div>
+                <div className="text-white">
+                  <h2 className="text-lg md:text-2xl font-extrabold tracking-wide leading-tight">
+                    {collegeName}
+                  </h2>
+                  <p className="text-xs md:text-sm text-green-300 font-medium mt-1">
+                    Faculty of {subjectParam} • Branch of {branchParam}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

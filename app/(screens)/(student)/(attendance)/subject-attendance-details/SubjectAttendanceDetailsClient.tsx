@@ -268,7 +268,7 @@ export default function SubjectAttendanceDetailsClient() {
             );
           })}
         </div>
-        <div className="hidden md:block md:w-[280px] lg:w-[320px] xl:w-[360px] shrink-0">
+        <div className="hidden md:block md:w-[280px] lg:w-[320px] xl:w-[360px] shrink-0 pb-2">
           <WorkWeekCalendar style="mt-0 w-full" />
         </div>
       </div>
@@ -347,11 +347,10 @@ export default function SubjectAttendanceDetailsClient() {
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className={`w-10 h-10 flex items-center justify-center rounded-lg border
-      ${
-        currentPage === 1
-          ? "border-gray-200 text-gray-300"
-          : "border-gray-300 text-gray-600 hover:bg-gray-100"
-      }`}
+      ${currentPage === 1
+                    ? "border-gray-200 text-gray-300"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                  }`}
               >
                 ‹
               </button>
@@ -361,11 +360,10 @@ export default function SubjectAttendanceDetailsClient() {
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
                   className={`w-10 h-10 rounded-lg font-semibold max-md:w-8 max-md:h-8
-        ${
-          currentPage === i + 1
-            ? "bg-[#16284F] text-white"
-            : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-        }`}
+        ${currentPage === i + 1
+                      ? "bg-[#16284F] text-white"
+                      : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                    }`}
                 >
                   {i + 1}
                 </button>
@@ -377,11 +375,10 @@ export default function SubjectAttendanceDetailsClient() {
                 }
                 disabled={currentPage === totalPages}
                 className={`w-10 h-10 flex items-center justify-center rounded-lg border
-      ${
-        currentPage === totalPages
-          ? "border-gray-200 text-gray-300"
-          : "border-gray-300 text-gray-600 hover:bg-gray-100"
-      }`}
+      ${currentPage === totalPages
+                    ? "border-gray-200 text-gray-300"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                  }`}
               >
                 ›
               </button>

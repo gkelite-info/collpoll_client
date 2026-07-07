@@ -272,7 +272,7 @@ import TableComponent from "@/app/utils/table/table";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { useEffect, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
-import { getStudentDashboardData } from "@/lib/helpers/student/attendance/subjectWiseStats";
+import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studentAttendanceActions";
 import { useTranslations } from "next-intl";
 import AiAttendanceNotificationBanner from "@/app/utils/AiAttendanceNotificationBanner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -343,7 +343,7 @@ export default function SubjectAttendance() {
       id: 1,
       icon: <Chalkboard size={32} />,
       value: dashboardData
-        ? `${dashboardData.cards.attended}/${dashboardData.cards.totalClasses}`
+        ? `${dashboardData.todayStats.attended}/${dashboardData.todayStats.total}`
         : "0/0",
       label: t("Today Total Classes"),
       style: "bg-[#FFEDDA] w-44 max-md:bg-[#FFEDDA]",
