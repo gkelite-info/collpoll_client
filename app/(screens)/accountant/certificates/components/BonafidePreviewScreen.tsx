@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 import type { BonafideCertificate } from "./BonafideCertificatesTable";
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 const fallbackCertificate: BonafideCertificate = {
   bonafideNo: "BON/24-25/0001",
@@ -49,53 +51,55 @@ function DetailsCard({
 
 export function BonafideCertificateLayout({ details }: { details: BonafideCertificate }) {
   return (
-    <div className="min-h-[530px] border-[3px] border-[#242424] p-8">
-      <h2 className="text-center text-[28px] font-bold tracking-[0.04em]">
+    <div className="min-h-[530px] border-[3px] border-[#242424] p-8 pb-12 relative">
+      <div className="text-right text-[14px] font-bold mb-6">
+        Date: <span className="inline-block min-w-[100px] border-b border-dashed border-[#242424] px-2 text-center font-normal italic">{details.dateIssued}</span>
+      </div>
+
+      <h2 className="text-center text-[24px] font-bold tracking-[0.04em] underline underline-offset-4 decoration-2">
         BONAFIDE CERTIFICATE
       </h2>
 
-      <div className="mt-12 text-[13px] leading-8">
-        <p>
-          This is to certify that Mr./Miss.{" "}
-          <span className="inline-block min-w-[150px] border-b border-[#242424] px-3 text-center">
+      <div className="mt-12 text-[15px] leading-[2.5rem]">
+        <p className="text-justify">
+          This is to certify that Mr. /Ms.{" "}
+          <span className="inline-block min-w-[250px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]">
             {details.studentName}
           </span>{" "}
-          S/o or D/o of Mr./Mrs.{" "}
-          <span className="inline-block min-w-[150px] border-b border-[#242424] px-3 text-center">
-            {details.fatherName ?? "-"}
+          Son/Daughter of{" "}
+          <span className="inline-block min-w-[250px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]">
+            {details.fatherName ?? ""}
           </span>{" "}
-          bearing roll no{" "}
-          <span className="inline-block min-w-[120px] border-b border-[#242424] px-3 text-center">
-            {details.rollNo ?? "-"}
+          Bearing Roll No{" "}
+          <span className="inline-block min-w-[150px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]">
+            {details.rollNo ?? ""}
           </span>{" "}
-          and admission no{" "}
-          <span className="inline-block min-w-[120px] border-b border-[#242424] px-3 text-center">
-            {details.admissionNo ?? "-"}
+          is a Bonafide student of this institution and is studying{" "}
+          <span className="inline-block min-w-[80px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]">
+            {details.courseYear ?? ""}
           </span>{" "}
-          is a bonafide student of this school/college/institution and studied in Class{" "}
-          <span className="inline-block min-w-[110px] border-b border-[#242424] px-3 text-center">
-            {details.educationType}
-          </span>{" "}
-          studying{" "}
-          <span className="inline-block min-w-[110px] border-b border-[#242424] px-3 text-center">
+          Year,{" "}
+          <span className="inline-block min-w-[80px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]"></span>{" "}
+          Sem. {details.educationType} Branch,{" "}
+          <span className="inline-block min-w-[100px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]">
             {details.branch}
           </span>{" "}
-          course for the academic year{" "}
-          <span className="inline-block min-w-[110px] border-b border-[#242424] px-3 text-center">
-            {details.academicYear ?? "-"}
+          during the Academic Year <span className="font-bold">{details.academicYear ?? ""}</span> as per our records his/her Date of Birth is{" "}
+          <span className="inline-block min-w-[120px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]"></span>
+          . His/her Conduct and Character is{" "}
+          <span className="inline-block min-w-[150px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]">
+            {details.conduct ?? ""}
           </span>
           .
         </p>
+
+        <p className="mt-8 text-center text-[15px]">
+          This Certificate is issued for the purpose of <span className="font-bold uppercase">({details.purpose})</span> only.
+        </p>
       </div>
 
-      <div className="mt-12 text-[13px] leading-7">
-        <p>Dated: {details.dateIssued}</p>
-      </div>
-
-      <div className="mt-6 text-right text-[12px] font-bold">
-        <p>Signature Head of the</p>
-        <p>Institution/School</p>
-        <p className="mt-1 text-[10px] font-medium">(with Stamp)</p>
+      <div className="mt-20 text-right text-[14px] font-bold">
+        <p>PRINCIPAL</p>
       </div>
     </div>
   );
@@ -113,11 +117,6 @@ export async function downloadBonafidePdf(details: BonafideCertificate) {
   });
 
   try {
-    const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-      import("html2canvas"),
-      import("jspdf"),
-    ]);
-
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     const canvas = await html2canvas(container, {
@@ -183,10 +182,6 @@ export function BonafidePreviewScreen({
     setIsDownloading(true);
 
     try {
-      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-        import("html2canvas"),
-        import("jspdf"),
-      ]);
       const canvas = await html2canvas(certificateRef.current, {
         backgroundColor: "#ffffff",
         scale: 2,
