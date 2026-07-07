@@ -11,6 +11,7 @@ import html2canvas from "html2canvas-pro";
 import { supabase } from "@/lib/supabaseClient";
 import { getStudentProgressData } from "@/lib/helpers/student/studentProgress/getStudentProgressData";
 import toast from "react-hot-toast";
+import Image from "next/image";
 
 type MidExamsProps = {
   onBack: () => void;
@@ -73,6 +74,10 @@ export default function MidExams({ onBack }: MidExamsProps) {
 
   const [scale, setScale] = useState(1);
   const [collegeName, setCollegeName] = useState("St. Xavier's College of Excellence");
+  const [bannerUrl, setBannerUrl] = useState("/college_banner.png");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState(false);
+  const [mediaLoading, setMediaLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -101,16 +106,21 @@ export default function MidExams({ onBack }: MidExamsProps) {
 
   useEffect(() => {
     if (!collegeId) return;
-    supabase
-      .from("colleges")
-      .select("collegeName")
-      .eq("collegeId", collegeId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.collegeName) {
-          setCollegeName(data.collegeName);
-        }
-      });
+    setMediaLoading(true);
+
+    Promise.all([
+      supabase.from("colleges").select("collegeName").eq("collegeId", collegeId).maybeSingle(),
+      supabase.from("college_media").select("bannerUrl, logoUrl").eq("collegeId", collegeId).is("deletedAt", null).maybeSingle()
+    ]).then(([collegeRes, mediaRes]) => {
+      if (collegeRes.data?.collegeName) {
+        setCollegeName(collegeRes.data.collegeName);
+      }
+      if (!mediaRes.error && mediaRes.data) {
+        if (mediaRes.data.bannerUrl) setBannerUrl(mediaRes.data.bannerUrl);
+        if (mediaRes.data.logoUrl) setLogoUrl(mediaRes.data.logoUrl);
+      }
+      setMediaLoading(false);
+    });
   }, [collegeId]);
 
   const collegeAbbreviation = useMemo(() => {
@@ -428,7 +438,7 @@ export default function MidExams({ onBack }: MidExamsProps) {
             >
               <div
                 style={{
-                  backgroundImage: "url('/college_banner.png')",
+                  backgroundImage: `url('${bannerUrl}')`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                   width: "100%",
@@ -438,6 +448,18 @@ export default function MidExams({ onBack }: MidExamsProps) {
                 }}
                 className="w-full h-56 shrink-0 relative"
               >
+                {mediaLoading && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      backgroundColor: "rgba(255, 255, 255, 0.2)",
+                      animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                      zIndex: 20
+                    }}
+                    className="absolute inset-0 bg-white/20 animate-pulse z-20"
+                  />
+                )}
                 <div
                   style={{
                     position: "absolute",
@@ -473,11 +495,35 @@ export default function MidExams({ onBack }: MidExamsProps) {
                         color: "#ffffff",
                         fontWeight: 800,
                         fontSize: "20px",
-                        flexShrink: 0
+                        flexShrink: 0,
+                        overflow: "hidden",
+                        position: "relative"
                       }}
-                      className="border-[4px] border-[#43C17A] rounded-[18px] bg-black/30 w-16 h-16 flex items-center justify-center text-white font-extrabold text-xl shrink-0"
+                      className="border-[4px] border-[#43C17A] rounded-[18px] bg-black/30 w-16 h-16 flex items-center justify-center text-white font-extrabold text-xl shrink-0 overflow-hidden relative"
                     >
-                      {collegeAbbreviation}
+                      {mediaLoading ? (
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            backgroundColor: "rgba(255, 255, 255, 0.2)",
+                            animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                            zIndex: 10
+                          }}
+                          className="absolute inset-0 bg-white/20 animate-pulse z-10"
+                        />
+                      ) : logoUrl && !logoError ? (
+                        <Image
+                          src={logoUrl}
+                          alt="College Logo"
+                          fill
+                          className="object-cover"
+                          onError={() => setLogoError(true)}
+                          unoptimized
+                        />
+                      ) : (
+                        collegeAbbreviation
+                      )}
                     </div>
                     <div
                       style={{

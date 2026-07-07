@@ -436,7 +436,6 @@ export async function saveAttendance(classId: string, payload: any[]) {
     .select("attendanceRecordId, studentId")
     .in("studentId", studentIds)
     .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId)
-    .eq("markedAt", eventDate)
     .is("deletedAt", null);
 
   if (fetchError) {

@@ -485,7 +485,6 @@ export default function Page() {
 
   return (
     <main className="relative overflow-hidden p-4">
-      <StudentProgressTabs activeView={activeView} onChange={updateView} />
       <section className="mb-4 flex items-center justify-between">
         <div>
           <div className="flex">

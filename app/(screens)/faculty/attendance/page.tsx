@@ -251,7 +251,15 @@ function AttendanceContent() {
 
       if (urlClassId) setTimeout(() => router.push("/faculty"), 2000);
     } catch (error: any) {
-      toast.error(error.message);
+      let errorMsg = "An unexpected error occurred while saving attendance.";
+      if (error.message) {
+        if (error.message.includes("unique constraint") || error.message.includes("duplicate key")) {
+          errorMsg = "Attendance for this class has already been recorded and cannot be duplicated.";
+        } else {
+          errorMsg = error.message;
+        }
+      }
+      toast.error(errorMsg);
     } finally {
       setSaving(false);
     }

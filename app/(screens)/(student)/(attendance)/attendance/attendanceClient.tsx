@@ -215,9 +215,8 @@ export default function AttendanceClient() {
     <>
       <div className="flex w-full h-fit lg:pb-5 p-2 max-md:p-0 max-md:bg-[#f4f5f6] min-h-screen">
         <div
-          className={`flex flex-col gap-2 max-md:p-4 max-md:gap-4 ${
-            hideRightSection ? "w-full" : "w-[68%]"
-          } max-md:w-full`}
+          className={`flex flex-col gap-2 max-md:p-4 max-md:gap-4 ${hideRightSection ? "w-full" : "w-[68%]"
+            } max-md:w-full`}
         >
           {!showSubjectAttendanceTable && !showSubjectAttendanceDetails && (
             <>
@@ -392,11 +391,10 @@ export default function AttendanceClient() {
                           }
                           disabled={currentPage === 1}
                           className={`w-10 h-10 flex items-center justify-center rounded-lg border
-      ${
-        currentPage === 1
-          ? "border-gray-200 text-gray-300"
-          : "border-gray-300 text-gray-600 hover:bg-gray-100"
-      }`}
+      ${currentPage === 1
+                              ? "border-gray-200 text-gray-300"
+                              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                            }`}
                         >
                           ‹
                         </button>
@@ -406,11 +404,10 @@ export default function AttendanceClient() {
                             key={i}
                             onClick={() => setCurrentPage(i + 1)}
                             className={`w-10 h-10 rounded-lg font-semibold max-md:w-8 max-md:h-8
-        ${
-          currentPage === i + 1
-            ? "bg-[#16284F] text-white"
-            : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-        }`}
+        ${currentPage === i + 1
+                                ? "bg-[#16284F] text-white"
+                                : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                              }`}
                           >
                             {i + 1}
                           </button>
@@ -422,11 +419,10 @@ export default function AttendanceClient() {
                           }
                           disabled={currentPage === totalPages}
                           className={`w-10 h-10 flex items-center justify-center rounded-lg border
-      ${
-        currentPage === totalPages
-          ? "border-gray-200 text-gray-300"
-          : "border-gray-300 text-gray-600 hover:bg-gray-100"
-      }`}
+      ${currentPage === totalPages
+                              ? "border-gray-200 text-gray-300"
+                              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                            }`}
                         >
                           ›
                         </button>

@@ -200,7 +200,7 @@ export default function WorkWeekCalendar({
         </div>
       </div>
 
-      <hr className="text-[#E4E5E7] -mt-4 w-[98%] mx-auto"/>
+      <hr className="text-[#E4E5E7] -mt-4 w-[98%] mx-auto" />
 
       <div className="grid grid-cols-6 text-center text-xs font-medium gap-1">
         {weekdays.map((day, idx) => {
