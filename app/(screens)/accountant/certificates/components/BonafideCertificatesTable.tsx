@@ -10,7 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import { downloadBonafidePdf } from "./BonafidePreviewScreen";
 import TableComponent from "@/app/utils/table/table";
-import DeleteConfirmModal from "@/app/components/modals/DeleteConfirmModal";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import { useState } from "react";
 import { deleteBonafideCertificate } from "@/lib/helpers/accountant/bonafideCertificatesAPI";
 
@@ -280,15 +280,19 @@ export function BonafideCertificatesTable({
         emptyStateMessage={error ? error : "No bonafide certificates found."}
       />
 
-      <DeleteConfirmModal
-        isOpen={deleteModalOpen}
-        type="Bonafide Certificate"
+      <ConfirmDeleteModal
+        open={deleteModalOpen}
+        title="Delete"
+        name="bonafide certificate"
         isDeleting={isDeleting}
         onCancel={() => {
           setDeleteModalOpen(false);
           setCertificateToDelete(null);
         }}
         onConfirm={handleDelete}
+        confirmText="Yes, Delete"
+        loadingText="Deleting..."
+        actionType="remove"
       />
     </section>
   );
