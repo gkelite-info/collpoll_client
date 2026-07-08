@@ -1,0 +1,136 @@
+"use client";
+
+import { getPayrollRuns } from "@/lib/helpers/Hr/payroll/payrollAPI";
+import { useEffect, useState } from "react";
+import { TableRowShimmer } from "@/app/(screens)/admin/my-attendance/payroll/components/shimmers";
+import { format } from "date-fns";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { useUser } from "@/app/utils/context/UserContext";
+import toast from "react-hot-toast";
+import ViewPayrollRunModal from "./ViewPayrollRunModal";
+
+export default function PayrollHistoryTab() {
+  const { collegeId } = useUser();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [selectedRun, setSelectedRun] = useState<any>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    async function fetchData() {
+      if (!collegeId) return;
+      setIsLoading(true);
+      
+      try {
+        const result = await getPayrollRuns(Number(collegeId), currentPage, itemsPerPage);
+        
+        if (isMounted) {
+          setHistoryData(result.runs);
+          setTotalItems(result.total);
+        }
+      } catch (error) {
+        toast.error("Unable to load payroll history at this time.", { id: "history-fetch-error" });
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+    
+    fetchData();
+
+    return () => { isMounted = false; };
+  }, [collegeId, currentPage, refreshKey]);
+
+  return (
+    <div className="flex flex-col gap-4 w-full h-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-lg font-semibold text-gray-800">Past Payroll Runs</h2>
+      </div>
+
+      <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col min-h-[400px]">
+        <div className="overflow-x-auto flex-1">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Month/Year</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Staff Count</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Net Payout</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {isLoading ? (
+                Array(4).fill(0).map((_, i) => (
+                  <TableRowShimmer key={i} columns={5} />
+                ))
+              ) : historyData.length > 0 ? (
+                historyData.map((data: any, i) => {
+                  const dateStr = `${data.payrollYear}-${String(data.payrollMonth).padStart(2, '0')}-01`;
+                  const monthDisplay = format(new Date(dateStr), 'MMMM yyyy');
+                  
+                  return (
+                    <tr key={i} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {monthDisplay}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        {data.totalStaff} Employees
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-800">
+                        ₹{Number(data.totalNetPay || 0).toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
+                          data.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                          data.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                          data.status === 'finalized' ? 'bg-indigo-100 text-indigo-800' :
+                          data.status === 'paid' ? 'bg-green-100 text-green-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {data.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button 
+                          onClick={() => setSelectedRun(data)}
+                          className="text-[#43C17A] hover:text-[#38A166] transition-colors cursor-pointer font-semibold"
+                        >
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-sm text-gray-500">
+                    No payroll history found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
+      </div>
+
+      <ViewPayrollRunModal 
+        open={!!selectedRun}
+        onClose={() => setSelectedRun(null)}
+        runData={selectedRun}
+        onActionSuccess={() => setRefreshKey(prev => prev + 1)}
+      />
+    </div>
+  );
+}

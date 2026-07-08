@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import CardComponent from "@/app/utils/card";
 import { HrInfoCard } from "./hrInfoCard";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import MonthlyAttendanceChart from "./MonthlyAttendanceChart";
 import FacultyMonthDetailTable from "./facultyAttendanceTable";
 import TableComponent from "@/app/utils/table/table";
@@ -56,44 +57,6 @@ const formatRoleForUrl = (roleStr: string) => {
     .join("");
 };
 
-function Pagination({
-  currentPage,
-  totalPages,
-  onPageChange,
-}: {
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-}) {
-  if (totalPages <= 1) return null;
-  return (
-    <div className="flex justify-end items-center gap-3 mt-4 mb-2">
-      <button
-        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-        disabled={currentPage === 1}
-        className={`w-10 h-10 flex items-center justify-center rounded-lg border ${currentPage === 1 ? "border-gray-200 text-gray-300" : "border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer"}`}
-      >
-        <CaretLeft size={18} weight="bold" />
-      </button>
-      {[...Array(totalPages)].map((_, i) => (
-        <button
-          key={i}
-          onClick={() => onPageChange(i + 1)}
-          className={`w-10 h-10 rounded-lg font-semibold cursor-pointer ${currentPage === i + 1 ? "bg-[#16284F] text-white" : "border border-gray-300 text-gray-600 hover:bg-gray-100"}`}
-        >
-          {i + 1}
-        </button>
-      ))}
-      <button
-        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-        disabled={currentPage === totalPages}
-        className={`w-10 h-10 flex items-center justify-center rounded-lg border ${currentPage === totalPages ? "border-gray-200 text-gray-300" : "border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer"}`}
-      >
-        <CaretRight size={18} weight="bold" />
-      </button>
-    </div>
-  );
-}
 
 function Shimmer({ className }: { className?: string }) {
   return (
@@ -242,12 +205,15 @@ function TodayTable({
       <h4 className="text-sm font-semibold text-[#282828] mb-1 mt-2">
         Attendance Overview
       </h4>
-      <TableComponent columns={columns} tableData={tableData} height="38vh" />
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-      />
+      <div className="overflow-hidden">
+        <TableComponent columns={columns} tableData={tableData} height="38vh" />
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalCount}
+          itemsPerPage={PAGE_SIZE}
+          onPageChange={onPageChange}
+        />
+      </div>
     </div>
   );
 }

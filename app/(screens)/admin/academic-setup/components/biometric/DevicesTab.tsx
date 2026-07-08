@@ -177,10 +177,10 @@ export default function DevicesTab() {
         const oldDevice = prev[index];
 
         const updatedList = [...prev];
+        // Merge all updated fields from newRow (including deviceIp, devicePort, etc.)
         updatedList[index] = { 
           ...oldDevice,
-          isOnline: newRow.isOnline,
-          lastHeartbeat: newRow.lastHeartbeat,
+          ...newRow,
         };
         return updatedList;
       });

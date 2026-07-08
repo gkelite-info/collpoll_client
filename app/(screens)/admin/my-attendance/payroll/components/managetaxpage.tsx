@@ -10,7 +10,9 @@ import {
     ArrowRight
 } from "@phosphor-icons/react";
 import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
-import WipOverlay from '@/app/utils/WipOverlay';
+import { useUser } from "@/app/utils/context/UserContext";
+import { upsertTaxDeclaration } from "@/lib/helpers/Hr/payroll/taxDeclarationAPI";
+import toast from "react-hot-toast";
 
 function ManageTaxPage() {
     const router = useRouter();
@@ -33,9 +35,36 @@ function ManageTaxPage() {
         router.push(`?main=${mainParam}&sub=${subParam}&taxView=${tab}`, { scroll: false });
     };
 
+    const { userId: loggedInUserId, collegeId } = useUser();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [taxData, setTaxData] = useState({
+        section80C: "",
+        section80D: "",
+        hraExemption: "",
+    });
+
+    const handleTaxSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!loggedInUserId || !collegeId) return;
+        setIsSubmitting(true);
+        try {
+            await upsertTaxDeclaration(
+                Number(loggedInUserId), 
+                Number(collegeId), 
+                "2025-26", 
+                taxData
+            );
+            toast.success("Tax declaration submitted successfully!");
+        } catch (error) {
+            toast.error("Failed to submit tax declaration");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <div className="w-full max-w-5xl mx-auto flex flex-col h-[600px] text-left">
-            <div className="flex-shrink-0 text-[14px] font-bold mb-6">
+            <div className="flex-shrink-0 text-[14px] font-bold mb-6 flex flex-wrap items-center gap-y-2 gap-x-1 sm:gap-x-2">
                 {["declaration", "forms", "taxFiling", "taxSaving"].map((tab, index) => (
                     <React.Fragment key={tab}>
                         <span
@@ -51,51 +80,59 @@ function ManageTaxPage() {
 
             <div className="flex-1  overflow-y-auto custom-scrollbar pr-2 pb-6">
                 {activeTab === "declaration" && (
-                    <div className="grid relative grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-                        <WipOverlay />
-                        <div className="flex flex-col gap-4">
-                            <div className="bg-white rounded-md p-5 shadow-sm border border-gray-100 flex-1">
-                                <h3 className="text-[#43C17A] font-semibold text-lg  mb-4">Investment Declaration</h3>
-                                <div className="mb-4">
-                                    <p className="text-[#1F2937] font-bold text-base ">Current windows</p>
-                                    <p className="text-[#1F2937] text-base">Till Aug 25, 2025</p>
+                    <div className="bg-white rounded-md p-6 shadow-[0px_2px_10px_rgba(0,0,0,0.04)] border border-gray-100">
+                        <h3 className="text-[#43C17A] font-bold text-[18px] mb-4">Investment Declaration</h3>
+                        <form onSubmit={handleTaxSubmit} className="flex flex-col gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-sm font-semibold text-gray-700">Section 80C (PPF, ELSS, LIC, etc.)</label>
+                                    <input
+                                        type="number"
+                                        placeholder="Enter amount"
+                                        value={taxData.section80C}
+                                        onChange={(e) => setTaxData({...taxData, section80C: e.target.value})}
+                                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#43C17A]"
+                                    />
                                 </div>
-                                <div>
-                                    <p className="text-[#1F2937] font-bold text-base">Monthly windows :</p>
-                                    <p className="text-[#1F2937] text-base">1st to 25th of every month till 15th jan 2026</p>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-sm font-semibold text-gray-700">Section 80D (Medical Insurance)</label>
+                                    <input
+                                        type="number"
+                                        placeholder="Enter amount"
+                                        value={taxData.section80D}
+                                        onChange={(e) => setTaxData({...taxData, section80D: e.target.value})}
+                                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#43C17A]"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-sm font-semibold text-gray-700">HRA Exemption</label>
+                                    <input
+                                        type="number"
+                                        placeholder="Enter amount"
+                                        value={taxData.hraExemption}
+                                        onChange={(e) => setTaxData({...taxData, hraExemption: e.target.value})}
+                                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#43C17A]"
+                                    />
                                 </div>
                             </div>
-                            <div className="bg-white rounded-md p-5 shadow-sm border border-gray-100 h-[110px] flex flex-col justify-center">
-                                <p className="text-[#333333] font-bold text-[15px]">Net Taxable Income</p>
-                                <p className="text-[#43C17A] font-bold text-[24px] mt-1">INR 0</p>
+                            <div className="flex justify-end">
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="bg-[#43C17A] text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#38A166] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmitting ? "Submitting..." : "Submit Declaration"}
+                                </button>
                             </div>
-                        </div>
-                        <div className="flex flex-col gap-4">
-                            <div className="bg-white rounded-md p-5 shadow-sm border border-gray-100 flex-1">
-                                <h3 className="text-[#43C17A] font-semibold text-lg  mb-4">Proof Submission</h3>
-                                <p className="text-[#1F2937] font-bold text-[14px]">Current windows</p>
-                                <p className="text-[#1F2937] text-[13px]">Till Aug 25, 2025</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-white rounded-md p-5 shadow-sm border border-gray-100 h-[110px] flex flex-col justify-center">
-                                    <p className="text-[#333333] font-bold text-[14px] leading-tight">Total tax<br />Payable</p>
-                                    <p className="text-[#43C17A] font-bold text-[24px] mt-1">INR 0</p>
-                                </div>
-                                <div className="bg-white rounded-md p-5 shadow-sm border border-gray-100 h-[110px] flex flex-col justify-center">
-                                    <p className="text-[#333333] font-bold text-[14px] leading-tight">Total tax<br />Payable</p>
-                                    <p className="text-[#43C17A] font-bold text-[24px] mt-1">INR 0</p>
-                                </div>
-                            </div>
-                        </div>
+                        </form>
                     </div>
                 )}
                 {activeTab === "forms" && (
                     <div className="flex relative flex-col gap-4">
-                        <WipOverlay />
                         <div className="bg-white rounded-md p-6 shadow-[0px_2px_10px_rgba(0,0,0,0.04)] border border-gray-100">
-                            <div className="flex justify-between items-center mb-3">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3">
                                 <h3 className="text-[#43C17A] font-bold text-[18px]">Form 16</h3>
-                                <div className="flex gap-2">
+                                <div className="flex flex-wrap sm:flex-nowrap gap-2">
                                     <div className="relative flex items-center">
                                         <select className="appearance-none bg-[#43C17A] text-white text-[11px] font-bold pl-3 pr-8 py-1.5 rounded-md outline-none cursor-pointer">
                                             <option>APR 2024 - MAR 2025</option>
@@ -123,9 +160,9 @@ function ManageTaxPage() {
                             </div>
                         </div>
                         <div className="bg-white rounded-md p-6 shadow-[0px_2px_10px_rgba(0,0,0,0.04)] border border-gray-100">
-                            <div className="flex justify-between items-center mb-3">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3">
                                 <h3 className="text-[#43C17A] font-bold text-[18px]">Form 12 BB</h3>
-                                <div className="flex gap-2">
+                                <div className="flex flex-wrap sm:flex-nowrap gap-2">
                                     <div className="relative flex items-center">
                                         <select className="appearance-none bg-[#43C17A] text-white text-[11px] font-bold pl-3 pr-8 py-1.5 rounded-md outline-none cursor-pointer">
                                             <option>APR 2024 - MAR 2025</option>
@@ -146,7 +183,6 @@ function ManageTaxPage() {
                 )}
                 {activeTab === "taxFiling" && (
                     <div className="bg-white relative rounded-lg p-8 border border-gray-200 shadow-sm">
-                        <WipOverlay fullHeight={true} />
                         <h3 className="text-[#43C17A] font-bold text-[20px] mb-2">
                             Tax Filing
                         </h3>
@@ -211,7 +247,6 @@ function ManageTaxPage() {
                 )}
                 {activeTab === "taxSaving" && (
                     <div className="bg-white relative rounded-lg p-8 border border-gray-200 shadow-sm flex flex-col gap-6">
-                        <WipOverlay fullHeight={true} />
                         <div>
                             <h3 className="text-[#43C17A] font-bold text-[20px] mb-2">
                                 Tax Saving Investment

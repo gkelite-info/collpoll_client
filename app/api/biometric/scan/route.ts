@@ -86,6 +86,23 @@ export async function POST(req: NextRequest) {
     let authMethod = body.authMethod;
     let scanTimestamp = body.scanTimestamp || body.dateTime;
     const rawDeviceData = body.rawDeviceData || body;
+    
+    // Extract IP from payload but ignore garbage local IPs that some firmwares send
+    let payloadIp = body.ipAddress || body.EventNotificationAlert?.ipAddress || body.EventNotificationAlert?.ipv4Address;
+    if (payloadIp === "0.0.0.0" || payloadIp === "127.0.0.1" || payloadIp === "localhost" || payloadIp === "::1") {
+      payloadIp = null;
+    }
+
+    // Dynamically extract the device IP (prioritize real payload IP, then headers, then NextJS req.ip)
+    let requestIpAddress = payloadIp 
+                        || req.headers.get("x-forwarded-for")?.split(",")[0].trim() 
+                        || req.headers.get("x-real-ip")
+                        || req.ip;
+
+    // Clean up IPv6 mapped IPv4 addresses (e.g. ::ffff:192.168.1.100)
+    if (requestIpAddress && requestIpAddress.includes("::ffff:")) {
+      requestIpAddress = requestIpAddress.replace("::ffff:", "");
+    }
 
     if (body.EventNotificationAlert?.AccessControllerEvent) {
       const evt = body.EventNotificationAlert.AccessControllerEvent;
@@ -141,8 +158,8 @@ export async function POST(req: NextRequest) {
     if (!device && deviceSerialNumber) {
       device = await validateAndLookupDevice(deviceSerialNumber);
     }
-    if (!device && body.ipAddress) {
-      device = await validateAndLookupDeviceByIp(body.ipAddress);
+    if (!device && requestIpAddress) {
+      device = await validateAndLookupDeviceByIp(requestIpAddress);
     }
     
     if (!device) {
@@ -152,24 +169,45 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Dynamic IP update & Heartbeat: if the device payload gives us an IP and it's different from what we have, update it!
-    // We ALSO update lastHeartbeat and isOnline: true here because a successful scan proves the device is online,
-    // which serves as a passive heartbeat for cloud deployments where active pinging of local IPs fails.
+    // Dynamic IP update & Scalable Heartbeat Debouncing
+    // To prevent hammering the database on every scan, we ONLY trigger an update if:
+    // 1. The device IP has actually changed.
+    // 2. The device was marked as offline.
+    // 3. It has been more than 2 minutes since the last heartbeat.
     if (device.deviceId) {
-      const updatePayload: any = {
-        isOnline: true,
-        lastHeartbeat: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      const nowMs = Date.now();
+      const lastHbMs = device.lastHeartbeat ? new Date(device.lastHeartbeat).getTime() : 0;
+      const isHeartbeatStale = (nowMs - lastHbMs) > 2 * 60 * 1000; // 2 minutes threshold
       
-      if (body.ipAddress && device.deviceIp !== body.ipAddress && body.ipAddress !== "0.0.0.0") {
-        updatePayload.deviceIp = body.ipAddress;
+      let needsUpdate = false;
+      const updatePayload: any = {};
+      
+      // Check if IP changed
+      if (
+        requestIpAddress && 
+        device.deviceIp !== requestIpAddress && 
+        requestIpAddress !== "0.0.0.0" && 
+        requestIpAddress !== "127.0.0.1" && 
+        requestIpAddress !== "::1"
+      ) {
+        updatePayload.deviceIp = requestIpAddress;
+        needsUpdate = true;
       }
       
-      await adminSupabase
-        .from("biometric_devices")
-        .update(updatePayload)
-        .eq("deviceId", device.deviceId);
+      // Check if we need a heartbeat update
+      if (needsUpdate || !device.isOnline || isHeartbeatStale) {
+        updatePayload.isOnline = true;
+        updatePayload.lastHeartbeat = new Date(nowMs).toISOString();
+        updatePayload.updatedAt = updatePayload.lastHeartbeat;
+        needsUpdate = true;
+      }
+      
+      if (needsUpdate) {
+        await adminSupabase
+          .from("biometric_devices")
+          .update(updatePayload)
+          .eq("deviceId", device.deviceId);
+      }
     }
 
     // 4. Lookup user

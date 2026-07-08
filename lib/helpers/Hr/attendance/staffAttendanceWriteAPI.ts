@@ -105,7 +105,10 @@ export async function saveAttendance(
       .select("attendanceDailyId")
       .single();
 
-    if (upsertError) throw new Error(upsertError.message);
+    if (upsertError) {
+      console.error("Attendance Daily Upsert Error:", upsertError);
+      throw new Error("Failed to save attendance record. Please try again.");
+    }
 
     const { error: adjError } = await supabase
       .from("attendance_adjustments")
@@ -117,9 +120,14 @@ export async function saveAttendance(
         newCheckOut: checkOutVal,
         reason: params.reason || null,
         adjustedBy: params.collegeHrId,
+        createdAt: now,
+        updatedAt: now,
       });
 
-    if (adjError) throw new Error(adjError.message);
+    if (adjError) {
+      console.error("Attendance Adjustment Insert Error:", adjError);
+      throw new Error("Failed to log attendance adjustment. Please try again.");
+    }
     return;
   }
 
@@ -140,7 +148,10 @@ export async function saveAttendance(
     .update(editPayload)
     .eq("attendanceDailyId", attendanceDailyId);
 
-  if (updateError) throw new Error(updateError.message);
+  if (updateError) {
+    console.error("Attendance Daily Update Error:", updateError);
+    throw new Error("Failed to update attendance record. Please try again.");
+  }
 
   const { data: existingAdj, error: fetchAdjError } = await supabase
     .from("attendance_adjustments")
@@ -150,7 +161,10 @@ export async function saveAttendance(
     .limit(1)
     .maybeSingle();
 
-  if (fetchAdjError) throw new Error(fetchAdjError.message);
+  if (fetchAdjError) {
+    console.error("Fetch Adjustment Error:", fetchAdjError);
+    throw new Error("Failed to fetch previous attendance adjustments. Please try again.");
+  }
 
   if (existingAdj) {
     const { error: adjUpdateError } = await supabase
@@ -162,10 +176,14 @@ export async function saveAttendance(
         newCheckOut: checkOutVal,
         reason: params.reason || null,
         adjustedBy: params.collegeHrId,
+        updatedAt: now,
       })
       .eq("adjustmentId", existingAdj.adjustmentId);
 
-    if (adjUpdateError) throw new Error(adjUpdateError.message);
+    if (adjUpdateError) {
+      console.error("Attendance Adjustment Update Error:", adjUpdateError);
+      throw new Error("Failed to update attendance adjustment log. Please try again.");
+    }
   } else {
     const { error: adjInsertError } = await supabase
       .from("attendance_adjustments")
@@ -177,9 +195,14 @@ export async function saveAttendance(
         newCheckOut: checkOutVal,
         reason: params.reason || null,
         adjustedBy: params.collegeHrId,
+        createdAt: now,
+        updatedAt: now,
       });
 
-    if (adjInsertError) throw new Error(adjInsertError.message);
+    if (adjInsertError) {
+      console.error("Attendance Adjustment Insert Error:", adjInsertError);
+      throw new Error("Failed to create attendance adjustment log. Please try again.");
+    }
   }
 }
 

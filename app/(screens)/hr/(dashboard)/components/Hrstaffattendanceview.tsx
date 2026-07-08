@@ -129,11 +129,11 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
-// import HrStaffAttendancePage from "./Hrstaffattendancepage";
-// import HrStaffSummaryPage from "./Hrstaffsummarypage";
-// import HrStaffManageTaxPage from "./Hrstaffmanagetaxpage";
-// import HrStaffMyPayPage from "./Hrstaffmypaypage";
-// import HrStaffAttendanceAnalyticsPage from "./Hrstaffattendanceanalyticspage ";
+import HrStaffAttendancePage from "./Hrstaffattendancepage";
+import HrStaffSummaryPage from "./Hrstaffsummarypage";
+import HrStaffManageTaxPage from "./Hrstaffmanagetaxpage";
+import { SharedMyPayPage } from "@/app/components/payroll/SharedMyPayPage";
+import HrStaffAttendanceAnalyticsPage from "./Hrstaffattendanceanalyticspage";
 
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import {
@@ -223,7 +223,7 @@ export default function HrStaffAttendanceView({ userId, onBack }: Props) {
         </div>
       </div>
 
-      {/* <div className="transition-opacity duration-300">
+      <div className="transition-opacity duration-300">
         {activeTab === "attendance" && (
           <HrStaffAttendancePage userId={userId} />
         )}
@@ -254,7 +254,7 @@ export default function HrStaffAttendanceView({ userId, onBack }: Props) {
               )}
               {activePayrollTab === "myPay" && (
                 <div className="w-full text-left mt-2">
-                  <HrStaffMyPayPage userId={userId} profile={profile} />
+                  <SharedMyPayPage overrideUserId={userId} isHrView={true} employeeProfile={profile} />
                 </div>
               )}
               {activePayrollTab === "manageTax" && (
@@ -269,7 +269,7 @@ export default function HrStaffAttendanceView({ userId, onBack }: Props) {
         {activeTab === "analytics" && (
           <HrStaffAttendanceAnalyticsPage userId={userId} profile={profile} />
         )}
-      </div> */}
+      </div>
     </div>
   );
 }
