@@ -12,6 +12,7 @@ import {
   SignOut,
   SmileyIcon,
   X,
+  CurrencyDollar,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -88,6 +89,13 @@ export default function HrNavbar({ onClose }: HrNavbarProps) {
       ),
       label: t("My Attendance"),
       path: "/hr/MyAttendance",
+    },
+    {
+      icon: (isActive) => (
+        <CurrencyDollar size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: t("Payroll"),
+      path: "/hr/payroll",
     },
     {
       icon: (isActive) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,

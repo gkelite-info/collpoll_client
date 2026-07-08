@@ -2,6 +2,7 @@ import { MonthDetailRow } from "@/lib/helpers/Hr/dashboard/Hrdashhelper";
 import { CaretDown, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import TableComponent from "@/app/utils/table/table";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 interface Props {
   month:         string;
@@ -20,41 +21,6 @@ function getPerformanceColor(p: string): string {
   if (p === "Excellent") return "text-[#00B050]";
   if (p === "Good")      return "text-[#FFC000]";
   return "text-[#FF0000]";
-}
-
-function Pagination({ currentPage, totalPages, onPageChange }: {
-  currentPage:  number;
-  totalPages:   number;
-  onPageChange: (page: number) => void;
-}) {
-  if (totalPages <= 1) return null;
-  return (
-    <div className="flex justify-end items-center gap-3 mt-4 mb-2">
-      <button
-        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-        disabled={currentPage === 1}
-        className={`w-10 h-10 flex items-center justify-center rounded-lg border
-          ${currentPage === 1 ? "border-gray-200 text-gray-300" : "border-gray-300 text-gray-600 hover:bg-gray-100"}`}
-      >
-        <CaretLeft size={18} weight="bold" />
-      </button>
-      {[...Array(totalPages)].map((_, i) => (
-        <button key={i} onClick={() => onPageChange(i + 1)}
-          className={`w-10 h-10 rounded-lg font-semibold
-            ${currentPage === i + 1 ? "bg-[#16284F] text-white" : "border border-gray-300 text-gray-600 hover:bg-gray-100"}`}>
-          {i + 1}
-        </button>
-      ))}
-      <button
-        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-        disabled={currentPage === totalPages}
-        className={`w-10 h-10 flex items-center justify-center rounded-lg border
-          ${currentPage === totalPages ? "border-gray-200 text-gray-300" : "border-gray-300 text-gray-600 hover:bg-gray-100"}`}
-      >
-        <CaretRight size={18} weight="bold" />
-      </button>
-    </div>
-  );
 }
 
 const PAGE_SIZE = 10;
@@ -167,8 +133,15 @@ export default function FacultyMonthDetailTable({
         <p className="text-gray-400 text-sm text-center py-8">No records for {month}</p>
       ) : (
         <>
-          <TableComponent columns={columns} tableData={tableData} height="50vh" />
-          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} />
+          <div>
+            <TableComponent columns={columns} tableData={tableData} height="38vh" />
+            <Pagination
+              currentPage={currentPage}
+              totalItems={totalCount}
+              itemsPerPage={10}
+              onPageChange={onPageChange}
+            />
+          </div>
         </>
       )}
     </div>

@@ -806,7 +806,6 @@ export default function ApplicationsPage() {
             </div>
           )}
 
-          {/* Clear Filters (pushed to end) */}
           <div className="md:ml-auto w-full md:w-auto flex flex-col sm:flex-row items-center gap-3 mt-2 md:mt-0">
             {activePrimaryTab === "Top" && (
               <button

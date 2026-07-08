@@ -105,7 +105,7 @@ export const fetchUniversalStaffProfile = async (
       email: user.email || "N/A",
       mobile: user.mobile || "N/A",
       role: user.role || "Staff",
-      department: user.collegeCode || "Administration",
+      department: user.collegeBranchCode || user.department || user.collegeCode || "-",
       gender: user.gender || "N/A",
       joiningDate: user.dateOfJoining
         ? new Date(user.dateOfJoining).toLocaleDateString("en-GB")

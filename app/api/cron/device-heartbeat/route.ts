@@ -102,35 +102,31 @@ export async function GET(request: Request) {
         });
         
         isActuallyOnline = await tcpPing();
-        
-        if (!isActuallyOnline) {
-          const url = `http://${device.deviceIp}:${device.devicePort}/`;
-          await fetch(url, { signal: AbortSignal.timeout(1500), method: "GET" }).catch(() => {});
-          // If fetch doesn't throw, it's technically reachable, but Hikvision might drop it
-          // We won't strictly rely on fetch success if TCP failed, but this handles weird proxies.
-        }
       } catch (err: any) {
         isActuallyOnline = false;
       }
 
       // 2. Intelligently Handle Ping Failures
       if (!isActuallyOnline) {
-        // If a ping to a Private IP fails from a Cloud Server, the failure is AMBIGUOUS.
-        // It might be turned off, OR the cloud just can't route to it due to NAT.
-        const isAmbiguousFailure = isPrivateIp && isCloudEnv;
+        // If a ping to a Private IP fails, it is AMBIGUOUS.
+        // It might be turned off, OR the ping is blocked by NAT, Firewalls, or Mobile Hotspot AP Isolation.
+        // We cannot assume it is offline just because TCP ping failed, even on localhost.
+        const isAmbiguousFailure = isPrivateIp;
 
         if (isAmbiguousFailure) {
           pingAttempted = false; // We can't trust this ping attempt
           
           // Passive fallback: rely on the last successful heartbeat push or local sync
           if (device.lastHeartbeat) {
+            // If it pushed data in the last 12 hours, consider it online for today's session
+            // 12 hours is safer than 24. If it misses overnight, it goes offline, giving HR a heads up before morning scans.
             const hoursSinceLastHeartbeat = (new Date().getTime() - new Date(device.lastHeartbeat).getTime()) / (1000 * 60 * 60);
-            isActuallyOnline = hoursSinceLastHeartbeat < 24;
+            isActuallyOnline = hoursSinceLastHeartbeat < 12;
           } else {
             isActuallyOnline = device.isOnline; // Retain previous state
           }
         } else {
-          // If it's a Public IP, OR if the server is running on Localhost, a failed ping means it's truly offline.
+          // If it's a Public IP, a failed ping means it's truly offline.
           isActuallyOnline = false;
         }
       }

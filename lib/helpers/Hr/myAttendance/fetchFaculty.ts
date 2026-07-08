@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabaseClient";
 export interface FacultyProfileData {
   id: string;
   facultyId: string;
+  employeeId: string;
   name: string;
   email: string;
   mobile: string;
@@ -14,62 +15,65 @@ export interface FacultyProfileData {
 }
 
 export const fetchFacultyProfile = async (
-  facultyId: string,
+  userId: string | number,
 ): Promise<FacultyProfileData | null> => {
   try {
     const { data, error } = await supabase
-      .from("faculty")
+      .from("users")
       .select(
         `
-        facultyId,
         userId,
         fullName,
         email,
         mobile,
         role,
-        users (
-          dateOfJoining,
-          professionalExperienceYears
-        )
-      `,
+        dateOfJoining,
+        professionalExperienceYears,
+        collegeBranchCode,
+        department,
+        employee_ids (employeeId),
+        user_profile (profilePic)
+      `
       )
-      .eq("facultyId", facultyId)
+      .eq("userId", userId)
       .maybeSingle();
 
     if (error) {
-      console.error("Error fetching faculty profile:", error);
+      console.error("Error fetching user profile:", error);
       return null;
     }
 
     if (!data) {
-      console.warn(`No faculty member found with facultyId: ${facultyId}.`);
+      console.warn(`No staff member found with userId: ${userId}.`);
       return null;
     }
 
-    const userData = Array.isArray(data.users) ? data.users[0] : data.users;
+    const employeeIds = Array.isArray(data.employee_ids) ? data.employee_ids[0] : data.employee_ids;
+    const userProfile = Array.isArray(data.user_profile) ? data.user_profile[0] : data.user_profile;
 
     return {
       id: data.userId.toString(),
-      facultyId: data.facultyId.toString(),
+      facultyId: "-",
+      employeeId: employeeIds?.employeeId || "-",
       name: data.fullName || "Unknown Name",
       email: data.email || "N/A",
       mobile: data.mobile || "N/A",
-      joiningDate: userData?.dateOfJoining
-        ? new Date(userData.dateOfJoining).toLocaleDateString("en-GB", {
+      joiningDate: data.dateOfJoining
+        ? new Date(data.dateOfJoining).toLocaleDateString("en-GB", {
             day: "2-digit",
             month: "short",
             year: "numeric",
           })
-        : "N/A",
-      department: "Computer Science",
-      role: data.role || "Faculty",
-      experience: userData?.professionalExperienceYears
-        ? `${userData.professionalExperienceYears} years`
-        : "N/A",
-      image: "/rahul.png",
+        : "-",
+      department: data.collegeBranchCode || data.department || "Computer Science",
+      role: data.role || "-",
+      experience: data.professionalExperienceYears
+        ? `${data.professionalExperienceYears} years`
+        : "-",
+      image: userProfile?.profilePic || "/assets/images/defaultUser.png",
     };
   } catch (err) {
-    console.error("Unexpected error fetching faculty data:", err);
+    console.error("Unexpected error fetching user data:", err);
     return null;
   }
 };

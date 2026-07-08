@@ -10,6 +10,7 @@ export interface EmployeePayData {
   userId: number;
   name: string;
   id: string;
+  employeeId: string;
   joiningDate: string;
   department: string;
   role: string;
@@ -496,7 +497,7 @@ export default function AddPayModal({
                   Employee ID :
                 </span>{" "}
                 <span className="text-[#282828] font-medium">
-                  {employee.id}
+                  {employee.employeeId || "-"}
                 </span>
               </div>
               <div>
