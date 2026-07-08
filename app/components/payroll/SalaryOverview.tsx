@@ -8,9 +8,10 @@ interface SalaryOverviewProps {
   isHrView?: boolean;
   employeeProfile?: any;
   effectiveUserId?: number;
+  onRefresh?: () => void;
 }
 
-export function SalaryOverview({ payData, isFetchingPay, isHrView, employeeProfile, effectiveUserId }: SalaryOverviewProps) {
+export function SalaryOverview({ payData, isFetchingPay, isHrView, employeeProfile, effectiveUserId, onRefresh }: SalaryOverviewProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // --- FLEXIBLE DATA MAPPING ---
@@ -44,7 +45,7 @@ export function SalaryOverview({ payData, isFetchingPay, isHrView, employeeProfi
             disabled={isFetchingPay}
             className={`bg-[#16284F] hover:bg-[#1a2f5c] text-white px-6 py-2 rounded-md font-medium text-[13px] transition-colors ${isFetchingPay ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
           >
-            {isFetchingPay ? "Loading..." : (payData && (payData.totalCTC || payData.monthlySalary || payData.totalCtc || payData.employee_salary_structure || (payData.allowances && payData.allowances.length > 0)) ? "Edit Pay" : "Add Pay")}
+            {isFetchingPay ? "Loading..." : (payData ? "Edit Pay" : "Add Pay")}
           </button>
         )}
       </div>
@@ -53,7 +54,10 @@ export function SalaryOverview({ payData, isFetchingPay, isHrView, employeeProfi
         <AddPayModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          onSuccess={() => setIsModalOpen(false)}
+          onSuccess={() => {
+            if (onRefresh) onRefresh();
+            setIsModalOpen(false);
+          }}
           payData={payData}
           employee={{
             userId: effectiveUserId,

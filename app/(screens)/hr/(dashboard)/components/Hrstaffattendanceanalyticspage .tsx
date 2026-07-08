@@ -231,11 +231,28 @@ function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
   );
 }
 
+import { FacultyProfileData } from "@/lib/helpers/Hr/myAttendance/fetchFaculty";
+
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function HrStaffAttendanceAnalyticsPage({ userId }: { userId: string }) {
+export default function HrStaffAttendanceAnalyticsPage({
+  userId,
+  profile,
+}: {
+  userId: string;
+  profile?: FacultyProfileData | null;
+}) {
+  const displayProfile: AnalyticsFacultyProfile = {
+    name: profile?.name || mockProfile.name,
+    department: profile?.department || mockProfile.department,
+    employeeId: profile?.employeeId || mockProfile.employeeId,
+    experience: profile?.experience || mockProfile.experience,
+    leavesTaken: mockProfile.leavesTaken,
+    workingDays: mockProfile.workingDays,
+  };
+
   return (
     <div className="flex flex-col w-full">
-      <AnalyticsFacultyInfo profile={mockProfile} />
+      <AnalyticsFacultyInfo profile={displayProfile} />
       <AttendancePerformanceChart data={mockChartData} />
       <AttendanceTable records={mockRecords} />
     </div>

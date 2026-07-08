@@ -133,13 +133,13 @@ import HrStaffAttendancePage from "./Hrstaffattendancepage";
 import HrStaffSummaryPage from "./Hrstaffsummarypage";
 import HrStaffManageTaxPage from "./Hrstaffmanagetaxpage";
 import { SharedMyPayPage } from "@/app/components/payroll/SharedMyPayPage";
-import HrStaffAttendanceAnalyticsPage from "./Hrstaffattendanceanalyticspage";
 
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import {
   FacultyProfileData,
   fetchFacultyProfile,
 } from "@/lib/helpers/Hr/myAttendance/fetchFaculty";
+import HrStaffAttendanceAnalyticsPage from "./Hrstaffattendanceanalyticspage ";
 
 interface Props {
   userId: string;

@@ -32,8 +32,15 @@ export function SharedMyPayPage({ overrideUserId, isHrView: propIsHrView, employ
     collegeBranchCode
   } = useUser();
 
-  const parsedOverrideUserId = overrideUserId ? parseInt(overrideUserId.toString(), 10) : undefined;
-  const effectiveUserId = parsedOverrideUserId ?? (loggedInUserId ? parseInt(loggedInUserId.toString(), 10) : undefined);
+  const safeParseInt = (val: any): number | undefined => {
+    if (val === undefined || val === null) return undefined;
+    const parsed = parseInt(val.toString(), 10);
+    return isNaN(parsed) ? undefined : parsed;
+  };
+
+  const parsedOverrideUserId = safeParseInt(overrideUserId);
+  const parsedLoggedInUserId = safeParseInt(loggedInUserId);
+  const effectiveUserId = parsedOverrideUserId ?? parsedLoggedInUserId;
   
   const roleLower = loggedInRole?.toLowerCase() || "";
   const isHrRole = roleLower === "hr" || 
@@ -60,17 +67,61 @@ export function SharedMyPayPage({ overrideUserId, isHrView: propIsHrView, employ
   const [activeTab, setActiveTab] = useState<"salary" | "tax">(viewParam);
 
   const [payData, setPayData] = useState<any | null>(null);
-  const [isFetchingPay, setIsFetchingPay] = useState(true);
+  const [isFetchingPay, setIsFetchingPay] = useState(false);
+  const [payLoadedForUserId, setPayLoadedForUserId] = useState<number | undefined>(undefined);
+
+  // Derive whether we are still waiting for data for the current user
+  const hasFetchedCurrentUser = payLoadedForUserId === effectiveUserId;
+  const showLoading = !hasFetchedCurrentUser && !!effectiveUserId && !!collegeId;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchPay = async () => {
+      if (!effectiveUserId || !collegeId) {
+        // Nothing to fetch — clear stale data and stop loading
+        if (!cancelled) {
+          setPayData(null);
+          setPayLoadedForUserId(effectiveUserId);
+          setIsFetchingPay(false);
+        }
+        return;
+      }
+
+      setIsFetchingPay(true);
+      try {
+        const data = await fetchEmployeePaySummary(effectiveUserId, collegeId);
+        if (!cancelled) {
+          setPayData(data);
+          setPayLoadedForUserId(effectiveUserId);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          toast.error("Unable to fetch pay summary at this time.", { id: "pay-summary-fetch-error" });
+          setPayData(null);
+          setPayLoadedForUserId(effectiveUserId);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsFetchingPay(false);
+        }
+      }
+    };
+
+    fetchPay();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveUserId, collegeId]);
 
   const loadPaySummary = async () => {
     if (!effectiveUserId || !collegeId) return;
     setIsFetchingPay(true);
     try {
-      const data = await fetchEmployeePaySummary(
-        effectiveUserId,
-        collegeId
-      );
+      const data = await fetchEmployeePaySummary(effectiveUserId, collegeId);
       setPayData(data);
+      setPayLoadedForUserId(effectiveUserId);
     } catch (error) {
       toast.error("Unable to fetch pay summary at this time.", { id: "pay-summary-fetch-error" });
     } finally {
@@ -78,9 +129,7 @@ export function SharedMyPayPage({ overrideUserId, isHrView: propIsHrView, employ
     }
   };
 
-  useEffect(() => {
-    loadPaySummary();
-  }, [effectiveUserId, collegeId]);
+  const finalIsFetchingPay = isFetchingPay || showLoading;
 
   useEffect(() => {
     setActiveTab(viewParam);
@@ -113,7 +162,7 @@ export function SharedMyPayPage({ overrideUserId, isHrView: propIsHrView, employ
 
       {activeTab === "salary" ? (
         <div className="w-full flex flex-col gap-6">
-          <SalaryOverview payData={payData} isFetchingPay={isFetchingPay} isHrView={finalIsHrView} employeeProfile={effectiveProfile} effectiveUserId={effectiveUserId} />
+          <SalaryOverview payData={payData} isFetchingPay={finalIsFetchingPay} isHrView={finalIsHrView} employeeProfile={effectiveProfile} effectiveUserId={effectiveUserId} onRefresh={loadPaySummary} />
           {effectiveUserId && (
             <PayslipsSection userId={effectiveUserId} />
           )}
