@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
     let requestIpAddress = payloadIp 
                         || req.headers.get("x-forwarded-for")?.split(",")[0].trim() 
                         || req.headers.get("x-real-ip")
-                        || req.ip;
+                        || (req as any).ip;
 
     // Clean up IPv6 mapped IPv4 addresses (e.g. ::ffff:192.168.1.100)
     if (requestIpAddress && requestIpAddress.includes("::ffff:")) {
