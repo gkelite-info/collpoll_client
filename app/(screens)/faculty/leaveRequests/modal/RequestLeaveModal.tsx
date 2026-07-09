@@ -20,7 +20,6 @@ type FacultyLeaveFormData = {
   startDate: string;
   endDate: string;
   description: string;
-<<<<<<< Updated upstream
   tags: EmployeeLeaveTagSelection[];
 };
 
@@ -32,10 +31,6 @@ const defaultLeaveTypes = [
   "Others",
 ];
 
-=======
-};
-
->>>>>>> Stashed changes
 export default function FacultyRequestLeaveModal({
   isOpen,
   onClose,

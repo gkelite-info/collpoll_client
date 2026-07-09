@@ -526,9 +526,3 @@ export default function WellbeingLeavesLeft() {
     </Suspense>
   );
 }
-
-<<<<<<< Updated upstream
- 
-=======
- 
->>>>>>> Stashed changes

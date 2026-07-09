@@ -490,13 +490,9 @@ function WellbeingLeavesContent({
               )}
             </div>
             <p className="text-[#525252] text-sm font-medium">
-<<<<<<< Updated upstream
               {activeView === "tagged"
                 ? "Review leave requests where you are tagged and join the group chat."
                 : "Submit leave applications and view approval updates from HR."}
-=======
-              Submit leave applications and view approval updates from HR.
->>>>>>> Stashed changes
             </p>
           </div>
 

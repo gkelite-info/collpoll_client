@@ -146,12 +146,8 @@ export const ROLE_BASED_ROUTES: Record<string, SearchRoute[]> = {
     { label: "Finance / Analytics", path: "/finance/finance-analytics", category: "Finance", keywords: ["revenue"] },
     { label: "Finance / Analytics", subLabel: "Student Analytics", path: "/finance/finance-analytics/students", category: "Finance", keywords: ["student fees", "dues", "collection"] },
     { label: "Add Fee Structure", path: "/finance/add-fee-structure", category: "Finance", keywords: ["create fees", "tuition", "pricing"] },
-<<<<<<< Updated upstream
     { label: "Calendar", subLabel: "Calendar Overview", path: "/finance/calendar", category: "Academics", keywords: [] },
     { label: "Calendar", subLabel: "Holiday Calendar", path: "/finance/calendar?tab=Holidays", category: "Academics", keywords: ["holidays", "calendar", "events"] },
-=======
-    { label: "Calendar", path: "/finance/calendar", category: "Academics", keywords: [] },
->>>>>>> Stashed changes
     { label: "Leave Request", path: "/finance/leave-request", category: "Requests", keywords: ["leave", "permission"] },
     { label: "Drive", path: "/finance/drive", category: "Resources", keywords: ["files", "documents", "storage"] },
     { label: "Meetings", subLabel: "Upcoming Meetings", path: "/finance/meetings?type=upcoming", category: "Collaboration", keywords: ["upcoming meetings", "new meetings"] },

@@ -1036,18 +1036,18 @@ export function TransferPreviewScreen({
       {/* Page Breadcrumb Header with caret back button */}
       <section className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="flex flex-wrap items-center gap-3 text-[22px] font-bold leading-tight md:text-[26px]">
+          <h1 className="flex flex-wrap items-center gap-4 text-[24px] font-bold leading-tight md:text-[28px]">
             <button
               type="button"
               onClick={onBack}
               className="cursor-pointer text-[#7B8AA3] hover:text-[#17213D] transition-colors p-1"
               aria-label="Back to Edit"
             >
-              <CaretLeft size={22} weight="bold" />
+              <CaretLeft size={24} weight="bold" />
             </button>
             <span className="text-[#17213D]">Transfer Certificate Preview</span>
           </h1>
-          <p className="mt-1 text-[12px] font-medium text-[#7B8AA3]">
+          <p className="mt-1 text-[13px] font-medium text-[#7B8AA3]">
             Please review details and choose template before downloading.
           </p>
         </div>

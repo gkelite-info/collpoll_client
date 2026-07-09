@@ -60,7 +60,6 @@ const MY_LEAVES_COLUMNS = [
   { title: "Details", key: "details" },
 ];
 
-<<<<<<< Updated upstream
 const TAGGED_LEAVES_COLUMNS = [
   { title: "S.No", key: "sNo" },
   { title: "Employee ID", key: "employeeId" },
@@ -90,8 +89,6 @@ const LEAVE_VIEW_TABS = [
   },
 ] as const;
 
-=======
->>>>>>> Stashed changes
 type LeaveStatusTab = "all" | "approved" | "pending" | "rejected";
 
 type FacultyLeaveFormData = {
@@ -124,13 +121,9 @@ function FacultyLeavesContent() {
   const { userId } = useUser();
   const [facultyId, setFacultyId] = useState<number | null>(null);
 
-<<<<<<< Updated upstream
   const [mainTab, setMainTab] = useState<
     "students" | "my_leaves" | "tagged"
   >("students");
-=======
-  const [mainTab, setMainTab] = useState<"students" | "my_leaves">("students");
->>>>>>> Stashed changes
   const [activeTab, setActiveTab] = useState<LeaveStatusTab>("all");
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -617,13 +610,9 @@ function FacultyLeavesContent() {
             <p className="text-[#525252] text-sm font-medium">
               {mainTab === "students"
                 ? "Review, Approve, and Manage Student Leave Applications Effortlessly"
-<<<<<<< Updated upstream
                 : mainTab === "tagged"
                   ? "Review leave requests where you are tagged and join the group chat."
                   : "Submit leave applications and view approval updates from HR."}
-=======
-                : "Submit leave applications and view approval updates from HR."}
->>>>>>> Stashed changes
             </p>
           </div>
 
