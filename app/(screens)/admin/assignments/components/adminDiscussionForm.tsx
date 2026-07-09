@@ -147,13 +147,12 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
 
         setLoading(true);
         try {
-            const payload = await saveDiscussionForum(
-                {
-                    discussionId: discussionId,
-                    title: form.title,
-                    description: form.description,
-                    deadline: form.deadline,
-                },
+            const payload = await saveDiscussionForum({
+                discussionId: discussionId,
+                title: form.title,
+                description: form.description,
+                deadline: form.deadline,
+            },
                 {
                     adminId: adminId ?? undefined,
                     facultyId: numericFacultyId

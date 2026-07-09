@@ -213,17 +213,16 @@ export default function AddAcademicSetup({
     try {
       const adminCtx = await fetchAdminContext(userId);
 
-      await saveAcademicSetupMaster(
-        {
-          educationType: form.degree,
-          branch: {
-            type: form.branch,
-            code: form.dept.replace(/\s+/g, "").toUpperCase(),
-            academicYear: form.year,
-            sections: form.sections,
-            batch: form.batch,
-          },
+      await saveAcademicSetupMaster({
+        educationType: form.degree,
+        branch: {
+          type: form.branch,
+          code: form.dept.replace(/\s+/g, "").toUpperCase(),
+          academicYear: form.year,
+          sections: form.sections,
+          batch: form.batch,
         },
+      },
         {
           adminId: adminCtx.adminId,
           collegeId: adminCtx.collegeId,
@@ -361,7 +360,7 @@ export default function AddAcademicSetup({
         </div>
         <div>
           <label className="block text-sm text-[#16284F] font-medium mb-1">
-            {collegeEducationType === "Inter" ? "Group Type" : "Branch Type"} <span className="text-red-500">*</span>
+            {form.degree === "Inter" ? "Group Type" : "Branch Type"} <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -373,7 +372,7 @@ export default function AddAcademicSetup({
                 .replace(/\b\w/g, (char) => char.toUpperCase());
               setForm((prev) => ({ ...prev, branch: formatted }));
             }}
-            placeholder={collegeEducationType === "Inter" ? "Enter Group" : "Enter Branch"}
+            placeholder={form.degree === "Inter" ? "Enter Group" : "Enter Branch"}
             className="w-full border border-[#CCCCCC] text-[#2D3748] outline-none rounded-lg px-4 py-2 focus:border-[#48C78E] focus:ring-1 focus:ring-[#48C78E]"
           />
         </div>
@@ -382,10 +381,10 @@ export default function AddAcademicSetup({
       <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-[#16284F] font-medium mb-1">
-            {collegeEducationType === "Inter" ? "Group Type" : "Branch Code"} <span className="text-red-500">*</span>
+            {form.degree === "Inter" ? "Group Type" : "Branch Code"} <span className="text-red-500">*</span>
           </label>
           {customMode.dept ? (
-            renderCustomInput("dept", "Enter Branch Code")
+            renderCustomInput("dept", form.degree === "Inter" ? "Enter Group Code" : "Enter Branch Code")
           ) : (
             <div className="relative">
               <select
@@ -395,7 +394,7 @@ export default function AddAcademicSetup({
                 disabled={!form.degree}
               >
                 <option value="" disabled>
-                  {collegeEducationType === "Inter" ? "Select Group Code" : "Select Branch Code"}
+                  {form.degree === "Inter" ? "Select Group Code" : "Select Branch Code"}
                 </option>
                 {availableDepts.map((opt) => (
                   <option key={opt} value={opt}>
@@ -420,7 +419,7 @@ export default function AddAcademicSetup({
         <div>
           <CustomMultiSelect
             label="Year"
-            placeholder="Select Years"
+            placeholder="Select Year"
             options={getYearOptions()}
             selectedValues={form.year ? [form.year] : []}
             onChange={(val) => setForm({ ...form, year: val })}

@@ -1,5 +1,6 @@
 "use client";
 
+import { supabase } from "@/lib/supabaseClient";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { useEffect, useRef, useState } from "react";
 import { FaCloudUploadAlt, FaTimes } from "react-icons/fa";
@@ -66,7 +67,7 @@ const AddProjectForm = ({
     role,
   } = useFaculty();
   const { collegeId: adminCollegeId, adminId } = useAdmin();
-  const { role: userRole } = useUser();
+  const { role: userRole, collegeEducationType } = useUser();
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -212,8 +213,21 @@ const AddProjectForm = ({
       if (!resolvedCollegeId) return;
       setIsLoading(true);
       try {
+        let eduId: number | undefined = undefined;
+        if (faculty_edu_type) {
+          const { data: eduData } = await supabase
+            .from("college_education")
+            .select("collegeEducationId")
+            .eq("collegeId", resolvedCollegeId)
+            .eq("collegeEducationType", faculty_edu_type)
+            .is("deletedAt", null)
+            .maybeSingle();
+          if (eduData) eduId = eduData.collegeEducationId;
+        }
+
         const { data } = await fetchFilteredFaculties({
           collegeId: resolvedCollegeId,
+          ...(eduId ? { collegeEducationId: eduId } : {})
         });
         setAllFaculties(
           (data as FacultyOption[]).map((faculty) => ({
@@ -228,7 +242,7 @@ const AddProjectForm = ({
       }
     };
     getFaculties();
-  }, [resolvedCollegeId]);
+  }, [resolvedCollegeId, faculty_edu_type]);
 
   useEffect(() => {
     const getStudents = async () => {
@@ -446,25 +460,29 @@ const AddProjectForm = ({
   };
 
   return (
-    <main className="p-4 min-h-screen">
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <div className="flex items-center gap-1">
-            <FaAngleLeft
-              className="text-black active:scale-90 cursor-pointer"
-              size={22}
-              onClick={onCancel}
-            />
-            <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
+    <main className="min-h-screen">
+      <div className={`flex ${isAdmin ? 'justify-end' : 'justify-between'} items-start mb-6`}>
+        {!isAdmin && (
+          <div>
+            <div className="flex items-center gap-1">
+              <FaAngleLeft
+                className="text-black active:scale-90 cursor-pointer"
+                size={22}
+                onClick={onCancel}
+              />
+              <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
+            </div>
+            <p className="text-[#282828] text-sm lg:ml-1.5">
+              Create, manage, and track student projects effortlessly.
+            </p>
           </div>
-          <p className="text-[#282828] text-sm lg:ml-1.5">
-            Create, manage, and track student projects effortlessly.
-          </p>
-        </div>
+        )}
 
         {(role === "Faculty" || isAdmin) && (
           <div className="bg-[#43C17A] text-white px-2 py-1 w-fit rounded text-sm font-medium max-md:hidden">
-            {faculty_edu_type} {college_branch} - {collegeAcademicYear}
+            {faculty_edu_type === college_branch
+              ? `${college_branch} - ${collegeAcademicYear}`
+              : `${college_branch} - ${collegeAcademicYear}`}
           </div>
         )}
       </div>

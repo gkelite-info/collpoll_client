@@ -92,6 +92,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [topics, setTopics] = useState<any[]>([]);
   const [sections, setSections] = useState<FacultySection[]>([]);
   const [semesterLabel, setSemesterLabel] = useState<number | null>(null);
+  const [isInter, setIsInter] = useState(false);
 
   const [meetingTitle, setMeetingTitle] = useState("");
   const [meetingLink, setMeetingLink] = useState("");
@@ -117,10 +118,19 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   useEffect(() => {
     if (!isOpen || !value?.facultyId) return;
     fetchFacultyContextAdmin({ facultyId: Number(value.facultyId) })
-      .then((ctx) => {
+      .then(async (ctx) => {
         setFacultyCtx(ctx);
         setEducationId(ctx.collegeEducationId);
         setBranchId(ctx.collegeBranchId);
+        
+        if (ctx.collegeEducationId) {
+          const { data } = await supabase
+            .from("college_education")
+            .select("collegeEducationType")
+            .eq("collegeEducationId", ctx.collegeEducationId)
+            .single();
+          if (data) setIsInter(data.collegeEducationType === "Inter");
+        }
       })
       .catch((err) => {
         toast.error("Failed to load faculty context");
@@ -522,8 +532,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       !educationId ||
       !branchId ||
       !facultyCtx?.academicYearIds?.length ||
-      typeof semester !== "number" ||
-      !semesterLabel
+      (!isInter && (typeof semester !== "number" || !semesterLabel))
     ) {
       toast.error("Academic context is incomplete. Please reload the page.");
       return;
@@ -539,7 +548,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       educationId,
       branchId,
       academicYearId: facultyCtx?.academicYearIds?.[0],
-      semester,
+      semester: isInter ? null : semester,
       sections: selectedSections.map((sec) => ({
         collegeSectionId: sec.collegeSectionsId,
       })),
@@ -1082,16 +1091,18 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 className="w-full h-11 border text-[#282828] focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
               />
             </div>
-            <div className="flex-1 w-full min-w-0">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Semester <span className="text-red-600">*</span>
-              </label>
-              <input
-                readOnly
-                value={semesterLabel ? `Semester ${semesterLabel}` : ""}
-                className="w-full h-11 border text-[#282828] focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
-              />
-            </div>
+            {!isInter && (
+              <div className="flex-1 w-full min-w-0">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Semester <span className="text-red-600">*</span>
+                </label>
+                <input
+                  readOnly
+                  value={semesterLabel ? `Semester ${semesterLabel}` : ""}
+                  className="w-full h-11 border text-[#282828] focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
+                />
+              </div>
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <label className="block text-sm font-medium text-gray-700 mb-1">

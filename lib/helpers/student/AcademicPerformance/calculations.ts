@@ -210,11 +210,13 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
                     }
 
                     else if (label.includes("project")) {
-                        const { data: allProjects } = await supabase
-                            .from("projects")
-                            .select("projectId, marks")
-                            .eq("collegeSubjectId", subject.collegeSubjectId)
-                            .is("is_deleted", false);
+                        if (history?.collegeSectionsId) {
+                            const { data: allProjects } = await supabase
+                                .from("projects")
+                                .select("projectId, marks")
+                                .eq("collegeSubjectId", subject.collegeSubjectId)
+                                .eq("collegeSectionsId", history.collegeSectionsId)
+                                .is("deletedAt", null);
 
                         if (allProjects && allProjects.length > 0) {
                             possible = allProjects.reduce((acc, curr) => acc + (Number(curr.marks) || 0), 0);
@@ -238,6 +240,7 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
                                 const res = Object.values(bestProject) as any[];
                                 earned = res.reduce((s, r) => s + r.earned, 0);
                             }
+                        }
                         }
                     }
 

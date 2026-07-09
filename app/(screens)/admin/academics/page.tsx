@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { MagnifyingGlass, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -96,6 +96,8 @@ const AcademicPage = () => {
   }, [debouncedSearch]);
 
   const {
+    educations,
+    resetEducation,
     branches,
     years,
     sections,
@@ -113,7 +115,7 @@ const AcademicPage = () => {
   } = useAcademicFilters(userId ?? undefined);
 
   const apiFilters = {
-    educationId: collegeEducationId ?? null,
+    educationId: education?.collegeEducationId ?? null,
     branchId: branch?.collegeBranchId ?? null,
     academicYearId: year?.collegeAcademicYearId ?? null,
     sectionId: section?.collegeSectionsId ?? null,
@@ -134,15 +136,18 @@ const AcademicPage = () => {
     debouncedSearch,
   ]);
 
+  const isEducationInitialized = useRef(false);
+
   useEffect(() => {
     if (!collegeEducationId || !selectEducation) return;
-    if (education?.collegeEducationId === collegeEducationId) return;
+    if (isEducationInitialized.current) return;
 
     selectEducation({
       collegeEducationId,
       collegeEducationType,
     } as any);
-  }, [collegeEducationId, selectEducation]);
+    isEducationInitialized.current = true;
+  }, [collegeEducationId, selectEducation, collegeEducationType]);
 
   const loadCardsOnly = async () => {
     try {
@@ -211,7 +216,7 @@ const AcademicPage = () => {
         </div>
 
         <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap flex-1 gap-2 border border-gray-100">
-          {/* <FilterDropdown
+          <FilterDropdown
             label="Education"
             value={education?.collegeEducationId?.toString() ?? "All"}
             options={[
@@ -233,25 +238,10 @@ const AcademicPage = () => {
                     (e) => e.collegeEducationId.toString() === val,
                   )?.collegeEducationType ?? val)
             }
-          /> */}
-
-          <div className="flex flex-col gap-1 min-w-30 overflow-visible">
-            <label className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold px-1">
-              Education
-            </label>
-
-            <div className="relative border border-gray-300 rounded-md bg-gray-100 w-[120px]">
-              <input
-                type="text"
-                value={collegeEducationType ?? ""}
-                disabled
-                className="w-full bg-transparent text-[13px] font-medium pl-2 pr-8 h-[20px] text-gray-500 cursor-not-allowed outline-none"
-              />
-            </div>
-          </div>
+          />
 
           <FilterDropdown
-            label="Branch"
+            label={education?.collegeEducationType === "Inter" ? "Group" : "Branch"}
             value={branch?.collegeBranchId?.toString() ?? "All"}
             placeholder="All"
             options={["All", ...branches.map((b) => b.collegeBranchId.toString())]}

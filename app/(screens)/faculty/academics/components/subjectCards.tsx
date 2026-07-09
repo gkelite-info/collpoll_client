@@ -37,6 +37,7 @@ export default function SubjectCard({ subjectProps, facultyCtx, role }: SubjectC
   const facultySubjects = facultyCtx?.faculty_subject ?? [];
   const facultySections = facultyCtx?.sections ?? [];
   const [isWeightageOpen, setIsWeightageOpen] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -166,9 +167,12 @@ export default function SubjectCard({ subjectProps, facultyCtx, role }: SubjectC
 
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-[#43C17A] text-sm max-md:text-[11px] text-white px-3 max-md:px-3 py-1 max-md:py-1.5 rounded-md cursor-pointer hover:bg-[#3bad6d] font-medium max-md:whitespace-nowrap"
+            disabled={isGeneratingPdf}
+            className={`text-sm max-md:text-[11px] text-white px-3 max-md:px-3 py-1 max-md:py-1.5 rounded-md font-medium max-md:whitespace-nowrap ${
+              isGeneratingPdf ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer hover:bg-[#3bad6d]"
+            }`}
           >
-            Add Unit
+            {isGeneratingPdf ? "Generating..." : "Add Unit"}
           </button>
         </div>
       </div>
@@ -205,6 +209,8 @@ export default function SubjectCard({ subjectProps, facultyCtx, role }: SubjectC
         facultySubjects={facultySubjects}
         facultySections={facultySections}
         defaultSubjectId={defaultSubjectId}
+        onGeneratingStart={() => setIsGeneratingPdf(true)}
+        onGeneratingEnd={() => setIsGeneratingPdf(false)}
       />
       <AddWeightageModal
         isOpen={isWeightageOpen}

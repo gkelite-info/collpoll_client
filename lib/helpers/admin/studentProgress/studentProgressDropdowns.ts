@@ -99,17 +99,22 @@ export async function fetchStudentProgressSections(
   academicYearIds: number[],
   semesterIds: number[],
 ) {
-  if (!academicYearIds.length || !semesterIds.length) {
+  if (!academicYearIds.length) {
     return [];
   }
 
-  const { data: historyRows, error: historyError } = await supabase
+  let historyQuery = supabase
     .from("student_academic_history")
     .select("collegeSectionsId")
     .eq("isCurrent", true)
     .is("deletedAt", null)
-    .in("collegeAcademicYearId", academicYearIds)
-    .in("collegeSemesterId", semesterIds);
+    .in("collegeAcademicYearId", academicYearIds);
+
+  if (semesterIds.length) {
+    historyQuery = historyQuery.in("collegeSemesterId", semesterIds);
+  }
+
+  const { data: historyRows, error: historyError } = await historyQuery;
 
   if (historyError) throw historyError;
 

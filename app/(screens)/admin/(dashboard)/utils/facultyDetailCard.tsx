@@ -65,7 +65,7 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data, collegeEdu }) => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div className="relative w-14 h-14 rounded-full overflow-hidden bg-gray-100 shrink-0">
-            <Avatar src={avatarUrl} alt=""/>
+            <Avatar src={avatarUrl} alt="" />
           </div>
 
           <div className="flex items-center gap-3">
@@ -142,7 +142,7 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data, collegeEdu }) => {
             <p className="text-base font-bold text-[#1a1a1a]">
               {data.department}
             </p>
-            <p className="text-xs font-medium text-[#444444]">{!(collegeEdu === "Inter") ? "Branch" : "Group"}</p>
+            <p className="text-xs font-medium text-[#444444]">{collegeEdu === "Inter" ? "Group" : "Branch"}</p>
           </div>
         </div>
       </div>

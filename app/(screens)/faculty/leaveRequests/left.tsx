@@ -118,7 +118,7 @@ type FacultyLeaveTableRow = {
 };
 
 function FacultyLeavesContent() {
-  const { userId } = useUser();
+  const { userId, collegeEducationType } = useUser();
   const [facultyId, setFacultyId] = useState<number | null>(null);
 
   const [mainTab, setMainTab] = useState<
@@ -596,11 +596,10 @@ function FacultyLeavesContent() {
                       setPage(1);
                       setEditingRows(new Set());
                     }}
-                    className={`cursor-pointer text-left transition-colors ${
-                      mainTab === tab.id
-                        ? "text-[#43C17A]"
-                        : "text-[#282828] hover:text-gray-500"
-                    }`}
+                    className={`cursor-pointer text-left transition-colors ${mainTab === tab.id
+                      ? "text-[#43C17A]"
+                      : "text-[#282828] hover:text-gray-500"
+                      }`}
                   >
                     {tab.label}
                   </button>
@@ -673,7 +672,7 @@ function FacultyLeavesContent() {
           <TableComponent
             columns={
               mainTab === "students"
-                ? STUDENT_COLUMNS
+                ? STUDENT_COLUMNS.map((col) => col.key === "branch" ? { ...col, title: collegeEducationType === "Inter" ? "Group" : "Branch" } : col)
                 : mainTab === "tagged"
                   ? TAGGED_LEAVES_COLUMNS
                   : MY_LEAVES_COLUMNS

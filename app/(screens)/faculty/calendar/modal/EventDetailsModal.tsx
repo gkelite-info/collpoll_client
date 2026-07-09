@@ -2,6 +2,7 @@
 
 import { CalendarBlank, X } from "@phosphor-icons/react";
 import { CalendarEvent } from "../types";
+import { useUser } from "@/app/utils/context/UserContext";
 
 type Props = {
   open: boolean;
@@ -11,6 +12,7 @@ type Props = {
 
 export default function EventDetailsModal({ open, event, onClose }: Props) {
   if (!open || !event) return null;
+  const { collegeEducationType } = useUser();
 
   const start = new Date(event.startTime);
   const end = new Date(event.endTime);
@@ -108,8 +110,8 @@ export default function EventDetailsModal({ open, event, onClose }: Props) {
             </>
           )}
 
-          <div className=" my-2 space-y-2">
-            <Detail label="Branch" value={event.branch} />
+          <div className="my-2 space-y-2">
+            <Detail label={collegeEducationType === "Inter" ? "Group" : "Branch"} value={event.branch} />
             <Detail label="Year" value={event.year} />
             <Detail label="Section" value={event.section} />
           </div>

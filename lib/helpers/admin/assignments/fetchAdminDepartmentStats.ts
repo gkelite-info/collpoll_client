@@ -120,6 +120,10 @@ export async function fetchAdminDepartmentStats(
   yearFilter: string = "All"
 ) {
   try {
+    if (!collegeEducationId) {
+       return { data: [], totalCount: 0, uniqueDepts: ["All"], uniqueYears: ["All"], error: null };
+    }
+
     // 1. Fetch base structure (Lightweight query)
     const { data: sections, error } = await supabase
       .from("faculty_sections")
@@ -176,9 +180,18 @@ export async function fetchAdminDepartmentStats(
 
     let allGroups = Array.from(grouped.values());
 
-    // 3. Extract unique dropdown options BEFORE applying filters
-    const uniqueDepts = ["All", ...Array.from(new Set(allGroups.map((g) => g.name)))];
-    const uniqueYears = ["All", ...Array.from(new Set(allGroups.map((g) => g.year)))];
+    // 3. Extract unique dropdown options by fetching directly from base tables
+    const [{ data: branchData }, { data: yearData }] = await Promise.all([
+      supabase.from("college_branch").select("collegeBranchCode").eq("collegeId", collegeId).eq("collegeEducationId", collegeEducationId).eq("isActive", true),
+      supabase.from("college_academic_year").select("collegeAcademicYear").eq("collegeId", collegeId).eq("collegeEducationId", collegeEducationId)
+    ]);
+
+    const uniqueDepts = ["All", ...Array.from(new Set((branchData || []).map((b) => b.collegeBranchCode || "")))].filter(Boolean);
+    const uniqueYears = ["All", ...Array.from(new Set((yearData || []).map((y) => y.collegeAcademicYear || "")))].filter(Boolean).sort((a, b) => {
+      if (a === "All") return -1;
+      if (b === "All") return 1;
+      return String(a).localeCompare(String(b));
+    });
 
     // 4. Apply Filters (Server-Side Logic)
     const searchText = search.toLowerCase().trim();
@@ -260,8 +273,8 @@ export async function fetchAdminDepartmentStats(
 
     return { data: result, totalCount, uniqueDepts, uniqueYears, error: null };
   } catch (err: any) {
-    console.error("Admin Dept Fetch Error:", err);
-    return { data: [], totalCount: 0, uniqueDepts: ["All"], uniqueYears: ["All"], error: err.message };
+    console.error("Admin Dept Fetch Error:", err?.message || err);
+    return { data: [], totalCount: 0, uniqueDepts: ["All"], uniqueYears: ["All"], error: err?.message || "Unknown error" };
   }
 }
 

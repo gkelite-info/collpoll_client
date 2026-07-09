@@ -1,4 +1,5 @@
 "use client";
+import { useUser } from "@/app/utils/context/UserContext";
 import { FacultySectionRow, fetchFacultySections } from "@/lib/helpers/faculty/facultysectionsAPI";
 import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
 import { fetchExistingFacultyWeightageConfig, fetchFacultyWeightageConfigs, saveFacultyWeightageConfig } from "@/lib/helpers/subjectWeightage/weightageConfig";
@@ -285,7 +286,10 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
                 adminId: facultyCtx?.adminId
             });
 
-            if (!configResponse.success) throw new Error("Config Save Failed");
+            if (!configResponse.success) {
+                console.error("Config save error:", configResponse.error);
+                throw new Error("Config Save Failed");
+            }
             const targetConfigId = configResponse.facultyWeightageConfigId;
 
             const itemPromises = activeWeights.map((item: any) => {
@@ -298,11 +302,18 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
                 });
             });
 
-            await Promise.all(itemPromises);
+            const results = await Promise.all(itemPromises);
+            const errorResult = results.find(res => !res.success);
+
+            if (errorResult) {
+                console.error("Item save error:", errorResult.error);
+                throw new Error("Failed to save some weightage items");
+            }
 
             toast.success("Saved successfully!");
             onClose();
-        } catch (error) {
+        } catch (error: any) {
+            console.error("handleSave Error:", error);
             toast.error("Failed to update weightage.");
         } finally {
             setLoading(false);
@@ -344,7 +355,7 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
                         </div> */}
 
                         <div className={role === "Faculty" ? "col-span-2" : "col-span-1"}>
-                            <label className="block text-base font-semibold text-[#282828] mb-2.5">Subject Name</label>
+                            <label className="block text-base font-semibold text-[#282828] mb-2.5">Subject</label>
                             <div className="relative">
                                 <select
                                     onChange={handleSubjectChange}
@@ -386,7 +397,7 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
 
                         <div>
                             <label className="block text-base font-semibold text-[#282828] mb-2.5">
-                                {facultyCtx?.collegeEducationType === "Inter" ? "Group" : "Branch"}
+                                {facultyCtx?.faculty_edu_type === "Inter" ? "Group" : "Branch"}
                             </label>
                             <div className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 font-medium">
                                 {selectedSubject?.branchCode || "---"}

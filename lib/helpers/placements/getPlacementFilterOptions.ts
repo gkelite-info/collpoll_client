@@ -61,25 +61,30 @@ async function getPlacementFilterRows(collegeId: number) {
 
 export async function fetchAdminPlacementFilterOptions(collegeId: number) {
   const rows = await getPlacementFilterRows(collegeId);
-  const branchIds = Array.from(
-    new Set(rows.map((row) => row.collegeBranchId).filter(Boolean)),
-  ) as number[];
-  const branchMap = await getBranchMap(branchIds);
 
   const cycles = Array.from(
     new Set(rows.map((row) => getCycleFromStartDate(row.startDate)).filter(Boolean)),
   ).sort((a, b) => Number(b) - Number(a));
 
-  const branches = Array.from(
-    new Set(
-      branchIds
-        .map((branchId) => {
-          const branch = branchMap.get(branchId);
-          return branch?.collegeBranchCode || branch?.collegeBranchType || "";
-        })
-        .filter(Boolean),
-    ),
-  ).sort((a, b) => a.localeCompare(b));
+  const { data: allBranchesData, error: branchesError } = await supabase
+    .from("college_branch")
+    .select("collegeBranchCode, collegeBranchType")
+    .eq("collegeId", collegeId)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  let branches: string[] = [];
+  if (!branchesError && allBranchesData) {
+    branches = Array.from(
+      new Set(
+        allBranchesData
+          .map((b) => b.collegeBranchCode || b.collegeBranchType || "")
+          .filter(Boolean),
+      ),
+    ).sort((a, b) => a.localeCompare(b));
+  } else {
+    console.error("Failed to fetch all college branches for placement filters:", branchesError);
+  }
 
   return { cycles, branches };
 }

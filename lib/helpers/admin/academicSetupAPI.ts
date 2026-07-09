@@ -20,11 +20,18 @@ export async function fetchAdminBranchesWithDetails(adminId: number, page: numbe
   try {
     const { data: adminCtx } = await supabase
       .from("admins")
-      .select("collegeId, collegeEducationId")
+      .select("collegeId")
       .eq("adminId", adminId)
       .maybeSingle();
 
-    const validEduIds = adminCtx?.collegeEducationId ? [adminCtx.collegeEducationId] : [];
+    const { data: adminEdus } = await supabase
+      .from("admin_education_types")
+      .select("collegeEducationId")
+      .eq("adminId", adminId)
+      .eq("isActive", true)
+      .eq("is_deleted", false);
+
+    const validEduIds = adminEdus ? adminEdus.map((e) => e.collegeEducationId) : [];
 
     const { data: branches, error: branchErr } = await supabase
       .from("college_branch")
@@ -141,25 +148,31 @@ export async function fetchAdminAssignedEducationsList(userId: number | string):
   try {
     const { data: admin, error: adminErr } = await supabase
       .from("admins")
-      .select("collegeEducationId")
+      .select("adminId")
       .eq("userId", userId)
       .is("deletedAt", null)
       .single();
 
-    if (adminErr || !admin?.collegeEducationId) {
+    if (adminErr || !admin?.adminId) {
       return [];
-      // throw new Error("Admin education ID not found");
     }
 
     const { data: edu, error: eduErr } = await supabase
-      .from("college_education")
-      .select("collegeEducationId, collegeEducationType")
-      .eq("collegeEducationId", admin.collegeEducationId)
-      .eq("isActive", true);
+      .from("admin_education_types")
+      .select(`
+        collegeEducationId,
+        college_education!inner(
+          collegeEducationId,
+          collegeEducationType
+        )
+      `)
+      .eq("adminId", admin.adminId)
+      .eq("isActive", true)
+      .eq("is_deleted", false);
 
     if (eduErr || !edu) throw new Error("Education type not found");
 
-    return edu;
+    return edu.map((e: any) => e.college_education);
   } catch (err) {
     console.error("Error fetching admin assigned education:", err);
     return [];

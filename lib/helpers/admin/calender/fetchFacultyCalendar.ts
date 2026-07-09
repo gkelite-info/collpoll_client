@@ -6,6 +6,7 @@ type FacultyFilterParams = {
   collegeBranchId?: number;
   collegeAcademicYearId?: number;
   collegeSubjectId?: number;
+  facultyId?: number;
   page?: number;
   limit?: number;
 };
@@ -69,6 +70,9 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
   }
   if (filters.collegeBranchId) {
     facultyQuery = facultyQuery.eq("collegeBranchId", filters.collegeBranchId);
+  }
+  if (filters.facultyId) {
+    facultyQuery = facultyQuery.eq("facultyId", filters.facultyId);
   }
   if (allowedFacultyIds !== null) {
     facultyQuery = facultyQuery.in("facultyId", allowedFacultyIds);

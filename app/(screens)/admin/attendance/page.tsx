@@ -449,22 +449,31 @@ const AttendancePage = () => {
         </div>
 
         <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap flex-1 gap-2 border border-gray-100">
-          <div className="flex flex-col gap-1 min-w-30 overflow-visible">
-            <label className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold px-1">
-              Education
-            </label>
-            <div className="relative border border-gray-300 rounded-md bg-gray-50 w-[120px] flex items-center h-6.25 overflow-hidden">
-              <span className="w-full text-[13px] font-medium text-gray-500 pl-2 truncate cursor-not-allowed">
-                {education?.collegeEducationType ?? "Loading..."}
-              </span>
-            </div>
-          </div>
+          <FilterDropdown
+            label="Education"
+            value={education?.collegeEducationId?.toString() ?? "All"}
+            placeholder="Select Education"
+            options={["All", ...educations.map((e) => e.collegeEducationId.toString())]}
+            onChange={(val) => {
+              if (val === "All") {
+                resetEducation();
+                return;
+              }
+              const edu = educations.find((e) => e.collegeEducationId === +val);
+              if (edu) selectEducation(edu);
+            }}
+            displayModifier={(val) =>
+              val === "All"
+                ? "All"
+                : educations.find((e) => e.collegeEducationId === +val)?.collegeEducationType || val
+            }
+          />
 
           <FilterDropdown
-            label="Branch"
+            label={education?.collegeEducationType === "Inter" ? "Group" : "Branch"}
             value={branch?.collegeBranchId?.toString() ?? "All"}
             disabled={!education}
-            placeholder="Select Branch"
+            placeholder={education?.collegeEducationType === "Inter" ? "Select Group" : "Select Branch"}
             options={[
               "All",
               ...branches.map((b) => b.collegeBranchId.toString()),

@@ -25,7 +25,7 @@ export default function ResultsManagement() {
   const searchParams = useSearchParams();
 
   const { sections, faculty_subject, collegeAcademicYears, college_branch, collegeId, collegeEducationId, collegeBranchId } = useFaculty();
-  const { identifierId } = useUser();
+  const { identifierId, collegeEducationType } = useUser();
 
   const [selectedSection, setSelectedSection] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -424,7 +424,7 @@ export default function ResultsManagement() {
                   Exam Type
                 </th>
                 <th scope="col" className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  Branch
+                  {collegeEducationType === "Inter" ? "Group" : "Branch"}
                 </th>
                 <th scope="col" className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
                   Year

@@ -29,10 +29,16 @@ export async function fetchAdminEducationTypes(adminId: number) {
     .is("deletedAt", null);
 
   if (error) throw error;
-  return data?.map((d: any) => ({
-    collegeEducationId: d.collegeEducationId,
-    collegeEducationType: d.college_education?.collegeEducationType
-  })) ?? [];
+  return data?.map((d: any) => {
+    const edu = Array.isArray(d.college_education) 
+      ? d.college_education[0] 
+      : d.college_education;
+    
+    return {
+      collegeEducationId: d.collegeEducationId,
+      collegeEducationType: edu?.collegeEducationType || "Unknown"
+    };
+  }) ?? [];
 }
 
 /* =========================
@@ -101,9 +107,9 @@ export async function fetchSubjects(
   collegeEducationId: number,
   collegeBranchId: number,
   collegeAcademicYearId: number,
-  collegeSemesterId: number
+  collegeSemesterId?: number | null
 ) {
-  const { data, error } = await supabase
+  let query = supabase
     .from("college_subjects")
     .select(`
       collegeSubjectId,
@@ -116,8 +122,15 @@ export async function fetchSubjects(
     .eq("collegeEducationId", collegeEducationId)
     .eq("collegeBranchId", collegeBranchId)
     .eq("collegeAcademicYearId", collegeAcademicYearId)
-    .eq("collegeSemesterId", collegeSemesterId)
     .eq("isActive", true);
+
+  if (collegeSemesterId) {
+    query = query.eq("collegeSemesterId", collegeSemesterId);
+  } else {
+    query = query.is("collegeSemesterId", null);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data ?? [];

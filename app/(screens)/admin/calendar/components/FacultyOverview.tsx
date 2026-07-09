@@ -67,10 +67,12 @@ export default function FacultyOverview({ onSelect }: Props) {
         }
     }, [collegeEducationId]);
 
-    useEffect(() => {
-        if (!collegeId || !collegeEducationId) return;
+    const isInter = educationTypes.find(e => e.collegeEducationId === educationId)?.collegeEducationType === "Inter";
 
-        fetchBranches(collegeId, collegeEducationId)
+    useEffect(() => {
+        if (!collegeId || !educationId) return;
+
+        fetchBranches(collegeId, educationId)
             .then(setBranches)
             .catch(() => toast.error("Failed to load branches"));
     }, [collegeId, educationId]);
@@ -94,13 +96,13 @@ export default function FacultyOverview({ onSelect }: Props) {
     useEffect(() => {
         if (
             !collegeId ||
-            !collegeEducationId ||
+            !educationId ||
             !branchId ||
             !academicYearId ||
-            !semesterId
+            (!semesterId && !isInter)
         ) return;
 
-        fetchSubjects(collegeId, collegeEducationId, branchId, academicYearId, semesterId)
+        fetchSubjects(collegeId, educationId, branchId, academicYearId, semesterId)
             .then(setSubjects)
             .catch(() => toast.error("Failed to load subjects"));
     }, [collegeId, educationId, branchId, academicYearId, semesterId, currentPage]);
@@ -141,8 +143,10 @@ export default function FacultyOverview({ onSelect }: Props) {
     const paginatedFaculty = facultyList
 
     useEffect(() => {
-        loadFaculty();
-    }, [collegeId, educationId, branchId, academicYearId, subjectId, currentPage]);
+        if (educationId) {
+            loadFaculty();
+        }
+    }, [collegeId, educationId, branchId, academicYearId, semesterId, subjectId, currentPage]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -185,7 +189,7 @@ export default function FacultyOverview({ onSelect }: Props) {
                 </div>
 
                 <div className="flex-1">
-                    <label className="text-xs text-[#282828]">Branch</label>
+                    <label className="text-xs text-[#282828]">{isInter ? "Group" : "Branch"}</label>
                     <select
                         disabled={!educationId}
                         value={branchId ?? "All"}
@@ -245,42 +249,44 @@ export default function FacultyOverview({ onSelect }: Props) {
                 </div>
 
 
-                <div className="flex-1">
-                    <label className="text-xs text-[#282828]">Semester</label>
-                    <select
-                        disabled={!academicYearId}
-                        value={semesterId ?? "All"}
-                        onChange={(e) => {
-                            setSemesterId(e.target.value === "All" ? null : Number(e.target.value))
-                            setSubjectId(null)
-                            setSubjects([]);
-                        }}
-                        className="w-full mt-1 outline-none cursor-pointer border border-[#CCCCCC] text-[#282828] rounded-md px-3 py-2 text-sm"
-                    >
-                        <option value="All">All</option>
-                        {semesters.length === 0 && academicYearId && (
-                            <option disabled>No data available</option>
-                        )}
-                        {semesters.map(s => (
-                            <option key={s.collegeSemesterId} value={s.collegeSemesterId}>
-                                {s.collegeSemester}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                {!isInter && (
+                    <div className="flex-1">
+                        <label className="text-xs text-[#282828]">Semester</label>
+                        <select
+                            disabled={!academicYearId}
+                            value={semesterId ?? "All"}
+                            onChange={(e) => {
+                                setSemesterId(e.target.value === "All" ? null : Number(e.target.value))
+                                setSubjectId(null)
+                                setSubjects([]);
+                            }}
+                            className={`w-full mt-1 outline-none border border-[#CCCCCC] rounded-md px-3 py-2 text-sm ${!academicYearId ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "text-[#282828] cursor-pointer"}`}
+                        >
+                            <option value="All">All</option>
+                            {semesters.length === 0 && academicYearId && (
+                                <option disabled>No data available</option>
+                            )}
+                            {semesters.map(s => (
+                                <option key={s.collegeSemesterId} value={s.collegeSemesterId}>
+                                    {s.collegeSemester}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
 
                 <div className="flex-1">
                     <label className="text-xs text-[#282828]">Subject</label>
                     <select
-                        disabled={!semesterId}
+                        disabled={isInter ? !academicYearId : !semesterId}
                         value={subjectId ?? "All"}
                         onChange={(e) =>
                             setSubjectId(e.target.value === "All" ? null : Number(e.target.value))
                         }
-                        className="w-full mt-1 outline-none cursor-pointer text-[#282828] border border-[#CCCCCC] rounded-md px-3 py-2 text-sm"
+                        className={`w-full mt-1 outline-none border border-[#CCCCCC] rounded-md px-3 py-2 text-sm ${(isInter ? !academicYearId : !semesterId) ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "text-[#282828] cursor-pointer"}`}
                     >
                         <option value="All">All</option>
-                        {subjects.length === 0 && semesterId && (
+                        {subjects.length === 0 && (isInter ? academicYearId : semesterId) && (
                             <option disabled>No data available</option>
                         )}
                         {subjects.map(s => (

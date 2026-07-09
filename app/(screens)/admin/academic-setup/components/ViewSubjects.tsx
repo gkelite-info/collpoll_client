@@ -7,6 +7,7 @@ import {
   getAcademicSubjects,
   deleteAcademicSubject,
 } from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
+import { fetchAdminAssignedEducationsList } from "@/lib/helpers/admin/academicSetupAPI";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Pagination } from "./pagination";
@@ -71,15 +72,18 @@ export default function ViewSubjects({
   useEffect(() => {
     if (!userId) return;
     loadSubjects();
-  }, [userId, collegeEducationId]);
+  }, [userId]);
 
   const loadSubjects = async () => {
-    if (!userId || !collegeEducationId) return;
+    if (!userId) return;
     try {
       setIsLoading(true);
 
       const { collegeId } = await fetchAdminContext(userId);
-      const res = await getAcademicSubjects(collegeId, collegeEducationId);
+      const adminEdus = await fetchAdminAssignedEducationsList(userId);
+      const validEduIds = adminEdus.map(e => e.collegeEducationId);
+
+      const res = await getAcademicSubjects(collegeId, validEduIds);
 
       if (!res.success) {
         toast.error(res.error || "Unable to load subjects. Please try again.");

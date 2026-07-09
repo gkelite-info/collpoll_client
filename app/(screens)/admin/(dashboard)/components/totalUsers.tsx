@@ -1,12 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { CaretLeft, UserCircle } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import CardComponent, { CardProps } from "./totalUsersCard";
 import FacultyView from "./facultyView";
 import { useTotalUsers } from "../../hooks/useTotalUsers";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { fetchAdminEducationTypes, fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns";
+import { FilterDropdown } from "../../assignments/components/filterDropdown";
 
 interface TotalUsersProps {
   onBack: () => void;
@@ -19,14 +21,61 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
   const {
     collegeId,
     collegeEducationId,
+    userId,
     loading: adminContextLoading,
   } = useAdmin();
+
+  const [educations, setEducations] = useState<any[]>([]);
+  const [educationFilter, setEducationFilter] = useState<string>("All");
+  const [education, setEducation] = useState<any>(null);
+  const [branchFilter, setBranchFilter] = useState<string>("All");
+
+  useEffect(() => {
+    const loadEducations = async () => {
+      if (!userId) return;
+      try {
+        let edus = await fetchAdminEducationTypes(userId);
+        if ((!edus || edus.length === 0) && collegeId) {
+          edus = await fetchEducations(collegeId);
+        }
+        setEducations(edus || []);
+        if (collegeEducationId && edus) {
+          const edu = edus.find((e: any) => e.collegeEducationId === collegeEducationId);
+          if (edu) setEducation(edu);
+        }
+      } catch (err) {
+        console.error("Failed to load educations", err);
+      }
+    };
+    loadEducations();
+  }, [userId, collegeId, collegeEducationId]);
+
+  useEffect(() => {
+    if (collegeEducationId && educationFilter === "All") {
+      setEducationFilter(collegeEducationId.toString());
+    }
+  }, [collegeEducationId]);
+
+  const activeEducationId = educationFilter !== "All" ? Number(educationFilter) : collegeEducationId;
 
   const {
     roles,
     departments,
     loading: dataLoading,
-  } = useTotalUsers(collegeId, collegeEducationId);
+  } = useTotalUsers(collegeId, activeEducationId);
+
+  const branchOptions = useMemo(() => {
+    return departments?.map((d) => ({
+      label: d.departmentName,
+      value: String(d.departmentId),
+    })) || [];
+  }, [departments]);
+
+  const filteredDepartments = useMemo(() => {
+    if (!departments) return [];
+    if (branchFilter === "All") return departments;
+    return departments.filter(d => String(d.departmentId) === branchFilter);
+  }, [departments, branchFilter]);
 
   const deptId = searchParams.get("deptId");
   const deptName = searchParams.get("deptName");
@@ -85,13 +134,13 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
     },
   ];
 
-  if (deptId && deptName && collegeId && collegeEducationId) {
+  if (deptId && deptName && collegeId && activeEducationId) {
     return (
       <FacultyView
         departmentId={Number(deptId)}
         departmentName={deptName}
         collegeId={collegeId}
-        collegeEducationId={collegeEducationId}
+        collegeEducationId={activeEducationId as number}
         onBack={() => router.push("?view=TOTAL_USERS")}
       />
     );
@@ -133,6 +182,33 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
               </div>
             ))}
         </article>
+      </div>
+
+      <div className="flex gap-4 mb-4">
+        <FilterDropdown
+          label="Education"
+          value={educationFilter}
+          options={educations.map((e) => ({
+            label: e.collegeEducationType,
+            value: String(e.collegeEducationId),
+          }))}
+          onChange={(val) => {
+            setEducationFilter(val);
+            setBranchFilter("All");
+            const edu = educations.find((e) => String(e.collegeEducationId) === val);
+            if (edu) setEducation(edu);
+          }}
+        />
+
+        <FilterDropdown
+          label={education?.collegeEducationType === "Inter" ? "Group" : "Branch"}
+          value={branchFilter}
+          options={[
+            { label: "All", value: "All" },
+            ...branchOptions
+          ]}
+          onChange={(val) => setBranchFilter(val)}
+        />
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm overflow-auto md:overflow-hidden lg:overflow-hidden">
@@ -178,14 +254,14 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
                   </td>
                 </tr>
               ))
-            ) : departments?.length === 0 ? (
+            ) : filteredDepartments?.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-6 text-center text-gray-500">
                   No Branches found
                 </td>
               </tr>
             ) : (
-              departments?.map((dept) => (
+              filteredDepartments?.map((dept) => (
                 <tr
                   key={dept.departmentId}
                   className="hover:bg-gray-50 transition-colors"

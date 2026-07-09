@@ -186,15 +186,22 @@ export default function MidExams({ onBack }: MidExamsProps) {
       try {
         setLoading(true);
 
-        const { data: subjectData, error: subjectError } = await supabase
+        let query = supabase
           .from("college_subjects")
           .select("*")
           .eq("collegeId", collegeId)
           .eq("collegeEducationId", collegeEducationId)
           .eq("collegeBranchId", collegeBranchId)
           .eq("collegeAcademicYearId", collegeAcademicYearId)
-          .eq("collegeSemesterId", collegeSemesterId)
           .is("deletedAt", null);
+
+        if (collegeSemesterId) {
+          query = query.eq("collegeSemesterId", collegeSemesterId);
+        } else {
+          query = query.is("collegeSemesterId", null);
+        }
+
+        const { data: subjectData, error: subjectError } = await query;
 
         if (subjectError) throw subjectError;
         setCollegeSubjectsList(subjectData || []);
@@ -220,9 +227,9 @@ export default function MidExams({ onBack }: MidExamsProps) {
         const enrolled = (enrollmentRows || []).map((r) => r.subjectName.trim().toLowerCase());
         setEnrolledSubjects(enrolled);
 
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to load exam subjects/enrollment", err);
-        toast.error("Failed to load exam details.");
+        toast.error("Failed to load exam details: " + (err?.message || "Unknown error"));
       } finally {
         setLoading(false);
       }
@@ -232,7 +239,7 @@ export default function MidExams({ onBack }: MidExamsProps) {
   }, [selectedSchedule, studentId, collegeId, collegeEducationId, collegeBranchId, collegeAcademicYearId, collegeSemesterId]);
 
   const confirmEnrollment = async () => {
-    if (!studentId || !selectedSchedule || !selectedSubject || !collegeSemesterId) return;
+    if (!studentId || !selectedSchedule || !selectedSubject) return;
 
     try {
       setLoading(true);

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, ReactNode, useEffect } from "react";
+import { useState, ReactNode, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { useUser } from "@/app/utils/context/UserContext";
 import {
   BuildingOffice,
   Calendar,
@@ -44,8 +45,10 @@ export default function Navbar({ onClose }: StudentNavbarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const t = useTranslations("Navbars");
   const [loading, setLoading] = useState(false);
+  const { collegeEducationType } = useUser();
 
-  const items: NavItem[] = [
+  const items: NavItem[] = useMemo(() => {
+    const allItems: NavItem[] = [
     {
       icon: (isActive) => <House size={18} weight={isActive ? "fill" : "regular"} />,
       label: t("Home"),
@@ -121,7 +124,14 @@ export default function Navbar({ onClose }: StudentNavbarProps) {
       label: t("Settings"),
       path: "/settings",
     },
-  ];
+    ];
+
+    if (collegeEducationType === "Inter") {
+      return allItems.filter((item) => item.path !== "/stu_placements");
+    }
+
+    return allItems;
+  }, [t, collegeEducationType]);
 
   useEffect(() => {
     const current = items.find((item) => item.path === pathname);

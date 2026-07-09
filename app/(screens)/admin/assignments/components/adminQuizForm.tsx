@@ -28,6 +28,7 @@ export default function AdminQuizForm({ onCancel }: AdminQuizFormProps) {
     collegeSubjectUnitTopicId: number;
   }[]>([]);
   const [selectedFacultyId, setSelectedFacultyId] = useState<number | null>(null);
+  const [selectedFacultyIdentifier, setSelectedFacultyIdentifier] = useState<string | null>(null);
   const [assignedFacultyName, setAssignedFacultyName] = useState<string>("Loading...");
 
   const [academicYears, setAcademicYears] = useState<{ id: number; label: string }[]>([]);
@@ -65,8 +66,10 @@ export default function AdminQuizForm({ onCancel }: AdminQuizFormProps) {
         if (facultyData) {
           setSelectedFacultyId(facultyData.facultyId);
           setAssignedFacultyName(facultyData.fullName);
+          setSelectedFacultyIdentifier(facultyData.identifierId);
         } else {
           setAssignedFacultyName("Unassigned");
+          setSelectedFacultyIdentifier(null);
         }
       });
     }
@@ -175,7 +178,7 @@ export default function AdminQuizForm({ onCancel }: AdminQuizFormProps) {
           <label className="text-sm font-bold text-[#282828]">Assign Faculty</label>
           <div className="border border-gray-200 rounded-md p-2.5 text-sm bg-gray-50 text-gray-500 flex justify-between items-center">
             <span>{assignedFacultyName}</span>
-            <span className="text-xs font-mono bg-gray-200 px-2 py-0.5 rounded">ID: {selectedFacultyId ?? "N/A"}</span>
+            <span className="text-xs font-mono bg-gray-200 px-2 py-0.5 rounded">ID: {selectedFacultyIdentifier ?? "N/A"}</span>
           </div>
         </div>
 

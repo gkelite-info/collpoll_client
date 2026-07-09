@@ -1305,7 +1305,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
             <div className="flex-1 w-full min-w-0">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Branch <span className="text-red-500">*</span>
+                {educations.find((e) => e.collegeEducationId === educationId)?.collegeEducationType === "Inter" ? "Group" : "Branch"} <span className="text-red-500">*</span>
               </label>
 
               <input
