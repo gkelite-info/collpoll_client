@@ -3,8 +3,11 @@ import {
   createEmployeeLeaveRequest,
   fetchEmployeeLeaveRequestCounts,
   fetchPaginatedEmployeeLeaveRequests,
+<<<<<<< Updated upstream
   fetchPaginatedTaggedEmployeeLeaveRequests,
   fetchTaggedEmployeeLeaveRequestCounts,
+=======
+>>>>>>> Stashed changes
 } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
 
 function getOrdinalSuffix(i: number) {
@@ -192,6 +195,7 @@ export async function fetchFacultyLeaveCounts(facultyId: number) {
     console.error("Error fetching faculty employee leave counts:", error);
     return { all: 0, approved: 0, pending: 0, rejected: 0 };
   }
+<<<<<<< Updated upstream
 }
 
 export async function fetchFacultyTaggedLeaveCounts(facultyId: number) {
@@ -212,6 +216,8 @@ export async function fetchFacultyTaggedLeaveCounts(facultyId: number) {
     console.error("Error fetching faculty tagged leave counts:", error);
     return { all: 0, approved: 0, pending: 0, rejected: 0 };
   }
+=======
+>>>>>>> Stashed changes
 }
 
 export async function fetchFacultyLeaves(
@@ -263,6 +269,7 @@ export async function fetchFacultyLeaves(
   }
 }
 
+<<<<<<< Updated upstream
 export async function fetchFacultyTaggedLeaves(
   facultyId: number,
   page: number,
@@ -311,12 +318,17 @@ export async function fetchFacultyTaggedLeaves(
   }
 }
 
+=======
+>>>>>>> Stashed changes
 type FacultyLeaveRequestPayload = {
   startDate: string;
   endDate: string;
   leaveType: string;
   description: string;
+<<<<<<< Updated upstream
   tags?: import("@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestTagsAPI").EmployeeLeaveTagSelection[];
+=======
+>>>>>>> Stashed changes
 };
 
 export async function submitFacultyLeaveRequest(
@@ -334,7 +346,10 @@ export async function submitFacultyLeaveRequest(
     leaveFromDate: startDate,
     leaveToDate: endDate,
     description,
+<<<<<<< Updated upstream
     tags: payload.tags,
+=======
+>>>>>>> Stashed changes
   });
 }
 

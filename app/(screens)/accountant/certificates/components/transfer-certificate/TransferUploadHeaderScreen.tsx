@@ -1,10 +1,12 @@
 "use client";
 
-import { CaretLeft, CloudArrowUp, Info } from "@phosphor-icons/react";
+import { Info } from "@phosphor-icons/react";
+import Image from "next/image";
 import { useState } from "react";
 import toast from "react-hot-toast";
 
 export type HeaderConfig = {
+  collegeTcHeaderId?: number;
   collegeName: string;
   affiliation: string;
   address: string;
@@ -20,46 +22,34 @@ export function TransferUploadHeaderScreen({
 }: {
   config: HeaderConfig;
   onCancel: () => void;
-  onSave: (updatedConfig: HeaderConfig) => void;
+  onSave: (updatedConfig: HeaderConfig) => Promise<void> | void;
   onDraft: () => void;
 }) {
   const [collegeName, setCollegeName] = useState(config.collegeName);
   const [affiliation, setAffiliation] = useState(config.affiliation);
   const [address, setAddress] = useState(config.address);
   const [phone, setPhone] = useState(config.phone);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(config.logoUrl || null);
+  const [isSaving, setIsSaving] = useState(false);
+  const logoUrl = config.logoUrl || null;
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error("Logo size must be less than 2MB.");
-        return;
-      }
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-      toast.success("Logo uploaded successfully!");
-    }
-  };
-
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!collegeName.trim() || !affiliation.trim() || !address.trim() || !phone.trim()) {
       toast.error("Please fill in all required fields.");
       return;
     }
 
-    onSave({
-      collegeName,
-      affiliation,
-      address,
-      phone,
-      logoUrl: logoPreview || undefined,
-    });
+    setIsSaving(true);
+    try {
+      await onSave({
+        collegeName,
+        affiliation,
+        address,
+        phone,
+        logoUrl: logoUrl || undefined,
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -109,7 +99,7 @@ export function TransferUploadHeaderScreen({
               value={collegeName}
               onChange={(e) => setCollegeName(e.target.value)}
               placeholder="Enter College Name"
-              className="h-10 rounded-md border border-[#D7DEE8] bg-white px-3 text-[13px] font-semibold text-[#17213D] outline-none focus:border-[#43C17A] transition-colors w-full"
+              className="h-10 rounded-md border border-[#D7DEE8] bg-white px-3 text-[13px] font-medium text-[#17213D] outline-none focus:border-[#43C17A] transition-colors w-full"
             />
           </label>
 
@@ -123,7 +113,7 @@ export function TransferUploadHeaderScreen({
               value={affiliation}
               onChange={(e) => setAffiliation(e.target.value)}
               placeholder="e.g. (Affiliated to State Board of Technical Education)"
-              className="h-10 rounded-md border border-[#D7DEE8] bg-white px-3 text-[13px] font-semibold text-[#17213D] outline-none focus:border-[#43C17A] transition-colors w-full"
+              className="h-10 rounded-md border border-[#D7DEE8] bg-white px-3 text-[13px] font-medium text-[#17213D] outline-none focus:border-[#43C17A] transition-colors w-full"
             />
           </label>
 
@@ -137,7 +127,7 @@ export function TransferUploadHeaderScreen({
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Enter College Address"
               rows={3}
-              className="rounded-md border border-[#D7DEE8] bg-white px-3 py-2 text-[13px] font-semibold text-[#17213D] outline-none focus:border-[#43C17A] transition-colors w-full resize-none h-[80px]"
+              className="rounded-md border border-[#D7DEE8] bg-white px-3 py-2 text-[13px] font-medium text-[#17213D] outline-none focus:border-[#43C17A] transition-colors w-full resize-none h-[80px]"
             />
           </label>
 
@@ -151,26 +141,33 @@ export function TransferUploadHeaderScreen({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="e.g. 08458-288974, 9505504219"
-              className="h-10 rounded-md border border-[#D7DEE8] bg-white px-3 text-[13px] font-semibold text-[#17213D] outline-none focus:border-[#43C17A] transition-colors w-full"
+              className="h-10 rounded-md border border-[#D7DEE8] bg-white px-3 text-[13px] font-medium text-[#17213D] outline-none focus:border-[#43C17A] transition-colors w-full"
             />
           </label>
 
-          {/* Logo Dropzone */}
+          {/* College Logo */}
           <div className="flex flex-col gap-2">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#17213D]">
-              UPLOAD COLLEGE LOGO <span className="text-[#EF4444]">*</span>
+              College Logo
             </span>
-            <div className="relative rounded-md border-2 border-dashed border-[#C9D0D9] bg-white p-6 hover:bg-slate-50 transition-colors flex flex-col items-center justify-center text-center cursor-pointer min-h-[140px]">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleLogoUpload}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-              />
-              <CloudArrowUp size={36} className="text-[#7B8AA3] mb-2" />
-              <p className="text-[13px] font-bold text-[#17213D]">Click to upload logo</p>
-              <p className="text-[11px] text-[#7B8AA3] mt-1 font-medium">PNG, JPG or JPEG (Max. size: 2MB)</p>
-              <p className="text-[10px] text-[#7B8AA3] font-medium">Recommended size: 250 × 250 pixels</p>
+            <div className="rounded-md border border-[#D7DEE8] bg-[#F8FAFC] p-6 flex min-h-[140px] flex-col items-center justify-center text-center">
+              {logoUrl ? (
+                <>
+                <Image
+                  src={logoUrl}
+                  alt="College Logo"
+                  width={64}
+                  height={64}
+                  unoptimized
+                  className="mb-3 h-16 w-16 rounded-full object-contain"
+                />
+                  <p className="text-[13px] font-bold text-[#17213D]">College logo loaded</p>
+                </>
+              ) : (
+                <p className="max-w-[360px] text-[13px] font-bold leading-relaxed text-[#E11D48]">
+                  College logo is not available. Please contact admin to add the logo.
+                </p>
+              )}
             </div>
           </div>
 
@@ -193,9 +190,10 @@ export function TransferUploadHeaderScreen({
             <button
               type="button"
               onClick={handleSave}
-              className="h-10 rounded-md bg-[#16284F] px-8 text-[13px] font-bold text-white hover:bg-[#0f1c37] transition-all shadow-[0_4px_12px_rgba(22,40,79,0.15)] cursor-pointer"
+              disabled={isSaving}
+              className="h-10 cursor-pointer rounded-md bg-[#16284F] px-8 text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(22,40,79,0.15)] transition-all hover:bg-[#0f1c37] disabled:cursor-not-allowed disabled:bg-slate-500"
             >
-              Save Header
+              {isSaving ? "Saving..." : "Save"}
             </button>
           </div>
         </section>
@@ -206,12 +204,19 @@ export function TransferUploadHeaderScreen({
             Live Preview
           </h2>
 
-          <div className="border border-slate-200 rounded-md p-6 bg-white flex flex-col items-center justify-between min-h-[420px] shadow-sm text-center">
+          <div className="border border-slate-200 rounded-md p-8 bg-white flex flex-col items-center justify-between min-h-[500px] shadow-sm text-center">
             <div className="flex flex-col items-center w-full">
               {/* Logo Placeholder */}
-              <div className="w-18 h-18 rounded-full border border-slate-300 flex items-center justify-center bg-slate-50 mb-4 overflow-hidden">
-                {logoPreview ? (
-                  <img src={logoPreview} alt="College Logo Preview" className="w-full h-full object-contain" />
+              <div className="mb-5 flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border border-slate-300 bg-slate-50">
+                {logoUrl ? (
+                  <Image
+                    src={logoUrl}
+                    alt="College Logo Preview"
+                    width={112}
+                    height={112}
+                    unoptimized
+                    className="h-full w-full object-contain"
+                  />
                 ) : (
                   <svg className="w-12 h-12 text-slate-300" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="2" />
@@ -223,29 +228,29 @@ export function TransferUploadHeaderScreen({
               </div>
 
               {/* College Name */}
-              <h3 className="text-[13px] font-extrabold uppercase text-[#17213D] leading-tight tracking-wide">
+              <h3 className="text-[18px] font-extrabold uppercase text-[#17213D] leading-tight tracking-wide">
                 {collegeName || "COLLEGE NAME"}
               </h3>
 
               {/* Affiliation */}
-              <p className="text-[9px] font-bold text-slate-500 mt-1 italic leading-tight">
+              <p className="mt-2 text-[16px] font-bold italic leading-tight text-slate-500">
                 {affiliation || "Affiliation Details"}
               </p>
 
               {/* Decorative separator with star/sun */}
-              <div className="w-full flex items-center justify-center my-3 text-slate-400 gap-2">
+              <div className="my-5 flex w-full items-center justify-center gap-2 text-slate-400">
                 <span className="h-[1px] bg-slate-200 flex-1"></span>
                 <span className="text-[10px]">✸</span>
                 <span className="h-[1px] bg-slate-200 flex-1"></span>
               </div>
 
               {/* Address */}
-              <p className="text-[9px] font-semibold text-slate-600 leading-relaxed px-2">
+              <p className="px-2 text-[16px] font-medium leading-relaxed text-slate-600">
                 {address || "College Address Details"}
               </p>
 
               {/* Phone */}
-              <p className="text-[9px] font-bold text-slate-800 mt-1">
+              <p className="mt-2 text-[18px] font-bold text-slate-800">
                 Ph : {phone || "Phone Details"}
               </p>
             </div>
