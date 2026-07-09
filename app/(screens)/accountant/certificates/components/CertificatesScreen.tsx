@@ -2,8 +2,8 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { BonafideCertificatesScreen } from "./BonafideCertificatesScreen";
-import { TransferCertificatesScreen } from "./TransferCertificatesScreen";
+import { BonafideCertificatesScreen } from "./bonafides/BonafideCertificatesScreen";
+import { TransferCertificatesScreen } from "./transfer-certificate/TransferCertificatesScreen";
 
 type CertificateTab = "bonafides" | "transfer-certificate";
 

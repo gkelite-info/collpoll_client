@@ -189,7 +189,7 @@ export function BonafideCertificatesScreen({
   return (
     <div className="flex flex-col gap-5">
       <section>
-        <h1 className="flex flex-wrap items-center gap-4 text-[24px] font-bold leading-tight md:text-[28px]">
+        <h1 className="flex flex-wrap items-center gap-3 text-[20px] font-bold leading-tight md:text-[24px]">
           <span className="text-[#43C17A]">Bonafides</span>
           <span className="text-[#17213D]">/</span>
           <button
@@ -200,17 +200,17 @@ export function BonafideCertificatesScreen({
             Transfer Certificate
           </button>
         </h1>
-        <p className="mt-1 text-[13px] font-medium text-[#7B8AA3]">
+        <p className="mt-1 text-[12px] font-medium text-[#7B8AA3]">
           Create, review, and issue student certificate requests.
         </p>
       </section>
 
       <section className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-[26px] font-bold leading-tight text-[#17213D]">
+          <h1 className="text-[22px] font-bold leading-tight text-[#17213D]">
             Bonafide Certificates
           </h1>
-          <p className="mt-1 text-[13px] font-medium text-[#4F5E72]">
+          <p className="mt-1 text-[12px] font-medium text-[#4F5E72]">
             Create, manage and track bonafide certificates
           </p>
         </div>
