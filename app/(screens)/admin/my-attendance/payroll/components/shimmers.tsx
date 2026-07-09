@@ -81,22 +81,37 @@ export const ModalDetailShimmer = () => (
         <div className="h-4 bg-gray-100 rounded w-32"></div>
       </div>
     </div>
-    <div className="grid grid-cols-2 gap-4">
-      <div className="h-16 bg-gray-50 rounded-xl border border-gray-100 p-4 flex flex-col gap-2">
+    <div className="grid grid-cols-2 gap-3">
+      <div className="h-16 bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 flex flex-col justify-between">
         <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-        <div className="h-5 bg-gray-200 rounded w-1/2"></div>
+        <div className="h-5 bg-gray-200 rounded w-1/4"></div>
       </div>
-      <div className="h-16 bg-gray-50 rounded-xl border border-gray-100 p-4 flex flex-col gap-2">
+      <div className="h-16 bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 flex flex-col justify-between">
         <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-        <div className="h-5 bg-gray-200 rounded w-1/2"></div>
+        <div className="h-5 bg-gray-200 rounded w-1/4"></div>
       </div>
-      <div className="h-16 bg-gray-50 rounded-xl border border-gray-100 p-4 flex flex-col gap-2">
-        <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-        <div className="h-5 bg-gray-200 rounded w-1/2"></div>
+      <div className="h-[120px] bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 col-span-2 flex flex-col gap-3">
+        <div className="h-3 bg-gray-200 rounded w-1/4 mb-1"></div>
+        <div className="w-full flex justify-between">
+          <div className="h-3 bg-gray-100 rounded w-1/3"></div>
+          <div className="h-3 bg-gray-200 rounded w-8"></div>
+        </div>
+        <div className="w-full flex justify-between">
+          <div className="h-3 bg-gray-100 rounded w-1/4"></div>
+          <div className="h-3 bg-gray-200 rounded w-8"></div>
+        </div>
+        <div className="w-full flex justify-between">
+          <div className="h-3 bg-gray-100 rounded w-1/5"></div>
+          <div className="h-3 bg-gray-200 rounded w-8"></div>
+        </div>
       </div>
-      <div className="h-16 bg-gray-50 rounded-xl border border-gray-100 p-4 flex flex-col gap-2">
+      <div className="h-16 bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 flex flex-col justify-between">
         <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-        <div className="h-5 bg-gray-200 rounded w-1/2"></div>
+        <div className="h-5 bg-gray-200 rounded w-1/4"></div>
+      </div>
+      <div className="h-16 bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 flex flex-col justify-between">
+        <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+        <div className="h-5 bg-gray-200 rounded w-1/3"></div>
       </div>
     </div>
     <div className="flex flex-col gap-3 mt-2">

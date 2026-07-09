@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
-import { TableRowShimmer } from "@/app/(screens)/admin/my-attendance/payroll/components/shimmers";
 import { CaretDown } from "@phosphor-icons/react";
-import { useEffect } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getTaxDeclarations } from "@/lib/helpers/Hr/payroll/taxDeclarationAPI";
 import toast from "react-hot-toast";
+import TaxDeclarationModal from "./TaxDeclarationModal";
+import ManageTaxShimmer from "./ManageTaxShimmer";
 
 export default function ManageTaxTab() {
   const { collegeId } = useUser();
@@ -20,12 +20,20 @@ export default function ManageTaxTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [declarations, setDeclarations] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
+  
+  const [modalData, setModalData] = useState({
+    isOpen: false,
+    taxDeclarationId: null as number | null,
+    userId: 0,
+    userName: ""
+  });
 
   const filterOptions = [
     { value: "all", label: "All Declarations" },
     { value: "pending", label: "Pending Review" },
     { value: "approved", label: "Approved" },
     { value: "rejected", label: "Rejected" },
+    { value: "not_declared", label: "Not Declared" },
   ];
 
   const selectedFilterLabel = filterOptions.find(o => o.value === filterStatus)?.label || "All Declarations";
@@ -116,27 +124,22 @@ export default function ManageTaxTab() {
         </div>
       </div>
 
-      <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col min-h-[400px]">
-        <div className="overflow-x-auto flex-1">
+      <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col min-h-[600px]">
+        <div className="overflow-auto flex-1 relative custom-scrollbar max-h-[65vh]">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Employee ID</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Employee</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Regime</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Total Declared</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Actions</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50">Employee ID</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50">Employee</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50">Regime</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50">Total Declared</th>
+                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50">Status</th>
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoading ? (
-                <>
-                  <TableRowShimmer columns={6} />
-                  <TableRowShimmer columns={6} />
-                  <TableRowShimmer columns={6} />
-                  <TableRowShimmer columns={6} />
-                </>
+                <ManageTaxShimmer />
               ) : declarations.length > 0 ? (
                 declarations.map((dec: any, i) => (
                   <tr key={i} className="hover:bg-gray-50 transition-colors">
@@ -159,18 +162,26 @@ export default function ManageTaxTab() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-800">
                       ₹{Number(dec.totalDeclared || 0).toLocaleString('en-IN')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
                         dec.proofStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                         dec.proofStatus === 'approved' ? 'bg-green-100 text-green-800' :
                         dec.proofStatus === 'rejected' ? 'bg-red-100 text-red-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
-                        {dec.proofStatus}
+                        {dec.proofStatus?.replace(/_/g, ' ')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-[#43C17A] hover:text-[#38A166] transition-colors">
+                      <button 
+                        onClick={() => setModalData({
+                          isOpen: true,
+                          taxDeclarationId: dec.taxDeclarationId,
+                          userId: dec.userId,
+                          userName: dec.user?.fullName || "Employee"
+                        })}
+                        className="text-[#43C17A] hover:text-[#38A166] transition-colors cursor-pointer"
+                      >
                         Review
                       </button>
                     </td>
@@ -193,6 +204,14 @@ export default function ManageTaxTab() {
           onPageChange={setCurrentPage}
         />
       </div>
+
+      <TaxDeclarationModal
+        isOpen={modalData.isOpen}
+        onClose={() => setModalData(prev => ({ ...prev, isOpen: false }))}
+        taxDeclarationId={modalData.taxDeclarationId}
+        userId={modalData.userId}
+        userName={modalData.userName}
+      />
     </div>
   );
 }

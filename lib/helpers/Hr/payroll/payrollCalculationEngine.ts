@@ -200,6 +200,8 @@ export async function calculatePayrollEngine(
       tempDate.setDate(tempDate.getDate() + 1);
     }
 
+    const dailyStatus = new Array(totalCalendarDays + 1).fill("HOLIDAY");
+
     // Optimized loop over calendar days
     const today = new Date();
     today.setHours(23, 59, 59, 999); // Include today fully
@@ -209,6 +211,7 @@ export async function calculatePayrollEngine(
       const loopDate = new Date(year, month - 1, d);
       
       if (holidayDates.has(dateStr)) {
+        dailyStatus[d] = "HOLIDAY";
         continue; // Weekends/Holidays are paid by default, no LOP
       }
 
@@ -217,13 +220,14 @@ export async function calculatePayrollEngine(
         // We increment fullDays so the Payslip 'Days Present' reflects the projected full month attendance,
         // ensuring 'Paid Absences' exactly equals just the holidays and actual paid leaves.
         fullDays++;
+        dailyStatus[d] = "PRESENT";
         continue;
       }
       
       if (attendanceByDate.has(dateStr)) {
         const st = attendanceByDate.get(dateStr);
-        if (st === "PRESENT" || st === "LATE") fullDays++;
-        else if (st === "HALFDAY") halfDays++;
+        if (st === "PRESENT" || st === "LATE") { fullDays++; dailyStatus[d] = "PRESENT"; }
+        else if (st === "HALFDAY") { halfDays++; dailyStatus[d] = "PRESENT"; }
         else if (st === "ABSENT") { 
           if (userLeaves.has(dateStr)) {
             const type = userLeaves.get(dateStr);
@@ -235,10 +239,10 @@ export async function calculatePayrollEngine(
             } else {
               if (paidUsed < alloc.paid) { paidUsed++; hasBalance = true; }
             }
-            if (hasBalance) paidLeaves++;
-            else { absentDays++; lopDays++; }
+            if (hasBalance) { paidLeaves++; dailyStatus[d] = "LEAVE"; }
+            else { absentDays++; lopDays++; dailyStatus[d] = "ABSENT"; }
           }
-          else { absentDays++; lopDays++; }
+          else { absentDays++; lopDays++; dailyStatus[d] = "ABSENT"; }
         }
       } else { 
         if (userLeaves.has(dateStr)) {
@@ -251,17 +255,50 @@ export async function calculatePayrollEngine(
           } else {
             if (paidUsed < alloc.paid) { paidUsed++; hasBalance = true; }
           }
-          if (hasBalance) paidLeaves++;
-          else { absentDays++; lopDays++; }
+          if (hasBalance) { paidLeaves++; dailyStatus[d] = "LEAVE"; }
+          else { absentDays++; lopDays++; dailyStatus[d] = "ABSENT"; }
         }
-        else { absentDays++; lopDays++; }
+        else { absentDays++; lopDays++; dailyStatus[d] = "ABSENT"; }
       }
     }
 
-    // SaaS HR Rule: If employee has 0 attendance and 0 approved leaves for the entire month,
-    // they do not get paid for weekends/holidays. The entire month is LOP.
-    if (fullDays === 0 && halfDays === 0 && paidLeaves === 0) {
-      lopDays = totalCalendarDays;
+    // SaaS HR Day-to-Day Sandwich Policy
+    // A holiday/weekend is LOP if sandwiched by unapproved absences (ABSENT).
+    for (let d = 1; d <= totalCalendarDays; d++) {
+      if (dailyStatus[d] === "HOLIDAY") {
+        let prevWorkingDay = "NONE";
+        for (let p = d - 1; p >= 1; p--) {
+          if (dailyStatus[p] !== "HOLIDAY") {
+            prevWorkingDay = dailyStatus[p];
+            break;
+          }
+        }
+        
+        let nextWorkingDay = "NONE";
+        for (let n = d + 1; n <= totalCalendarDays; n++) {
+          if (dailyStatus[n] !== "HOLIDAY") {
+            nextWorkingDay = dailyStatus[n];
+            break;
+          }
+        }
+
+        const isPrevAbsent = prevWorkingDay === "ABSENT" || prevWorkingDay === "NONE";
+        const isNextAbsent = nextWorkingDay === "ABSENT" || nextWorkingDay === "NONE";
+        const hasAtLeastOneAbsent = prevWorkingDay === "ABSENT" || nextWorkingDay === "ABSENT";
+        
+        if (isPrevAbsent && isNextAbsent && hasAtLeastOneAbsent) {
+          lopDays++; // Holiday becomes LOP
+          dailyStatus[d] = "SANDWICH_LOP";
+        }
+      }
+    }
+
+    // SaaS HR Monthly Continuous LOP Rule: 
+    // If employee has 0 attendance (0 present days) for the entire month,
+    // they ONLY get paid for explicitly approved paid leaves (sick, casual, paid).
+    // All other days (including all weekends/holidays) are converted to LOP.
+    if (fullDays === 0 && halfDays === 0) {
+      lopDays = totalCalendarDays - paidLeaves;
     }
 
     const lopDeduction = lopDays * perDayRate;

@@ -8,6 +8,7 @@ import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagi
 import { useUser } from "@/app/utils/context/UserContext";
 import toast from "react-hot-toast";
 import ViewPayrollRunModal from "./ViewPayrollRunModal";
+import { CaretDown } from "@phosphor-icons/react";
 
 export default function PayrollHistoryTab() {
   const { collegeId } = useUser();
@@ -20,6 +21,17 @@ export default function PayrollHistoryTab() {
   const [selectedRun, setSelectedRun] = useState<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const [filterYear, setFilterYear] = useState("all");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [{ value: "all", label: "All Years" }];
+  for (let y = currentYear; y >= 2026; y--) {
+    yearOptions.push({ value: y.toString(), label: y.toString() });
+  }
+
+  const selectedYearLabel = yearOptions.find(o => o.value === filterYear)?.label || "All Years";
+
   useEffect(() => {
     let isMounted = true;
     
@@ -28,7 +40,7 @@ export default function PayrollHistoryTab() {
       setIsLoading(true);
       
       try {
-        const result = await getPayrollRuns(Number(collegeId), currentPage, itemsPerPage);
+        const result = await getPayrollRuns(Number(collegeId), currentPage, itemsPerPage, filterYear);
         
         if (isMounted) {
           setHistoryData(result.runs);
@@ -44,18 +56,55 @@ export default function PayrollHistoryTab() {
     fetchData();
 
     return () => { isMounted = false; };
-  }, [collegeId, currentPage, refreshKey]);
+  }, [collegeId, currentPage, refreshKey, filterYear]);
 
   return (
     <div className="flex flex-col gap-4 w-full h-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-lg font-semibold text-gray-800">Past Payroll Runs</h2>
+        <div className="flex flex-col sm:flex-row gap-4 relative w-full sm:w-auto">
+          <div className="relative w-full sm:w-auto">
+            <div 
+              className="relative border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white cursor-pointer w-full sm:min-w-[160px] flex justify-between items-center"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            >
+              <span className="font-medium text-gray-800">{selectedYearLabel}</span>
+              <CaretDown 
+                size={16} 
+                weight="bold" 
+                className={`text-gray-500 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} 
+              />
+            </div>
+            
+            {isDropdownOpen && (
+              <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                {yearOptions.map((opt) => (
+                  <div
+                    key={opt.value}
+                    onClick={() => {
+                      setFilterYear(opt.value);
+                      setCurrentPage(1); // Reset to first page on filter change
+                      setIsDropdownOpen(false);
+                    }}
+                    className={`px-3 py-2 text-sm cursor-pointer transition-colors ${
+                      filterYear === opt.value
+                        ? "bg-[#43C17A]/10 text-[#43C17A] font-semibold"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {opt.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col min-h-[400px]">
-        <div className="overflow-x-auto flex-1">
+        <div className="overflow-auto flex-1 relative custom-scrollbar max-h-[60vh]">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Month/Year</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Staff Count</th>

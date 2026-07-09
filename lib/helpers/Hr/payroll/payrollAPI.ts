@@ -19,15 +19,21 @@ export async function createPayrollRun(
   return data;
 }
 
-export async function getPayrollRuns(collegeId: number, page: number, limit: number) {
+export async function getPayrollRuns(collegeId: number, page: number, limit: number, year?: string | number) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("payroll_runs")
     .select("*, processor:processedBy(fullName)", { count: "exact" })
     .eq("collegeId", collegeId)
-    .eq("is_deleted", false)
+    .eq("is_deleted", false);
+
+  if (year && year !== 'all') {
+    query = query.eq("payrollYear", Number(year));
+  }
+
+  const { data, error, count } = await query
     .order("payrollYear", { ascending: false })
     .order("payrollMonth", { ascending: false })
     .order("createdAt", { ascending: false })
@@ -238,10 +244,11 @@ export async function getPayrollEntryDetails(entryId: number) {
     .from("payroll_entries")
     .select(`
       *,
-      payroll_runs ( payrollMonth, payrollYear, totalCalendarDays ),
+      payroll_runs ( payrollMonth, payrollYear, totalCalendarDays, createdAt ),
       user:userId (
         fullName,
         email,
+        collegeId,
         employee_ids ( employeeId ),
         employee_pay_profiles (
           employee_payroll_compliance_values ( amount, payroll_compliance_types ( title ) )
@@ -255,5 +262,44 @@ export async function getPayrollEntryDetails(entryId: number) {
     throw new Error(error?.message || "Entry not found");
   }
   
-  return data;
+  // Also fetch leaves, holidays, weekoffs to separate them in the UI
+  const month = data.payroll_runs.payrollMonth;
+  const year = data.payroll_runs.payrollYear;
+  const userId = data.userId;
+  // Fallback collegeId to 8 if not fetched for some reason
+  const collegeId = data.user?.collegeId || 8; 
+
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Last day of month
+
+  const [leavesRes, holidaysRes, mediaRes] = await Promise.all([
+    supabase
+      .from("employee_leave_requests")
+      .select("leaveType, leaveFromDate, leaveToDate")
+      .eq("userId", userId)
+      .eq("status", "approved")
+      .eq("is_deleted", false)
+      .or(`leaveFromDate.gte.${startDate},leaveToDate.gte.${startDate}`)
+      .or(`leaveFromDate.lte.${endDate},leaveToDate.lte.${endDate}`),
+    supabase
+      .from("college_holidays")
+      .select("holidayDate, title, holidayType")
+      .eq("collegeId", collegeId)
+      .gte("holidayDate", startDate)
+      .lte("holidayDate", endDate),
+    supabase
+      .from("college_media")
+      .select("logoUrl, bannerUrl")
+      .eq("collegeId", collegeId)
+      .eq("is_deleted", false)
+      .maybeSingle()
+  ]);
+
+  return {
+    ...data,
+    leavesTaken: leavesRes.data || [],
+    holidaysInMonth: holidaysRes.data || [],
+    weekoffsConfig: [{ dayOfWeek: 0 }], // Default to Sunday
+    collegeMedia: mediaRes.data || null
+  };
 }
