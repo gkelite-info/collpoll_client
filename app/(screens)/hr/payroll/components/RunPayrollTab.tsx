@@ -108,7 +108,7 @@ export default function RunPayrollTab() {
       setRefreshKey(prev => prev + 1);
       setIsConfirmOpen(false);
     } catch (err: any) {
-      toast.error(err.message || "Failed to calculate payroll", { id: "payroll-calculate-error" });
+      toast.error("Unable to calculate payroll at this time. Please try again.", { id: "payroll-calculate-error" });
     } finally {
       setIsProcessing(false);
       setIsConfirmOpen(false);
@@ -123,7 +123,7 @@ export default function RunPayrollTab() {
       toast.success("Payroll run finalized! Payslips are now visible to staff.", { id: "payroll-finalize-success" });
       setRefreshKey(prev => prev + 1);
     } catch (err: any) {
-      toast.error(err.message || "Failed to finalize payroll run.", { id: "payroll-finalize-error" });
+      toast.error("Unable to finalize payroll run. Please try again.", { id: "payroll-finalize-error" });
     } finally {
       setIsProcessing(false);
     }
@@ -137,7 +137,7 @@ export default function RunPayrollTab() {
       toast.success("Payroll marked as paid.", { id: "payroll-paid-success" });
       setRefreshKey(prev => prev + 1);
     } catch (err: any) {
-      toast.error(err.message || "Failed to mark as paid.", { id: "payroll-paid-error" });
+      toast.error("Unable to mark payroll as paid. Please try again.", { id: "payroll-paid-error" });
     } finally {
       setIsProcessing(false);
     }
@@ -166,7 +166,10 @@ export default function RunPayrollTab() {
             <input
               type="month"
               value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
+              onChange={(e) => {
+                setSelectedMonth(e.target.value);
+                setCurrentPage(1);
+              }}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#43C17A] bg-white cursor-pointer w-full sm:min-w-[160px]"
             />
           </div>
@@ -212,7 +215,7 @@ export default function RunPayrollTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {isLoading ? (
           <>
             <StatCardShimmer />
@@ -235,10 +238,10 @@ export default function RunPayrollTab() {
         )}
       </div>
 
-      <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col min-h-[400px]">
-        <div className="overflow-x-auto flex-1">
+      <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col min-h-[600px]">
+        <div className="overflow-auto flex-1 relative custom-scrollbar max-h-[65vh]">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Employee ID</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Employee</th>

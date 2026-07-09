@@ -1,5 +1,3 @@
-import React from "react";
-
 export function TaxSection() {
   return (
     <div className="flex-1 relative min-h-[60vh] overflow-y-auto pr-2 pb-6 custom-scrollbar">

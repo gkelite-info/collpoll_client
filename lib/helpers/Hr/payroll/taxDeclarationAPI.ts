@@ -11,6 +11,24 @@ export async function upsertTaxDeclaration(
   return { success: true };
 }
 
+export async function getTaxDeclarationById(taxDeclarationId: number) {
+  const { data, error } = await supabase
+    .from("employee_tax_declarations")
+    .select(`
+      *,
+      user:userId (
+        fullName,
+        email,
+        employee_ids (employeeId)
+      )
+    `)
+    .eq("taxDeclarationId", taxDeclarationId)
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function getMyTaxDeclaration(userId: number, financialYear: string) {
   // TODO: Connect to backend API when available
   return null;
@@ -28,11 +46,13 @@ export async function getTaxDeclarations(collegeId: number, filterStatus: string
       supabase.from('users')
         .select('userId')
         .eq('collegeId', collegeId)
-        .or(`fullName.ilike.${term},email.ilike.${term},mobile.ilike.${term}`),
+        .or(`fullName.ilike.${term},email.ilike.${term},mobile.ilike.${term}`)
+        .limit(1000),
       supabase.from('employee_ids')
         .select('userId')
         .eq('collegeId', collegeId)
         .ilike('employeeId', term)
+        .limit(1000)
     ]);
     const uIds = new Set([
       ...(usersRes.data || []).map(u => u.userId),
@@ -44,23 +64,42 @@ export async function getTaxDeclarations(collegeId: number, filterStatus: string
     }
   }
 
+  const isSpecificFilter = filterStatus !== "all" && filterStatus !== "not_declared";
+  const declarationRelation = isSpecificFilter 
+    ? 'employee_tax_declarations!employee_tax_declarations_userId_fkey!inner' 
+    : 'employee_tax_declarations!employee_tax_declarations_userId_fkey';
+
   let query = supabase
-    .from("employee_tax_declarations")
+    .from("users")
     .select(`
-      *,
-      user:userId!inner (
-        fullName,
-        email,
-        role,
-        employee_ids (employeeId)
+      userId,
+      fullName,
+      email,
+      role,
+      employee_ids (employeeId),
+      ${declarationRelation} (
+        taxRegime,
+        totalDeclared,
+        proofStatus
       )
     `, { count: "exact" })
     .eq("collegeId", collegeId)
-    .not("user.role", "in", '("Student","Parent","SuperAdmin","GroundStaff")')
-    .eq("is_deleted", false);
+    .eq("is_deleted", false)
+    .not("role", "in", '("Student","Parent","SuperAdmin","GroundStaff")');
 
-  if (filterStatus !== "all") {
-    query = query.eq("proofStatus", filterStatus);
+  if (isSpecificFilter) {
+    query = query.eq("employee_tax_declarations.proofStatus", filterStatus);
+  } else if (filterStatus === "not_declared") {
+    // Exclude users who already have a declaration
+    const { data: declared } = await supabase
+      .from('employee_tax_declarations')
+      .select('userId')
+      .eq('collegeId', collegeId);
+    
+    if (declared && declared.length > 0) {
+      const declaredIds = declared.map(d => d.userId);
+      query = query.not('userId', 'in', `(${declaredIds.join(',')})`);
+    }
   }
 
   if (matchedUserIds) {
@@ -75,5 +114,22 @@ export async function getTaxDeclarations(collegeId: number, filterStatus: string
     throw new Error(error.message);
   }
 
-  return { declarations: data || [], total: count || 0 };
+  // Map the users to match the frontend expectations
+  const mappedDeclarations = data?.map((user: any) => {
+    const dec = user.employee_tax_declarations?.[0]; // Get the first declaration if exists
+    return {
+      userId: user.userId,
+      user: {
+        fullName: user.fullName,
+        email: user.email,
+        employee_ids: Array.isArray(user.employee_ids) ? user.employee_ids[0] : user.employee_ids
+      },
+      taxDeclarationId: dec?.taxDeclarationId || null,
+      taxRegime: dec?.taxRegime || 'N/A',
+      totalDeclared: dec?.totalDeclared || 0,
+      proofStatus: dec?.proofStatus || 'not_declared'
+    };
+  });
+
+  return { declarations: mappedDeclarations || [], total: count || 0 };
 }

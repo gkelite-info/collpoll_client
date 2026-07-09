@@ -28,7 +28,7 @@ export default function ViewPayrollRunModal({ open, onClose, runData, onActionSu
       if (onActionSuccess) onActionSuccess();
       onClose();
     } catch (err: any) {
-      toast.error(err.message || "Failed to finalize payroll run.", { id: "payroll-finalize-error" });
+      toast.error("Unable to finalize payroll run. Please try again.", { id: "payroll-finalize-error" });
     } finally {
       setIsProcessing(false);
     }
@@ -42,7 +42,7 @@ export default function ViewPayrollRunModal({ open, onClose, runData, onActionSu
       if (onActionSuccess) onActionSuccess();
       onClose();
     } catch (err: any) {
-      toast.error(err.message || "Failed to mark as paid.", { id: "payroll-paid-error" });
+      toast.error("Unable to mark payroll as paid. Please try again.", { id: "payroll-paid-error" });
     } finally {
       setIsProcessing(false);
     }
@@ -51,23 +51,23 @@ export default function ViewPayrollRunModal({ open, onClose, runData, onActionSu
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div 
-        className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">Payroll Run Details</h2>
-            <p className="text-sm text-gray-500 mt-1">Summary for {monthDisplay}</p>
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 bg-gray-50/50">
+          <div className="min-w-0 pr-2">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 truncate">Payroll Run Details</h2>
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1 truncate">Summary for {monthDisplay}</p>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+            className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors cursor-pointer shrink-0"
           >
-            <X size={20} weight="bold" />
+            <X size={20} weight="bold" className="sm:w-[20px] sm:h-[20px] w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-4 sm:p-6 overflow-y-auto max-h-[70vh]">
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
               <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Status</span>
@@ -106,8 +106,8 @@ export default function ViewPayrollRunModal({ open, onClose, runData, onActionSu
             </div>
 
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Payable Days / Holidays</span>
-              <div className="mt-2 text-xl font-bold text-gray-800">
+              <span className="text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Payable Days / Weekoffs & Holidays</span>
+              <div className="mt-2 text-lg sm:text-xl font-bold text-gray-800">
                 {runData.totalPayableDays || 0} / {runData.totalHolidays || 0}
               </div>
             </div>

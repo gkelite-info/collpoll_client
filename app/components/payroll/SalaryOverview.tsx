@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { ShimmerBlock } from "@/app/(screens)/admin/my-attendance/payroll/components/shimmers";
 import AddPayModal from "@/app/(screens)/hr/MyAttendance/components/AddPayModal";
 
