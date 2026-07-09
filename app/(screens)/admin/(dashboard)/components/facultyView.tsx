@@ -187,22 +187,22 @@ const FacultyView: React.FC<FacultyViewProps> = ({
   const { faculty, totalCount: facultyTotal, loading: facLoading } = useFacultyByDepartment(
     departmentId,
     null,
-    activeTab === "Faculty",
+    true,
     null,
     collegeId,
     collegeEducationId,
-    currentPage,
+    activeTab === "Faculty" ? currentPage : 1,
     itemsPerPage
   );
 
   const { students, loading: stuLoading, totalCount: studentTotal } = useStudentsByDepartment(
     departmentId,
     activeYearId,
-    activeTab === "Students",
+    true,
     activeSectionId,
     collegeId,
     collegeEducationId,
-    currentPage,
+    activeTab === "Students" ? currentPage : 1,
     itemsPerPage
   );
 
@@ -271,7 +271,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
       iconColor: "text-[#6C20CA]",
     },
     {
-      value: stuLoading ? <CardValueShimmer /> : students.length.toString(),
+      value: stuLoading ? <CardValueShimmer /> : (studentTotal || 0).toString(),
       label: "Students",
       bgColor: "bg-[#FFEDDA]",
       icon: <UserCircle />,

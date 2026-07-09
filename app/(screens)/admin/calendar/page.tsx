@@ -64,15 +64,15 @@ function PageContent() {
     }
 
     const loadFaculty = async () => {
-      if (!collegeId || !collegeEducationId) return
+      if (!collegeId) return
 
       try {
         const { data } = await fetchFilteredFaculties({
           collegeId,
-          collegeEducationId,
+          facultyId: Number(facultyId),
         })
 
-        const faculty = data.find((f: any) => f.id === facultyId)
+        const faculty = data[0]
         if (faculty) {
           setSelectedFaculty(faculty)
         } else {

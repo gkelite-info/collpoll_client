@@ -24,6 +24,8 @@ type AddNewCardModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSave: (card: CardProps) => void;
+  onGeneratingStart?: () => void;
+  onGeneratingEnd?: () => void;
 
   facultySubjects: {
     collegeSubjectId: number;
@@ -113,6 +115,8 @@ export default function AddNewCardModal({
   facultySubjects,
   defaultSubjectId,
   facultySections,
+  onGeneratingStart,
+  onGeneratingEnd,
 }: AddNewCardModalProps) {
   const [formData, setFormData] = useState<FacultyAcademicForm>({
     educationId: undefined,
@@ -531,6 +535,7 @@ export default function AddNewCardModal({
         }
 
         pdfGenerationKeysRef.current.add(pdfGenerationKey);
+        onGeneratingStart?.();
 
         runWhenBrowserIsIdle(() => {
           const pdfToastId = toast.loading(
@@ -622,6 +627,7 @@ export default function AddNewCardModal({
               });
             } finally {
               pdfGenerationKeysRef.current.delete(pdfGenerationKey);
+              onGeneratingEnd?.();
             }
           })();
         });
@@ -630,14 +636,14 @@ export default function AddNewCardModal({
       toast.success("Unit saved successfully. PDFs will appear shortly.");
       onClose();
       setFormData({
-        educationId: undefined,
-        branchId: undefined,
-        academicYearId: undefined,
+        educationId: facultyCtx?.collegeEducationId,
+        branchId: facultyCtx?.collegeBranchId,
+        academicYearId: facultyCtx?.academicYearIds?.length === 1 ? facultyCtx.academicYearIds[0] : undefined,
         semester: undefined,
         collegeSubjectId: undefined,
 
-        subjectName: "",
-        subjectId: undefined,
+        subjectName: facultySubjects.length === 1 ? facultySubjects[0].subjectName : "",
+        subjectId: facultySubjects.length === 1 ? facultySubjects[0].collegeSubjectId : undefined,
         sectionIds: [],
         unitName: "",
         unitNumber: 1,
@@ -692,7 +698,7 @@ export default function AddNewCardModal({
 
             <div>
               <label className="text-sm font-semibold text-[#282828]">
-                Branch
+                {facultyCtx?.faculty_edu_type === "Inter" ? "Group" : "Branch"}
               </label>
 
               <input
@@ -702,7 +708,7 @@ export default function AddNewCardModal({
                     ?.collegeBranchCode || ""
                 }
                 readOnly
-                placeholder="Branch"
+                placeholder={facultyCtx?.faculty_edu_type === "Inter" ? "Group" : "Branch"}
                 className="
       w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
       text-gray-900 placeholder:text-gray-400

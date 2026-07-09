@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { getFacultyStudentProgressSummary } from "@/lib/helpers/faculty/studentProgress/getFacultyStudentProgressSummary";
 import { StudentProgressPageSkeleton } from "../shimmer/StudentProgressSkeleton";
+import { FaChevronDown } from "react-icons/fa6";
 
 const cardData: CardProps[] = [
   {
@@ -71,6 +72,10 @@ export default function StudentProgressOverview() {
     subjectIds,
     faculty_subject,
     facultyId,
+    faculty_edu_type,
+    sections,
+    collegeAcademicYear,
+    collegeAcademicYears,
   } = useFaculty();
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summary, setSummary] =
@@ -79,7 +84,13 @@ export default function StudentProgressOverview() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedYearId, setSelectedYearId] = useState<number | null>(null);
+  const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
   const rowsPerPage = 10;
+
+  useEffect(() => {
+    setSelectedSectionId(null);
+  }, [selectedYearId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -110,8 +121,8 @@ export default function StudentProgressOverview() {
           collegeId,
           collegeEducationId,
           collegeBranchId,
-          academicYearIds,
-          sectionIds,
+          academicYearIds: selectedYearId ? [selectedYearId] : academicYearIds,
+          sectionIds: selectedSectionId ? [selectedSectionId] : sectionIds,
           subjectIds,
           departmentLabel: college_branch,
           subjectLabel:
@@ -157,6 +168,8 @@ export default function StudentProgressOverview() {
     currentPage,
     rowsPerPage,
     debouncedSearchQuery,
+    selectedYearId,
+    selectedSectionId,
   ]);
 
   const subtitleParts = [summary.yearLabel, summary.sectionLabel]
@@ -226,7 +239,7 @@ export default function StudentProgressOverview() {
         <div className="flex gap-3 md:gap-4 w-max items-center">
           <div className="flex items-center gap-1.5">
             <span className="text-gray-600 text-xs md:text-sm font-medium shrink-0">
-              Department :
+              {faculty_edu_type === "Inter" ? "Group" : "Branch"}
             </span>
             <span className="bg-[#43C17A1C] text-[#43C17A] px-3 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0">
               {summary.departmentLabel}
@@ -246,18 +259,46 @@ export default function StudentProgressOverview() {
             <span className="text-gray-600 text-xs md:text-sm font-medium shrink-0">
               Year :
             </span>
-            <span className="bg-[#43C17A1C] text-[#43C17A] px-3 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0">
-              {summary.yearLabel}
-            </span>
+            <div className="relative">
+              <select
+                className="bg-[#43C17A1C] text-[#43C17A] pl-3 pr-7 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0 outline-none cursor-pointer appearance-none"
+                value={selectedYearId ?? ""}
+                onChange={(e) => setSelectedYearId(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">All</option>
+                {collegeAcademicYears?.map((y: any) => (
+                  <option key={y.collegeAcademicYearId} value={y.collegeAcademicYearId}>
+                    {y.collegeAcademicYear}
+                  </option>
+                ))}
+              </select>
+              <FaChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] md:text-xs text-[#43C17A] pointer-events-none" />
+            </div>
           </div>
 
           <div className="flex items-center gap-1.5">
             <span className="text-gray-600 text-xs md:text-sm font-medium shrink-0">
               Sec :
             </span>
-            <span className="bg-[#43C17A1C] text-[#43C17A] px-3 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0">
-              {summary.sectionLabel}
-            </span>
+            <div className="relative">
+              <select
+                className="bg-[#43C17A1C] text-[#43C17A] pl-3 pr-7 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0 outline-none cursor-pointer appearance-none"
+                value={selectedSectionId ?? ""}
+                onChange={(e) => setSelectedSectionId(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">All</option>
+                {Array.from(new Map(
+                  sections
+                    ?.filter((s: any) => selectedYearId ? s.collegeAcademicYearId === selectedYearId : true)
+                    .map((s: any) => [s.collegeSectionsId, s])
+                ).values()).map((s: any) => (
+                  <option key={s.collegeSectionsId} value={s.collegeSectionsId}>
+                    {s.college_sections?.collegeSections}
+                  </option>
+                ))}
+              </select>
+              <FaChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] md:text-xs text-[#43C17A] pointer-events-none" />
+            </div>
           </div>
         </div>
       </div>

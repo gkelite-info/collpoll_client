@@ -18,6 +18,9 @@ export default function Academics() {
   const [facultyCtx, setFacultyCtx] = useState<any>(null);
   const { facultyId } = useFaculty();
 
+  console.log("What is inside", facultyCtx);
+
+
   const hasLoadedOnce = useRef(false);
 
   useEffect(() => {

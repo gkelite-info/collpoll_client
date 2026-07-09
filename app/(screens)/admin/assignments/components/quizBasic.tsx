@@ -18,6 +18,8 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import AdminQuizResumeBanner from "./adminQuizResumeBanner";
 
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { useUser } from "@/app/utils/context/UserContext";
+import { fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns";
 
 import TaskModal from "@/app/components/modals/taskModal";
 import toast from "react-hot-toast";
@@ -101,7 +103,23 @@ export default function QuizBasic() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const { collegeId, collegeEducationId } = useAdmin();
+  const { collegeId, collegeEducationId: defaultEducationId, collegeEducationType: defaultEducationType } = useAdmin();
+  const { userId } = useUser();
+  const [educations, setEducations] = useState<any[]>([]);
+  const [education, setEducation] = useState<any>(null);
+
+  const currentEducationId = education?.collegeEducationId ?? defaultEducationId;
+  const currentEducationType = education?.collegeEducationType ?? defaultEducationType;
+
+  const selectEducation = (edu: any) => {
+    setEducation(edu);
+  };
+
+  useEffect(() => {
+    if (collegeId) {
+      fetchEducations(collegeId).then(setEducations);
+    }
+  }, [collegeId]);
 
   const dept = searchParams.get("dept");
   const year = searchParams.get("year");
@@ -265,19 +283,19 @@ export default function QuizBasic() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!collegeId || !collegeEducationId) return;
-    fetchQuizFilterOptions(collegeId, collegeEducationId).then((res) => {
+    if (!collegeId || !currentEducationId) return;
+    fetchQuizFilterOptions(collegeId, currentEducationId).then((res) => {
       setBranchOptions(res.branchOptions);
       setYearOptions(res.yearOptions);
     });
-  }, [collegeId, collegeEducationId]);
+  }, [collegeId, currentEducationId]);
 
   useEffect(() => {
-    if (!collegeId || !collegeEducationId || branchIdParam) return;
+    if (!collegeId || !currentEducationId || branchIdParam) return;
     setIsLoading(true);
     fetchAdminQuizDepartments(
       collegeId,
-      collegeEducationId,
+      currentEducationId,
       branchFilter,
       yearFilter,
       page,
@@ -290,7 +308,7 @@ export default function QuizBasic() {
       .finally(() => setIsLoading(false));
   }, [
     collegeId,
-    collegeEducationId,
+    currentEducationId,
     branchIdParam,
     branchFilter,
     yearFilter,
@@ -383,7 +401,24 @@ export default function QuizBasic() {
           <>
             <div className="flex flex-wrap items-center gap-6 mt-1 mb-5">
               <FilterDropdown
-                label="Branch"
+                label="Education"
+                value={currentEducationId?.toString() ?? ""}
+                options={educations.map((e) => ({
+                  label: e.collegeEducationType,
+                  value: e.collegeEducationId.toString()
+                }))}
+                onChange={(val) => {
+                  const edu = educations.find((e) => e.collegeEducationId === +val);
+                  if (edu) {
+                    selectEducation(edu);
+                    setBranchFilter("All");
+                    setYearFilter("All");
+                    setPage(1);
+                  }
+                }}
+              />
+              <FilterDropdown
+                label={currentEducationType === "Inter" ? "Group" : "Branch"}
                 value={branchFilter}
                 options={branchOptions}
                 onChange={(val) => {

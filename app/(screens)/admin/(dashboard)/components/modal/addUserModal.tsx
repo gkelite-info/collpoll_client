@@ -37,6 +37,7 @@ import { upsertIdentifier } from "@/lib/helpers/identifiers/upsertIdentifier";
 import { upsertPlacementEmployee } from "@/lib/helpers/admin/registrations/placement/placementregistration";
 import { createWellbeing } from "@/lib/helpers/admin/registrations/wellbeing/wellbeingRegistration";
 import { registerUserToHikvision } from "@/lib/helpers/biometric/registerUser";
+import { fetchAdminEducationTypes } from "@/lib/helpers/admin/adminEducationTypesAPI";
 // import { upsertPlacementOfficer } from "@/lib/helpers/admin/registrations/placement/placementRegistration";
 
 type SubjectBlock = {
@@ -153,6 +154,7 @@ const AddUserModal: React.FC<{
   const [sessionOptions, setSessionOptions] = useState<
     { id: number; label: string; value: number }[]
   >([]);
+  const [adminEducationOptions, setAdminEducationOptions] = useState<any[]>([]);
 
   const [isSuccess, setIsSuccess] = useState(false);
   const { collegeEducationId, collegeEducationType, userId: adminUserId } = useAdmin();
@@ -250,6 +252,9 @@ const AddUserModal: React.FC<{
           const sessions = await fetchSessionOptions(adminContext.collegeId);
           setSessionOptions(sessions);
 
+          const adminEducations = await fetchAdminEducationTypes(adminContext.adminId);
+          setAdminEducationOptions(adminEducations);
+
           const data = await fetchModalInitialData(adminContext.collegeId);
 
           const { data: semesterData } = await supabase
@@ -285,9 +290,9 @@ const AddUserModal: React.FC<{
   const selectedEducation = useMemo(
     () =>
       dbData.educations.find(
-        (e) => e.collegeEducationType === collegeEducationType,
+        (e) => e.collegeEducationId === selectedEducationId,
       ),
-    [dbData.educations, collegeEducationType],
+    [dbData.educations, selectedEducationId],
   );
 
   const filteredBranches = useMemo(
@@ -340,9 +345,9 @@ const AddUserModal: React.FC<{
   const studentSelectedEducation = useMemo(
     () =>
       dbData.educations.find(
-        (e) => e.collegeEducationId === collegeEducationId,
+        (e) => e.collegeEducationId === selectedEducationId,
       ),
-    [dbData.educations, collegeEducationId],
+    [dbData.educations, selectedEducationId],
   );
 
   const studentAvailableBranches = useMemo(
@@ -710,7 +715,7 @@ const AddUserModal: React.FC<{
       return toast.error("Please select a gender.");
 
     if (isFaculty) {
-      if (!collegeEducationId || !selectedBranchId)
+      if (!selectedEducationId || !selectedBranchId)
         return toast.error("Complete all academic fields for Faculty.");
       const incomplete = subjectBlocks.some(
         (b) => !b.yearId || !b.subjectId || b.sectionIds.length === 0,
@@ -723,10 +728,10 @@ const AddUserModal: React.FC<{
 
     if (isStudent) {
       if (
-        !collegeEducationId ||
+        !selectedEducationId ||
         !selectedDepts.length ||
         !selectedYears.length ||
-        (!["Inter"].includes(collegeEducationType!) &&
+        (!["Inter"].includes(studentSelectedEducation?.collegeEducationType || "") &&
           !selectedSemester.length) ||
         !selectedEntryType.length ||
         !selectedSections.length
@@ -744,7 +749,7 @@ const AddUserModal: React.FC<{
       }
     }
 
-    if (isPlacement && !collegeEducationId)
+    if (isPlacement && !selectedEducationId)
       return toast.error("Select Education Type for Placement Officer.");
 
     if (!user) {
@@ -856,13 +861,13 @@ const AddUserModal: React.FC<{
           throw new Error(adminRes.error || "Admin creation failed");
         }
 
-        if (!adminRes.data?.adminId || !collegeEducationId) {
+        if (!adminRes.data?.adminId || !selectedEducationId) {
           throw new Error("Admin education type creation failed");
         }
 
         const adminEducationRes = await upsertAdminEducationTypes({
           adminId: adminRes.data.adminId,
-          collegeEducationIds: [collegeEducationId],
+          collegeEducationIds: [selectedEducationId],
         });
 
         if (!adminEducationRes.success) {
@@ -1010,7 +1015,7 @@ const AddUserModal: React.FC<{
             targetUserId,
             { ...basicData, collegePublicId: basicData.collegeId },
             {
-              educationId: collegeEducationId!,
+              educationId: selectedEducationId!,
               branchId: selectedBranchId!,
               yearId: block.yearId!,
               subjectId: block.subjectId!,
@@ -1042,7 +1047,7 @@ const AddUserModal: React.FC<{
           !eduId ||
           !branchId ||
           !yearId ||
-          (!["Inter"].includes(collegeEducationType!) && !semesterId) ||
+          (!["Inter"].includes(studentSelectedEducation?.collegeEducationType || "") && !semesterId) ||
           !sectionId
         ) {
           throw new Error("Invalid academic selection data");
@@ -1369,17 +1374,28 @@ const AddUserModal: React.FC<{
                     Education Type <span className="text-red-600">*</span>
                   </label>
                   <div className="relative">
-                    <input
-                      type="text"
-                      readOnly
-                      disabled
-                      value={collegeEducationType!}
-                      className="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-md px-3 py-1 text-sm outline-none cursor-not-allowed"
-                      placeholder="Auto-filled from Admin context"
-                    />
-                    <Lock
+                    <select
+                      value={selectedEducationId || ""}
+                      onChange={(e) => {
+                        setSelectedEducationId(Number(e.target.value));
+                        setSelectedBranchId(null);
+                        setSelectedYearId(null);
+                        setSelectedSubjectId(null);
+                        setSelectedSectionIds([]);
+                        setSubjectBlocks([{ id: 1, yearId: null, subjectId: null, sectionIds: [] }]);
+                      }}
+                      className="w-full border cursor-pointer border-gray-200 rounded-md px-3 py-1 text-sm appearance-none outline-none bg-white focus:ring-1 focus:ring-[#48C78E] text-gray-600"
+                    >
+                      <option value="" disabled>Select Education Type</option>
+                      {adminEducationOptions.map((edu: any) => (
+                        <option key={edu.collegeEducationId} value={edu.collegeEducationId}>
+                          {edu.collegeEducationType}
+                        </option>
+                      ))}
+                    </select>
+                    <CaretDown
                       size={14}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                     />
                   </div>
                 </div>
@@ -1392,17 +1408,29 @@ const AddUserModal: React.FC<{
                       Education Type <span className="text-red-600">*</span>
                     </label>
                     <div className="relative">
-                      <input
-                        type="text"
-                        readOnly
-                        disabled
-                        value={collegeEducationType!}
-                        className="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-md px-3 py-1 text-sm outline-none cursor-not-allowed"
-                        placeholder="Auto-filled from Admin context"
-                      />
-                      <Lock
+                      <select
+                        value={selectedEducationId || ""}
+                        onChange={(e) => {
+                          setSelectedEducationId(Number(e.target.value));
+                          setSelectedDepts([]);
+                          setSelectedYears([]);
+                          setSelectedSemester([]);
+                          setSelectedSections([]);
+                          setSelectedEntryType([]);
+                          setSelectedSessionType([]);
+                        }}
+                        className="w-full border cursor-pointer border-gray-200 rounded-md px-3 py-1 text-sm appearance-none outline-none bg-white focus:ring-1 focus:ring-[#48C78E] text-gray-600"
+                      >
+                        <option value="" disabled>Select Education Type</option>
+                        {adminEducationOptions.map((edu: any) => (
+                          <option key={edu.collegeEducationId} value={edu.collegeEducationId}>
+                            {edu.collegeEducationType}
+                          </option>
+                        ))}
+                      </select>
+                      <CaretDown
                         size={14}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                       />
                     </div>
                   </div>
@@ -1648,7 +1676,7 @@ const AddUserModal: React.FC<{
                 {/* Branch stays outside — shared across all subject blocks */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
-                    {collegeEducationType === "Inter"
+                    {selectedEducation?.collegeEducationType === "Inter"
                       ? "Group Type"
                       : "Branch Type"}{" "}
                     <span className="text-red-600">*</span>
@@ -1671,7 +1699,7 @@ const AddUserModal: React.FC<{
                       className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
                     >
                       <option value="" disabled>
-                        {collegeEducationType === "Inter"
+                        {selectedEducation?.collegeEducationType === "Inter"
                           ? "Select Group Type"
                           : "Select Branch Type"}
                       </option>
@@ -1888,18 +1916,18 @@ const AddUserModal: React.FC<{
                 <div className="grid grid-cols-2 gap-5">
                   <CustomMultiSelect
                     label={
-                      collegeEducationType === "Inter"
+                      studentSelectedEducation?.collegeEducationType === "Inter"
                         ? "Group Type"
                         : "Branch Type"
                     }
                     placeholder={
-                      collegeEducationType === "Inter"
+                      studentSelectedEducation?.collegeEducationType === "Inter"
                         ? "Select Group"
                         : "Select Branch"
                     }
                     options={branchOptions}
                     selectedValues={selectedDepts}
-                    disabled={!collegeEducationId}
+                    disabled={!selectedEducationId}
                     onChange={(v) => {
                       handleSingleSelect(v, setSelectedDepts);
                       setSelectedYears([]);
@@ -1923,7 +1951,7 @@ const AddUserModal: React.FC<{
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-5">
-                  {!["Inter"].includes(collegeEducationType!) && (
+                  {!["Inter"].includes(studentSelectedEducation?.collegeEducationType || "") && (
                     <CustomMultiSelect
                       label="Semester"
                       placeholder="Select Semester"
@@ -1964,14 +1992,14 @@ const AddUserModal: React.FC<{
                     placeholder="Select Entry Type"
                     options={
                       !["Inter", "Polytechnic", "Diploma"].includes(
-                        collegeEducationType!,
+                        studentSelectedEducation?.collegeEducationType || "",
                       )
                         ? ENTRY_TYPES
                         : INTER_ENTRY
                     }
                     selectedValues={selectedEntryType}
                     disabled={
-                      !["Inter"].includes(collegeEducationType!) &&
+                      !["Inter"].includes(studentSelectedEducation?.collegeEducationType || "") &&
                       selectedSemester.length === 0
                     }
                     onChange={(v) =>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useUser } from "@/app/utils/context/UserContext";
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { useTranslations } from "next-intl";
 
@@ -42,6 +43,7 @@ export function AssignmentsSummaryTable({
   semesterLabel,
 }: SubjectProgressTableProps) {
   const t = useTranslations("Progress.student");
+  const { collegeEducationType } = useUser();
 
   return (
     <div className="w-full rounded-2xl bg-white p-6 shadow-sm max-md:p-0 max-md:bg-transparent max-md:shadow-none max-md:rounded-none">
@@ -49,15 +51,17 @@ export function AssignmentsSummaryTable({
         <h2 className="text-lg font-bold text-[#282828] max-md:text-[14.5px] max-md:font-bold max-md:tracking-tight max-md:text-gray-800">
           {t("Class Progress Overview")}
         </h2>
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className="flex items-center gap-2 rounded-lg bg-[#43C17A] px-4 py-2 text-sm font-medium text-white max-md:px-3 max-md:py-1.5 max-md:text-xs max-md:rounded-md shadow-sm"
-          >
-            {semesterLabel}
-            <CaretDownIcon size={16} weight="bold" />
-          </button>
-        </div>
+        {!(collegeEducationType === "Inter") &&
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-lg bg-[#43C17A] px-4 py-2 text-sm font-medium text-white max-md:px-3 max-md:py-1.5 max-md:text-xs max-md:rounded-md shadow-sm"
+            >
+              {semesterLabel}
+              <CaretDownIcon size={16} weight="bold" />
+            </button>
+          </div>
+        }
       </div>
 
       <div className="overflow-hidden rounded-xl border border-gray-100 max-md:hidden">

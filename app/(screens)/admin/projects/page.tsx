@@ -8,6 +8,7 @@ import { fetchBranchOptionsForAdmin } from "@/lib/helpers/admin/collegeBranchAPI
 import { fetchAcademicYearOptionsForAdmin } from "@/lib/helpers/admin/collegeAcademicYearAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { FilterDropdown } from "../assignments/components/filterDropdown";
+import { fetchAdminEducationTypes, fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns";
 import { fetchActiveStudentCount } from "@/lib/helpers/admin/studentsCountAPI";
 import { fetchActiveFacultyData, fetchActiveProjectCountByBranchYear, fetchSubjectFacultyList } from "@/lib/helpers/admin/facultyCountAPI";
 import { getBranchTheme } from "../assignments/utils/palette";
@@ -19,6 +20,7 @@ import AdminProjectsList from "./AdminProjectsList";
 import { useUser } from "@/app/utils/context/UserContext";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { fetchAdminPendingStats } from "@/lib/helpers/projects/project";
+import { supabase } from "@/lib/supabaseClient";
 
 function ProjectsOverview() {
   const { userId, collegeEducationId, collegeId } = useAdmin();
@@ -40,6 +42,10 @@ function ProjectsOverview() {
   const branchId = searchParams.get("branchId");
   const yearId = searchParams.get("yearId");
 
+  const [educations, setEducations] = useState<any[]>([]);
+  const [educationFilter, setEducationFilter] = useState<string>("All");
+  const [education, setEducation] = useState<any>(null);
+
   const [branchOptions, setBranchOptions] = useState<
     { id: number; name: string; code: string }[]
   >([]);
@@ -48,9 +54,50 @@ function ProjectsOverview() {
     { id: number; label: string }[]
   >([]);
 
+  const [branchYearsMap, setBranchYearsMap] = useState<Record<number, { id: number; label: string }[]>>({});
+
   const [branches, setBranches] = useState<any[]>([]);
   const selectedBranch = branchOptions.find(b => String(b.id) === branchId);
   const selectedYear = yearOptions.find(y => String(y.id) === yearId);
+
+  const [dbEducationType, setDbEducationType] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!branchId) {
+      setDbEducationType(null);
+      return;
+    }
+    const fetchEduType = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("college_branch")
+          .select(`
+            college_education:collegeEducationId (
+              collegeEducationType
+            )
+          `)
+          .eq("collegeBranchId", Number(branchId))
+          .single();
+        
+        if (data) {
+          const edu = Array.isArray(data.college_education)
+            ? data.college_education[0]
+            : data.college_education;
+          setDbEducationType(edu?.collegeEducationType || null);
+        }
+      } catch (err) {
+        console.error("Failed to fetch edu type", err);
+      }
+    };
+    fetchEduType();
+  }, [branchId]);
+
+  const selectedEducationLabel = useMemo(() => {
+    if (dbEducationType) return dbEducationType;
+    if (!educationFilter || educationFilter === "All" || educations.length === 0) return null;
+    const edu = educations.find((e) => String(e.collegeEducationId) === String(educationFilter));
+    return edu ? edu.collegeEducationType : null;
+  }, [educationFilter, educations, dbEducationType]);
 
   const [activeProjectCounts, setActiveProjectCounts] = useState<Record<string, number>>({});
 
@@ -58,13 +105,43 @@ function ProjectsOverview() {
     role?.toLowerCase() === "admin" ? "admin" : "faculty";
 
   useEffect(() => {
-    if (!userId || !collegeEducationId) return;
+    if (collegeEducationId && educationFilter === "All") {
+      setEducationFilter(collegeEducationId.toString());
+    }
+  }, [collegeEducationId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const loadEducations = async () => {
+      try {
+        let edus = await fetchAdminEducationTypes(userId);
+        if ((!edus || edus.length === 0) && collegeId) {
+          edus = await fetchEducations(collegeId);
+        }
+        setEducations(edus || []);
+        if (collegeEducationId && edus) {
+          const edu = edus.find((e: any) => e.collegeEducationId === collegeEducationId);
+          if (edu) setEducation(edu);
+        }
+      } catch (err) {
+        console.error("Failed to load educations", err);
+      }
+    };
+    loadEducations();
+  }, [userId, collegeId, collegeEducationId]);
+
+  useEffect(() => {
+    if (!userId || !educationFilter || educationFilter === "All") {
+      setBranchOptions([]);
+      setBranches([]);
+      return;
+    }
 
     const loadBranches = async () => {
       try {
         const data = await fetchBranchOptionsForAdmin(
           userId,
-          collegeEducationId
+          Number(educationFilter)
         );
 
         setBranchOptions(
@@ -82,59 +159,53 @@ function ProjectsOverview() {
     };
 
     loadBranches();
-  }, [userId, collegeEducationId]);
+  }, [userId, educationFilter]);
 
   useEffect(() => {
-    if (!userId || branches.length === 0) return;
+    if (!userId || branches.length === 0) {
+      setYearOptions([]);
+      setBranchYearsMap({});
+      return;
+    }
 
     const loadYears = async () => {
       try {
-        if (branchFilter !== "All") {
-          const years = await fetchAcademicYearOptionsForAdmin(
-            userId,
-            Number(branchFilter)
-          );
+        const results = await Promise.all(
+          branches.map(async (b) => {
+            const years = await fetchAcademicYearOptionsForAdmin(userId, b.collegeBranchId);
+            return {
+              branchId: b.collegeBranchId,
+              years: years.map((y) => ({ id: y.value, label: y.label })),
+            };
+          })
+        );
 
-          setYearOptions(
-            years.map((y) => ({
-              id: y.value,
-              label: y.label,
-            }))
-          );
-        } else {
-          const allYearsRequests = branches.map((b) =>
-            fetchAcademicYearOptionsForAdmin(
-              userId,
-              b.collegeBranchId
-            )
-          );
+        const newMap: Record<number, { id: number; label: string }[]> = {};
+        results.forEach((item) => {
+          newMap[item.branchId] = item.years;
+        });
+        setBranchYearsMap(newMap);
 
-          const results = await Promise.all(allYearsRequests);
-
-          const flatYears = results
-            .flat()
-            .map((y) => ({ id: y.value, label: y.label }));
-
-          const uniqueYears = Array.from(
-            new Map(flatYears.map((item) => [item.label, item])).values()
-          );
-
-          setYearOptions(uniqueYears);
-        }
+        const allFlat = results.flatMap((r) => r.years);
+        const uniqueYears = Array.from(
+          new Map(allFlat.map((item) => [item.label, item])).values()
+        );
+        setYearOptions(uniqueYears);
       } catch (err) {
         console.error("Failed to load years", err);
       }
     };
 
     loadYears();
-  }, [branchFilter, userId, branches]);
+  }, [userId, branches]);
 
   const filteredCards = useMemo(() => {
     const cards = branches.flatMap((branch) => {
+      const branchYears = branchYearsMap[branch.collegeBranchId] ?? [];
       const yearsToDisplay =
         yearFilter === "All"
-          ? yearOptions
-          : yearOptions.filter((y) => String(y.id) === yearFilter);
+          ? branchYears
+          : branchYears.filter((y) => y.label === yearFilter);
 
       return yearsToDisplay.map((year) => ({
         branchId: branch.collegeBranchId,
@@ -149,50 +220,7 @@ function ProjectsOverview() {
         ? true
         : String(card.branchId) === branchFilter
     );
-  }, [branches, yearOptions, branchFilter, yearFilter]);
-
-  useEffect(() => {
-    const getCounts = async () => {
-      if (!collegeEducationId || filteredCards.length === 0) return;
-
-      try {
-        setLoading(true);
-
-        const results = await Promise.all(
-          filteredCards.map(async (card) => {
-            const [studentCount, facultyData] = await Promise.all([
-              fetchActiveStudentCount(
-                collegeEducationId,
-                card.branchId,
-                card.yearId
-              ),
-              fetchActiveFacultyData(
-                collegeEducationId,
-                card.branchId,
-                card.yearId
-              ),
-            ]);
-
-            return {
-              branchId: card.branchId,
-              yearId: card.yearId,
-              studentCount,
-              facultyCount: facultyData.count,
-              facultyPhotos: facultyData.photos,
-            };
-          })
-        );
-
-        setCountsData(results);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getCounts();
-  }, [filteredCards, collegeEducationId]);
+  }, [branches, branchYearsMap, branchFilter, yearFilter]);
 
 
   useEffect(() => {
@@ -240,7 +268,7 @@ function ProjectsOverview() {
 
   useEffect(() => {
     const getAllOverviewCounts = async () => {
-      if (!collegeEducationId || !collegeId || filteredCards.length === 0) return;
+      if (!educationFilter || educationFilter === "All" || !collegeId || filteredCards.length === 0) return;
 
       try {
         setLoading(true);
@@ -248,8 +276,8 @@ function ProjectsOverview() {
         const results = await Promise.all(
           filteredCards.map(async (card) => {
             const [studentCount, facultyData, activeCount] = await Promise.all([
-              fetchActiveStudentCount(collegeEducationId, card.branchId, card.yearId),
-              fetchActiveFacultyData(collegeEducationId, card.branchId, card.yearId),
+              fetchActiveStudentCount(Number(educationFilter), card.branchId, card.yearId),
+              fetchActiveFacultyData(Number(educationFilter), card.branchId, card.yearId),
               fetchActiveProjectCountByBranchYear(collegeId, card.branchId, card.yearId),
             ]);
 
@@ -273,7 +301,7 @@ function ProjectsOverview() {
     };
 
     getAllOverviewCounts();
-  }, [filteredCards, collegeEducationId, collegeId]);
+  }, [filteredCards, educationFilter, collegeId]);
 
 
   const handleBack = () => {
@@ -311,7 +339,23 @@ function ProjectsOverview() {
         <>
           <div className="flex gap-4 mt-4">
             <FilterDropdown
-              label="Branch"
+              label="Education"
+              value={educationFilter}
+              options={educations.map((e) => ({
+                label: e.collegeEducationType,
+                value: e.collegeEducationId.toString()
+              }))}
+              onChange={(val) => {
+                setEducationFilter(val);
+                setBranchFilter("All");
+                setYearFilter("All");
+                const edu = educations.find((e) => e.collegeEducationId.toString() === val);
+                if (edu) setEducation(edu);
+              }}
+            />
+
+            <FilterDropdown
+              label={education?.collegeEducationType === "Inter" ? "Group" : "Branch"}
               value={branchFilter}
               options={[
                 { label: "All", value: "All" },
@@ -337,7 +381,7 @@ function ProjectsOverview() {
                     { label: "All", value: "All" },
                     ...yearOptions.map((y) => ({
                       label: y.label,
-                      value: String(y.id),
+                      value: y.label,
                     })),
                   ]
               }
@@ -390,7 +434,7 @@ function ProjectsOverview() {
           subjectId={subjectId}
           college_branch={selectedBranch?.code ?? null}
           collegeAcademicYear={selectedYear?.label ?? null}
-          faculty_edu_type={dept ?? null}
+          faculty_edu_type={selectedEducationLabel ?? null}
           subjectName={subjectName ?? null}
         />
       ) : (

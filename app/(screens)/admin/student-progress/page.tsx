@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ValueShimmer } from "@/app/components/shimmers/valueShimmer";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns";
 import { getAdminStudentProgressSummary } from "@/lib/helpers/admin/studentProgress/getAdminStudentProgressSummary";
 import { useStudentProgressFilters } from "@/lib/helpers/admin/studentProgress/useStudentProgressFilters";
 import { FilterDropdown } from "../academics/components/filterDropdown";
@@ -161,9 +162,26 @@ export default function Page() {
   const {
     loading: adminLoading,
     collegeId,
-    collegeEducationId,
-    collegeEducationType,
+    collegeEducationId: defaultEducationId,
+    collegeEducationType: defaultEducationType,
   } = useAdmin();
+
+  const [educations, setEducations] = useState<any[]>([]);
+  const [education, setEducation] = useState<any>(null);
+
+  const currentEducationId = education?.collegeEducationId ?? defaultEducationId;
+  const currentEducationType = education?.collegeEducationType ?? defaultEducationType;
+
+  const selectEducation = (edu: any) => {
+    setEducation(edu);
+  };
+
+  useEffect(() => {
+    if (collegeId) {
+      fetchEducations(collegeId).then(setEducations);
+    }
+  }, [collegeId]);
+
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summary, setSummary] = useState<StudentProgressSummary>(defaultSummary);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
@@ -196,12 +214,12 @@ export default function Page() {
     selectSubject,
   } = useStudentProgressFilters({
     collegeId,
-    collegeEducationId,
+    collegeEducationId: currentEducationId,
   });
 
   const isYearEnabled = !!selectedBranch;
-  const isSemesterEnabled = !!selectedYear;
-  const isSectionEnabled = !!selectedSemester;
+  const isSemesterEnabled = !!selectedYear && currentEducationType !== "Inter";
+  const isSectionEnabled = currentEducationType === "Inter" ? !!selectedYear : !!selectedSemester;
   const isSubjectEnabled = !!selectedSection;
 
   useEffect(() => {
@@ -228,7 +246,7 @@ export default function Page() {
 
     if (
       !collegeId ||
-      !collegeEducationId ||
+      !currentEducationId ||
       !activeBranchIds.length ||
       !activeYearIds.length ||
       !activeSemesterIds.length ||
@@ -248,7 +266,7 @@ export default function Page() {
       try {
         const data = await getAdminStudentProgressSummary({
           collegeId,
-          collegeEducationId,
+          collegeEducationId: currentEducationId,
           collegeBranchIds: activeBranchIds,
           academicYearIds: activeYearIds,
           semesterIds: activeSemesterIds,
@@ -286,7 +304,7 @@ export default function Page() {
     adminLoading,
     filtersLoading,
     collegeId,
-    collegeEducationId,
+    currentEducationId,
     activeBranchIds,
     activeYearIds,
     activeSemesterIds,
@@ -504,22 +522,25 @@ export default function Page() {
 
       <div className="mb-5 w-full max-w-5xl rounded-xl">
         <div className="mb-4 grid grid-cols-1 gap-x-4 gap-y-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm md:grid-cols-2 xl:grid-cols-6">
-          <div className="flex min-w-0 flex-col gap-1 overflow-visible">
-            <label className="px-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-              Education
-            </label>
-            <div className="relative w-full rounded-md border border-gray-300 bg-gray-100">
-              <input
-                type="text"
-                value={collegeEducationType ?? ""}
-                disabled
-                className="h-[20px] w-full cursor-not-allowed bg-transparent pl-2 pr-8 text-[13px] font-medium text-gray-500 outline-none"
-              />
-            </div>
-          </div>
+          <FilterDropdown
+            label="Education"
+            value={currentEducationId?.toString() ?? ""}
+            options={educations.map((e) => e.collegeEducationId.toString())}
+            displayModifier={(opt) => {
+              const edu = educations.find((e) => e.collegeEducationId.toString() === opt);
+              return edu ? edu.collegeEducationType : opt;
+            }}
+            onChange={(val) => {
+              const edu = educations.find((e) => e.collegeEducationId === +val);
+              if (edu) {
+                selectEducation(edu);
+                selectBranch(null);
+              }
+            }}
+          />
 
           <FilterDropdown
-            label="Department"
+            label={currentEducationType === "Inter" ? "Group" : "Department"}
             value={selectedBranch?.collegeBranchId?.toString() ?? "All"}
             placeholder="All"
             options={["All", ...branches.map((branch) => String(branch.collegeBranchId))]}
@@ -569,37 +590,39 @@ export default function Page() {
             }
           />
 
-          <FilterDropdown
-            label="Semester"
-            value={selectedSemester?.collegeSemesterId?.toString() ?? "All"}
-            placeholder="All"
-            disabled={!isSemesterEnabled}
-            options={[
-              "All",
-              ...semesters.map((semester) => String(semester.collegeSemesterId)),
-            ]}
-            onChange={(value) => {
-              if (value === "All") {
-                selectSemester(null);
-                return;
-              }
+          {currentEducationType !== "Inter" && (
+            <FilterDropdown
+              label="Semester"
+              value={selectedSemester?.collegeSemesterId?.toString() ?? "All"}
+              placeholder="All"
+              disabled={!isSemesterEnabled}
+              options={[
+                "All",
+                ...semesters.map((semester) => String(semester.collegeSemesterId)),
+              ]}
+              onChange={(value) => {
+                if (value === "All") {
+                  selectSemester(null);
+                  return;
+                }
 
-              const semester = semesters.find(
-                (item) => item.collegeSemesterId === Number(value),
-              );
-              selectSemester(semester ?? null);
-            }}
-            widthClassName="w-full"
-            displayModifier={(value) =>
-              value === "All"
-                ? "All"
-                : String(
-                  semesters.find(
-                    (semester) => String(semester.collegeSemesterId) === value,
-                  )?.collegeSemester ?? value,
-                )
-            }
-          />
+                const semester = semesters.find(
+                  (item) => item.collegeSemesterId === Number(value),
+                );
+                selectSemester(semester ?? null);
+              }}
+              widthClassName="w-full"
+              displayModifier={(value) =>
+                value === "All"
+                  ? "All"
+                  : String(
+                      semesters.find(
+                        (semester) => String(semester.collegeSemesterId) === value,
+                      )?.collegeSemester ?? value,
+                    )
+              }
+            />
+          )}
 
           <FilterDropdown
             label="Section"

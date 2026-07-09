@@ -20,6 +20,7 @@ import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { DiscussionCourseCardSkeleton } from "./components/shimmers/courseCardSkeleton";
 import { useUser } from "@/app/utils/context/UserContext";
+import { useAcademicFilters } from "@/lib/helpers/admin/academics/useAcademicFilters";
 
 interface FilterProps {
   label: string;
@@ -73,13 +74,17 @@ const AssignmentPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [dataList, setDataList] = useState<any[]>([]);
-  const { collegeEducationType } = useAdmin();
+  const { collegeEducationId: defaultEducationId, collegeEducationType: defaultEducationType } = useAdmin();
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [totalRecords, setTotalRecords] = useState(0);
   const [uniqueDepts, setUniqueDepts] = useState<string[]>(["All"]);
   const [uniqueYears, setUniqueYears] = useState<string[]>(["All"]);
   const cardsPerPage = 10;
-  const { userId } = useUser()
+  const { userId } = useUser();
+  const { educations, education, selectEducation } = useAcademicFilters(userId ?? undefined);
+
+  const currentEducationId = education?.collegeEducationId ?? defaultEducationId;
+  const currentEducationType = education?.collegeEducationType ?? defaultEducationType;
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 400);
@@ -99,7 +104,7 @@ const AssignmentPage = () => {
 
         const res = await fetchAdminDepartmentStats(
           adminCtx.collegeId,
-          adminCtx.collegeEducationId,
+          currentEducationId!,
           currentPage,
           cardsPerPage,
           debouncedSearch,
@@ -119,10 +124,10 @@ const AssignmentPage = () => {
       }
     };
     loadData();
-  }, [userId, currentPage, debouncedSearch, deptFilter, yearFilter]);
+  }, [userId, currentPage, debouncedSearch, deptFilter, yearFilter, currentEducationId]);
 
   const totalPages = Math.ceil(totalRecords / cardsPerPage);
- 
+
   if (activeTab === "quiz") {
     return <QuizBasic />;
   }
@@ -140,7 +145,7 @@ const AssignmentPage = () => {
       <TabNavigation />
 
       <div className="mt-0 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="relative w-full md:w-[69%]">
+        <div className="relative w-full md:w-[50%]">
           <input
             type="text"
             placeholder="Search here......"
@@ -157,7 +162,23 @@ const AssignmentPage = () => {
 
         <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap gap-4 border border-gray-100">
           <FilterDropdown
-            label={collegeEducationType === "Inter" ? "Group" : "Branch"}
+            label="Education"
+            value={currentEducationId?.toString() ?? ""}
+            options={educations.map((e) => e.collegeEducationId.toString())}
+            onChange={(val) => {
+              const edu = educations.find((e) => e.collegeEducationId === +val);
+              if (edu) {
+                selectEducation(edu);
+                setDeptFilter("All");
+                setYearFilter("All");
+              }
+            }}
+            displayModifier={(val) =>
+              educations.find((e) => e.collegeEducationId === +val)?.collegeEducationType || val
+            }
+          />
+          <FilterDropdown
+            label={currentEducationType === "Inter" ? "Group" : "Branch"}
             value={deptFilter}
             options={uniqueDepts}
             onChange={setDeptFilter}

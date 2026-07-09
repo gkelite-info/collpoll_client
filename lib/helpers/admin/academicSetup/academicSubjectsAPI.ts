@@ -134,9 +134,9 @@ export const resolveSubjectIds = async ({
 
 export const getAcademicSubjects = async (
   collegeId: number,
-  collegeEducationId: number,
+  collegeEducationId: number | number[],
 ) => {
-  const { data, error } = await supabase
+  let query = supabase
     .from("college_subjects")
     .select(
       `
@@ -148,9 +148,20 @@ export const getAcademicSubjects = async (
     `,
     )
     .eq("collegeId", collegeId)
-    .eq("collegeEducationId", collegeEducationId)
     .is("deletedAt", null)
     .order("createdAt", { ascending: false });
+
+  if (Array.isArray(collegeEducationId)) {
+    if (collegeEducationId.length > 0) {
+      query = query.in("collegeEducationId", collegeEducationId);
+    } else {
+      return { success: true, data: [] };
+    }
+  } else if (collegeEducationId) {
+    query = query.eq("collegeEducationId", collegeEducationId);
+  }
+
+  const { data, error } = await query;
 
   if (error) return { success: false, data: [], error: error.message };
   return { success: true, data: data ?? [] };

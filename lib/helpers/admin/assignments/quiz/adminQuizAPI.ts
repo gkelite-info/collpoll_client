@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabaseClient";
 export async function fetchFacultyForSubject(collegeSubjectId: number) {
   const { data, error } = await supabase
     .from("faculty_sections")
-    .select("facultyId, faculty(fullName)")
+    .select("facultyId, faculty(fullName, userId, collegeId)")
     .eq("collegeSubjectId", collegeSubjectId)
     .eq("isActive", true)
     .limit(1)
@@ -15,9 +15,18 @@ export async function fetchFacultyForSubject(collegeSubjectId: number) {
 
   const fac = Array.isArray(data.faculty) ? data.faculty[0] : data.faculty;
 
+  const { data: empData } = await supabase
+    .from("employee_ids")
+    .select("employeeId")
+    .eq("userId", fac.userId)
+    .eq("collegeId", fac.collegeId)
+    .eq("isActive", true)
+    .maybeSingle();
+
   return {
     facultyId: data.facultyId,
     fullName: fac.fullName,
+    identifierId: empData?.employeeId || null,
   };
 }
 

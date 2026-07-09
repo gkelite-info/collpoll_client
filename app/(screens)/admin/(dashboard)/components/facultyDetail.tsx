@@ -2,7 +2,7 @@ import { CaretLeft, UserCircle } from "@phosphor-icons/react";
 import CardComponent, { CardProps } from "./totalUsersCard";
 import FacultyCard, { FacultyData } from "../utils/facultyDetailCard";
 import SessionTable from "./tables/facultyDetailclassesTable";
-import { classSessions } from "../data";
+import { useFacultySessions } from "../../hooks/useFacultySessions";
 
 interface FacultyDetailProps {
   faculty: FacultyData;
@@ -38,6 +38,9 @@ const cardData: CardProps[] = [
 ];
 
 const FacultyDetail: React.FC<FacultyDetailProps> = ({ faculty, onBack, collegeEdu }) => {
+  const facultyId = (faculty as any)?.facultyId ?? (faculty as any)?.raw?.facultyId;
+  const { sessions, loading } = useFacultySessions(facultyId);
+
   return (
     <div className="px-1 w-[92.5vw] landscape:w-[95.5vw] md:w-full landscape:md:w-full lg:w-full min-h-screen pb-7 md:pb-0 lg:pb-0">
       <div className="mb-3">
@@ -81,7 +84,7 @@ const FacultyDetail: React.FC<FacultyDetailProps> = ({ faculty, onBack, collegeE
           Showing what classes/sections the faculty teaches
         </p>
       </div>
-      <SessionTable sessions={classSessions} />
+      <SessionTable sessions={sessions} loading={loading} />
     </div>
   );
 };

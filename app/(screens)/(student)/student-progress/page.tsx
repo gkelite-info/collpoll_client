@@ -147,7 +147,7 @@ const Page = () => {
   useEffect(() => {
     if (!collegeId) return;
     setMediaLoading(true);
-    
+
     Promise.all([
       supabase.from("colleges").select("collegeName").eq("collegeId", collegeId).maybeSingle(),
       supabase.from("college_media").select("bannerUrl, logoUrl").eq("collegeId", collegeId).is("deletedAt", null).maybeSingle()
@@ -470,21 +470,22 @@ const Page = () => {
 
                     <div className="flex items-center gap-1 max-md:shrink-0">
                       <span className="text-gray-600 text-lg font-medium max-md:text-[13px] max-md:ml-1">
-                        Section:
+                        Section :
                       </span>
                       <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide max-md:px-2 max-md:py-0.5 max-md:text-[11px]">
                         {college_sections ?? "N/A"}
                       </span>
                     </div>
-
-                    <div className="flex items-center gap-1 max-md:shrink-0">
-                      <span className="text-gray-600 text-lg font-medium max-md:text-[13px] max-md:ml-1">
-                        Semester:
-                      </span>
-                      <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide max-md:px-2 max-md:py-0.5 max-md:text-[11px]">
-                        {collegeSemester ?? "N/A"}
-                      </span>
-                    </div>
+                    {!(collegeEducationType === "Inter") && (
+                      <div className="flex items-center gap-1 max-md:shrink-0">
+                        <span className="text-gray-600 text-lg font-medium max-md:text-[13px] max-md:ml-1">
+                          Semester:
+                        </span>
+                        <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide max-md:px-2 max-md:py-0.5 max-md:text-[11px]">
+                          {collegeSemester ?? "N/A"}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -492,7 +493,7 @@ const Page = () => {
                   <CourseScheduleCard style="w-[320px]" />
                 </div>
 
-                <div
+                {/* <div
                   className="w-12 h-12 aspect-square rounded-full bg-[#43C17A1A] flex items-center justify-center cursor-pointer max-md:w-8 max-md:h-8 max-md:shrink-0"
                   onClick={() => setOpen(true)}
                 >
@@ -501,7 +502,7 @@ const Page = () => {
                     weight="bold"
                     className="text-gray-700 max-md:w-[18px] max-md:h-[18px]"
                   />
-                </div>
+                </div> */}
               </div>
             </section>
 
@@ -590,7 +591,6 @@ const Page = () => {
         {activeTab === "results" && (
           selectedScheduleId !== null ? (
             <div className="max-w-4xl mx-auto w-full flex flex-col pb-10">
-              {/* Back Button and Download PDF Row */}
               <div className="flex items-center justify-between mb-4 w-full px-2">
                 <button
                   onClick={() => setSelectedScheduleId(null)}
@@ -607,7 +607,6 @@ const Page = () => {
                 </button>
               </div>
 
-              {/* Wrapper container that scales the A4 page container */}
               <div
                 ref={containerRef}
                 className="w-full flex justify-center overflow-hidden py-6 bg-gray-150/40 rounded-2xl border border-gray-200/50"
@@ -622,7 +621,6 @@ const Page = () => {
                   }}
                   className="shrink-0 transition-transform duration-200"
                 >
-                  {/* Memorandum Card */}
                   <div
                     ref={printRef}
                     style={{
@@ -637,7 +635,6 @@ const Page = () => {
                     }}
                     className="bg-white shadow-[0_10px_30px_rgba(0,0,0,0.08)] border border-gray-200 relative overflow-hidden flex flex-col gap-6 box-border"
                   >
-                    {/* Banner */}
                     <div
                       style={{
                         backgroundImage: `url('${bannerUrl}')`,
@@ -650,7 +647,6 @@ const Page = () => {
                       }}
                       className="w-full h-56 shrink-0 relative"
                     >
-                      {/* Shimmer for Banner */}
                       {mediaLoading && (
                         <div
                           style={{
@@ -761,7 +757,6 @@ const Page = () => {
                       </div>
                     </div>
 
-                    {/* Card Body */}
                     <div
                       style={{
                         paddingLeft: "10mm",
@@ -775,7 +770,6 @@ const Page = () => {
                       }}
                       className="px-[10mm] pb-[15mm] flex flex-col gap-6 w-full flex-1"
                     >
-                      {/* Results Text */}
                       <h1
                         style={{
                           fontSize: "30px",
@@ -789,7 +783,6 @@ const Page = () => {
                         RESULTS
                       </h1>
 
-                      {/* Student Info Card */}
                       <div
                         style={{
                           display: "flex",
@@ -799,7 +792,6 @@ const Page = () => {
                         }}
                         className="flex flex-col md:flex-row gap-6 items-start"
                       >
-                        {/* User Icon Avatar Placeholder */}
                         <div
                           style={{
                             width: "112px",
@@ -832,7 +824,6 @@ const Page = () => {
                           )}
                         </div>
 
-                        {/* Student Specs */}
                         <div
                           style={{
                             flex: 1,
@@ -864,7 +855,6 @@ const Page = () => {
                         </div>
                       </div>
 
-                      {/* Memo Title */}
                       <h3
                         style={{
                           textAlign: "center",
@@ -879,7 +869,6 @@ const Page = () => {
                       >
                         MEMORANDUM OF GRADES
                       </h3>
-                      {/* Table */}
                       <div
                         style={{
                           marginTop: "8px",
@@ -988,7 +977,6 @@ const Page = () => {
                         </table>
                       </div>
 
-                      {/* SGPA Summary Block */}
                       <div
                         style={{
                           border: "1px solid #d1d5db",
@@ -1012,7 +1000,6 @@ const Page = () => {
 
           ) : (
             <div className="max-w-5xl mx-auto w-full flex flex-col gap-8 pb-10">
-              {/* Header */}
               <div className="flex flex-col items-start gap-1">
                 <h2 className="text-2xl font-bold text-[#282828]">
                   My Results
@@ -1022,9 +1009,7 @@ const Page = () => {
                 </p>
               </div>
 
-              {/* Results Table Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 sm:p-6">
-                {/* Table Header */}
                 <div className="grid grid-cols-4 items-center text-center py-3 border-b border-gray-100 text-[10px] sm:text-xs font-bold text-gray-400 tracking-wider">
                   <div className="text-left pl-4 sm:pl-8">EXAM SCHEDULE</div>
                   <div>RELEASE DATE</div>
@@ -1032,7 +1017,6 @@ const Page = () => {
                   <div className="text-right pr-4 sm:pr-8">ACTION</div>
                 </div>
 
-                {/* Table Rows */}
                 {resultsLoading ? (
                   <div className="flex flex-col items-center justify-center gap-2 text-gray-500 py-10">
                     <SpinnerGap size={24} className="animate-spin text-[#007a4b]" />

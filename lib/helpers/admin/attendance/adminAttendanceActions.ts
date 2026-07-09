@@ -456,17 +456,34 @@ export async function saveAttendance(
   }
 
   const recordMap = new Map(existingRecords?.map((r) => [r.studentId, r.attendanceRecordId]));
+  
+  const updates: any[] = [];
+  const inserts: any[] = [];
+
   dbRecords.forEach((record) => {
     const existingId = recordMap.get(record.studentId);
     if (existingId) {
       record.attendanceRecordId = existingId;
+      updates.push(record);
+    } else {
+      delete record.attendanceRecordId;
+      inserts.push(record);
     }
   });
 
-  const { error } = await supabase
-    .from("attendance_record")
-    .upsert(dbRecords);
+  if (updates.length > 0) {
+    const { error: updateError } = await supabase
+      .from("attendance_record")
+      .upsert(updates);
+    if (updateError) return { success: false, error: updateError.message };
+  }
 
-  if (error) return { success: false, error: error.message };
+  if (inserts.length > 0) {
+    const { error: insertError } = await supabase
+      .from("attendance_record")
+      .insert(inserts);
+    if (insertError) return { success: false, error: insertError.message };
+  }
+
   return { success: true };
 }

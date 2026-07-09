@@ -61,6 +61,7 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [studentsList, setStudentsList] = useState<UIStudent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [calendarType, setCalendarType] = useState<"Single" | "Bulk">("Single");
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -140,8 +141,10 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
         const classes = await getAdminClassesForSection(collegeSectionsId, dateStr);
         setClassOptions(classes);
 
-        if (classes.length > 0) {
-          const firstClass = classes[0];
+        const filtered = classes.filter(c => calendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-"));
+
+        if (filtered.length > 0) {
+          const firstClass = filtered[0];
           setSelectedClassId(firstClass.id);
 
           const students = await getStudentsForClass(
@@ -173,6 +176,13 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
     setSelectedClassId(newClassId);
     setLoading(true);
     setIsEditing(false);
+    
+    if (!newClassId) {
+      setStudentsList([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const students = await getStudentsForClass(
         newClassId,
@@ -347,12 +357,37 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
           <div className="flex items-center gap-3 justify-between">
             <div className="relative">
               <select
+                value={calendarType}
+                onChange={(e) => {
+                  const type = e.target.value as "Single" | "Bulk";
+                  setCalendarType(type);
+                  const filtered = classOptions.filter(c => type === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-"));
+                  if (filtered.length > 0) {
+                    handleClassChange(filtered[0].id);
+                  } else {
+                    handleClassChange("");
+                  }
+                }}
+                className="appearance-none rounded-full bg-[#43C17A1C] pl-4 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm min-w-[100px]"
+              >
+                <option value="Single">Single</option>
+                <option value="Bulk">Bulk</option>
+              </select>
+              <CaretDown
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
+                size={12}
+                weight="bold"
+              />
+            </div>
+
+            <div className="relative">
+              <select
                 value={selectedClassId}
                 onChange={(e) => handleClassChange(e.target.value)}
-                className="appearance-none rounded-md bg-[#43C17A1C] pl-3 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm"
+                className="appearance-none rounded-full bg-[#43C17A1C] pl-4 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm min-w-[180px]"
               >
-                {classOptions.length > 0 ? (
-                  classOptions.map((c) => (
+                {classOptions.filter(c => calendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-")).length > 0 ? (
+                  classOptions.filter(c => calendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-")).map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.label}
                     </option>

@@ -164,7 +164,8 @@ export default function ExamsPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
-  const showDateRangePicker = ["Select", "Mid 1 Exam", "Mid 2 Exam", "Semester Exam"].includes(examTypeSelect);
+  const isInterGlobal = educations.find((e) => e.collegeEducationId === educationSelect)?.collegeEducationType === "Inter";
+  const showDateRangePicker = isInterGlobal || ["Select", "Mid 1 Exam", "Mid 2 Exam", "Semester Exam"].includes(examTypeSelect);
 
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [currentAcademicYearId, setCurrentAcademicYearId] = useState<number | null>(null);
@@ -366,15 +367,16 @@ export default function ExamsPage() {
       toast.error("Please select an Education Type.");
       return;
     }
-    if (!showDateRangePicker && (branchSelect === null || semesterSelect === null)) {
-      toast.error("Please select branch and semester.");
+    const isInter = educations.find((e) => e.collegeEducationId === educationSelect)?.collegeEducationType === "Inter";
+    if (!showDateRangePicker && (branchSelect === null || (!isInter && semesterSelect === null))) {
+      toast.error(isInter ? "Please select a group." : "Please select branch and semester.");
       return;
     }
-    if (showDateRangePicker && (!fromDate || !toDate)) {
+    if ((showDateRangePicker || isInter) && (!fromDate || !toDate)) {
       toast.error("Please enter From Date and To Date.");
       return;
     }
-    if (showDateRangePicker) {
+    if (showDateRangePicker || isInter) {
       const start = new Date(fromDate);
       const end = new Date(toDate);
       if (start > end) {
@@ -402,10 +404,10 @@ export default function ExamsPage() {
         collegeBranchId: showDateRangePicker ? null : branchSelect,
         academicYear: showDateRangePicker ? null : yearSelect,
         collegeSectionsId: showDateRangePicker ? null : sectionSelect,
-        collegeSemesterId: showDateRangePicker ? null : semesterSelect,
+        collegeSemesterId: showDateRangePicker || isInter ? null : semesterSelect,
         examType: finalExamType,
-        fromDate: showDateRangePicker ? fromDate : null,
-        toDate: showDateRangePicker ? toDate : null,
+        fromDate: showDateRangePicker || isInter ? fromDate : null,
+        toDate: showDateRangePicker || isInter ? toDate : null,
         createdBy: adminId,
       };
 
@@ -427,6 +429,15 @@ export default function ExamsPage() {
       setScheduledSubjects([]);
       setFromDate("");
       setToDate("");
+      setExamTypeSelect("Select");
+      setBranchSelect(null);
+      setYearSelect("1st Year");
+      setSemesterSelect(null);
+      setSectionSelect(null);
+      if (educations.length > 0) {
+        setEducationSelect(educations[0].collegeEducationId);
+        setPrevSchedulesEduSelect(educations[0].collegeEducationId);
+      }
       if (collegeId) {
         loadSchedules(collegeId);
       }
@@ -486,7 +497,7 @@ export default function ExamsPage() {
         <div>
           <h1 className="text-[#282828] text-2xl font-bold">Upload Exam Schedule</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Create and publish the timetable for the upcoming semester exams
+            Create and publish the timetable for the upcoming exams
           </p>
         </div>
 
@@ -510,55 +521,39 @@ export default function ExamsPage() {
                   value={scheduleTitle}
                   onChange={(e) => {
                     let val = e.target.value;
-                    val = val.replace(/[^a-zA-Z ]/g, "");
+                    val = val.replace(/[^a-zA-Z0-9 \-]/g, "");
                     if (val.length > 0) {
                       val = val.charAt(0).toUpperCase() + val.slice(1);
                     }
                     setScheduleTitle(val);
                   }}
-                  placeholder="e.g, Sem Exam Schedule"
+                  placeholder="e.g, Sem 1 - Exam Schedule"
                   className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#43C17A] focus:border-[#43C17A]"
                 />
               </div>
 
               <div className="flex flex-col">
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-sm font-bold text-gray-700">
-                    Exam Type <span className="text-red-500">*</span>
-                  </label>
-                </div>
+                <label className="text-sm font-bold text-gray-700 mb-1.5">
+                  Education Type <span className="text-red-500">*</span>
+                </label>
                 <div className="relative">
-                  {!isCustomExamType ? (
-                    <>
-                      <select
-                        value={examTypeSelect}
-                        onChange={(e) => setExamTypeSelect(e.target.value)}
-                        className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 focus:outline-none appearance-none cursor-pointer"
-                      >
-                        <option>Select</option>
-                        <option value="Mid 1 Exam">Mid 1 Exam</option>
-                        <option value="Mid 2 Exam">Mid 2 Exam</option>
-                        <option value="Lab Internal 1">Lab Internal 1</option>
-                        <option value="Lab Internal 2">Lab Internal 2</option>
-                        <option value="Semester Exam">Semester Exam</option>
-                        {customExamTypes.map((t) => (
-                          <option key={t.collegeExamTypeId} value={t.examTypeName}>
-                            {t.examTypeName}
-                          </option>
-                        ))}
-                      </select>
-                      <CaretDown size={14} className="absolute right-3 top-3.5 text-gray-500 pointer-events-none" />
-                    </>
-                  ) : (
-                    <input
-                      type="text"
-                      value={examTypeSelect}
-                      onChange={(e) => setExamTypeSelect(e.target.value)}
-                      placeholder="Enter new exam type"
-                      className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#43C17A] focus:border-[#43C17A]"
-                      autoFocus
-                    />
-                  )}
+                  <select
+                    value={educationSelect || ""}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setEducationSelect(val);
+                      setPrevSchedulesEduSelect(val);
+                    }}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 focus:outline-none appearance-none cursor-pointer"
+                  >
+                    {educations.length === 0 && <option value="">Loading...</option>}
+                    {educations.map((edu) => (
+                      <option key={edu.collegeEducationId} value={edu.collegeEducationId}>
+                        {edu.collegeEducationType}
+                      </option>
+                    ))}
+                  </select>
+                  <CaretDown size={14} className="absolute right-3 top-3.5 text-gray-500 pointer-events-none" />
                 </div>
               </div>
             </div>
@@ -566,23 +561,57 @@ export default function ExamsPage() {
             {showDateRangePicker ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col">
-                  <label className="text-sm font-bold text-gray-700 mb-1.5">
-                    Education Type <span className="text-red-500">*</span>
-                  </label>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="text-sm font-bold text-gray-700">
+                      Exam Type <span className="text-red-500">*</span>
+                    </label>
+                  </div>
                   <div className="relative">
-                    <select
-                      value={educationSelect || ""}
-                      onChange={(e) => setEducationSelect(Number(e.target.value))}
-                      className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 focus:outline-none appearance-none cursor-pointer"
-                    >
-                      {educations.length === 0 && <option value="">Loading...</option>}
-                      {educations.map((edu) => (
-                        <option key={edu.collegeEducationId} value={edu.collegeEducationId}>
-                          {edu.collegeEducationType}
-                        </option>
-                      ))}
-                    </select>
-                    <CaretDown size={14} className="absolute right-3 top-3.5 text-gray-500 pointer-events-none" />
+                    {!isCustomExamType ? (
+                      <>
+                        <select
+                          value={examTypeSelect}
+                          onChange={(e) => setExamTypeSelect(e.target.value)}
+                          className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 focus:outline-none appearance-none cursor-pointer"
+                        >
+                          <option>Select</option>
+                          {educations.find((e) => e.collegeEducationId === educationSelect)?.collegeEducationType === "Inter" ? (
+                            <>
+                              <option value="Unit Test 1">Unit Test 1</option>
+                              <option value="Unit Test 2">Unit Test 2</option>
+                              <option value="Quarterly Exam">Quarterly Exam</option>
+                              <option value="Half-Yearly Exam">Half-Yearly Exam</option>
+                              <option value="Pre-Final Exam">Pre-Final Exam</option>
+                              <option value="Practical/Internal Assessment">Practical/Internal Assessment</option>
+                              <option value="Intermediate Public Examination">Intermediate Public Examination</option>
+                            </>
+                          ) : (
+                            <>
+                              <option value="Mid 1 Exam">Mid 1 Exam</option>
+                              <option value="Mid 2 Exam">Mid 2 Exam</option>
+                              <option value="Lab Internal 1">Lab Internal 1</option>
+                              <option value="Lab Internal 2">Lab Internal 2</option>
+                              <option value="Semester Exam">Semester Exam</option>
+                            </>
+                          )}
+                          {/* {customExamTypes.map((t) => (
+                            <option key={t.collegeExamTypeId} value={t.examTypeName}>
+                              {t.examTypeName}
+                            </option>
+                          ))} */}
+                        </select>
+                        <CaretDown size={14} className="absolute right-3 top-3.5 text-gray-500 pointer-events-none" />
+                      </>
+                    ) : (
+                      <input
+                        type="text"
+                        value={examTypeSelect}
+                        onChange={(e) => setExamTypeSelect(e.target.value)}
+                        placeholder="Enter new exam type"
+                        className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#43C17A] focus:border-[#43C17A]"
+                        autoFocus
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -621,29 +650,63 @@ export default function ExamsPage() {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col">
-                    <label className="text-sm font-bold text-gray-700 mb-1.5">
-                      Education Type <span className="text-red-500">*</span>
-                    </label>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="text-sm font-bold text-gray-700">
+                        Exam Type <span className="text-red-500">*</span>
+                      </label>
+                    </div>
                     <div className="relative">
-                      <select
-                        value={educationSelect || ""}
-                        onChange={(e) => setEducationSelect(Number(e.target.value))}
-                        className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 focus:outline-none appearance-none cursor-pointer"
-                      >
-                        {educations.length === 0 && <option value="">Loading...</option>}
-                        {educations.map((edu) => (
-                          <option key={edu.collegeEducationId} value={edu.collegeEducationId}>
-                            {edu.collegeEducationType}
-                          </option>
-                        ))}
-                      </select>
-                      <CaretDown size={14} className="absolute right-3 top-3.5 text-gray-500 pointer-events-none" />
+                      {!isCustomExamType ? (
+                        <>
+                          <select
+                            value={examTypeSelect}
+                            onChange={(e) => setExamTypeSelect(e.target.value)}
+                            className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 focus:outline-none appearance-none cursor-pointer"
+                          >
+                            <option>Select</option>
+                            {educations.find((e) => e.collegeEducationId === educationSelect)?.collegeEducationType === "Inter" ? (
+                              <>
+                                <option value="Unit Test 1">Unit Test 1</option>
+                                <option value="Unit Test 2">Unit Test 2</option>
+                                <option value="Quarterly Exam">Quarterly Exam</option>
+                                <option value="Half-Yearly Exam">Half-Yearly Exam</option>
+                                <option value="Pre-Final Exam">Pre-Final Exam</option>
+                                <option value="Practical/Internal Assessment">Practical/Internal Assessment</option>
+                                <option value="Intermediate Public Examination">Intermediate Public Examination</option>
+                              </>
+                            ) : (
+                              <>
+                                <option value="Mid 1 Exam">Mid 1 Exam</option>
+                                <option value="Mid 2 Exam">Mid 2 Exam</option>
+                                <option value="Lab Internal 1">Lab Internal 1</option>
+                                <option value="Lab Internal 2">Lab Internal 2</option>
+                                <option value="Semester Exam">Semester Exam</option>
+                              </>
+                            )}
+                            {/* {customExamTypes.map((t) => (
+                              <option key={t.collegeExamTypeId} value={t.examTypeName}>
+                                {t.examTypeName}
+                              </option>
+                            ))} */}
+                          </select>
+                          <CaretDown size={14} className="absolute right-3 top-3.5 text-gray-500 pointer-events-none" />
+                        </>
+                      ) : (
+                        <input
+                          type="text"
+                          value={examTypeSelect}
+                          onChange={(e) => setExamTypeSelect(e.target.value)}
+                          placeholder="Enter new exam type"
+                          className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#43C17A] focus:border-[#43C17A]"
+                          autoFocus
+                        />
+                      )}
                     </div>
                   </div>
 
                   <div className="flex flex-col">
                     <label className="text-sm font-bold text-gray-700 mb-1.5">
-                      Branch <span className="text-red-500">*</span>
+                      {educations.find((e) => e.collegeEducationId === educationSelect)?.collegeEducationType === "Inter" ? "Group" : "Branch"} <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <select
@@ -655,7 +718,7 @@ export default function ExamsPage() {
                         }}
                         className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 focus:outline-none appearance-none cursor-pointer"
                       >
-                        {branches.length === 0 && <option value="">No branches</option>}
+                        {branches.length === 0 && <option value="">{educations.find((e) => e.collegeEducationId === educationSelect)?.collegeEducationType === "Inter" ? "No groups" : "No branches"}</option>}
                         {branches.map((b) => (
                           <option key={b.collegeBranchId} value={b.collegeBranchId}>
                             {b.collegeBranchCode}
@@ -680,8 +743,12 @@ export default function ExamsPage() {
                       >
                         <option value="1st Year">1st Year</option>
                         <option value="2nd Year">2nd Year</option>
-                        <option value="3rd Year">3rd Year</option>
-                        <option value="4th Year">4th Year</option>
+                        {educations.find((e) => e.collegeEducationId === educationSelect)?.collegeEducationType !== "Inter" && (
+                          <>
+                            <option value="3rd Year">3rd Year</option>
+                            <option value="4th Year">4th Year</option>
+                          </>
+                        )}
                       </select>
                       <CaretDown size={14} className="absolute right-3 top-3.5 text-gray-500 pointer-events-none" />
                     </div>
@@ -709,28 +776,34 @@ export default function ExamsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col">
-                    <label className="text-sm font-bold text-gray-700 mb-1.5">
-                      Semester <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={semesterSelect || ""}
-                        onChange={(e) => setSemesterSelect(Number(e.target.value))}
-                        className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 focus:outline-none appearance-none cursor-pointer"
-                      >
-                        {semesters.length === 0 && <option value="">No semesters</option>}
-                        {semesters.map((sem) => (
-                          <option key={sem.collegeSemesterId} value={sem.collegeSemesterId}>
-                            {sem.collegeSemester}
-                          </option>
-                        ))}
-                      </select>
-                      <CaretDown size={14} className="absolute right-3 top-3.5 text-gray-500 pointer-events-none" />
+                {educations.find((e) => e.collegeEducationId === educationSelect)?.collegeEducationType !== "Inter" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-col">
+                      <label className="text-sm font-bold text-gray-700 mb-1.5">
+                        Semester <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={semesterSelect || ""}
+                          onChange={(e) => setSemesterSelect(Number(e.target.value))}
+                          disabled={educations.find((e) => e.collegeEducationId === educationSelect)?.collegeEducationType === "Inter"}
+                          className={`w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none appearance-none ${educations.find((e) => e.collegeEducationId === educationSelect)?.collegeEducationType === "Inter"
+                              ? "bg-gray-100 cursor-not-allowed text-gray-400"
+                              : "bg-white cursor-pointer text-gray-700"
+                            }`}
+                        >
+                          {semesters.length === 0 && <option value="">No semesters</option>}
+                          {semesters.map((sem) => (
+                            <option key={sem.collegeSemesterId} value={sem.collegeSemesterId}>
+                              {sem.collegeSemester}
+                            </option>
+                          ))}
+                        </select>
+                        <CaretDown size={14} className="absolute right-3 top-3.5 text-gray-500 pointer-events-none" />
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </>
             )}
 
@@ -969,6 +1042,9 @@ export default function ExamsPage() {
                     Exam Type
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Education
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Scope / Target
                   </th>
                   <th scope="col" className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -992,6 +1068,9 @@ export default function ExamsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                      </td>
                       <td className="px-6 py-4">
                         <div className="h-4 bg-gray-200 rounded w-5/6"></div>
                       </td>
@@ -1014,7 +1093,7 @@ export default function ExamsPage() {
                     const hasDates = row.fromDate && row.toDate;
                     const scopeText = hasDates
                       ? `Dates: ${row.fromDate} to ${row.toDate}`
-                      : `${row.college_education?.collegeEducationType || ""} - ${row.college_branch?.collegeBranchCode || ""} (${row.academicYear || ""}, ${row.college_semester?.collegeSemester ? `Sem ${row.college_semester.collegeSemester}` : ""}${row.college_sections?.collegeSections ? `, Sec ${row.college_sections.collegeSections}` : ""})`;
+                      : `${row.college_branch?.collegeBranchCode || ""} (${row.academicYear || ""}, ${row.college_semester?.collegeSemester ? `Sem ${row.college_semester.collegeSemester}` : ""}${row.college_sections?.collegeSections ? `, Sec ${row.college_sections.collegeSections}` : ""})`;
 
                     const isCompleted = (() => {
                       const today = new Date();
@@ -1055,6 +1134,9 @@ export default function ExamsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-left text-xs md:text-sm text-gray-600">
                           {row.examType}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-left text-xs md:text-sm text-gray-600">
+                          {row.college_education?.collegeEducationType || educations.find((e) => e.collegeEducationId === row.collegeEducationId)?.collegeEducationType || "-"}
                         </td>
                         <td className="px-6 py-4 text-left text-xs md:text-sm text-gray-600">
                           {scopeText}

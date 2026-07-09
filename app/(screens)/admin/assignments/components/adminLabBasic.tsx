@@ -23,6 +23,7 @@ import { DiscussionDeptCardSkeleton } from "./shimmers/DiscussionDeptCardSkeleto
 import { DiscussionCourseCardSkeleton } from "./shimmers/courseCardSkeleton";
 import { FilterDropdown } from "./filterDropdown";
 import { fetchQuizFilterOptions } from "@/lib/helpers/admin/assignments/quiz/adminQuizAPI";
+import { fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns";
 import {
   fetchAdminLabDepartments,
   fetchAdminLabSubjects,
@@ -140,7 +141,7 @@ export default function AdminLabBasic() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { adminId, collegeId, collegeEducationId } = useAdmin();
+  const { adminId, collegeId, collegeEducationId: defaultEducationId, collegeEducationType: defaultEducationType } = useAdmin();
   const action = searchParams.get("action");
   const branchIdParam = searchParams.get("branchId");
   const yearIdParam = searchParams.get("yearId");
@@ -184,6 +185,22 @@ export default function AdminLabBasic() {
     year: "",
   });
 
+  const [educations, setEducations] = useState<any[]>([]);
+  const [education, setEducation] = useState<any>(null);
+
+  const currentEducationId = education?.collegeEducationId ?? defaultEducationId;
+  const currentEducationType = education?.collegeEducationType ?? defaultEducationType;
+
+  const selectEducation = (edu: any) => {
+    setEducation(edu);
+  };
+
+  useEffect(() => {
+    if (collegeId) {
+      fetchEducations(collegeId).then(setEducations);
+    }
+  }, [collegeId]);
+
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
   const branchYearTitle =
     [dept || branchYearLabel.branch, year || branchYearLabel.year]
@@ -193,7 +210,7 @@ export default function AdminLabBasic() {
   async function fetchLabs() {
     if (
       !collegeId ||
-      !collegeEducationId ||
+      !currentEducationId ||
       !branchIdParam ||
       !yearIdParam ||
       !subjectId
@@ -205,7 +222,7 @@ export default function AdminLabBasic() {
       setLabsLoading(true);
       const response = await fetchLabManualsForStaff({
         collegeId,
-        collegeEducationId,
+        collegeEducationId: currentEducationId,
         collegeBranchId: Number(branchIdParam),
         collegeAcademicYearId: Number(yearIdParam),
         collegeSubjectId: Number(subjectId),
@@ -251,7 +268,7 @@ export default function AdminLabBasic() {
     fetchLabs();
   }, [
     collegeId,
-    collegeEducationId,
+    currentEducationId,
     branchIdParam,
     yearIdParam,
     subjectId,
@@ -403,20 +420,20 @@ export default function AdminLabBasic() {
   };
 
   useEffect(() => {
-    if (!collegeId || !collegeEducationId) return;
-    fetchQuizFilterOptions(collegeId, collegeEducationId).then((response) => {
+    if (!collegeId || !currentEducationId) return;
+    fetchQuizFilterOptions(collegeId, currentEducationId).then((response) => {
       setBranchOptions(response.branchOptions);
       setYearOptions(response.yearOptions);
     });
-  }, [collegeId, collegeEducationId]);
+  }, [collegeId, currentEducationId]);
 
   useEffect(() => {
-    if (!collegeId || !collegeEducationId || branchIdParam) return;
+    if (!collegeId || !currentEducationId || branchIdParam) return;
 
     setDeptLoading(true);
     fetchAdminLabDepartments(
       collegeId,
-      collegeEducationId,
+      currentEducationId,
       branchFilter,
       yearFilter,
       deptPage,
@@ -429,7 +446,7 @@ export default function AdminLabBasic() {
       .finally(() => setDeptLoading(false));
   }, [
     collegeId,
-    collegeEducationId,
+    currentEducationId,
     branchIdParam,
     branchFilter,
     yearFilter,
@@ -538,11 +555,27 @@ export default function AdminLabBasic() {
     <div className="flex flex-col m-4">
       <TabNavigation />
 
-      {!branchIdParam ? (
+      {!branchIdParam && !dept ? (
         <>
           <div className="flex flex-wrap items-center gap-6 mt-1 mb-5">
             <FilterDropdown
-              label="Branch"
+              label="Education"
+              value={currentEducationId?.toString() ?? ""}
+              options={educations.map((e) => ({
+                label: e.collegeEducationType,
+                value: e.collegeEducationId.toString(),
+              }))}
+              onChange={(val) => {
+                const edu = educations.find((e) => e.collegeEducationId === +val);
+                if (edu) {
+                  selectEducation(edu);
+                  setBranchFilter("All");
+                  setYearFilter("All");
+                }
+              }}
+            />
+            <FilterDropdown
+              label={currentEducationType === "Inter" ? "Group" : "Branch"}
               value={branchFilter}
               options={branchOptions}
               onChange={(value) => {
@@ -691,7 +724,7 @@ export default function AdminLabBasic() {
                 />
               </button>
               <h2 className="text-xl font-bold text-gray-800">
-                Lab Manuals for Subject
+                {currentEducationType} {dept} - {year}
               </h2>
             </div>
             <button

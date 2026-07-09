@@ -164,8 +164,6 @@ export default function AdminRegistration() {
             }
             if (!form.educationTypes.length) return toast.error("Select Education Type.");
 
-            if (!form.gender) return toast.error("Select Gender.");
-
             if (!form.dateOfJoining) {
                 return toast.error("Date of Joining is required.");
             }
@@ -178,6 +176,9 @@ export default function AdminRegistration() {
             if (!form.employeeId) {
                 return toast.error("Employee Id is required.");
             }
+
+            if (!form.gender) return toast.error("Select Gender.");
+
             if (
                 form.employeeId.length < 6 ||
                 form.employeeId.length > 15
@@ -338,6 +339,7 @@ export default function AdminRegistration() {
             <InputField
                 label="Full Name"
                 value={form.fullName}
+                required={true}
                 placeholder='e.g., "Admin Mallareddy"'
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     handleChange("fullName", e.target.value)
@@ -347,6 +349,7 @@ export default function AdminRegistration() {
                 <InputField
                     label="Email ID"
                     value={form.email}
+                    required={true}
                     placeholder="admin@gmail.com"
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         handleChange("email", e.target.value.toLowerCase())
@@ -355,7 +358,7 @@ export default function AdminRegistration() {
 
                 <div>
                     <label className="text-[#282828] font-semibold text-[15px] mb-1.5 block">
-                        Mobile
+                        Mobile <span className="text-red-500">*</span>
                     </label>
                     <div className="flex gap-2">
                         <input
@@ -465,6 +468,7 @@ export default function AdminRegistration() {
                     label="Date of Joining"
                     type="date"
                     value={form.dateOfJoining}
+                    required={true}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         handleChange("dateOfJoining", e.target.value)
                     }
@@ -479,6 +483,7 @@ export default function AdminRegistration() {
                     type="number"
                     placeholder="e.g. 2.5"
                     value={form.experienceYears}
+                    required={true}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const value = e.target.value.replace(/[^0-9.]/g, "");
                         handleChange("experienceYears", value);
@@ -489,6 +494,7 @@ export default function AdminRegistration() {
                     label="Employee Id"
                     placeholder="Enter Employee Id"
                     value={form.employeeId}
+                    required={true}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         const sanitized = e.target.value
                             .replace(/[^A-Za-z0-9-]/g, "")
@@ -503,7 +509,7 @@ export default function AdminRegistration() {
             <div className="grid md:grid-cols-2 gap-6 mt-5">
                 <div>
                     <label className="text-[#282828] font-semibold text-[15px] mb-3 block">
-                        Gender
+                        Gender <span className="text-red-500">*</span>
                     </label>
 
                     <div className="flex gap-10 mt-2">
@@ -566,7 +572,7 @@ export default function AdminRegistration() {
             <div className="grid md:grid-cols-2 gap-6 mt-5">
                 <div className="flex flex-col w-full">
                     <label className="text-[#282828] font-semibold text-[15px] mb-1.5">
-                        Password
+                        Password <span className="text-red-500">*</span>
                     </label>
 
                     <div className="relative">
@@ -592,7 +598,7 @@ export default function AdminRegistration() {
                 </div>
                 <div className="flex flex-col w-full">
                     <label className="text-[#282828] font-semibold text-[15px] mb-1.5">
-                        Confirm Password
+                        Confirm Password <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                         <input

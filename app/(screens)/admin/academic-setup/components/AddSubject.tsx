@@ -217,7 +217,7 @@ export default function AddSubject({
     if (!ui.branch) return toast.error("Please select Branch");
     if (!ui.year) return toast.error("Please select Year");
 
-    if (!["Inter"].includes(collegeEducationType!)) {
+    if (!["Inter"].includes(ui.education)) {
       if (!ui.semester) return toast.error("Please select Semester");
     }
     if (!form.subjectName.trim())
@@ -229,7 +229,7 @@ export default function AddSubject({
     //   return toast.error("Please upload Subject Image");
     // }
 
-    if (!["Inter"].includes(collegeEducationType!)) {
+    if (!["Inter"].includes(ui.education)) {
       if (!form.credits) return toast.error("Please enter Credits");
     }
 
@@ -272,7 +272,7 @@ export default function AddSubject({
           </div>
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
-              {collegeEducationType === "Inter" ? "Group Type" : "Branch Type"} <span className="text-red-500">*</span>
+              {ui.education === "Inter" ? "Group Type" : "Branch Type"} <span className="text-red-500">*</span>
             </label>
             {isLoadingOptions && ui.education && !ui.branch ? (
               <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse p-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
@@ -286,7 +286,7 @@ export default function AddSubject({
                 disabled={!ui.education}
                 className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full disabled:bg-gray-50 disabled:cursor-not-allowed"
               >
-                <option value="">{collegeEducationType === "Inter" ? "Select Group" : "Select Branch"}</option>
+                <option value="">{ui.education === "Inter" ? "Select Group" : "Select Branch"}</option>
                 {ui.education &&
                   options.branches.map((b) => (
                     <option key={b.id}>{b.label}</option>
@@ -318,7 +318,7 @@ export default function AddSubject({
               </select>
             )}
           </div>
-          {!["Inter"].includes(collegeEducationType!) && (
+          {!["Inter"].includes(ui.education) && (
             <div>
               <label className="block text-sm font-medium text-[#16284F] mb-1">
                 Semester <span className="text-red-500">*</span>
@@ -381,9 +381,11 @@ export default function AddSubject({
 
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
-              Credits <span className="text-red-500">*</span>
-              {collegeEducationType === "Inter" && (
+              Credits
+              {ui.education === "Inter" ? (
                 <span className="ml-1 text-[#16284F] text-sm">(Optional)</span>
+              ) : (
+                <span className="text-red-500 ml-1">*</span>
               )}
             </label>
             <input

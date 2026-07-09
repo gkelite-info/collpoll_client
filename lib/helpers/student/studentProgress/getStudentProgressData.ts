@@ -267,17 +267,28 @@ export async function getStudentProgressData(userId: number) {
 
   if (studentPinError) throw studentPinError;
 
-  const { data: facultySectionRows, error: facultySectionError } =
-    semesterSubjectIds.length > 0
-      ? await supabase
+  let facultySectionsQuery = supabase
           .from("faculty_sections")
           .select("facultyId, collegeSubjectId")
-          .eq("collegeAcademicYearId", studentContext.collegeAcademicYearId)
-          .eq("collegeSectionsId", studentContext.collegeSectionsId)
           .in("collegeSubjectId", semesterSubjectIds)
           .eq("isActive", true)
-          .is("deletedAt", null)
-          .returns<FacultySectionRow[]>()
+          .is("deletedAt", null);
+
+  if (studentContext.collegeAcademicYearId === null) {
+    facultySectionsQuery = facultySectionsQuery.is("collegeAcademicYearId", null);
+  } else {
+    facultySectionsQuery = facultySectionsQuery.eq("collegeAcademicYearId", studentContext.collegeAcademicYearId);
+  }
+
+  if (studentContext.collegeSectionsId === null) {
+    facultySectionsQuery = facultySectionsQuery.is("collegeSectionsId", null);
+  } else {
+    facultySectionsQuery = facultySectionsQuery.eq("collegeSectionsId", studentContext.collegeSectionsId);
+  }
+
+  const { data: facultySectionRows, error: facultySectionError } =
+    semesterSubjectIds.length > 0
+      ? await facultySectionsQuery.returns<FacultySectionRow[]>()
       : { data: [], error: null };
 
   if (facultySectionError) throw facultySectionError;
@@ -471,10 +482,20 @@ export async function getStudentProgressData(userId: number) {
     `,
     )
     .eq("collegeBranchId", studentContext.collegeBranchId)
-    .eq("collegeAcademicYearId", studentContext.collegeAcademicYearId)
-    .eq("collegeSectionsId", studentContext.collegeSectionsId)
     .eq("is_deleted", false)
     .neq("status", "Cancelled");
+
+  if (studentContext.collegeAcademicYearId === null) {
+    assignmentQuery = assignmentQuery.is("collegeAcademicYearId", null);
+  } else {
+    assignmentQuery = assignmentQuery.eq("collegeAcademicYearId", studentContext.collegeAcademicYearId);
+  }
+
+  if (studentContext.collegeSectionsId === null) {
+    assignmentQuery = assignmentQuery.is("collegeSectionsId", null);
+  } else {
+    assignmentQuery = assignmentQuery.eq("collegeSectionsId", studentContext.collegeSectionsId);
+  }
 
   if (semesterSubjectIds.length > 0) {
     assignmentQuery = assignmentQuery.in("subjectId", semesterSubjectIds);
@@ -525,16 +546,27 @@ export async function getStudentProgressData(userId: number) {
     };
   });
 
-  const { data: quizzes, error: quizzesError } = semesterSubjectIds.length
-    ? await supabase
+  let quizzesQuery = supabase
         .from("quizzes")
         .select("quizId, collegeSubjectId, totalMarks")
-        .eq("collegeAcademicYearId", studentContext.collegeAcademicYearId)
-        .eq("collegeSectionsId", studentContext.collegeSectionsId)
         .in("collegeSubjectId", semesterSubjectIds)
         .eq("isActive", true)
-        .is("deletedAt", null)
-        .returns<QuizRow[]>()
+        .is("deletedAt", null);
+
+  if (studentContext.collegeAcademicYearId === null) {
+    quizzesQuery = quizzesQuery.is("collegeAcademicYearId", null);
+  } else {
+    quizzesQuery = quizzesQuery.eq("collegeAcademicYearId", studentContext.collegeAcademicYearId);
+  }
+
+  if (studentContext.collegeSectionsId === null) {
+    quizzesQuery = quizzesQuery.is("collegeSectionsId", null);
+  } else {
+    quizzesQuery = quizzesQuery.eq("collegeSectionsId", studentContext.collegeSectionsId);
+  }
+
+  const { data: quizzes, error: quizzesError } = semesterSubjectIds.length
+    ? await quizzesQuery.returns<QuizRow[]>()
     : { data: [], error: null };
 
   if (quizzesError) throw quizzesError;
@@ -568,16 +600,22 @@ export async function getStudentProgressData(userId: number) {
     (discussion) => discussion.discussionId,
   );
 
-  const { data: discussionSections, error: discussionSectionsError } =
-    discussionIds.length
-      ? await supabase
+  let discussionSectionsQuery = supabase
           .from("discussion_forum_sections")
           .select("discussionId, collegeSectionsId, marks")
           .in("discussionId", discussionIds)
-          .eq("collegeSectionsId", studentContext.collegeSectionsId)
           .eq("is_deleted", false)
-          .is("deletedAt", null)
-          .returns<DiscussionSectionRow[]>()
+          .is("deletedAt", null);
+
+  if (studentContext.collegeSectionsId === null) {
+    discussionSectionsQuery = discussionSectionsQuery.is("collegeSectionsId", null);
+  } else {
+    discussionSectionsQuery = discussionSectionsQuery.eq("collegeSectionsId", studentContext.collegeSectionsId);
+  }
+
+  const { data: discussionSections, error: discussionSectionsError } =
+    discussionIds.length
+      ? await discussionSectionsQuery.returns<DiscussionSectionRow[]>()
       : { data: [], error: null };
 
   if (discussionSectionsError) throw discussionSectionsError;
@@ -612,9 +650,14 @@ export async function getStudentProgressData(userId: number) {
     .eq("collegeId", studentContext.collegeId)
     .eq("collegeEducationId", studentContext.collegeEducationId)
     .eq("collegeBranchId", studentContext.collegeBranchId)
-    .eq("collegeSectionsId", studentContext.collegeSectionsId)
     .in("collegeSubjectId", semesterSubjectIds)
     .is("deletedAt", null);
+
+  if (studentContext.collegeSectionsId === null) {
+    weightageQuery = weightageQuery.is("collegeSectionsId", null);
+  } else {
+    weightageQuery = weightageQuery.eq("collegeSectionsId", studentContext.collegeSectionsId);
+  }
 
   if (studentContext.collegeSemesterId === null) {
     weightageQuery = weightageQuery.is("collegeSemesterId", null);

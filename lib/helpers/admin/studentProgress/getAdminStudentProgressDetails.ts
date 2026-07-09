@@ -500,15 +500,26 @@ export async function getAdminStudentProgressDetails(
   const resolvedDepartmentLabel =
     branchRow?.collegeBranchCode ?? scope.departmentLabel ?? "N/A";
 
-  const { data: facultySectionRows, error: facultySectionError } = await supabase
+  let facultySectionsQuery = supabase
     .from("faculty_sections")
     .select("facultyId, collegeSubjectId")
-    .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
-    .eq("collegeSectionsId", historyRow.collegeSectionsId)
     .in("collegeSubjectId", scope.subjectIds)
     .eq("isActive", true)
-    .is("deletedAt", null)
-    .returns<FacultySectionRow[]>();
+    .is("deletedAt", null);
+
+  if (historyRow.collegeAcademicYearId === null) {
+    facultySectionsQuery = facultySectionsQuery.is("collegeAcademicYearId", null);
+  } else {
+    facultySectionsQuery = facultySectionsQuery.eq("collegeAcademicYearId", historyRow.collegeAcademicYearId);
+  }
+
+  if (historyRow.collegeSectionsId === null) {
+    facultySectionsQuery = facultySectionsQuery.is("collegeSectionsId", null);
+  } else {
+    facultySectionsQuery = facultySectionsQuery.eq("collegeSectionsId", historyRow.collegeSectionsId);
+  }
+
+  const { data: facultySectionRows, error: facultySectionError } = await facultySectionsQuery.returns<FacultySectionRow[]>();
 
   if (facultySectionError) throw facultySectionError;
 
@@ -532,9 +543,14 @@ export async function getAdminStudentProgressDetails(
     .eq("collegeId", scope.collegeId)
     .eq("collegeEducationId", scope.collegeEducationId)
     .in("collegeBranchId", scope.collegeBranchIds)
-    .eq("collegeSectionsId", historyRow.collegeSectionsId)
     .in("collegeSubjectId", scope.subjectIds)
     .is("deletedAt", null);
+
+  if (historyRow.collegeSectionsId === null) {
+    weightageQuery = weightageQuery.is("collegeSectionsId", null);
+  } else {
+    weightageQuery = weightageQuery.eq("collegeSectionsId", historyRow.collegeSectionsId);
+  }
 
   if (historyRow.collegeSemesterId === null) {
     weightageQuery = weightageQuery.is("collegeSemesterId", null);
@@ -544,6 +560,67 @@ export async function getAdminStudentProgressDetails(
       historyRow.collegeSemesterId,
     );
   }
+
+  let subjectsQuery = supabase
+    .from("college_subjects")
+    .select("collegeSubjectId, subjectName, subjectKey")
+    .in("collegeSubjectId", scope.subjectIds)
+    .eq("collegeBranchId", studentRow.collegeBranchId)
+    .eq("collegeEducationId", scope.collegeEducationId)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (historyRow.collegeAcademicYearId === null) {
+    subjectsQuery = subjectsQuery.is("collegeAcademicYearId", null);
+  } else {
+    subjectsQuery = subjectsQuery.eq("collegeAcademicYearId", historyRow.collegeAcademicYearId);
+  }
+
+  if (historyRow.collegeSemesterId === null) {
+    subjectsQuery = subjectsQuery.is("collegeSemesterId", null);
+  } else {
+    subjectsQuery = subjectsQuery.eq("collegeSemesterId", historyRow.collegeSemesterId);
+  }
+
+  let assignmentsQuery = supabase
+    .from("assignments")
+    .select("assignmentId, subjectId, topicName, submissionDeadlineInt, marks, status")
+    .in("collegeBranchId", scope.collegeBranchIds)
+    .in("subjectId", scope.subjectIds)
+    .eq("is_deleted", false)
+    .neq("status", "Cancelled");
+
+  if (historyRow.collegeAcademicYearId === null) {
+    assignmentsQuery = assignmentsQuery.is("collegeAcademicYearId", null);
+  } else {
+    assignmentsQuery = assignmentsQuery.eq("collegeAcademicYearId", historyRow.collegeAcademicYearId);
+  }
+
+  if (historyRow.collegeSectionsId === null) {
+    assignmentsQuery = assignmentsQuery.is("collegeSectionsId", null);
+  } else {
+    assignmentsQuery = assignmentsQuery.eq("collegeSectionsId", historyRow.collegeSectionsId);
+  }
+
+  let quizzesQuery = supabase
+    .from("quizzes")
+    .select("quizId, collegeSubjectId, totalMarks, quizTitle, endDate, status")
+    .in("collegeSubjectId", scope.subjectIds)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (historyRow.collegeAcademicYearId === null) {
+    quizzesQuery = quizzesQuery.is("collegeAcademicYearId", null);
+  } else {
+    quizzesQuery = quizzesQuery.eq("collegeAcademicYearId", historyRow.collegeAcademicYearId);
+  }
+
+  if (historyRow.collegeSectionsId === null) {
+    quizzesQuery = quizzesQuery.is("collegeSectionsId", null);
+  } else {
+    quizzesQuery = quizzesQuery.eq("collegeSectionsId", historyRow.collegeSectionsId);
+  }
+
 
   const [
     userProfileResult,
@@ -596,27 +673,8 @@ export async function getAdminStudentProgressDetails(
       .is("deletedAt", null)
       .lte("markedAt", today)
       .returns<AttendanceRecordRow[]>(),
-      supabase
-        .from("college_subjects")
-        .select("collegeSubjectId, subjectName, subjectKey")
-        .in("collegeSubjectId", scope.subjectIds)
-        .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
-        .eq("collegeBranchId", studentRow.collegeBranchId)
-      .eq("collegeEducationId", scope.collegeEducationId)
-      .eq("collegeSemesterId", historyRow.collegeSemesterId)
-      .eq("isActive", true)
-      .is("deletedAt", null)
-      .returns<SubjectRow[]>(),
-    supabase
-      .from("assignments")
-      .select("assignmentId, subjectId, topicName, submissionDeadlineInt, marks, status")
-      .in("collegeBranchId", scope.collegeBranchIds)
-      .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
-      .eq("collegeSectionsId", historyRow.collegeSectionsId)
-      .in("subjectId", scope.subjectIds)
-      .eq("is_deleted", false)
-      .neq("status", "Cancelled")
-      .returns<AssignmentRow[]>(),
+      subjectsQuery.returns<SubjectRow[]>(),
+      assignmentsQuery.returns<AssignmentRow[]>(),
     facultyIds.length
       ? supabase
           .from("discussion_forum")
@@ -626,15 +684,7 @@ export async function getAdminStudentProgressDetails(
           .is("deletedAt", null)
           .returns<DiscussionForumRow[]>()
       : Promise.resolve({ data: [], error: null }),
-    supabase
-      .from("quizzes")
-      .select("quizId, collegeSubjectId, totalMarks, quizTitle, endDate, status")
-      .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
-      .eq("collegeSectionsId", historyRow.collegeSectionsId)
-      .in("collegeSubjectId", scope.subjectIds)
-      .eq("isActive", true)
-      .is("deletedAt", null)
-      .returns<QuizRow[]>(),
+      quizzesQuery.returns<QuizRow[]>(),
     weightageQuery.returns<WeightageConfigRow[]>(),
   ]);
 
