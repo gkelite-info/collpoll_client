@@ -38,6 +38,16 @@ type AnnouncementDetails = {
   targetRoles?: string[];
 };
 
+type CalendarAnnouncementRow = {
+  collegeAnnouncementId: number;
+  announcementTitle: string;
+  date: string;
+  type: string;
+  createdBy: number;
+  createdByRole: string;
+  createdAt: string;
+};
+
 type AnnouncementsCardProps = {
   announceCard: AnnounceCard[];
   height?: string;
@@ -322,6 +332,7 @@ export default function AnnouncementsCard({
             faculty: "Faculty",
             finance: "Finance",
             financemanager: "FinanceManager",
+            accountant: "Finance",
             hr: "CollegeHr",
             parent: "Parent",
             placement: "PlacementOfficer",
@@ -358,7 +369,7 @@ export default function AnnouncementsCard({
           other: "/others.png",
         };
 
-        const formatted = (data || []).map((item: any) => {
+        const formatted = ((data || []) as CalendarAnnouncementRow[]).map((item) => {
           const creatorRoleFormatted = item.createdByRole
             ?.replace(/([A-Z])/g, " $1")
             .replace(/_/g, " ")
@@ -380,8 +391,14 @@ export default function AnnouncementsCard({
         });
 
         setCalendarAnnouncements(formatted);
-      } catch (err: any) {
-        console.error("Error fetching announcements for calendar date:", err?.message || err, err?.details || "", {
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : err;
+        const errorDetails =
+          err && typeof err === "object" && "details" in err
+            ? err.details
+            : "";
+
+        console.error("Error fetching announcements for calendar date:", errorMessage, errorDetails || "", {
           err,
           collegeId,
           userId,

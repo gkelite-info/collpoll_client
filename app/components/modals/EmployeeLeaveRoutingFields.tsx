@@ -17,6 +17,7 @@ const requesterTagRole: Record<string, EmployeeLeaveTagFetchRole> = {
   Faculty: "AllStaff",
   Finance: "AllStaff",
   FinanceManager: "AllStaff",
+  Accountant: "AllStaff",
   CollegeHr: "CollegeHr",
   WellbeingExecutive: "AllStaff",
   WellbeingManager: "AllStaff",
@@ -46,6 +47,7 @@ const allStaffTaggedRoles = new Set<EmployeeLeaveTaggedRole>([
   "Faculty",
   "Finance",
   "FinanceManager",
+  "Accountant",
   "CollegeHr",
   "CollegeAdmin",
   "PlacementOfficer",
@@ -71,6 +73,7 @@ const tagRoleLabels: Record<EmployeeLeaveTagFetchRole, string> = {
   Faculty: "Faculty",
   Finance: "Finance Executive",
   FinanceManager: "Finance Manager",
+  Accountant: "Accountant",
   CollegeHr: "HR",
   CollegeAdmin: "College Admin",
   PlacementOfficer: "Placement Officer",
@@ -84,6 +87,7 @@ const staffRoleOrder: EmployeeLeaveTaggedRole[] = [
   "Admin",
   "FinanceManager",
   "Finance",
+  "Accountant",
   "PlacementOfficer",
   "WellbeingManager",
   "WellbeingExecutive",
@@ -126,7 +130,10 @@ export default function EmployeeLeaveRoutingFields({
           key={taggedRole}
           collegeId={collegeId}
           excludeUserId={
-            role === "CollegeHr" && taggedRole === "CollegeHr" ? null : userId
+            taggedRole === "AllStaff" ||
+            (role === "CollegeHr" && taggedRole === "CollegeHr")
+              ? null
+              : userId
           }
           collegeEducationType={
             taggedRole === "Faculty" ||

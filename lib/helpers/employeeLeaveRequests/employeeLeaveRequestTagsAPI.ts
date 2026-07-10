@@ -5,6 +5,7 @@ export type EmployeeLeaveTaggedRole =
   | "Faculty"
   | "Finance"
   | "FinanceManager"
+  | "Accountant"
   | "CollegeHr"
   | "CollegeAdmin"
   | "PlacementOfficer"
@@ -48,6 +49,7 @@ const tagRoleLabels: Record<EmployeeLeaveTaggedRole, string> = {
   Faculty: "Faculty",
   Finance: "Finance Executive",
   FinanceManager: "Finance Manager",
+  Accountant: "Accountant",
   CollegeHr: "HR",
   CollegeAdmin: "College Admin",
   PlacementOfficer: "Placement Officer",
@@ -62,6 +64,7 @@ const userRoleToTaggedRole: Partial<Record<string, EmployeeLeaveTaggedRole>> = {
   FinanceExecutive: "Finance",
   FinanceManager: "FinanceManager",
   FinanceExecutiveRole: "Finance",
+  Accountant: "Accountant",
   CollegeHr: "CollegeHr",
   HR: "CollegeHr",
   Hr: "CollegeHr",
@@ -79,6 +82,7 @@ const normalizedUserRoleToTaggedRole: Partial<
   finance: "Finance",
   financeexecutive: "Finance",
   financemanager: "FinanceManager",
+  accountant: "Accountant",
   collegehr: "CollegeHr",
   hr: "CollegeHr",
   collegeadmin: "CollegeAdmin",
@@ -92,6 +96,7 @@ const staffRoleOrder: EmployeeLeaveTaggedRole[] = [
   "Admin",
   "FinanceManager",
   "Finance",
+  "Accountant",
   "PlacementOfficer",
   "WellbeingManager",
   "WellbeingExecutive",
@@ -326,6 +331,94 @@ async function fetchFinanceManagerOptions(
   return payload.options ?? [];
 }
 
+async function fetchAccountantOptions(
+  collegeId: number,
+  excludeUserId?: number | null,
+) {
+  const { data: registrations, error: registrationError } = await supabase
+    .from("accountants")
+    .select("userId")
+    .eq("collegeId", collegeId)
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null);
+
+  if (registrationError) throw registrationError;
+
+  const registeredUserIds = Array.from(
+    new Set((registrations ?? []).map((row) => row.userId as number)),
+  ).filter((userId) => userId && userId !== excludeUserId);
+
+  const optionByUserId = new Map<number, EmployeeLeaveTagOption>();
+
+  if (registeredUserIds.length) {
+    let registeredUsersQuery = supabase
+      .from("users")
+      .select("userId, fullName")
+      .in("userId", registeredUserIds)
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .eq("is_deleted", false)
+      .is("deletedAt", null);
+
+    if (excludeUserId) {
+      registeredUsersQuery = registeredUsersQuery.neq("userId", excludeUserId);
+    }
+
+    const { data, error } = await registeredUsersQuery.order("fullName", {
+      ascending: true,
+    });
+
+    if (error) throw error;
+
+    mapUsersToOptions(await attachProfileUrls(data ?? []), "Accountant").forEach(
+      (option) => optionByUserId.set(option.taggedUserId, option),
+    );
+  }
+
+  let roleUsersQuery = supabase
+    .from("users")
+    .select("userId, fullName")
+    .eq("collegeId", collegeId)
+    .eq("role", "Accountant")
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null);
+
+  if (excludeUserId) {
+    roleUsersQuery = roleUsersQuery.neq("userId", excludeUserId);
+  }
+
+  const { data, error } = await roleUsersQuery.order("fullName", {
+    ascending: true,
+  });
+
+  if (error) throw error;
+
+  mapUsersToOptions(await attachProfileUrls(data ?? []), "Accountant").forEach(
+    (option) => optionByUserId.set(option.taggedUserId, option),
+  );
+
+  return Array.from(optionByUserId.values()).sort((first, second) =>
+    first.label.localeCompare(second.label),
+  );
+}
+
+const mergeUniqueTagOptions = (options: EmployeeLeaveTagOption[]) =>
+  Array.from(
+    new Map(
+      options.map((option) => [
+        `${option.taggedRole}-${option.taggedUserId}`,
+        option,
+      ]),
+    ).values(),
+  );
+
+const toEmployeeLeaveTagDbRole = (
+  taggedRole: EmployeeLeaveTaggedRole,
+): EmployeeLeaveTaggedRole =>
+  taggedRole === "Accountant" ? "Finance" : taggedRole;
+
 async function fetchAllStaffOptions(
   collegeId: number,
   excludeUserId?: number | null,
@@ -360,7 +453,7 @@ async function fetchAllStaffOptions(
       })),
   );
 
-  const options = usersWithProfiles
+  const userRoleOptions = usersWithProfiles
     .map<EmployeeLeaveTagOption | null>((user) => {
       const roleKey = normalizeUserRoleKey(user.role);
       if (allStaffExcludedRoleKeys.has(roleKey)) return null;
@@ -378,6 +471,15 @@ async function fetchAllStaffOptions(
       } satisfies EmployeeLeaveTagOption;
     })
     .filter((option): option is EmployeeLeaveTagOption => Boolean(option));
+
+  const accountantOptions = await fetchAccountantOptions(
+    collegeId,
+    excludeUserId,
+  );
+  const options = mergeUniqueTagOptions([
+    ...userRoleOptions,
+    ...accountantOptions,
+  ]);
 
   return options.sort((first, second) => {
     const firstRoleIndex = staffRoleOrder.indexOf(first.taggedRole);
@@ -427,6 +529,10 @@ export async function fetchEmployeeLeaveTagOptions({
     return fetchFinanceManagerOptions(collegeId, excludeUserId);
   }
 
+  if (taggedRole === "Accountant") {
+    return fetchAccountantOptions(collegeId, excludeUserId);
+  }
+
   if (taggedRole === "AllStaff") {
     return fetchAllStaffOptions(collegeId, excludeUserId);
   }
@@ -466,7 +572,7 @@ export async function saveEmployeeLeaveRequestTags(
     uniqueTags.map((tag) => ({
       employeeLeaveRequestId,
       taggedUserId: tag.taggedUserId,
-      taggedRole: tag.taggedRole,
+      taggedRole: toEmployeeLeaveTagDbRole(tag.taggedRole),
       is_deleted: false,
       createdAt: now,
       updatedAt: now,
