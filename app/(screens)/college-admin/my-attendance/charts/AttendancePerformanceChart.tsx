@@ -1,4 +1,6 @@
-import { FC, ReactNode } from "react";
+"use client";
+
+import React from "react";
 import {
   LineChart,
   Line,
@@ -9,6 +11,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+// FIX: Import the required internal generic primitives from Recharts
+import type { Formatter, ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
 
 type ChartDataPoint = {
   month: string;
@@ -30,37 +34,15 @@ const mockChartData: ChartDataPoint[] = [
   { month: "Jul", performance: 47, attendance: 32 },
 ];
 
-const AttendancePerformanceChart: FC<Props> = ({ data }) => {
+const AttendancePerformanceChart: React.FC<Props> = ({ data }) => {
   const chartData = data ?? mockChartData;
 
-  // FIX: Swapped strict TooltipProps for a clean, flexible callback signature
-  const tooltipFormatter = (value: any, name: any): [ReactNode, ReactNode] => {
-    if (name === "Performance") {
-      return [`${value}%`, name];
+  // FIX: Converted the problematic TooltipProps lookup to the global Formatter structure
+  const tooltipFormatter: Formatter<ValueType, NameType> = (value, name) => {
+    if (String(name) === "Performance") {
+      return [`${value}%`, name as string];
     }
-    return [value, name];
-  };
-
-  const renderLegend = (props: any) => {
-    const { payload } = props;
-    return (
-      <div className="flex justify-center items-center gap-6 pt-5">
-        {payload.map((entry: any, index: number) => (
-          <div
-            key={`item-${index}`}
-            className="flex items-center gap-2"
-          >
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-[13px] text-gray-700 leading-none">
-              {entry.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
+    return [value, name as string];
   };
 
   return (
@@ -95,8 +77,8 @@ const AttendancePerformanceChart: FC<Props> = ({ data }) => {
             />
 
             <Tooltip
-              // FIX: Cast as any to immediately clear any remaining internal generic errors from Recharts
-              formatter={tooltipFormatter as any}
+              formatter={tooltipFormatter}
+              labelStyle={{ color: "#282828", fontWeight: "bold", paddingBottom: "4px" }}
               contentStyle={{
                 borderRadius: "8px",
                 border: "none",
@@ -104,7 +86,10 @@ const AttendancePerformanceChart: FC<Props> = ({ data }) => {
               }}
             />
 
-            <Legend content={renderLegend} />
+            <Legend
+              iconType="circle"
+              wrapperStyle={{ fontSize: "13px", paddingTop: "20px" }}
+            />
 
             <Line
               type="linear"

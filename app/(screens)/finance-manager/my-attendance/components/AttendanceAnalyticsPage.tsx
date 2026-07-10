@@ -41,6 +41,7 @@ const AttendanceAnalyticsPage = () => {
   const [chartLoading, setChartLoading] = useState(true);
   const [workingDays, setWorkingDays] = useState(0);
   const [workingDaysLoading, setWorkingDaysLoading] = useState(true);
+  const [leavesTaken, setLeavesTaken] = useState(0);
   const itemsPerPage = 15;
 
   useEffect(() => {
@@ -56,8 +57,10 @@ const AttendanceAnalyticsPage = () => {
         });
 
         setWorkingDays(res.totalWorkingDays);
+        setLeavesTaken(res.leavesTaken || 0);
       } catch (err) {
         setWorkingDays(0);
+        setLeavesTaken(0);
       } finally {
         setWorkingDaysLoading(false);
       }
@@ -77,7 +80,8 @@ const AttendanceAnalyticsPage = () => {
         employeeId: identifierId || financeManagerId,
         collegeEducationType: collegeEducationType || "",
         experience: professionalExperienceYears ? `${professionalExperienceYears} ${Number(professionalExperienceYears) > 1 ? 'years' : 'year'} ` : "—",
-        workingDays
+        workingDays,
+        leavesTaken
       };
       setProfile(updatedProfile);
     } finally {

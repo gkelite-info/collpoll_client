@@ -10,10 +10,13 @@ export interface FacultyProfile {
 }
 
 export interface AttendanceStats {
-  todayStatus: "Present" | "Absent" | "Half Day";
+  todayStatus: string | null;
   totalWorkingDays: number;
   leavesTaken: number;
   remainingLeaves: number;
+  lopDays?: number;
+  presentDays?: number;
+  expectedWorkingDays?: number;
 }
 
 export interface AttendanceRecord {
@@ -21,7 +24,7 @@ export interface AttendanceRecord {
   checkIn: string;
   checkOut: string;
   totalHours: string;
-  status: "Present" | "Absent" | "Leave";
+  status: string;
   lateBy: string;
   earlyOut: string;
   classDetail: string;

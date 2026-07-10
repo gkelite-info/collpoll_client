@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { CaretDown, CheckSquare } from "@phosphor-icons/react";
+import { CaretDown, CheckSquare, Question, XSquare } from "@phosphor-icons/react";
 import { AttendanceRecord } from "../types";
 
 interface Props {
@@ -46,6 +46,30 @@ const AttendanceTable: React.FC<Props> = ({ title, records, month, year }) => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+  const getStatusDisplay = (status: string) => {
+    if (!status) return { color: "text-gray-400", icon: <Question size={15} weight="fill" /> };
+    const s = status.toUpperCase();
+    if (s === "PRESENT" || s === "LATE" || s === "HALFDAY")
+      return {
+        color: "text-[#43C17A]",
+        icon: <CheckSquare size={15} weight="fill" />,
+      };
+    if (s === "ABSENT")
+      return {
+        color: "text-[#EF4444]",
+        icon: <XSquare size={15} weight="fill" />,
+      };
+    if (s === "LEAVE")
+      return {
+        color: "text-[#60AEFF]",
+        icon: <CheckSquare size={15} weight="fill" />,
+      };
+    return {
+      color: "text-gray-400",
+      icon: <Question size={15} weight="fill" />,
+    };
+  };
+
 
   return (
     <div className="w-full">
@@ -140,16 +164,13 @@ const AttendanceTable: React.FC<Props> = ({ title, records, month, year }) => {
                 <td className="py-1.5 px-3">{row.checkIn}</td>
                 <td className="py-1.5 px-3">{row.checkOut}</td>
                 <td className="py-1.5 px-3">{row.totalHours}</td>
-                <td className="py-1.5 px-3">
-                  <div className="flex items-center gap-1.5 text-gray-700">
-                    <CheckSquare
-                      size={15}
-                      weight="fill"
-                      className="text-[#43C17A]"
-                    />
-                    <span>{row.status}</span>
-                  </div>
-                </td>
+                
+                    <td className="py-1.5 px-3">
+                      <div className={`flex items-center gap-1.5 ${getStatusDisplay(row.status).color} font-semibold`}>
+                        {getStatusDisplay(row.status).icon}
+                        <span>{row.status || '—'}</span>
+                      </div>
+                    </td>
                 <td className="py-1.5 px-3">{row.lateBy}</td>
                 <td className="py-1.5 px-3">{row.earlyOut}</td>
                 {/* Updated Column Value */}
