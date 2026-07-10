@@ -100,6 +100,7 @@ const AttendancePerformanceChart: FC<Props> = ({ data }) => {
 
             <Tooltip
               formatter={tooltipFormatter}
+              labelStyle={{ color: "#282828", fontWeight: "bold", paddingBottom: "4px" }}
               contentStyle={{
                 borderRadius: "8px",
                 border: "none",
