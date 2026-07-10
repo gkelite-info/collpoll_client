@@ -43,7 +43,12 @@ export default function MonthlyFeeCollectionChart() {
     let isMounted = true;
 
     async function loadMonthlyCollection() {
-      if (contextLoading || !collegeId || !collegeEducationId) return;
+      if (contextLoading) return;
+
+      if (!collegeId || !collegeEducationId) {
+        if (isMounted) setLoading(false);
+        return;
+      }
 
       setLoading(true);
       try {

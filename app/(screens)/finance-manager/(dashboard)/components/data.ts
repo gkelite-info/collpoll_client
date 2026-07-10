@@ -1,28 +1,28 @@
 export const financeSummaryCards = [
   {
     label: "Total Revenue Collected",
-    value: "₹12.8 CR",
+    value: "₹0 CR",
     style: "bg-[#E6FBEA]",
     iconBgColor: "#FFFFFF",
     iconColor: "#43C17A",
   },
   {
     label: "Total Pending Fees",
-    value: "₹2.1 CR",
+    value: "₹0 CR",
     style: "bg-[#FFEDDA]",
     iconBgColor: "#FFFFFF",
     iconColor: "#FFB45F",
   },
   {
     label: "Total Students",
-    value: "6,820",
+    value: "0",
     style: "bg-[#E2DAFF]",
     iconBgColor: "#FFFFFF",
     iconColor: "#714EF2",
   },
   {
     label: "Active Finance Executives",
-    value: "05",
+    value: "0",
     style: "bg-[#CEE6FF]",
     iconBgColor: "#FFFFFF",
     iconColor: "#60AEFF",

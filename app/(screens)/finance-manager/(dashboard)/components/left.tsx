@@ -73,7 +73,7 @@ export default function FinanceManagerDashLeft() {
       <FinanceManagerInfoCard
         fullName={fullName}
         image={avatarImage}
-        todayCollection={245000}
+        todayCollection={0}
       />
       <FinanceSummaryCards
         cards={summaryCards}

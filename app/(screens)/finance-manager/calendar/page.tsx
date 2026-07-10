@@ -46,17 +46,17 @@ type ManagerCalendarEvent = {
 type FinanceCalendarSectionDetails = {
   financeCalendarSectionId?: number;
   college_branch?:
-    | { collegeBranchCode?: string }
-    | { collegeBranchCode?: string }[]
-    | null;
+  | { collegeBranchCode?: string }
+  | { collegeBranchCode?: string }[]
+  | null;
   college_academic_year?:
-    | { collegeAcademicYear?: string }
-    | { collegeAcademicYear?: string }[]
-    | null;
+  | { collegeAcademicYear?: string }
+  | { collegeAcademicYear?: string }[]
+  | null;
   college_sections?:
-    | { collegeSections?: string }
-    | { collegeSections?: string }[]
-    | null;
+  | { collegeSections?: string }
+  | { collegeSections?: string }[]
+  | null;
 };
 
 const CalendarShimmer = () => (
@@ -284,8 +284,8 @@ function PageContent() {
     try {
       const result = eventToDelete.financeCalendarSectionId
         ? await deactivateFinanceCalendarSection(
-            eventToDelete.financeCalendarSectionId,
-          )
+          eventToDelete.financeCalendarSectionId,
+        )
         : await deactivateFinanceCalendarEvent(eventToDelete.calendarEventId);
 
       if (!result.success) {
@@ -331,7 +331,7 @@ function PageContent() {
               : "Stay organized and on track with your personalised calendar"}
           </p>
         </div>
-        <CourseScheduleCard style="w-[320px]" />
+        <CourseScheduleCard style="w-[320px]" isVisibile={false} />
       </section>
 
       <div className="flex gap-3 mb-5 mt-2">

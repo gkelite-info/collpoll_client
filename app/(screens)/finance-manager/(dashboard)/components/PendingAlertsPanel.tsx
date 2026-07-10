@@ -8,6 +8,7 @@ import {
 } from "@/lib/helpers/finance-manager/dashboard/FetchPendingAlerts";
 import { Warning } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import FinanceEducationDropdown from "../../components/FinanceEducationDropdown";
 
 const realtimeTables = [
   "student_fee_obligation",
@@ -26,7 +27,13 @@ export default function PendingAlertsPanel() {
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadAlerts = useCallback(async () => {
-    if (contextLoading || !collegeId || !collegeEducationId) return;
+    if (contextLoading) return;
+
+    if (!collegeId || !collegeEducationId) {
+      setLoading(false);
+      setAlerts([]);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -87,7 +94,10 @@ export default function PendingAlertsPanel() {
 
   return (
     <div className="flex h-90 min-h-0 flex-col rounded-lg bg-white p-4 shadow-sm">
-      <h2 className="text-md font-semibold text-[#282828]">Pending Alerts</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-md font-semibold text-[#282828]">Pending Alerts</h2>
+        <FinanceEducationDropdown />
+      </div>
       <div className="custom-scrollbar mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden pr-2">
         {loading ? (
           Array.from({ length: 4 }).map((_, index) => (

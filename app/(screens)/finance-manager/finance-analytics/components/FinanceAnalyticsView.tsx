@@ -4,6 +4,7 @@ import { CaretDown, CaretRight } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import FinanceEducationDropdown from "../../components/FinanceEducationDropdown";
 import { getFinanceAnalyticsOverview } from "@/lib/helpers/finance-manager/analytics/FetchFinanceAnalytics";
 import FinanceAnalyticsSummaryCards from "./FinanceAnalyticsSummaryCards";
 
@@ -159,7 +160,12 @@ export default function FinanceAnalyticsView() {
     let isMounted = true;
 
     async function loadAnalytics() {
-      if (contextLoading || !collegeId || !collegeEducationId) return;
+      if (contextLoading) return;
+
+      if (!collegeId || !collegeEducationId) {
+        if (isMounted) setLoading(false);
+        return;
+      }
 
       setLoading(true);
       try {
@@ -195,9 +201,12 @@ export default function FinanceAnalyticsView() {
 
   return (
     <div className="min-h-screen w-full bg-[#F4F4F4] p-2 pb-7 lg:pb-5">
-      <h1 className="mb-4 text-xl font-semibold text-[#282828]">
-        Finance / Analytics
-      </h1>
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-xl font-semibold text-[#282828]">
+          Finance / Analytics
+        </h1>
+        <FinanceEducationDropdown />
+      </div>
 
       <FinanceAnalyticsSummaryCards cards={summaryCards} />
 

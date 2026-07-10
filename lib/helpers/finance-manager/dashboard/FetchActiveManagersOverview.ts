@@ -18,17 +18,20 @@ export type ActiveManagerRow = {
   studentsManaged: number;
 };
 
-type FinanceManagerRow = {
-  financeManagerId: number;
-  userId: number;
+type FinanceManagerEducationRow = {
+  FinanceManagerEducationId: number;
   collegeEducationId: number;
-  type: "executive" | "manager";
-  updatedAt?: string | null;
-  createdAt?: string | null;
-  users?: {
-    fullName?: string | null;
+  finance_manager: {
+    financeManagerId: number;
+    userId: number;
+    type: "executive" | "manager";
     updatedAt?: string | null;
     createdAt?: string | null;
+    users?: {
+      fullName?: string | null;
+      updatedAt?: string | null;
+      createdAt?: string | null;
+    } | null;
   } | null;
   college_education?: {
     collegeEducationType?: string | null;
@@ -40,39 +43,45 @@ export async function fetchActiveManagersOverview(
   search?: string,
 ) {
   let managerQuery = supabase
-    .from("finance_manager")
+    .from("finance_manager_education_types")
     .select(
       `
-      financeManagerId,
-      userId,
+      FinanceManagerEducationId,
       collegeEducationId,
-      type,
-      updatedAt,
-      createdAt,
-      users!inner (
-        fullName,
-        role,
-        collegeId,
-        isActive,
-        is_deleted,
-        deletedAt,
+      finance_manager!inner (
+        financeManagerId,
+        userId,
+        type,
         updatedAt,
-        createdAt
+        createdAt,
+        users!inner (
+          fullName,
+          role,
+          collegeId,
+          isActive,
+          is_deleted,
+          deletedAt,
+          updatedAt,
+          createdAt
+        )
       ),
       college_education:collegeEducationId (
         collegeEducationType
       )
     `,
     )
-    .eq("collegeId", filters.collegeId)
+    .eq("finance_manager.collegeId", filters.collegeId)
+    .eq("finance_manager.isActive", true)
+    .eq("finance_manager.is_deleted", false)
+    .is("finance_manager.deletedAt", null)
+    .eq("finance_manager.users.collegeId", filters.collegeId)
+    .eq("finance_manager.users.role", filters.type === "manager" ? "FinanceManager" : "Finance")
+    .eq("finance_manager.users.isActive", true)
+    .eq("finance_manager.users.is_deleted", false)
+    .is("finance_manager.users.deletedAt", null)
     .eq("isActive", true)
     .eq("is_deleted", false)
-    .is("deletedAt", null)
-    .eq("users.collegeId", filters.collegeId)
-    .eq("users.role", filters.type === "manager" ? "FinanceManager" : "Finance")
-    .eq("users.isActive", true)
-    .eq("users.is_deleted", false)
-    .is("users.deletedAt", null);
+    .is("deletedAt", null);
 
   if (filters.collegeEducationId) {
     managerQuery = managerQuery.eq(
@@ -82,7 +91,7 @@ export async function fetchActiveManagersOverview(
   }
 
   if (filters.type) {
-    managerQuery = managerQuery.eq("type", filters.type);
+    managerQuery = managerQuery.eq("finance_manager.type", filters.type);
   }
 
   const trimmedSearch = search?.trim();
@@ -115,7 +124,7 @@ export async function fetchActiveManagersOverview(
       ),
     );
 
-    managerQuery = managerQuery.in("userId", userIds.length ? userIds : [0]);
+    managerQuery = managerQuery.in("finance_manager.userId", userIds.length ? userIds : [0]);
   }
 
   const { data: managers, error } = await managerQuery.order("createdAt", {
@@ -123,8 +132,8 @@ export async function fetchActiveManagersOverview(
   });
   if (error) throw error;
 
-  const managerRows = (managers ?? []) as FinanceManagerRow[];
-  const managerUserIds = managerRows.map((manager) => manager.userId);
+  const managerRows = (managers ?? []) as unknown as FinanceManagerEducationRow[];
+  const managerUserIds = managerRows.map((manager) => manager.finance_manager?.userId).filter(Boolean) as number[];
   const educationIds = Array.from(
     new Set(managerRows.map((manager) => manager.collegeEducationId)),
   );
@@ -187,14 +196,14 @@ export async function fetchActiveManagersOverview(
   });
 
   return managerRows.map((manager) => ({
-    financeManagerId: manager.financeManagerId,
-    userId: manager.userId,
-    managerName: manager.users?.fullName?.trim() || "Unknown Manager",
+    financeManagerId: manager.finance_manager?.financeManagerId ?? 0,
+    userId: manager.finance_manager?.userId ?? 0,
+    managerName: manager.finance_manager?.users?.fullName?.trim() || "Unknown Manager",
     employeeId:
-      String(employeeIdMap.get(manager.userId) ?? manager.financeManagerId) ||
+      String(employeeIdMap.get(manager.finance_manager?.userId ?? 0) ?? manager.finance_manager?.financeManagerId) ||
       "N/A",
     collegeEducationId: manager.collegeEducationId,
-    type: manager.type,
+    type: manager.finance_manager?.type ?? "executive",
     educationType:
       manager.college_education?.collegeEducationType ?? "Education",
     studentsManaged: studentsByEducation.get(manager.collegeEducationId) ?? 0,

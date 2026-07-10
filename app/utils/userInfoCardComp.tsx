@@ -25,7 +25,6 @@ export default function UserInfoCard() {
     collegeSectionsId,
     collegeAcademicYear,
   } = useStudent();
-  console.log("What is year", collegeAcademicYear);
 
   const t = useTranslations("Dashboard.student");
 
