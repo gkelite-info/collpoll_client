@@ -11,7 +11,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-// FIX: Import the proper internal generic type structures from Recharts
+// FIX: Import the required internal generic primitives from Recharts
 import type { Formatter, ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
 
 type ChartDataPoint = {
@@ -37,7 +37,7 @@ const mockChartData: ChartDataPoint[] = [
 const AttendancePerformanceChart: React.FC<Props> = ({ data }) => {
   const chartData = data ?? mockChartData;
 
-  // FIX: Converted strict TooltipProps generic parameters into standard loose ValueType primitives
+  // FIX: Converted the problematic TooltipProps lookup to the global Formatter structure
   const tooltipFormatter: Formatter<ValueType, NameType> = (value, name) => {
     if (String(name) === "Performance") {
       return [`${value}%`, name as string];

@@ -149,8 +149,14 @@ export async function fetchFullAttendanceDashboardData(userId: number, monthName
       classDetail = attRecord.classesTaken ? String(attRecord.classesTaken).padStart(2, "0") : "—";
     } else {
       if (!isHoliday) {
-        absentDays++; lopDays++; dailyStatus[d] = "ABSENT";
-        rowStatus = "Absent";
+        // SaaS Rule: If today is not completed, don't penalize with an LOP yet.
+        if (loopDate.toDateString() === todayObj.toDateString()) {
+          dailyStatus[d] = "NOT_MARKED";
+          rowStatus = "Not Marked";
+        } else {
+          absentDays++; lopDays++; dailyStatus[d] = "ABSENT";
+          rowStatus = "Absent";
+        }
       }
     }
 
@@ -163,11 +169,20 @@ export async function fetchFullAttendanceDashboardData(userId: number, monthName
     }
   }
 
-  for (let d = 1; d <= evaluatedDays; d++) {
+  const lastCalendarDay = Math.min(totalCalendarDays, todayObj.getDate());
+  for (let d = 1; d <= lastCalendarDay; d++) {
     if (dailyStatus[d] === "HOLIDAY") {
       let prevWorkingDay = "NONE", nextWorkingDay = "NONE";
-      for (let p = d - 1; p >= 1; p--) if (dailyStatus[p] !== "HOLIDAY") { prevWorkingDay = dailyStatus[p]; break; }
-      for (let n = d + 1; n <= evaluatedDays; n++) if (dailyStatus[n] !== "HOLIDAY") { nextWorkingDay = dailyStatus[n]; break; }
+      for (let p = d - 1; p >= 1; p--) {
+        if (dailyStatus[p] !== "HOLIDAY" && dailyStatus[p] !== "SANDWICH_LOP") { 
+          prevWorkingDay = dailyStatus[p]; break; 
+        }
+      }
+      for (let n = d + 1; n <= lastCalendarDay; n++) {
+        if (dailyStatus[n] !== "HOLIDAY" && dailyStatus[n] !== "SANDWICH_LOP") { 
+          nextWorkingDay = dailyStatus[n]; break; 
+        }
+      }
       if ((prevWorkingDay === "ABSENT" || prevWorkingDay === "NONE") && (nextWorkingDay === "ABSENT" || nextWorkingDay === "NONE") && (prevWorkingDay === "ABSENT" || nextWorkingDay === "ABSENT")) {
         lopDays++; dailyStatus[d] = "SANDWICH_LOP";
       }

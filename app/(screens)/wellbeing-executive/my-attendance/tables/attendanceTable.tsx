@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { CaretDown } from "@phosphor-icons/react";
+import { CaretDown, CheckSquare, XSquare, Question } from "@phosphor-icons/react";
 import { AttendanceRecord } from "../types";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
@@ -96,6 +96,30 @@ const AttendanceTable: React.FC<Props> = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+  const getStatusDisplay = (status: string) => {
+    if (!status) return { color: "text-gray-400", icon: <Question size={15} weight="fill" /> };
+    const s = status.toUpperCase();
+    if (s === "PRESENT" || s === "LATE" || s === "HALFDAY")
+      return {
+        color: "text-[#43C17A]",
+        icon: <CheckSquare size={15} weight="fill" />,
+      };
+    if (s === "ABSENT")
+      return {
+        color: "text-[#EF4444]",
+        icon: <XSquare size={15} weight="fill" />,
+      };
+    if (s === "LEAVE")
+      return {
+        color: "text-[#60AEFF]",
+        icon: <CheckSquare size={15} weight="fill" />,
+      };
+    return {
+      color: "text-gray-400",
+      icon: <Question size={15} weight="fill" />,
+    };
+  };
+
 
   return (
     <div className="w-full max-md:px-2">
@@ -198,11 +222,13 @@ const AttendanceTable: React.FC<Props> = ({
                 <td className="py-1.5 px-3">{row.checkOut}</td>
                 <td className="py-1.5 px-3">{row.totalHours}</td>
                 {/* <td className="py-1.5 px-3">{row.status}</td> */}
-                <td className="py-1.5 px-3">
-                  <span className={`px-2 py-[3px] rounded text-[11.5px] font-medium ${STATUS_STYLES[row.status] || "bg-gray-100 text-gray-600"}`}>
-                    {row.status}
-                  </span>
-                </td>
+                
+                    <td className="py-1.5 px-3">
+                      <div className={`flex items-center gap-1.5 ${getStatusDisplay(row.status).color} font-semibold`}>
+                        {getStatusDisplay(row.status).icon}
+                        <span>{row.status || '—'}</span>
+                      </div>
+                    </td>
                 <td className="py-1.5 px-3">{row.reason ?? "—"}</td>
                 <td className="py-1.5 px-3">{row.lateBy}</td>
                 <td className="py-1.5 px-3">{row.earlyOut}</td>

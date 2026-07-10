@@ -1,6 +1,6 @@
 "use client";
 
-import { FC } from "react";
+import React from "react";
 import {
   LineChart,
   Line,
@@ -11,7 +11,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-// FIX: Import the standard generic interface parameters to keep Recharts happy
+// FIX: Import the required internal generic primitives from Recharts
 import type { Formatter, ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
 
 type ChartDataPoint = {
@@ -34,10 +34,10 @@ const mockChartData: ChartDataPoint[] = [
   { month: "Jul", performance: 47, attendance: 32 },
 ];
 
-const AttendancePerformanceChart: FC<Props> = ({ data }) => {
+const AttendancePerformanceChart: React.FC<Props> = ({ data }) => {
   const chartData = data ?? mockChartData;
 
-  // FIX: Shifted from TooltipProps to the clean global Formatter generic type architecture
+  // FIX: Converted the problematic TooltipProps lookup to the global Formatter structure
   const tooltipFormatter: Formatter<ValueType, NameType> = (value, name) => {
     if (String(name) === "Performance") {
       return [`${value}%`, name as string];
@@ -45,27 +45,8 @@ const AttendancePerformanceChart: FC<Props> = ({ data }) => {
     return [value, name as string];
   };
 
-  const renderLegend = (props: any) => {
-    const { payload } = props;
-    return (
-      <div className="flex justify-center items-center gap-6 pt-5">
-        {payload.map((entry: any, index: number) => (
-          <div key={`item-${index}`} className="flex items-center gap-2">
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-[13px] text-gray-700 leading-none">
-              {entry.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5 w-full max-md:p-3 max-md:mb-3">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5 w-full">
       <h3 className="text-[#282828] font-bold text-[15px] mb-6">
         Attendance & Performance Trend
       </h3>
@@ -105,7 +86,10 @@ const AttendancePerformanceChart: FC<Props> = ({ data }) => {
               }}
             />
 
-            <Legend content={renderLegend} />
+            <Legend
+              iconType="circle"
+              wrapperStyle={{ fontSize: "13px", paddingTop: "20px" }}
+            />
 
             <Line
               type="linear"

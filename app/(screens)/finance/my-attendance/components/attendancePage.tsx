@@ -82,17 +82,11 @@ const AttendancePage = () => {
         setStats({
           todayStatus: res.todayStatus,
           totalWorkingDays: res.totalWorkingDays,
-          leavesTaken: 0,
-          remainingLeaves: 0
-        });
-
-      }
-      catch (err) {
-        setStats({
-          todayStatus: null,
-          totalWorkingDays: 0,
-          leavesTaken: 0,
-          remainingLeaves: 0
+          leavesTaken: res.leavesTaken,
+          remainingLeaves: res.remainingLeaves,
+          lopDays: res.lopDays,
+          expectedWorkingDays: res.expectedWorkingDays,
+          presentDays: res.presentDays
         });
       }
       finally {
