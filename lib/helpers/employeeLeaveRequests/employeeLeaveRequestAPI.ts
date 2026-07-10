@@ -103,6 +103,7 @@ type EmployeeLeaveRequestJoin = Omit<
 
 type EmployeeLeaveQuery = {
   eq: (column: string, value: unknown) => EmployeeLeaveQuery;
+  neq: (column: string, value: unknown) => EmployeeLeaveQuery;
   is: (column: string, value: unknown) => EmployeeLeaveQuery;
   lte: (column: string, value: unknown) => EmployeeLeaveQuery;
   gte: (column: string, value: unknown) => EmployeeLeaveQuery;
@@ -185,6 +186,23 @@ const mapEmployeeLeaveRows = (rows: EmployeeLeaveRequestJoin[]) =>
     employee: firstRelation(row.employee),
     user: firstRelation(row.user),
   }));
+
+async function rollbackEmployeeLeaveRequest(employeeLeaveRequestId: number) {
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("employee_leave_requests")
+    .update({
+      isActive: false,
+      is_deleted: true,
+      deletedAt: now,
+      updatedAt: now,
+    })
+    .eq("employeeLeaveRequestId", employeeLeaveRequestId);
+
+  if (error) {
+    console.error("Employee leave request rollback failed:", error);
+  }
+}
 
 async function attachProfileUrls(rows: EmployeeLeaveRequestRecord[]) {
   const userIds = Array.from(new Set(rows.map((row) => row.userId)));
@@ -615,10 +633,14 @@ export async function createEmployeeLeaveRequest(
 
   if (error) throw error;
 
-  await saveEmployeeLeaveRequestTags(
-    data.employeeLeaveRequestId as number,
-    payload.tags ?? [],
-  );
+  const employeeLeaveRequestId = data.employeeLeaveRequestId as number;
+
+  try {
+    await saveEmployeeLeaveRequestTags(employeeLeaveRequestId, payload.tags ?? []);
+  } catch (tagError) {
+    await rollbackEmployeeLeaveRequest(employeeLeaveRequestId);
+    throw tagError;
+  }
 
   return data;
 }
@@ -789,6 +811,7 @@ export async function fetchPaginatedTaggedEmployeeLeaveRequests({
     },
   )
     .in("employeeLeaveRequestId", requestIds)
+    .neq("userId", taggedUserId)
     .order("createdAt", { ascending: false })
     .range(from, to);
 
@@ -827,7 +850,9 @@ export async function fetchTaggedEmployeeLeaveRequestCounts({
         status,
         date,
       },
-    ).in("employeeLeaveRequestId", taggedRequestIds);
+    )
+      .in("employeeLeaveRequestId", taggedRequestIds)
+      .neq("userId", taggedUserId);
 
     const { count, error } = await query;
     if (error) throw error;

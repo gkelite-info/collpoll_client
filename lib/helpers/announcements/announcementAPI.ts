@@ -83,6 +83,7 @@ const getAnnouncementTargetRoleValues = (role: string) => {
     faculty: "Faculty",
     finance: "Finance",
     financemanager: "FinanceManager",
+    accountant: "Finance",
     hr: "CollegeHr",
     parent: "Parent",
     placement: "PlacementOfficer",
@@ -186,7 +187,9 @@ export async function fetchCollegeAnnouncements({
     return clean;
   };
 
-  const targetContextRole = normalizeRoleForMatch(role);
+  const targetContextRoles = getAnnouncementTargetRoleValues(role).map(
+    normalizeRoleForMatch,
+  );
 
   const rows = (data ?? []) as CollegeAnnouncementListRow[];
 
@@ -221,7 +224,7 @@ export async function fetchCollegeAnnouncements({
 
       return item.targetRoles.some(
         (r: string) =>
-          normalizeRoleForMatch(r) === targetContextRole ||
+          targetContextRoles.includes(normalizeRoleForMatch(r)) ||
           normalizeRoleForMatch(r) === "all",
       );
     });
