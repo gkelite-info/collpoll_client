@@ -927,10 +927,79 @@ export async function updateEmployeeLeaveRequestStatus({
       updatedAt: new Date().toISOString(),
     })
     .eq("employeeLeaveRequestId", employeeLeaveRequestId)
-    .select("employeeLeaveRequestId")
+    .select("*")
     .single();
 
   if (error) throw error;
+
+  if (status === "approved" && data) {
+    const { userId, leaveFromDate, leaveToDate, leaveType, collegeId } = data;
+    const start = new Date(leaveFromDate);
+    const end = new Date(leaveToDate);
+    
+    const startStr = start.toISOString().split("T")[0];
+    const endStr = end.toISOString().split("T")[0];
+
+    // 1. Bulk fetch existing attendance_daily records for the entire leave date range
+    const { data: existingRecords } = await supabase
+      .from("attendance_daily")
+      .select("attendanceDailyId, attendanceDate")
+      .eq("userId", userId)
+      .gte("attendanceDate", startStr)
+      .lte("attendanceDate", endStr);
+      
+    const existingMap = new Map();
+    existingRecords?.forEach(r => existingMap.set(r.attendanceDate, r.attendanceDailyId));
+    
+    // 2. Process each day in the leave date range
+    const toInsert: any[] = [];
+    const updatePromises: any[] = [];
+    
+    let current = new Date(start);
+    while (current <= end) {
+      const dateStr = current.toISOString().split("T")[0];
+      const existingId = existingMap.get(dateStr);
+        
+      const formattedStatus = "Leave";
+        
+      if (existingId) {
+        // Queue existing record for update
+        updatePromises.push(
+          supabase
+            .from("attendance_daily")
+            .update({ status: formattedStatus, checkIn: null, checkOut: null, totalMinutes: 0, updatedAt: new Date().toISOString() })
+            .eq("attendanceDailyId", existingId)
+        );
+      } else {
+        // Queue new record for bulk insert
+        toInsert.push({
+          userId,
+          attendanceDate: dateStr,
+          checkIn: null,
+          checkOut: null,
+          totalMinutes: 0,
+          status: formattedStatus,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+      
+      current.setDate(current.getDate() + 1);
+    }
+    
+    // 3. Execute all DB operations concurrently for maximum scalability
+    const dbTasks = [...updatePromises];
+    if (toInsert.length > 0) {
+      dbTasks.push(supabase.from("attendance_daily").insert(toInsert));
+    }
+    
+    if (dbTasks.length > 0) {
+      const results = await Promise.all(dbTasks);
+      results.forEach(res => {
+        if (res.error) console.error("Error syncing attendance_daily:", res.error);
+      });
+    }
+  }
 
   return data;
 }
