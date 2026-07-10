@@ -6,6 +6,7 @@ import {
   type FeeCollectionOverviewRow,
 } from "@/lib/helpers/finance-manager/dashboard/FetchFeeCollectionOverview";
 import { useEffect, useState } from "react";
+import FinanceEducationDropdown from "../../components/FinanceEducationDropdown";
 
 const formatShortCurrency = (value: number) => {
   const amount = Number(value) || 0;
@@ -25,7 +26,12 @@ export default function FeeCollectionPanel() {
     let isMounted = true;
 
     async function loadFeeCollection() {
-      if (contextLoading || !collegeId || !collegeEducationId) return;
+      if (contextLoading) return;
+
+      if (!collegeId || !collegeEducationId) {
+        if (isMounted) setLoading(false);
+        return;
+      }
 
       setLoading(true);
       try {
@@ -54,7 +60,10 @@ export default function FeeCollectionPanel() {
 
   return (
     <div className="flex h-[360px] min-h-0 flex-col rounded-lg bg-white p-4 shadow-sm">
-      <h2 className="text-md font-semibold text-[#282828]">Fee Collection</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-md font-semibold text-[#282828]">Fee Collection</h2>
+        <FinanceEducationDropdown />
+      </div>
       <div className="custom-scrollbar mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overflow-x-hidden pr-2">
         {isLoading ? (
           Array.from({ length: 2 }).map((_, index) => (

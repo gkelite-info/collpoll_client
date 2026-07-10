@@ -27,23 +27,23 @@ const formatShortCurrency = (value: number) => {
 export const formatFinanceManagerDashboardCards = (
   stats: FinanceManagerDashboardCardStats,
 ) => [
-  {
-    label: "Total Revenue Collected",
-    value: formatShortCurrency(stats.totalRevenueCollected),
-  },
-  {
-    label: "Total Pending Fees",
-    value: formatShortCurrency(stats.totalPendingFees),
-  },
-  {
-    label: "Total Students",
-    value: stats.totalStudents.toLocaleString("en-IN"),
-  },
-  {
-    label: "Active Finance Executives",
-    value: stats.activeFinanceExecutives.toString().padStart(2, "0"),
-  },
-];
+    {
+      label: "Total Revenue Collected",
+      value: formatShortCurrency(stats.totalRevenueCollected),
+    },
+    {
+      label: "Total Pending Fees",
+      value: formatShortCurrency(stats.totalPendingFees),
+    },
+    {
+      label: "Total Students",
+      value: stats.totalStudents.toLocaleString("en-IN"),
+    },
+    {
+      label: "Active Finance Executives",
+      value: stats.activeFinanceExecutives.toString().padStart(2, "0"),
+    },
+  ];
 
 export async function fetchFinanceManagerDashboardCards(
   collegeId: number | null | undefined,
@@ -51,7 +51,13 @@ export async function fetchFinanceManagerDashboardCards(
 ): Promise<FinanceManagerDashboardCardStats> {
   if (!collegeId || !collegeEducationId) return emptyStats;
 
-  const [studentsResult, financeExecutivesResult, obligationsResult] = await Promise.all([
+
+
+  const [
+    studentsResult,
+    financeManagerEducationsResult,
+    obligationsResult,
+  ] = await Promise.all([
     supabase
       .from("students")
       .select(
@@ -81,11 +87,23 @@ export async function fetchFinanceManagerDashboardCards(
       .eq("student_academic_history.isCurrent", true),
 
     supabase
-      .from("finance_manager")
-      .select("financeManagerId", { count: "exact", head: true })
-      .eq("collegeId", collegeId)
+      .from("finance_manager_education_types")
+      .select(`
+        FinanceManagerEducationId,
+        finance_manager!inner(
+          collegeId,
+          type,
+          isActive,
+          is_deleted,
+          deletedAt
+        )
+      `, { count: "exact", head: true })
       .eq("collegeEducationId", collegeEducationId)
-      .eq("type", "executive")
+      .eq("finance_manager.collegeId", collegeId)
+      .eq("finance_manager.type", "executive")
+      .eq("finance_manager.isActive", true)
+      .eq("finance_manager.is_deleted", false)
+      .is("finance_manager.deletedAt", null)
       .eq("isActive", true)
       .eq("is_deleted", false)
       .is("deletedAt", null),
@@ -116,7 +134,7 @@ export async function fetchFinanceManagerDashboardCards(
   ]);
 
   if (studentsResult.error) throw studentsResult.error;
-  if (financeExecutivesResult.error) throw financeExecutivesResult.error;
+  if (financeManagerEducationsResult.error) throw financeManagerEducationsResult.error;
   if (obligationsResult.error) throw obligationsResult.error;
 
   const obligations = obligationsResult.data ?? [];
@@ -163,6 +181,6 @@ export async function fetchFinanceManagerDashboardCards(
     totalRevenueCollected,
     totalPendingFees: Math.max(totalObligationAmount - totalRevenueCollected, 0),
     totalStudents: studentsResult.count ?? 0,
-    activeFinanceExecutives: financeExecutivesResult.count ?? 0,
+    activeFinanceExecutives: financeManagerEducationsResult.count ?? 0,
   };
 }

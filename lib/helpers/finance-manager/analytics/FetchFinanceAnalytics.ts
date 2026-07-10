@@ -737,11 +737,23 @@ export async function getFinanceAnalyticsOverview(
       .is("users.deletedAt", null)
       .eq("student_academic_history.isCurrent", true),
     supabase
-      .from("finance_manager")
-      .select("financeManagerId", { count: "exact", head: true })
-      .eq("collegeId", collegeId)
+      .from("finance_manager_education_types")
+      .select(`
+        FinanceManagerEducationId,
+        finance_manager!inner(
+          collegeId,
+          type,
+          isActive,
+          is_deleted,
+          deletedAt
+        )
+      `, { count: "exact", head: true })
       .eq("collegeEducationId", collegeEducationId)
-      .eq("type", "executive")
+      .eq("finance_manager.collegeId", collegeId)
+      .eq("finance_manager.type", "executive")
+      .eq("finance_manager.isActive", true)
+      .eq("finance_manager.is_deleted", false)
+      .is("finance_manager.deletedAt", null)
       .eq("isActive", true)
       .eq("is_deleted", false)
       .is("deletedAt", null),
@@ -841,7 +853,7 @@ export async function getBranchWiseCollectionDynamic(
 
   const selectedYearLabel = academicYearId
     ? academicYears?.find((year) => year.collegeAcademicYearId === academicYearId)
-        ?.collegeAcademicYear
+      ?.collegeAcademicYear
     : null;
   const selectedYearIds = new Set(
     (academicYears ?? [])
@@ -852,16 +864,16 @@ export async function getBranchWiseCollectionDynamic(
   );
   const selectedSemesterNumber = semesterId
     ? semesters?.find((semester) => semester.collegeSemesterId === semesterId)
-        ?.collegeSemester
+      ?.collegeSemester
     : null;
   const selectedSemesterIds = new Set(
     (semesters ?? [])
       .filter((semester) =>
         selectedSemesterNumber
           ? semester.collegeSemester === selectedSemesterNumber &&
-            (selectedYearIds.size
-              ? selectedYearIds.has(semester.collegeAcademicYearId)
-              : true)
+          (selectedYearIds.size
+            ? selectedYearIds.has(semester.collegeAcademicYearId)
+            : true)
           : false,
       )
       .map((semester) => semester.collegeSemesterId),
@@ -960,19 +972,19 @@ export async function getBranchWiseCollectionDynamic(
   const filteredSemesters = Array.from(
     new Map(
       (semesters ?? [])
-    .filter((semester) =>
-      selectedYearLabel && selectedYearIds.size > 0
-        ? selectedYearIds.has(semester.collegeAcademicYearId)
-        : true,
-    )
-    .map((semester) => [
-      semester.collegeSemester,
-      {
-        id: semester.collegeSemesterId,
-        label: `Semester ${semester.collegeSemester}`,
-        academicYearId: semester.collegeAcademicYearId,
-      },
-    ]),
+        .filter((semester) =>
+          selectedYearLabel && selectedYearIds.size > 0
+            ? selectedYearIds.has(semester.collegeAcademicYearId)
+            : true,
+        )
+        .map((semester) => [
+          semester.collegeSemester,
+          {
+            id: semester.collegeSemesterId,
+            label: `Semester ${semester.collegeSemester}`,
+            academicYearId: semester.collegeAcademicYearId,
+          },
+        ]),
     ).values(),
   )
     .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
@@ -1075,7 +1087,7 @@ export async function getYearWiseDetailsDynamic(
 
   const selectedSemesterNumber = semesterId
     ? semesters?.find((semester) => semester.collegeSemesterId === semesterId)
-        ?.collegeSemester
+      ?.collegeSemester
     : null;
 
   const selectedSemesterIds = new Set(
@@ -1083,9 +1095,9 @@ export async function getYearWiseDetailsDynamic(
       .filter((semester) =>
         selectedSemesterNumber
           ? semester.collegeSemester === selectedSemesterNumber &&
-            (academicYearId
-              ? semester.collegeAcademicYearId === academicYearId
-              : branchAcademicYearIds.has(semester.collegeAcademicYearId))
+          (academicYearId
+            ? semester.collegeAcademicYearId === academicYearId
+            : branchAcademicYearIds.has(semester.collegeAcademicYearId))
           : false,
       )
       .map((semester) => semester.collegeSemesterId),
@@ -1161,8 +1173,8 @@ export async function getYearWiseDetailsDynamic(
       validStudentIds === null
         ? semesterStudentIds
         : validStudentIds.filter((studentId) =>
-            semesterStudentIds.includes(studentId),
-          );
+          semesterStudentIds.includes(studentId),
+        );
   }
 
   const obligationSelect = `
@@ -1389,7 +1401,7 @@ export async function getYearWiseDetailsDynamic(
       semesterBuckets.set(
         semesterNumber,
         (semesterBuckets.get(semesterNumber) ?? 0) +
-          (Number(collection.collectedAmount) || 0),
+        (Number(collection.collectedAmount) || 0),
       );
     });
 
@@ -1437,7 +1449,7 @@ export async function getYearWiseDetailsDynamic(
 
     const semesterLabel = semesterId
       ? availableSemesters.find((semester) => semester.id === semesterId)?.label ||
-        "N/A"
+      "N/A"
       : semesterObj?.collegeSemester
         ? `Semester ${semesterObj.collegeSemester}`
         : "N/A";
@@ -1708,10 +1720,10 @@ export async function getStudentFinanceDetails(
   const formatCurrency = (val: number) => `₹${val.toLocaleString("en-IN")}`;
   const dynamicDueDate = structure?.dueDate
     ? new Date(structure.dueDate).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "Not Set";
 
   const stats = [

@@ -177,7 +177,7 @@ async function checkAcademicCalendarConflicts(payload: {
   collegeEducationId: number;
   collegeBranchId: number;
   collegeAcademicYearId: number;
-  collegeSemesterId: number;
+  collegeSemesterId: number | null;
   sectionIds: number[];
   date: string;
   fromTime: string;
@@ -347,7 +347,7 @@ export async function checkFinanceCalendarConflicts(payload: {
   collegeEducationId: number;
   collegeBranchId: number;
   collegeAcademicYearId: number;
-  collegeSemesterId: number;
+  collegeSemesterId: number | null;
   sectionIds: number[];
   date: string;
   fromTime: string;
@@ -400,8 +400,15 @@ export async function checkFinanceCalendarConflicts(payload: {
     .eq("college_education.collegeId", payload.collegeId)
     .eq("collegeEducationId", payload.collegeEducationId)
     .eq("collegeBranchId", payload.collegeBranchId)
-    .eq("collegeAcademicYearId", payload.collegeAcademicYearId)
-    .eq("collegeSemesterId", payload.collegeSemesterId)
+    .eq("collegeAcademicYearId", payload.collegeAcademicYearId);
+
+  if (payload.collegeSemesterId !== null) {
+    query = query.eq("collegeSemesterId", payload.collegeSemesterId);
+  } else {
+    query = query.is("collegeSemesterId", null);
+  }
+
+  query = query
     .in("collegeSectionsId", payload.sectionIds)
     .eq("finance_calendar.date", payload.date)
     .eq("finance_calendar.isActive", true)
@@ -462,17 +469,24 @@ export async function fetchExistingFinanceCalendarSection(payload: {
   collegeEducationId: number;
   collegeBranchId: number;
   collegeAcademicYearId: number;
-  collegeSemesterId: number;
+  collegeSemesterId: number | null;
   collegeSectionsId: number;
 }) {
-  const { data, error } = await supabase
+  let query = supabase
     .from("finance_calendar_sections")
     .select("financeCalendarSectionId")
     .eq("financeCalendarId", payload.financeCalendarId)
     .eq("collegeEducationId", payload.collegeEducationId)
     .eq("collegeBranchId", payload.collegeBranchId)
-    .eq("collegeAcademicYearId", payload.collegeAcademicYearId)
-    .eq("collegeSemesterId", payload.collegeSemesterId)
+    .eq("collegeAcademicYearId", payload.collegeAcademicYearId);
+
+  if (payload.collegeSemesterId !== null) {
+    query = query.eq("collegeSemesterId", payload.collegeSemesterId);
+  } else {
+    query = query.is("collegeSemesterId", null);
+  }
+
+  const { data, error } = await query
     .eq("collegeSectionsId", payload.collegeSectionsId)
     .is("deletedAt", null)
     .single();
@@ -541,7 +555,7 @@ export async function saveFinanceCalendarSection(
     collegeEducationId: number;
     collegeBranchId: number;
     collegeAcademicYearId: number;
-    collegeSemesterId: number;
+    collegeSemesterId: number | null;
     collegeSectionsId: number;
   },
   createdBy: number,

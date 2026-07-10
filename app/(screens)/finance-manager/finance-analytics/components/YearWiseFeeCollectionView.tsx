@@ -2,6 +2,7 @@
 
 import TableComponent from "@/app/utils/table/table";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import FinanceEducationDropdown from "../../components/FinanceEducationDropdown";
 import { getYearWiseDetailsDynamic } from "@/lib/helpers/finance-manager/analytics/FetchFinanceAnalytics";
 import {
   CaretLeft,
@@ -375,7 +376,13 @@ export default function YearWiseFeeCollectionView({
     let isMounted = true;
 
     async function loadYearWise() {
-      if (contextLoading || !collegeId || !collegeEducationId || !branchTitle) {
+      if (contextLoading) return;
+
+      if (!collegeId || !collegeEducationId || !branchTitle) {
+        if (isMounted) {
+          setIsChartLoading(false);
+          setIsTableLoading(false);
+        }
         return;
       }
 
@@ -450,7 +457,12 @@ export default function YearWiseFeeCollectionView({
     let isMounted = true;
 
     async function loadTableOnly() {
-      if (contextLoading || !collegeId || !collegeEducationId || !branchTitle) {
+      if (contextLoading) return;
+
+      if (!collegeId || !collegeEducationId || !branchTitle) {
+        if (isMounted) {
+          setIsTableLoading(false);
+        }
         return;
       }
 
@@ -577,18 +589,21 @@ export default function YearWiseFeeCollectionView({
 
   return (
     <div className="min-h-screen w-full bg-[#F4F4F4] p-2 pb-7 lg:pb-5">
-      <div className="mb-3 flex items-center gap-2">
-        <button
-          type="button"
-          aria-label="Back to Branch Wise Collection"
-          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#282828] transition hover:bg-[#F0F0F0]"
-          onClick={() => router.push(backHref)}
-        >
-          <CaretLeft size={24} weight="bold" />
-        </button>
-        <h1 className="text-xl font-semibold text-[#282828]">{branchTitle}</h1>
-        <CaretRight size={18} className="text-[#8A8A8A]" />
-        <span className="text-sm text-[#525252]">Year-wise Fee Collection</span>
+      <div className="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Back to Branch Wise Collection"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#282828] transition hover:bg-[#F0F0F0]"
+            onClick={() => router.push(backHref)}
+          >
+            <CaretLeft size={24} weight="bold" />
+          </button>
+          <h1 className="text-xl font-semibold text-[#282828]">{branchTitle}</h1>
+          <CaretRight size={18} className="text-[#8A8A8A]" />
+          <span className="text-sm text-[#525252]">Year-wise Fee Collection</span>
+        </div>
+        <FinanceEducationDropdown />
       </div>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">

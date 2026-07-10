@@ -96,8 +96,16 @@ export default function AddEventModal({
     FinanceCalendarConflict[]
   >([]);
 
-  const { financeManagerId, collegeId, collegeEducationId } =
+  const [selectedModalEducationId, setSelectedModalEducationId] = useState<number | null>(null);
+
+  const { financeManagerId, collegeId, collegeEducationId, collegeEducationTypes, collegeEducationIds } =
     useFinanceManager();
+
+  const selectedModalEducationType = selectedModalEducationId 
+    ? collegeEducationTypes[collegeEducationIds.indexOf(selectedModalEducationId)] 
+    : null;
+  const isInter = selectedModalEducationType === "Inter";
+  const branchLabel = isInter ? "Group" : "Branch";
 
   const TextOnly = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
@@ -142,6 +150,7 @@ export default function AddEventModal({
           );
           if (sectionsData.length > 0) {
             const first = sectionsData[0];
+            setSelectedModalEducationId(first.collegeEducationId);
             setSelectedBranchId(first.collegeBranchId);
             setSelectedAcademicYearId(first.collegeAcademicYearId);
             setSelectedSemesterId(first.collegeSemesterId);
@@ -193,6 +202,7 @@ export default function AddEventModal({
       setToHour(toP.h);
       setToMinute(toP.m);
       setToAmPm(toP.a);
+      setSelectedModalEducationId(collegeEducationId);
       setSelectedBranchId(null);
       setSelectedAcademicYearId(null);
       setSelectedSemesterId(null);
@@ -204,11 +214,11 @@ export default function AddEventModal({
   }, [isOpen, editData]);
 
   useEffect(() => {
-    if (!isOpen || !collegeId || !collegeEducationId) return;
+    if (!isOpen || !collegeId || !selectedModalEducationId) return;
     const loadBranches = async () => {
       try {
         setLoadingBranches(true);
-        const data = await fetchCollegeBranches(collegeId, collegeEducationId);
+        const data = await fetchCollegeBranches(collegeId, selectedModalEducationId);
         setBranches(data);
       } catch (err) {
         console.error(err);
@@ -218,7 +228,7 @@ export default function AddEventModal({
       }
     };
     loadBranches();
-  }, [isOpen, collegeId, collegeEducationId]);
+  }, [isOpen, collegeId, selectedModalEducationId]);
 
   useEffect(() => {
     if (!collegeId || !selectedBranchId) return;
@@ -241,13 +251,13 @@ export default function AddEventModal({
   }, [collegeId, selectedBranchId]);
 
   useEffect(() => {
-    if (!collegeId || !collegeEducationId || !selectedAcademicYearId) return;
+    if (!collegeId || !selectedModalEducationId || !selectedAcademicYearId) return;
     const loadSemesters = async () => {
       try {
         setLoadingSemesters(true);
         const data = await fetchCollegeSemesters(
           collegeId,
-          collegeEducationId,
+          selectedModalEducationId,
           selectedAcademicYearId,
         );
         setSemesters(data);
@@ -259,12 +269,12 @@ export default function AddEventModal({
       }
     };
     loadSemesters();
-  }, [collegeId, collegeEducationId, selectedAcademicYearId]);
+  }, [collegeId, selectedModalEducationId, selectedAcademicYearId]);
 
   useEffect(() => {
     if (
       !collegeId ||
-      !collegeEducationId ||
+      !selectedModalEducationId ||
       !selectedBranchId ||
       !selectedAcademicYearId
     )
@@ -274,7 +284,7 @@ export default function AddEventModal({
         setLoadingSections(true);
         const data = await fetchCollegeSections(
           collegeId,
-          collegeEducationId,
+          selectedModalEducationId,
           selectedBranchId,
           selectedAcademicYearId,
         );
@@ -287,7 +297,7 @@ export default function AddEventModal({
       }
     };
     loadSections();
-  }, [collegeId, collegeEducationId, selectedBranchId, selectedAcademicYearId]);
+  }, [collegeId, selectedModalEducationId, selectedBranchId, selectedAcademicYearId]);
 
   const toggleSectionId = (id: number) => {
     setSelectedSectionIds((prev) =>
@@ -328,8 +338,13 @@ export default function AddEventModal({
       return;
     }
 
+    if (!selectedModalEducationId) {
+      toast.error("Please select an Education type.");
+      return;
+    }
+
     if (!selectedBranchId) {
-      toast.error("Please select a Branch.");
+      toast.error(`Please select a ${branchLabel}.`);
       return;
     }
 
@@ -338,7 +353,7 @@ export default function AddEventModal({
       return;
     }
 
-    if (!selectedSemesterId) {
+    if (!selectedSemesterId && !isInter) {
       toast.error("Please select a Semester.");
       return;
     }
@@ -382,10 +397,10 @@ export default function AddEventModal({
       if (!forceSave && collegeId) {
         const conflicts = await checkFinanceCalendarConflicts({
           collegeId,
-          collegeEducationId,
+          collegeEducationId: selectedModalEducationId,
           collegeBranchId: selectedBranchId,
           collegeAcademicYearId: selectedAcademicYearId,
-          collegeSemesterId: selectedSemesterId,
+          collegeSemesterId: selectedSemesterId ?? null,
           sectionIds: selectedSectionIds,
           date: eventDate,
           fromTime: formattedFromTime,
@@ -449,10 +464,10 @@ export default function AddEventModal({
           {
             financeCalendarSectionId: existingSectionsMap[secId] || undefined,
             financeCalendarId: eventRes.financeCalendarId as number,
-            collegeEducationId,
+            collegeEducationId: selectedModalEducationId as number,
             collegeBranchId: selectedBranchId,
             collegeAcademicYearId: selectedAcademicYearId,
-            collegeSemesterId: selectedSemesterId,
+            collegeSemesterId: selectedSemesterId ?? null,
             collegeSectionsId: secId,
           },
           financeManagerId,
@@ -646,21 +661,51 @@ export default function AddEventModal({
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2 mt-2">
                 <label className="text-sm font-medium text-gray-700">
-                  Branch<span className="text-red-500">*</span>
+                  Education<span className="text-red-500">*</span>
+                </label>
+                <select
+                  className={`${INPUT} cursor-pointer`}
+                  value={selectedModalEducationId ?? ""}
+                  onChange={(e) => {
+                    setSelectedModalEducationId(Number(e.target.value));
+                    setBranches([]);
+                    setSelectedBranchId(null);
+                    setAcademicYears([]);
+                    setSelectedAcademicYearId(null);
+                    setSemesters([]);
+                    setSelectedSemesterId(null);
+                    setSections([]);
+                    setSelectedSectionIds([]);
+                  }}
+                >
+                  <option value="">Select Education</option>
+                  {collegeEducationIds.map((id, idx) => (
+                    <option key={id} value={id}>
+                      {collegeEducationTypes[idx]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-2 mt-2">
+                <label className="text-sm font-medium text-gray-700">
+                  {branchLabel}<span className="text-red-500">*</span>
                 </label>
                 <select
                   className={`${INPUT} cursor-pointer`}
                   value={selectedBranchId ?? ""}
-                  disabled={loadingBranches}
+                  disabled={loadingBranches || !selectedModalEducationId}
                   onChange={(e) => {
                     setSelectedBranchId(Number(e.target.value));
                     setAcademicYears([]);
+                    setSelectedAcademicYearId(null);
+                    setSemesters([]);
                     setSelectedSemesterId(null);
+                    setSections([]);
                     setSelectedSectionIds([]);
                   }}
                 >
                   <option value="">
-                    {loadingBranches ? "Loading..." : "Select Branch"}
+                    {loadingBranches ? "Loading..." : `Select ${branchLabel}`}
                   </option>
                   {branches.map((b) => (
                     <option key={b.collegeBranchId} value={b.collegeBranchId}>
@@ -669,6 +714,9 @@ export default function AddEventModal({
                   ))}
                 </select>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-2 mt-2">
                 <label className="text-sm font-medium text-gray-700">
                   Year<span className="text-red-500">*</span>
@@ -680,6 +728,7 @@ export default function AddEventModal({
                     setSelectedAcademicYearId(Number(e.target.value));
                     setSemesters([]);
                     setSelectedSemesterId(null);
+                    setSections([]);
                     setSelectedSectionIds([]);
                   }}
                   disabled={!selectedBranchId}
@@ -697,10 +746,8 @@ export default function AddEventModal({
                   ))}
                 </select>
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
+              {!isInter ? (
+              <div className="flex flex-col gap-2 mt-2">
                 <label className="text-sm font-medium text-gray-700">
                   Semester<span className="text-red-500">*</span>
                 </label>
@@ -729,34 +776,38 @@ export default function AddEventModal({
                   ))}
                 </select>
               </div>
-              <div className="flex flex-col gap-2">
-                <CustomMultiSelect
-                  label="Section"
-                  required={true}
-                  entityName="Section"
-                  placeholder={
-                    loadingSections ? "Loading..." : "Select Sections"
-                  }
-                  options={sections.map((s) => s.collegeSections)}
-                  selectedValues={selectedSectionLabels}
-                  disabled={!selectedAcademicYearId || !selectedBranchId}
-                  onChange={(value) => {
-                    const section = sections.find(
-                      (s) => s.collegeSections === value,
-                    );
-                    if (section) toggleSectionId(section.collegeSectionsId);
-                  }}
-                  onRemove={(value) => {
-                    const section = sections.find(
-                      (s) => s.collegeSections === value,
-                    );
-                    if (section) toggleSectionId(section.collegeSectionsId);
-                  }}
-                  paddingY="p-2"
-                  closedBorder="border-[#C9C9C9]"
-                  placeholderColorActive="text-gray-900"
-                />
-              </div>
+              ) : (
+                <div className="flex flex-col gap-2 mt-2"></div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 mt-2">
+              <CustomMultiSelect
+                label="Section"
+                required={true}
+                entityName="Section"
+                placeholder={
+                  loadingSections ? "Loading..." : "Select Sections"
+                }
+                options={sections.map((s) => s.collegeSections)}
+                selectedValues={selectedSectionLabels}
+                disabled={!selectedAcademicYearId || !selectedBranchId}
+                onChange={(value) => {
+                  const section = sections.find(
+                    (s) => s.collegeSections === value,
+                  );
+                  if (section) toggleSectionId(section.collegeSectionsId);
+                }}
+                onRemove={(value) => {
+                  const section = sections.find(
+                    (s) => s.collegeSections === value,
+                  );
+                  if (section) toggleSectionId(section.collegeSectionsId);
+                }}
+                paddingY="p-2"
+                closedBorder="border-[#C9C9C9]"
+                placeholderColorActive="text-gray-900"
+              />
             </div>
 
             <button

@@ -2,6 +2,7 @@
 
 import TableComponent from "@/app/utils/table/table";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import FinanceEducationDropdown from "../../components/FinanceEducationDropdown";
 import { getBranchWiseCollectionDynamic } from "@/lib/helpers/finance-manager/analytics/FetchFinanceAnalytics";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -154,7 +155,12 @@ export default function BranchWiseCollectionView({
     let isMounted = true;
 
     async function loadBranchWise() {
-      if (contextLoading || !collegeId || !collegeEducationId) return;
+      if (contextLoading) return;
+
+      if (!collegeId || !collegeEducationId) {
+        if (isMounted) setIsLoading(false);
+        return;
+      }
 
       setIsLoading(true);
       try {
@@ -228,18 +234,21 @@ export default function BranchWiseCollectionView({
 
   return (
     <div className="min-h-screen w-full bg-[#F4F4F4] p-2 pb-7 lg:pb-5">
-      <div className="mb-4 flex items-center gap-2">
-        <button
-          type="button"
-          aria-label="Back to Finance Analytics"
-          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#282828] transition hover:bg-[#F0F0F0]"
-          onClick={() => router.push(backHref)}
-        >
-          <CaretLeft size={24} weight="bold" />
-        </button>
-        <h1 className="text-xl font-semibold text-[#282828]">{title}</h1>
-        <CaretRight size={18} className="text-[#8A8A8A]" />
-        <span className="text-sm text-[#525252]">Branch Wise Collection</span>
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Back to Finance Analytics"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#282828] transition hover:bg-[#F0F0F0]"
+            onClick={() => router.push(backHref)}
+          >
+            <CaretLeft size={24} weight="bold" />
+          </button>
+          <h1 className="text-xl font-semibold text-[#282828]">{title}</h1>
+          <CaretRight size={18} className="text-[#8A8A8A]" />
+          <span className="text-sm text-[#525252]">Branch Wise Collection</span>
+        </div>
+        <FinanceEducationDropdown />
       </div>
 
       <section className="rounded-lg bg-white p-5 shadow-sm">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import FinanceEducationDropdown from "../../components/FinanceEducationDropdown";
 import { useRouter } from "next/navigation";
 import { AgCharts } from "ag-charts-react";
 import {
@@ -42,7 +43,12 @@ export default function FeeCollectionOverviewChart() {
     let isMounted = true;
 
     async function loadOverview() {
-      if (contextLoading || !collegeId || !collegeEducationId) return;
+      if (contextLoading) return;
+
+      if (!collegeId || !collegeEducationId) {
+        if (isMounted) setLoading(false);
+        return;
+      }
 
       setLoading(true);
       try {
@@ -176,12 +182,14 @@ export default function FeeCollectionOverviewChart() {
         <h2 className="text-md font-semibold text-[#282828]">
           Fee Collection Overview
         </h2>
-        <button
-          type="button"
-          className="cursor-pointer text-[#282828] transition-transform hover:translate-x-1"
-          onClick={() => router.push("?view=fee-collection-overview")}
-        >
-          <svg
+        <div className="flex items-center gap-3">
+          <FinanceEducationDropdown />
+          <button
+            type="button"
+            className="cursor-pointer text-[#282828] transition-transform hover:translate-x-1"
+            onClick={() => router.push("?view=fee-collection-overview")}
+          >
+            <svg
             width="24"
             height="24"
             viewBox="0 0 24 24"
@@ -194,6 +202,7 @@ export default function FeeCollectionOverviewChart() {
             <path d="m9 18 6-6-6-6" />
           </svg>
         </button>
+        </div>
       </div>
 
       <div className="custom-scrollbar overflow-x-scroll overflow-y-hidden pb-2">

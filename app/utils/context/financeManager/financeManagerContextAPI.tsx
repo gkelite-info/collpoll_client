@@ -4,16 +4,11 @@ type FinanceManagerJoin = {
     financeManagerId: number;
     userId: number;
     collegeId: number;
-    collegeEducationId: number;
     isActive: boolean;
     type: "executive" | "manager";
 
     college: {
         collegeName: string;
-    };
-
-    college_education: {
-        collegeEducationType: string;
     };
 };
 
@@ -31,14 +26,10 @@ export async function fetchFinanceManagerContext(userId: number) {
       financeManagerId,
       userId,
       collegeId,
-      collegeEducationId,
       isActive,
       type,
       college:collegeId!inner (
         collegeName
-      ),
-      college_education:collegeEducationId!inner (
-        collegeEducationType
       )
     `)
         .eq("userId", userId)
@@ -49,46 +40,62 @@ export async function fetchFinanceManagerContext(userId: number) {
     if (error) throw error;
 
     const { data: educationTypes, error: educationTypesError } = await supabase
-        .from("finance_manager_education_types")
+        .from("college_education")
         .select(`
             collegeEducationId,
-            college_education:collegeEducationId (
-                collegeEducationType
+            collegeEducationType,
+            finance_manager_education_types!inner (
+                financeManagerId,
+                isActive,
+                is_deleted,
+                deletedAt
             )
         `)
-        .eq("financeManagerId", data.financeManagerId)
-        .eq("isActive", true)
-        .eq("is_deleted", false)
-        .is("deletedAt", null)
-        .returns<FinanceManagerEducationTypeJoin[]>();
+        .eq("collegeId", data.collegeId)
+        .eq("finance_manager_education_types.financeManagerId", data.financeManagerId)
+        .eq("finance_manager_education_types.isActive", true)
+        .eq("finance_manager_education_types.is_deleted", false)
+        .is("finance_manager_education_types.deletedAt", null)
+        .returns<any[]>();
 
     if (educationTypesError) throw educationTypesError;
 
-    const collegeEducationIds =
+    let collegeEducationIds: number[] =
         educationTypes && educationTypes.length > 0
             ? educationTypes.map((education) => education.collegeEducationId)
-            : [data.collegeEducationId];
+            : [];
 
-    const collegeEducationTypes =
+    let collegeEducationTypes: string[] =
         educationTypes && educationTypes.length > 0
-            ? educationTypes
-                  .map(
-                      (education) =>
-                          education.college_education?.collegeEducationType,
-                  )
-                  .filter((educationType): educationType is string =>
-                      Boolean(educationType),
-                  )
-            : [data.college_education.collegeEducationType];
+            ? educationTypes.map((education) => education.collegeEducationType)
+            : [];
+
+    // Fallback: If no mappings exist in finance_manager_education_types, fetch all education types for this college
+    if (collegeEducationIds.length === 0) {
+        const { data: fallbackTypes } = await supabase
+            .from("college_education")
+            .select("collegeEducationId, collegeEducationType")
+            .eq("collegeId", data.collegeId)
+            .eq("isActive", true)
+            .is("deletedAt", null)
+            .returns<any[]>();
+
+        if (fallbackTypes && fallbackTypes.length > 0) {
+            collegeEducationIds = fallbackTypes.map((e: any) => e.collegeEducationId);
+            collegeEducationTypes = fallbackTypes.map((e: any) => e.collegeEducationType);
+        }
+    }
+    const primaryCollegeEducationType = collegeEducationTypes.length > 0 ? collegeEducationTypes[0] : null;
+    const primaryCollegeEducationId = collegeEducationIds.length > 0 ? collegeEducationIds[0] : null;
 
     return {
         financeManagerId: data.financeManagerId,
         userId: data.userId,
         collegeId: data.collegeId,
-        collegeEducationId: data.collegeEducationId,
+        collegeEducationId: primaryCollegeEducationId,
         collegeEducationIds,
         collegeName: data.college.collegeName,
-        collegeEducationType: data.college_education.collegeEducationType,
+        collegeEducationType: primaryCollegeEducationType,
         collegeEducationTypes,
         isActive: data.isActive,
         type: data.type,

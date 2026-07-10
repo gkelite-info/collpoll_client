@@ -16,6 +16,7 @@ export type FinanceManagerContextType = {
     collegeEducationTypes: string[];
     isActive: boolean | null;
     type: "executive" | "manager" | null;
+    setEducation: (id: number, type: string) => void;
 };
 
 const FinanceManagerContext =
@@ -28,7 +29,7 @@ export const FinanceManagerProvider = ({
 }) => {
     const { userId, role, loading: userLoading } = useUser();
 
-    const [state, setState] = useState<FinanceManagerContextType>({
+    const [state, setState] = useState<Omit<FinanceManagerContextType, "setEducation">>({
         loading: true,
         financeManagerId: null,
         userId: null,
@@ -75,8 +76,16 @@ export const FinanceManagerProvider = ({
         loadFinanceManager();
     }, [userId, role, userLoading]);
 
+    const setEducation = (id: number, type: string) => {
+        setState((s) => ({
+            ...s,
+            collegeEducationId: id,
+            collegeEducationType: type,
+        }));
+    };
+
     return (
-        <FinanceManagerContext.Provider value={state}>
+        <FinanceManagerContext.Provider value={{ ...state, setEducation }}>
             {children}
         </FinanceManagerContext.Provider>
     );

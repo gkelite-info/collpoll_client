@@ -438,8 +438,35 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         getEmployeeEmpId(uid, cid),
       ]);
       s.setFinanceManagerId(financeData.data?.financeManagerId ?? null);
-      s.setCollegeEducationType(financeCtx?.collegeEducationType ?? null);
       s.setIdentifierId(empId ?? null);
+
+      if (!financeData.data?.financeManagerId) {
+        s.setCollegeEducationType(financeCtx?.collegeEducationType ?? null);
+        return;
+      }
+
+      const { data: educationTypes } = await supabase
+        .from("finance_manager_education_types")
+        .select(`
+          collegeEducationId,
+          college_education:collegeEducationId (
+            collegeEducationType
+          )
+        `)
+        .eq("financeManagerId", financeData.data.financeManagerId)
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .is("deletedAt", null);
+
+      const educationTypeFromMapping = uniqueJoinedValues(
+        (educationTypes ?? []).map(
+          (education) => getCollegeEducationType(education.college_education as any),
+        ),
+      );
+
+      s.setCollegeEducationType(
+        educationTypeFromMapping || financeCtx?.collegeEducationType || null
+      );
     },
 
     FinanceManager: async (uid, cid) => {
@@ -455,8 +482,35 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         getEmployeeEmpId(uid, cid),
       ]);
       s.setFinanceManagerId(financeData.data?.financeManagerId ?? null);
-      s.setCollegeEducationType(financeCtx?.collegeEducationType ?? null);
       s.setIdentifierId(empId ?? null);
+
+      if (!financeData.data?.financeManagerId) {
+        s.setCollegeEducationType(financeCtx?.collegeEducationType ?? null);
+        return;
+      }
+
+      const { data: educationTypes } = await supabase
+        .from("finance_manager_education_types")
+        .select(`
+          collegeEducationId,
+          college_education:collegeEducationId (
+            collegeEducationType
+          )
+        `)
+        .eq("financeManagerId", financeData.data.financeManagerId)
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .is("deletedAt", null);
+
+      const educationTypeFromMapping = uniqueJoinedValues(
+        (educationTypes ?? []).map(
+          (education) => getCollegeEducationType(education.college_education as any),
+        ),
+      );
+
+      s.setCollegeEducationType(
+        educationTypeFromMapping || financeCtx?.collegeEducationType || null
+      );
     },
 
     Accountant: async (uid, cid) => {

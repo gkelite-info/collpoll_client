@@ -15,6 +15,7 @@ export default function FinanceChartsSection() {
         title="Monthly Fee Collection"
         minWidth="min-w-[900px]"
         onViewClick={() => router.push("?view=monthly-fee-collection")}
+        showDropdown
       >
         <MonthlyFeeCollectionChart />
       </ChartCard>
