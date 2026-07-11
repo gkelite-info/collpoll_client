@@ -6,9 +6,8 @@ export async function getOrCreateCollegeSession(
   collegeBranchId: number,
   startYear: number,
   endYear: number,
-  totalFeeAmount: number, // 🟢 Passing the calculated total fee
+  totalFeeAmount: number,
 ) {
-  // 🟢 FIXED: Match strictly by the DB's unique constraint columns
   const { data: existing } = await supabase
     .from("college_session")
     .select("collegeSessionId, totalFeeAmount")
@@ -22,7 +21,6 @@ export async function getOrCreateCollegeSession(
   const now = new Date().toISOString();
 
   if (existing) {
-    // Update the total fee if it has changed or was previously null
     if (existing.totalFeeAmount !== totalFeeAmount) {
       await supabase
         .from("college_session")
@@ -43,7 +41,7 @@ export async function getOrCreateCollegeSession(
       sessionName,
       startYear,
       endYear,
-      totalFeeAmount, // 🟢 Save it during creation
+      totalFeeAmount,
       is_deleted: false,
       updatedAt: now,
       createdAt: now,

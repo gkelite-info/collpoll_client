@@ -13,9 +13,9 @@ export type CollegeFeeStructureRow = {
   deletedAt: string | null;
 };
 
-export async function fetchAllFeeStructures(collegeId: number) {
+export async function fetchAllFeeStructures(collegeId: number, collegeEducationId?: number) {
   try {
-    const { data: structures, error: structError } = await supabase
+    let query = supabase
       .from("college_fee_structure")
       .select(
         `
@@ -27,6 +27,12 @@ export async function fetchAllFeeStructures(collegeId: number) {
       .eq("collegeId", collegeId)
       .eq("isActive", true)
       .order("createdAt", { ascending: false });
+
+    if (collegeEducationId) {
+      query = query.eq("collegeEducationId", collegeEducationId);
+    }
+
+    const { data: structures, error: structError } = await query;
 
     if (structError) throw structError;
     if (!structures || structures.length === 0) return [];
@@ -83,6 +89,7 @@ export async function fetchAllFeeStructures(collegeId: number) {
 
 export async function saveCollegeFeeStructure(
   payload: {
+    feeStructureId?: number;
     collegeId: number;
     collegeEducationId: number;
     collegeBranchId: number;
@@ -95,21 +102,10 @@ export async function saveCollegeFeeStructure(
 ) {
   const now = new Date().toISOString();
 
-  const { data: existing } = await supabase
-    .from("college_fee_structure")
-    .select("createdAt")
-    .match({
-      collegeId: payload.collegeId,
-      collegeEducationId: payload.collegeEducationId,
-      collegeBranchId: payload.collegeBranchId,
-      collegeSessionId: payload.collegeSessionId,
-    })
-    .maybeSingle();
-
-  const { data, error } = await supabase
-    .from("college_fee_structure")
-    .upsert(
-      {
+  if (payload.feeStructureId) {
+    const { data, error } = await supabase
+      .from("college_fee_structure")
+      .update({
         collegeId: payload.collegeId,
         collegeEducationId: payload.collegeEducationId,
         collegeBranchId: payload.collegeBranchId,
@@ -117,23 +113,59 @@ export async function saveCollegeFeeStructure(
         dueDate: payload.dueDate,
         lateFeePerDay: payload.lateFeePerDay,
         remarks: payload.remarks || null,
-        createdBy: financeManagerId,
-        isActive: true,
         updatedAt: now,
-        createdAt: existing?.createdAt || now,
-      },
-      {
-        onConflict:
-          "collegeId,collegeEducationId,collegeBranchId,collegeSessionId",
-      },
-    )
-    .select("feeStructureId")
-    .maybeSingle();
+      })
+      .eq("feeStructureId", payload.feeStructureId)
+      .select("feeStructureId")
+      .maybeSingle();
 
-  if (error) {
-    console.error("saveCollegeFeeStructure error:", error);
-    return { success: false, error };
+    if (error) {
+      console.error("saveCollegeFeeStructure update error:", error);
+      return { success: false, error };
+    }
+
+    return { success: true, feeStructureId: data?.feeStructureId || payload.feeStructureId };
+  } else {
+    const { data: existing } = await supabase
+      .from("college_fee_structure")
+      .select("createdAt")
+      .match({
+        collegeId: payload.collegeId,
+        collegeEducationId: payload.collegeEducationId,
+        collegeBranchId: payload.collegeBranchId,
+        collegeSessionId: payload.collegeSessionId,
+      })
+      .maybeSingle();
+
+    const { data, error } = await supabase
+      .from("college_fee_structure")
+      .upsert(
+        {
+          collegeId: payload.collegeId,
+          collegeEducationId: payload.collegeEducationId,
+          collegeBranchId: payload.collegeBranchId,
+          collegeSessionId: payload.collegeSessionId,
+          dueDate: payload.dueDate,
+          lateFeePerDay: payload.lateFeePerDay,
+          remarks: payload.remarks || null,
+          createdBy: financeManagerId,
+          isActive: true,
+          updatedAt: now,
+          createdAt: existing?.createdAt || now,
+        },
+        {
+          onConflict:
+            "collegeId,collegeEducationId,collegeBranchId,collegeSessionId",
+        },
+      )
+      .select("feeStructureId")
+      .maybeSingle();
+
+    if (error) {
+      console.error("saveCollegeFeeStructure error:", error);
+      return { success: false, error };
+    }
+
+    return { success: true, feeStructureId: data?.feeStructureId };
   }
-
-  return { success: true, feeStructureId: data?.feeStructureId };
 }

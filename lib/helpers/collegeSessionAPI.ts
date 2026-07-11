@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabaseClient";
 export type CollegeSessionRow = {
     collegeSessionId: number;
     collegeId: number;
+    collegeEducationId: number;
     sessionName: string;
     startYear: number;
     endYear: number;
@@ -19,6 +20,7 @@ export async function fetchCollegeSessions(collegeId: number) {
         .select(`
       collegeSessionId,
       collegeId,
+      collegeEducationId,
       sessionName,
       startYear,
       endYear,
@@ -46,6 +48,7 @@ export async function fetchSessionOptions(collegeId: number) {
         id: row.collegeSessionId,
         label: row.sessionName,
         value: row.collegeSessionId,
+        collegeEducationId: row.collegeEducationId,
         startYear: row.startYear,
         endYear: row.endYear,
     }));
@@ -141,6 +144,7 @@ export async function fetchSessionsForLoggedInAdmin(userId: number) {
         id: row.collegeSessionId,
         label: row.sessionName,
         value: row.collegeSessionId,
+        collegeEducationId: row.collegeEducationId,
         startYear: row.startYear,
         endYear: row.endYear,
     }));

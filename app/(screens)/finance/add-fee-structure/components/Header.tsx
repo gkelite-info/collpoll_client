@@ -1,25 +1,38 @@
 "use client";
 
-import { Plus } from "@phosphor-icons/react";
+import { Plus, ArrowLeft } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
+import FinanceEducationDropdown from "@/app/(screens)/finance-manager/components/FinanceEducationDropdown";
 
 type AddFeeHeaderProps = {
     button: boolean;
+    showBack?: boolean;
 }
 
-export default function AddFeeHeader({ button = true }: AddFeeHeaderProps) {
+export default function AddFeeHeader({ button = true, showBack = false }: AddFeeHeaderProps) {
     const router = useRouter();
 
     const handleCreate = () => {
         router.push("?fee=create-fee");
     };
 
+    const handleBack = () => {
+        router.back();
+    };
+
     return (
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 w-full">
             <div className="space-y-1">
-                <h1 className="text-2xl font-semibold text-[#43C17A]">
-                    Fee Structure
-                </h1>
+                <div className="flex items-center gap-2">
+                    {showBack && (
+                        <button onClick={handleBack} className="p-1 cursor-pointer hover:bg-gray-100 rounded-full transition-colors">
+                            <ArrowLeft size={20} className="text-[#282828]" />
+                        </button>
+                    )}
+                    <h1 className="text-2xl font-semibold text-[#43C17A]">
+                        Fee Structure
+                    </h1>
+                </div>
                 <h2 className="text-2xl font-semibold text-[#282828]">
                     Create Fee Structure
                 </h2>
@@ -28,8 +41,9 @@ export default function AddFeeHeader({ button = true }: AddFeeHeaderProps) {
                 </p>
             </div>
 
-            {button && (
-                <div className="mt-15">
+            <div className="flex items-center gap-4">
+                <FinanceEducationDropdown />
+                {button && (
                     <button
                         className="flex items-center gap-2 
                  bg-[#1F2F56] 
@@ -47,8 +61,8 @@ export default function AddFeeHeader({ button = true }: AddFeeHeaderProps) {
                             Create New
                         </span>
                     </button>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }

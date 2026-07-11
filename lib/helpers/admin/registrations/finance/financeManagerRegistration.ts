@@ -5,7 +5,7 @@ export type FinanceManagerType = "executive" | "manager";
 export type CreateFinanceManagerPayload = {
   userId: number;
   collegeId: number;
-  collegeEducationId: number;
+  collegeEducationId?: number | null;
   createdBy: number;
   type?: FinanceManagerType;
   isActive?: boolean;
@@ -22,7 +22,7 @@ export const createFinanceManager = async (
     .insert({
       userId: payload.userId,
       collegeId: payload.collegeId,
-      collegeEducationId: payload.collegeEducationId,
+      collegeEducationId: null,
       createdBy: payload.createdBy,
       isActive: payload.isActive ?? true,
       is_deleted: false,

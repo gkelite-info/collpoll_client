@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import EventCard from "./eventCard";
 
@@ -105,9 +105,9 @@ interface CalendarGridProps {
   onPrevWeek: () => void;
   onNextWeek: () => void;
   activeTab?: string;
-  onDeleteRequest: (event: any) => void;
-  onEditRequest: (event: any) => void;
-  onEventClick: (event: any) => void;
+  onDeleteRequest?: (event: any) => void;
+  onEditRequest?: (event: any) => void;
+  onEventClick?: (event: any) => void;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -127,7 +127,30 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return event.type.toLowerCase() === activeTab.toLowerCase();
   };
 
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [hoveredEvent, setHoveredEvent] = useState<any | null>(null);
+
+  useEffect(() => {
+    setSelectedDayIndex(0);
+  }, [weekDays]);
+
+  const handlePrevDay = () => {
+    if (selectedDayIndex > 0) {
+      setSelectedDayIndex(prev => prev - 1);
+    } else {
+      onPrevWeek();
+      setSelectedDayIndex(weekDays.length - 1);
+    }
+  };
+
+  const handleNextDay = () => {
+    if (selectedDayIndex < weekDays.length - 1) {
+      setSelectedDayIndex(prev => prev + 1);
+    } else {
+      onNextWeek();
+      setSelectedDayIndex(0);
+    }
+  };
 
   const isTimeOverlapping = (
     aStart: string,
@@ -144,35 +167,42 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   };
 
   return (
-    // HEIGHT UPDATED & BOTTOM BORDER RADIUS REMOVED HERE
-    <div className="bg-white rounded-tr-[20px] rounded-b-none shadow-sm overflow-y-auto flex flex-col relative -mt-2 h-[600px] lg:h-[700px] xl:h-[750px] 2xl:h-[850px]">
-      <div className="flex border-b border-gray-400 bg-white min-h-[60px]">
-        <div className="w-20 min-w-[80px] border-r border-gray-400 p-2 flex items-center justify-center gap-1 z-10">
+    <div className="bg-red-00 rounded-bl-[20px] shadow-sm overflow-y-auto custom-scrollbar flex flex-col relative -mt-2 h-[80vh]">
+      <div className="flex border-b border-gray-400 sticky top-0 z-20 bg-white">
+        <div className="hidden md:flex lg:flex w-20 min-w-[80px] border-r border-gray-400 p-2 flex items-center justify-center gap-1 bg-white z-10">
           <button
             onClick={onPrevWeek}
-            className="p-1.5 hover:bg-gray-100 cursor-pointer rounded text-gray-500 transition-colors"
+            className="p-1 hover:bg-gray-100 cursor-pointer rounded text-gray-500 transition-colors"
           >
-            <CaretLeft size={18} weight="bold" />
+            <CaretLeft size={16} weight="bold" />
           </button>
           <button
             onClick={onNextWeek}
-            className="p-1.5 hover:bg-gray-100 cursor-pointer rounded text-gray-500 transition-colors"
+            className="p-1 hover:bg-gray-100 cursor-pointer rounded text-gray-500 transition-colors"
           >
-            <CaretRight size={18} weight="bold" />
+            <CaretRight size={16} weight="bold" />
           </button>
         </div>
 
-        <div className="flex-1 grid grid-cols-6">
+        <div className="bg-white flex md:hidden lg:hidden w-full items-center justify-center py-4 gap-4">
+          <button onClick={handlePrevDay} className="p-2"><CaretLeft size={20} weight="bold" /></button>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+            {weekDays[selectedDayIndex]?.day} {weekDays[selectedDayIndex]?.date}
+          </h2>
+          <button onClick={handleNextDay} className="p-2"><CaretLeft className="rotate-180" size={20} weight="bold" /></button>
+        </div>
+
+        <div className="flex-1 hidden md:grid md:grid-cols-6 lg:grid grid-cols-6 scrollbar-hide">
           {weekDays.map((day) => (
             <div
               key={day.fullDate}
-              className="flex items-center justify-center border-r border-gray-400 last:border-r-0 py-4"
+              className={`text-center py-2.5 border-r border-gray-400 last:border-r-0`}
             >
-              <div className="flex items-center justify-center space-x-1.5">
-                <div className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide">
-                  {day.day.substring(0, 3)}
+              <div className="flex items-center justify-center space-x-1">
+                <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
+                  {day.day.substring(0, 3)}{" "}
                 </div>
-                <div className="text-[15px] font-bold text-gray-800">
+                <div className="text-sm font-bold text-gray-700">
                   {day.date}
                 </div>
               </div>
@@ -181,33 +211,36 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+      <div className="bg-white flex-1 relative">
         <div className="flex min-h-[720px]">
-          <div className="w-20 min-w-20 bg-white border-r border-gray-300 shrink-0 select-none">
-            {TIME_SLOTS.map((time) => (
-              <div
-                key={time}
-                className="h-[120px] text-[11px] font-medium text-gray-400 text-center pt-3 border-b border-dashed border-gray-100"
-              >
-                {time}
-              </div>
-            ))}
+          <div className="w-16 md:w-20 lg:w-20 bg-white border-r border-gray-300 shrink-0 select-none">
+            {TIME_SLOTS &&
+              TIME_SLOTS.map((time) => (
+                <div
+                  key={time}
+                  className="h-[120px] text-[10px] md:text-[11px] lg:text-[11px] font-medium text-gray-400 text-center pt-3 border-b border-dashed border-gray-100"
+                >
+                  {time}
+                </div>
+              ))}
           </div>
 
-          <div className="flex-1 grid grid-cols-6 relative">
-            <div className="absolute inset-0 z-0 pointer-events-none flex flex-col">
-              {TIME_SLOTS.map((_, i) => (
-                <div
-                  key={i}
-                  className="h-[120px] w-full border-b border-[#C6C6C69E]"
-                />
-              ))}
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-6 lg:grid-cols-6 relative">
+            <div className="absolute inset-0 z-0 pointer-events-none hidden lg:flex flex-col">
+              {TIME_SLOTS &&
+                TIME_SLOTS.map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-[120px] w-full border-b border-[#C6C6C69E]"
+                  />
+                ))}
             </div>
 
-            {weekDays.map((dayObj) => (
+            {weekDays.map((dayObj, index) => (
               <div
                 key={dayObj.fullDate}
-                className="relative h-full border-r border-[#C6C6C69E] last:border-r-0 z-10"
+                className={`relative h-full border-r border-[#C6C6C69E] last:border-r-0 z-10 
+                  ${selectedDayIndex === index ? "block" : "hidden lg:block"}`}
               >
                 {getOverlappingEvents(
                   events
@@ -267,9 +300,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     >
                       <EventCard
                         event={event}
-                        onDelete={() => onDeleteRequest(event)}
-                        onEdit={() => onEditRequest(event)}
-                        onClick={() => onEventClick(event)}
+                        onDelete={() => onDeleteRequest?.(event)}
+                        onEdit={() => onEditRequest?.(event)}
+                        onClick={() => onEventClick?.(event)}
                       />
                     </div>
                   );

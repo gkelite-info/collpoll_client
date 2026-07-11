@@ -1,18 +1,17 @@
 "use client";
-import { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import CalendarToolbar from "./components/calenderToolbar";
 import CalendarGrid from "./components/CalendarGrid";
-import { getWeekDays } from "../../faculty/calendar/utils";
 import CalendarHeader from "./components/calenderHeader";
 import AddEventModal from "./modal/AddEventModal";
-import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import EventDetailsModal from "./components/eventDetailsModal";
 import { Trash } from "@phosphor-icons/react";
-
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import {
-  fetchFinanceCalendarEvents,
   deactivateFinanceCalendarEvent,
+  fetchFinanceCalendarEvents,
 } from "@/lib/helpers/finance/calendar/financeCalendarAPI";
 import {
   deactivateFinanceCalendarSection,
@@ -20,7 +19,6 @@ import {
   fetchFinanceCalendarSectionsWithDetails,
 } from "@/lib/helpers/finance/calendar/financeCalendarSectionsAPI";
 import toast from "react-hot-toast";
-import EventDetailsModal from "./components/eventDetailsModal";
 
 import { useUser } from "@/app/utils/context/UserContext";
 import HolidayCalendar from "@/app/(screens)/hr/calendar/components/HolidayCalendar";
@@ -28,7 +26,7 @@ import HolidayCalendarShimmer from "@/app/(screens)/hr/calendar/components/Holid
 import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/holidayAPI";
 import { Loader } from "../../(student)/calendar/right/timetable";
 
-type FinanceCalendarEvent = {
+type ManagerCalendarEvent = {
   id: string;
   calendarEventId: number;
   financeCalendarSectionId?: number;
@@ -48,17 +46,17 @@ type FinanceCalendarEvent = {
 type FinanceCalendarSectionDetails = {
   financeCalendarSectionId?: number;
   college_branch?:
-    | { collegeBranchCode?: string }
-    | { collegeBranchCode?: string }[]
-    | null;
+  | { collegeBranchCode?: string }
+  | { collegeBranchCode?: string }[]
+  | null;
   college_academic_year?:
-    | { collegeAcademicYear?: string }
-    | { collegeAcademicYear?: string }[]
-    | null;
+  | { collegeAcademicYear?: string }
+  | { collegeAcademicYear?: string }[]
+  | null;
   college_sections?:
-    | { collegeSections?: string }
-    | { collegeSections?: string }[]
-    | null;
+  | { collegeSections?: string }
+  | { collegeSections?: string }[]
+  | null;
 };
 
 const CalendarShimmer = () => (
@@ -100,6 +98,31 @@ const CalendarShimmer = () => (
   </div>
 );
 
+const getWeekDays = (startDate: Date) => {
+  const days = [];
+  const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+  // Find the Monday of the week
+  const monday = new Date(startDate);
+  const day = monday.getDay();
+  const diff = monday.getDate() - day + (day === 0 ? -6 : 1); // Adjust if Sunday
+  monday.setDate(diff);
+
+  for (let i = 0; i < 6; i++) {
+    const date = new Date(monday);
+    date.setDate(date.getDate() + i);
+    const fullDate = date.toISOString().split("T")[0];
+
+    days.push({
+      day: dayNames[i],
+      date: date.getDate(),
+      fullDate,
+    });
+  }
+
+  return days;
+};
+
 function PageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -107,23 +130,19 @@ function PageContent() {
   const activeMainTab = tabQuery === "Holidays" ? "Holidays" : "Academics";
 
   const [activeTab, setActiveTab] = useState("All Scheduled");
-  const [currentDate, setCurrentDate] = useState(new Date());
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [eventToEdit, setEventToEdit] =
-    useState<FinanceCalendarEvent | null>(null);
-
+    useState<ManagerCalendarEvent | null>(null);
   const [selectedEvent, setSelectedEvent] =
-    useState<FinanceCalendarEvent | null>(null);
+    useState<ManagerCalendarEvent | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-
   const [eventToDelete, setEventToDelete] =
-    useState<FinanceCalendarEvent | null>(null);
+    useState<ManagerCalendarEvent | null>(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [events, setEvents] = useState<ManagerCalendarEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
-
-  const [events, setEvents] = useState<FinanceCalendarEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   const { financeManagerId, loading: fmLoading } = useFinanceManager();
   const { collegeId } = useUser();
@@ -151,7 +170,7 @@ function PageContent() {
     }
   }, [activeMainTab, loadHolidays, holidayYear, collegeId]);
 
-  const weekDays = getWeekDays(currentDate);
+  const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
 
   const loadEvents = useCallback(async () => {
     if (fmLoading) return;
@@ -160,19 +179,19 @@ function PageContent() {
       setIsLoading(false);
       return;
     }
+
     setIsLoading(true);
     try {
-      const createdBy = financeManagerId;
-      const fetchedEvents = await fetchFinanceCalendarEvents(createdBy);
+      const fetchedEvents = await fetchFinanceCalendarEvents(financeManagerId);
 
       const eventGroups = await Promise.all(
-        fetchedEvents.map(async (ev): Promise<FinanceCalendarEvent[]> => {
+        fetchedEvents.map(async (ev): Promise<ManagerCalendarEvent[]> => {
           const sections = await fetchFinanceCalendarSectionsWithDetails(
             ev.financeCalendarId,
           );
-          let branch = "All",
-            year = "All",
-            section = "All";
+          let branch = "All";
+          let year = "All";
+          let section = "All";
 
           if (sections.length > 0) {
             const firstSec = sections[0] as FinanceCalendarSectionDetails;
@@ -196,7 +215,7 @@ function PageContent() {
           const createEvent = (
             sectionName: string,
             financeCalendarSectionId?: number,
-          ): FinanceCalendarEvent => ({
+          ): ManagerCalendarEvent => ({
             id: financeCalendarSectionId
               ? `${ev.financeCalendarId}-${financeCalendarSectionId}`
               : ev.financeCalendarId.toString(),
@@ -231,9 +250,11 @@ function PageContent() {
           });
         }),
       );
+
       setEvents(eventGroups.flat());
     } catch (error) {
       console.error("Error loading calendar events:", error);
+      toast.error("Failed to load calendar events");
     } finally {
       setIsLoading(false);
     }
@@ -241,7 +262,7 @@ function PageContent() {
 
   useEffect(() => {
     loadEvents();
-  }, [currentDate, loadEvents]);
+  }, [loadEvents]);
 
   // WEEK NAVIGATION CARROTS
   const handleNextWeek = () => {
@@ -256,7 +277,6 @@ function PageContent() {
     setCurrentDate(prev);
   };
 
-  // DELETE LOGIC SEAMLESS
   const handleDeleteConfirm = async () => {
     if (!eventToDelete) return;
 
@@ -264,8 +284,8 @@ function PageContent() {
     try {
       const result = eventToDelete.financeCalendarSectionId
         ? await deactivateFinanceCalendarSection(
-            eventToDelete.financeCalendarSectionId,
-          )
+          eventToDelete.financeCalendarSectionId,
+        )
         : await deactivateFinanceCalendarEvent(eventToDelete.calendarEventId);
 
       if (!result.success) {
@@ -289,8 +309,8 @@ function PageContent() {
         setEventToDelete(null);
         setIsDeleting(false);
         setDeleteSuccess(false);
-        loadEvents(); // SEAMLESS REFRESH
-      }, 1500);
+        loadEvents();
+      }, 1000);
     } catch {
       toast.error("Failed to delete event");
       setIsDeleting(false);
@@ -311,7 +331,7 @@ function PageContent() {
               : "Stay organized and on track with your personalised calendar"}
           </p>
         </div>
-        <CourseScheduleCard style="w-[320px]" />
+        <CourseScheduleCard style="w-[320px]" isVisibile={false} />
       </section>
 
       <div className="flex gap-3 mb-5 mt-2">
@@ -345,22 +365,32 @@ function PageContent() {
         </div>
       ) : (
         <>
-          <div className="flex justify-between items-center">
-            <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
-            <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
-
-            <AddEventModal
-              isOpen={isModalOpen}
-              editData={eventToEdit}
-              onSuccess={loadEvents}
-              onClose={() => {
-                setIsModalOpen(false);
-                setEventToEdit(null);
+          <div className="flex flex-col md:flex-row justify-between md:items-center mb-2 gap-4">
+            <CalendarToolbar
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              currentDate={currentDate}
+              onMonthYearChange={(month, year) => {
+                const updated = new Date(currentDate);
+                updated.setMonth(month);
+                updated.setFullYear(year);
+                setCurrentDate(updated);
               }}
             />
+            <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
           </div>
 
-          <div className="bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden relative mt-4">
+          <AddEventModal
+            isOpen={isModalOpen}
+            editData={eventToEdit}
+            onSuccess={loadEvents}
+            onClose={() => {
+              setIsModalOpen(false);
+              setEventToEdit(null);
+            }}
+          />
+
+          <div className="w-full h-[80vh] bg-[#f3f4f6] text-gray-800 mt-4">
             {isLoading || fmLoading ? (
               <CalendarShimmer />
             ) : (
@@ -439,7 +469,7 @@ function PageContent() {
   );
 }
 
-export default function FinanceCalendarPage() {
+export default function FinanceManagerCalendarPage() {
   return (
     <Suspense
       fallback={

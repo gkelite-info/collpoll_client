@@ -152,7 +152,7 @@ const AddUserModal: React.FC<{
   const [selectedWellbeingEducationTypes, setSelectedWellbeingEducationTypes] =
     useState<string[]>([]);
   const [sessionOptions, setSessionOptions] = useState<
-    { id: number; label: string; value: number }[]
+    { id: number; label: string; value: number, collegeEducationId?: number }[]
   >([]);
   const [adminEducationOptions, setAdminEducationOptions] = useState<any[]>([]);
 
@@ -304,6 +304,14 @@ const AddUserModal: React.FC<{
         )
         : [],
     [dbData.branches, selectedEducation],
+  );
+
+  const filteredSessionOptions = useMemo(
+    () =>
+      selectedEducationId
+        ? sessionOptions.filter((s) => s.collegeEducationId === selectedEducationId)
+        : sessionOptions,
+    [sessionOptions, selectedEducationId]
   );
 
   // const filteredYears = useMemo(
@@ -2010,7 +2018,7 @@ const AddUserModal: React.FC<{
                   <CustomMultiSelect
                     label="Academic Session"
                     placeholder="Select Session Period"
-                    options={sessionOptions.map((s) => s.label)}
+                    options={filteredSessionOptions.map((s) => s.label)}
                     selectedValues={selectedSessionType}
                     disabled={selectedEntryType.length === 0}
                     onChange={(v) =>

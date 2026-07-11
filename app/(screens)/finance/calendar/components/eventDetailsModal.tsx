@@ -61,6 +61,21 @@ export default function EventDetailsModal({ open, event, onClose }: Props) {
         <div className="space-y-2.5 text-sm">
           <Detail label="Date" value={dateStr} />
           <Detail label="Time" value={timeStr} />
+          {event.participantName && (
+            <div className="flex items-center gap-2 py-2 px-3 bg-purple-50 rounded-lg">
+              <div className="w-6 h-6 rounded-full bg-purple-200 flex items-center justify-center text-xs font-bold text-purple-700">
+                {event.participantName.charAt(0)}
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-gray-900">
+                  {event.participantName}
+                </div>
+                {event.participantId && (
+                  <div className="text-xs text-gray-600">ID: {event.participantId}</div>
+                )}
+              </div>
+            </div>
+          )}
           <Detail label="Branch" value={event.branch} />
           <Detail label="Year" value={event.year} />
           <Detail label="Section" value={event.section} />

@@ -1,8 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
 
-// ==========================================
-// INTERFACES
-// ==========================================
 export interface ReminderFilters {
   searchTerm?: string;
   educationType?: string;
@@ -428,24 +425,44 @@ function determineYearFromSem(sem: string | number): string {
 // DASHBOARD FETCHERS
 // ==========================================
 
-export async function fetchReminderFilterOptions(collegeId: number) {
+export async function fetchReminderFilterOptions(
+  collegeId: number,
+  collegeEducationId: number | null = null
+) {
   try {
-    const [eduData, branchData, semData] = await Promise.all([
+    let branchQuery = supabase
+      .from("college_branch")
+      .select("collegeBranchCode")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true);
+
+    let semQuery = supabase
+      .from("college_semester")
+      .select("collegeSemester")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true);
+
+    let yearQuery = supabase
+      .from("college_academic_year")
+      .select("collegeAcademicYear")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true);
+
+    if (collegeEducationId) {
+      branchQuery = branchQuery.eq("collegeEducationId", collegeEducationId);
+      semQuery = semQuery.eq("collegeEducationId", collegeEducationId);
+      yearQuery = yearQuery.eq("collegeEducationId", collegeEducationId);
+    }
+
+    const [eduData, branchData, semData, yearData] = await Promise.all([
       supabase
         .from("college_education")
         .select("collegeEducationType")
         .eq("collegeId", collegeId)
         .eq("isActive", true),
-      supabase
-        .from("college_branch")
-        .select("collegeBranchCode")
-        .eq("collegeId", collegeId)
-        .eq("isActive", true),
-      supabase
-        .from("college_semester")
-        .select("collegeSemester")
-        .eq("collegeId", collegeId)
-        .eq("isActive", true),
+      branchQuery,
+      semQuery,
+      yearQuery,
     ]);
 
     const educationTypes = [
@@ -465,10 +482,15 @@ export async function fetchReminderFilterOptions(collegeId: number) {
     ).sort((a, b) => a - b);
     const sems = ["All", ...rawSems.map(String)];
 
-    return { educationTypes, branches, sems };
+    const rawYears = Array.from(
+      new Set(yearData.data?.map((y: any) => String(y.collegeAcademicYear)) || [])
+    ).sort((a, b) => a.localeCompare(b));
+    const years = ["All", ...rawYears];
+
+    return { educationTypes, branches, sems, years };
   } catch (error) {
     console.error("Error fetching filter options:", error);
-    return { educationTypes: ["All"], branches: ["All"], sems: ["All"] };
+    return { educationTypes: ["All"], branches: ["All"], sems: ["All"], years: ["All"] };
   }
 }
 
