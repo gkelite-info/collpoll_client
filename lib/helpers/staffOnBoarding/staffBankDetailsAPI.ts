@@ -8,6 +8,8 @@ export type StaffBankRow = {
     ifscCode: string;
     accountHolderName: string;
     branch: string | null;
+    pfNumber: string | null;
+    esiNumber: string | null;
     isPrimary: boolean | null;
     isActive: boolean | null;
     createdAt: string;
@@ -25,6 +27,8 @@ export async function fetchStaffBanks(userId: number) {
       ifscCode,
       accountHolderName,
       branch,
+      pfNumber,
+      esiNumber,
       isPrimary,
       isActive,
       createdAt,
@@ -51,7 +55,9 @@ export async function fetchPrimaryStaffBank(userId: number) {
       accountNumber,
       ifscCode,
       accountHolderName,
-      branch
+      branch,
+      pfNumber,
+      esiNumber
     `)
         .eq("userId", userId)
         .eq("isPrimary", true)
@@ -78,6 +84,8 @@ export async function saveStaffBank(
         ifscCode: string;
         accountHolderName: string;
         branch?: string | null;
+        pfNumber?: string | null;
+        esiNumber?: string | null;
     }
 ) {
     const now = new Date().toISOString();
@@ -89,6 +97,8 @@ export async function saveStaffBank(
         ifscCode: payload.ifscCode.trim(),
         accountHolderName: payload.accountHolderName.trim(),
         branch: payload.branch ?? null,
+        pfNumber: payload.pfNumber?.trim() || null,
+        esiNumber: payload.esiNumber?.trim() || null,
         updatedAt: now,
     };
 

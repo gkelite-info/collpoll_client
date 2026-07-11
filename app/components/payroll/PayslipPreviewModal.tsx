@@ -226,9 +226,9 @@ export default function PayslipPreviewModal({ entryId, onClose }: PayslipPreview
 
       // 2. Employee Details
       pdf.setFillColor(248, 250, 252);
-      pdf.roundedRect(margin, currentY, pageWidth - margin * 2, 45, 3, 3, "F");
+      pdf.roundedRect(margin, currentY, pageWidth - margin * 2, 60, 3, 3, "F");
       pdf.setDrawColor(241, 245, 249);
-      pdf.roundedRect(margin, currentY, pageWidth - margin * 2, 45, 3, 3, "S");
+      pdf.roundedRect(margin, currentY, pageWidth - margin * 2, 60, 3, 3, "S");
 
       currentY += 10;
       pdf.setFontSize(7);
@@ -246,6 +246,23 @@ export default function PayslipPreviewModal({ entryId, onClose }: PayslipPreview
       pdf.text(data.user?.fullName || "N/A", margin + 5, currentY);
       pdf.text(data.user?.employee_ids?.employeeId || "N/A", margin + 65, currentY);
       pdf.text(data.user?.email || "N/A", margin + 125, currentY);
+
+      currentY += 12;
+      pdf.setFontSize(7);
+      pdf.setTextColor(148, 163, 184);
+      pdf.setFont("helvetica", "bold");
+      
+      // Row 2 Headings
+      pdf.text("PF NUMBER", margin + 5, currentY);
+      pdf.text("ESI NUMBER", margin + 65, currentY);
+
+      currentY += 5;
+      pdf.setFontSize(10);
+      pdf.setTextColor(15, 23, 42);
+      const pfNum = data.user?.staff_bank_details?.[0]?.pfNumber || "N/A";
+      const esiNum = data.user?.staff_bank_details?.[0]?.esiNumber || "N/A";
+      pdf.text(pfNum, margin + 5, currentY);
+      pdf.text(esiNum, margin + 65, currentY);
 
       currentY += 12;
       pdf.setFontSize(7);
@@ -423,7 +440,7 @@ export default function PayslipPreviewModal({ entryId, onClose }: PayslipPreview
 
                 {/* Employee Details Grid */}
                 <div className="bg-gray-50/80 rounded-xl p-5 mb-8 border border-gray-100">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-5 gap-x-8">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-y-5 gap-x-8">
                     <div>
                       <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider mb-1">Employee Name</p>
                       <p className="font-bold text-gray-900 text-sm">{data.user?.fullName}</p>
@@ -432,9 +449,17 @@ export default function PayslipPreviewModal({ entryId, onClose }: PayslipPreview
                       <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider mb-1">Employee ID</p>
                       <p className="font-bold text-gray-900 text-sm">{data.user?.employee_ids?.employeeId || "N/A"}</p>
                     </div>
+                    <div>
+                      <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider mb-1">PF Number</p>
+                      <p className="font-bold text-gray-900 text-sm">{data.user?.staff_bank_details?.[0]?.pfNumber || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider mb-1">ESI Number</p>
+                      <p className="font-bold text-gray-900 text-sm">{data.user?.staff_bank_details?.[0]?.esiNumber || "N/A"}</p>
+                    </div>
                     <div className="col-span-2 sm:col-span-1">
                       <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider mb-1">Email</p>
-                      <p className="font-bold text-gray-900 text-sm truncate">{data.user?.email}</p>
+                      <p className="font-bold text-gray-900 text-sm break-all">{data.user?.email}</p>
                     </div>
                     
                     <div>

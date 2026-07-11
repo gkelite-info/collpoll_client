@@ -105,7 +105,7 @@ export default function MyAttendanceRight() {
       <div className="w-[32%] p-2 flex flex-col">
         <CourseScheduleCard />
         <WorkWeekCalendar />
-        <TaskPanel studentTasks={myTasks} role="student" />
+        {/* <TaskPanel studentTasks={myTasks} role="student" /> */}
         <AnnouncementsCard
           announceCard={announcements}
           height="80vh"

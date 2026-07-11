@@ -125,6 +125,8 @@ export const saveEmployeeOnboardingDetails = async (
       ifscCode: formData.ifscCode,
       accountHolderName: formData.accountHolderName,
       branch: formData.branch,
+      pfNumber: formData.pfNumber,
+      esiNumber: formData.esiNumber,
     });
     if (!bankRes.success) throw new Error("Failed to save Bank Details.");
 

@@ -46,6 +46,10 @@ export default function LogsTab() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(initialSearch);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [errorModalContent, setErrorModalContent] = useState<string | null>(null);
+  
+  const [triggerDate, setTriggerDate] = useState<string>(
+    new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+  );
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -136,13 +140,12 @@ export default function LogsTab() {
     setIsConfirmModalOpen(false);
     setTriggering(true);
     try {
-      const date = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
       const res = await fetch("/api/hr/re-finalize", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ targetDate: date, userId })
+        body: JSON.stringify({ targetDate: triggerDate, userId })
       });
       
       const data = await res.json();
@@ -257,21 +260,37 @@ export default function LogsTab() {
             <p className="text-sm text-gray-500 mt-1">History of the nightly EOD attendance calculation runs</p>
           </div>
           
-          <button
-            onClick={() => setIsConfirmModalOpen(true)}
-            disabled={triggering}
-            className="px-4 h-[42px] bg-gradient-to-r from-[#6C20CA] to-[#8C3BEA] text-white text-sm font-medium rounded-xl shadow hover:shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
-          >
-            {triggering ? (
-              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-            )}
-            Trigger Run Manually
-          </button>
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <div className="relative group w-full sm:w-40">
+              <div className="absolute inset-0 flex items-center pl-10 pr-4 border border-gray-200 rounded-xl bg-gray-50 text-sm transition-all group-hover:bg-gray-100/50 group-focus-within:ring-2 group-focus-within:ring-[#6C20CA]/20 group-focus-within:border-[#6C20CA] pointer-events-none">
+                {triggerDate ? <span className="text-gray-700 font-medium">{triggerDate.split("-").reverse().join("/")}</span> : <span className="text-gray-400 font-medium">Select Date</span>}
+              </div>
+              <input
+                type="date"
+                max={new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })}
+                value={triggerDate}
+                onChange={(e) => setTriggerDate(e.target.value)}
+                className="w-full opacity-0 cursor-pointer h-[42px] z-10 relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+              />
+              <CalendarDots className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 z-20 pointer-events-none" size={18} />
+            </div>
+
+            <button
+              onClick={() => setIsConfirmModalOpen(true)}
+              disabled={triggering || !triggerDate}
+              className="px-4 h-[42px] w-full sm:w-auto bg-gradient-to-r from-[#6C20CA] to-[#8C3BEA] text-white text-sm font-medium rounded-xl shadow hover:shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
+            >
+              {triggering ? (
+                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              )}
+              Trigger Run Manually
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 w-full pt-2 border-t border-gray-50">
@@ -376,8 +395,8 @@ export default function LogsTab() {
         onCancel={() => setIsConfirmModalOpen(false)}
         onConfirm={handleManualTrigger}
         title="Trigger"
-        name="EOD Finalization Manually"
-        customDescription="Are you sure you want to run the EOD Attendance Finalization now? This will recalculate today's attendance."
+        name={`EOD Finalization Manually for ${triggerDate.split("-").reverse().join("/")}`}
+        customDescription={`Are you sure you want to run the EOD Attendance Finalization for ${triggerDate.split("-").reverse().join("/")}? This will recalculate attendance for this date.`}
         confirmText="Yes, Run Now"
         actionType="accept"
         isDeleting={triggering}

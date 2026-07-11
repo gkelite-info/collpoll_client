@@ -146,7 +146,9 @@ const MyAttendanceLeft = ({
   //   );
   // }
 
-  const showRightSidebar = !(activeMainTab === "payroll" && activePayrollTab === "reimbursements");
+  // Hide right sidebar if onBack is provided (meaning we are inside the Dashboard view)
+  // or if we are on the reimbursements tab
+  const showRightSidebar = !onBack && !(activeMainTab === "payroll" && activePayrollTab === "reimbursements");
 
   return (
     <div className="flex w-full items-start justify-between">
