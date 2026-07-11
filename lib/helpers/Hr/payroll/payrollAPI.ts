@@ -250,6 +250,7 @@ export async function getPayrollEntryDetails(entryId: number) {
         email,
         collegeId,
         employee_ids ( employeeId ),
+        staff_bank_details ( pfNumber, esiNumber ),
         employee_pay_profiles (
           employee_payroll_compliance_values ( amount, payroll_compliance_types ( title ) )
         )

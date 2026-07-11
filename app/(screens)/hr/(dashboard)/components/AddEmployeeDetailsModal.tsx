@@ -30,6 +30,8 @@ export default function AddEmployeeModal({
     accountHolderName: "",
     branch: "",
     staffBankId: undefined as number | undefined,
+    pfNumber: "",
+    esiNumber: "",
 
     // Aadhaar
     aadhaarNumber: "",
@@ -58,6 +60,8 @@ export default function AddEmployeeModal({
         accountHolderName: user.bankDetails?.accountHolderName || "",
         branch: user.bankDetails?.branch || "",
         staffBankId: user.bankDetails?.staffBankId,
+        pfNumber: user.bankDetails?.pfNumber || "",
+        esiNumber: user.bankDetails?.esiNumber || "",
 
         aadhaarNumber: user.aadhaarDetails?.aadhaarNumber || "",
         aadhaarDob: user.aadhaarDetails?.dateOfBirth || "",
@@ -114,10 +118,15 @@ export default function AddEmployeeModal({
         // Allows letters, numbers, spaces, hyphens, dots, and commas
         isValid = /^[a-zA-Z0-9\s\-\.\,]*$/.test(value);
         break;
-      case "enrollmentNumber":
-        // Allows alphanumeric, spaces, hyphens, and slashes
-        isValid = /^[a-zA-Z0-9\s\-\/]*$/.test(value);
-        break;
+    case "pfNumber":
+    case "esiNumber":
+      // PF number / ESI number can be alphanumeric and contain slashes or hyphens
+      isValid = /^[a-zA-Z0-9\s\-\/]*$/.test(value);
+      break;
+    case "enrollmentNumber":
+      // Allows alphanumeric, spaces, hyphens, and slashes
+      isValid = /^[a-zA-Z0-9\s\-\/]*$/.test(value);
+      break;
       default:
         break;
     }
@@ -136,6 +145,8 @@ export default function AddEmployeeModal({
       accountHolderName: "",
       branch: "",
       staffBankId: undefined,
+      pfNumber: "",
+      esiNumber: "",
       aadhaarNumber: "",
       aadhaarDob: "",
       address: "",
@@ -405,6 +416,7 @@ export default function AddEmployeeModal({
           <h4 className="font-bold text-[#333] text-[13px] mb-3">Photo ID</h4>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-[13px]">
+            {/* Row 1 */}
             <div className="flex items-center justify-between">
               <label className="font-bold text-[#333] w-[130px]">
                 Aadhaar Number
@@ -417,6 +429,49 @@ export default function AddEmployeeModal({
                 onChange={handleChange}
                 placeholder="Enter 12-digit Aadhaar"
                 className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-[#333] w-[130px]">
+                PF Number
+              </label>
+              <input
+                type="text"
+                maxLength={25}
+                name="pfNumber"
+                value={formData.pfNumber}
+                onChange={handleChange}
+                placeholder="Enter PF Number"
+                className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A] uppercase"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-[#333] w-[130px]">
+                ESI Number
+              </label>
+              <input
+                type="text"
+                maxLength={17}
+                name="esiNumber"
+                value={formData.esiNumber}
+                onChange={handleChange}
+                placeholder="Enter ESI Number"
+                className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A] uppercase"
+              />
+            </div>
+
+            {/* Row 2 */}
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-[#333] w-[130px]">
+                Date of Birth
+              </label>
+              <input
+                type="date"
+                name="aadhaarDob"
+                value={formData.aadhaarDob}
+                onChange={handleChange}
+                className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A] cursor-pointer"
               />
             </div>
             <div className="flex items-center justify-between">
@@ -434,16 +489,16 @@ export default function AddEmployeeModal({
               />
             </div>
 
+            {/* Row 3 */}
             <div className="flex items-center justify-between">
-              <label className="font-bold text-[#333] w-[130px]">
-                Date of Birth
-              </label>
+              <label className="font-bold text-[#333] w-[130px]">Address</label>
               <input
-                type="date"
-                name="aadhaarDob"
-                value={formData.aadhaarDob}
+                type="text"
+                name="address"
+                value={formData.address}
                 onChange={handleChange}
-                className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A] cursor-pointer"
+                placeholder="Enter address (Optional)"
+                className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
               />
             </div>
             <div className="flex items-center justify-between">
@@ -459,14 +514,18 @@ export default function AddEmployeeModal({
               />
             </div>
 
+            {/* Row 4 */}
             <div className="flex items-center justify-between">
-              <label className="font-bold text-[#333] w-[130px]">Address</label>
+              <label className="font-bold text-[#333] w-[130px]">
+                Enrollment Number
+              </label>
               <input
                 type="text"
-                name="address"
-                value={formData.address}
+                name="enrollmentNumber"
+                value={formData.enrollmentNumber}
                 onChange={handleChange}
-                placeholder="Enter address (Optional)"
+                placeholder="Optional"
+                maxLength={30}
                 className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
               />
             </div>
@@ -483,17 +542,16 @@ export default function AddEmployeeModal({
               />
             </div>
 
+            {/* Row 5 */}
             <div className="flex items-center justify-between">
-              <label className="font-bold text-[#333] w-[130px]">
-                Enrollment Number
-              </label>
+              <label className="font-bold text-[#333] w-[130px]">Name</label>
               <input
                 type="text"
-                name="enrollmentNumber"
-                value={formData.enrollmentNumber}
+                name="nameOnAadhaar"
+                value={formData.nameOnAadhaar}
                 onChange={handleChange}
-                placeholder="Optional"
-                maxLength={30}
+                placeholder="Name on Aadhaar"
+                maxLength={100}
                 className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
               />
             </div>
@@ -512,32 +570,19 @@ export default function AddEmployeeModal({
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <label className="font-bold text-[#333] w-[130px]">Name</label>
-              <input
-                type="text"
-                name="nameOnAadhaar"
-                value={formData.nameOnAadhaar}
-                onChange={handleChange}
-                placeholder="Name on Aadhaar"
-                maxLength={100}
-                className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
-              />
-            </div>
-
             {/* Buttons aligned to Bottom Right */}
-            <div className="flex justify-end gap-3 mt-4 md:col-start-2 md:row-start-5 md:row-span-2 items-end z-20">
+            <div className="flex flex-wrap justify-end items-center gap-2 sm:gap-3 w-full h-full md:col-start-2 md:row-start-6 z-20 mt-4 md:mt-0">
               <button
                 onClick={handleClose}
                 disabled={isSaving}
-                className={`px-8 py-2 bg-gray-200 hover:bg-gray-300 text-[#333] font-bold rounded transition-colors ${isSaving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                className={`px-4 sm:px-6 py-2 bg-gray-200 hover:bg-gray-300 text-[#333] font-bold rounded transition-colors whitespace-nowrap flex items-center justify-center ${isSaving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className={`px-8 py-2 bg-[#43C17A] hover:bg-[#3ba869] text-white font-bold rounded transition-all flex items-center justify-center min-w-[150px] ${isSaving ? "opacity-80 cursor-not-allowed" : "cursor-pointer"}`}
+                className={`px-4 sm:px-6 py-2 bg-[#43C17A] hover:bg-[#3ba869] text-white font-bold rounded transition-all whitespace-nowrap flex items-center justify-center ${isSaving ? "opacity-80 cursor-not-allowed" : "cursor-pointer"}`}
               >
                 {isSaving ? (
                   <>

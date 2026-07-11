@@ -25,6 +25,14 @@ const ROLE_TABLE_MAP: Record<string, { tableName: string; idColumn: string }> =
       tableName: "finance_manager",
       idColumn: "financeManagerId",
     },
+    accountant: {
+      tableName: "accountants",
+      idColumn: "accountantId",
+    },
+    placementofficer: {
+      tableName: "placement_employee",
+      idColumn: "placementEmployeeId",
+    },
   };
 
 const normalizeRole = (role: string) =>

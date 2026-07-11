@@ -200,7 +200,7 @@ export function PayslipsSection({ userId }: PayslipsSectionProps) {
         </div>
 
         {/* Server-Side Pagination */}
-        {totalPayslips > 0 && !isFetchingSlips && (
+        {paySlips.length > 0 && totalPayslips > 0 && !isFetchingSlips && (
           <div className="mt-1 border border-gray-100 rounded-xl overflow-hidden shadow-sm">
             <Pagination
               currentPage={currentPage}
