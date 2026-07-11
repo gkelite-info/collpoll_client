@@ -7,7 +7,6 @@ export interface CalendarEvent {
   type: EventType;
   startTime: string;
   endTime: string;
-  // year?: string[];
   subjectName?: string;
   subjectCode?: string;
   subjectKey?: string;
@@ -15,7 +14,10 @@ export interface CalendarEvent {
   branch?: string;
   section?: string;
   day: string;
-  rawFormData?: any;
+  rawFormData?: unknown;
+  participantName?: string;
+  participantId?: string;
+  participantAvatar?: string;
 }
 
 export interface WeekDay {
@@ -24,28 +26,21 @@ export interface WeekDay {
   fullDate: string;
 }
 
-
-
 export type CalendarEventUI = {
   calendarEventId: number;
   facultyId: number;
-
   eventTitle: string;
   eventTopic: string;
   type: string;
   date: string;
-
   roomNo: string;
   fromTime: string;
   toTime: string;
-
   degree: string;
   year: string;
-
   departments: string[];
   sections: string[];
   semester: string;
-
   createdAt: string;
   updatedAt: string;
 };

@@ -19,6 +19,7 @@ import { ScheduleReminderModal } from "../modals/ScheduleReminderModal";
 import { SendFeeReminderModal } from "../modals/sendFeeReminderModal";
 import ReminderHistory from "./ReminderHistory";
 import { useUser } from "@/app/utils/context/UserContext";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import {
   fetchPaymentReminderStats,
   fetchReminderFilterOptions,
@@ -111,9 +112,9 @@ const FilterDropdown = ({ label, value, options, onChange }: Props) => (
 const PaymentReminder = () => {
   const router = useRouter();
   const { collegeId } = useUser();
+  const { collegeEducationIds, collegeEducationTypes } = useFinanceManager();
   const activeCollegeId = collegeId || 1;
 
-  // --- UI States ---
   const [activeTab, setActiveTab] = useState<"dues" | "history">("dues");
   const [modalState, setModalState] = useState<
     "none" | "student" | "faculty" | "schedule"
@@ -123,7 +124,6 @@ const PaymentReminder = () => {
   const [isStatsLoading, setIsStatsLoading] = useState(true);
   const [isTableLoading, setIsTableLoading] = useState(true);
 
-  // --- Filter States ---
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 500);
 
@@ -139,8 +139,8 @@ const PaymentReminder = () => {
     educationTypes: ["All"],
     branches: ["All"],
     sems: ["All"],
+    years: ["All"],
   });
-  const [availableYears, setAvailableYears] = useState<string[]>(["All"]);
 
   const [studentsData, setStudentsData] = useState<any[]>([]);
   const [dashboardStats, setDashboardStats] = useState({
@@ -154,14 +154,48 @@ const PaymentReminder = () => {
     const initializeDashboard = async () => {
       setIsStatsLoading(true);
       const options = await fetchReminderFilterOptions(activeCollegeId);
-      setDropdownOptions(options);
+      setDropdownOptions({
+        ...options,
+        educationTypes: ["All", ...(collegeEducationTypes || [])]
+      });
 
       const statsData = await fetchPaymentReminderStats(activeCollegeId);
       setDashboardStats(statsData);
       setIsStatsLoading(false);
     };
-    initializeDashboard();
-  }, [activeCollegeId]);
+    if (activeCollegeId && collegeEducationTypes) {
+      initializeDashboard();
+    }
+  }, [activeCollegeId, collegeEducationTypes]);
+
+  useEffect(() => {
+    const fetchDynamicDropdowns = async () => {
+      if (filters.educationType === "All") {
+        const options = await fetchReminderFilterOptions(activeCollegeId);
+        setDropdownOptions(prev => ({
+          ...prev,
+          branches: options.branches,
+          sems: options.sems,
+          years: options.years
+        }));
+      } else {
+        const idx = collegeEducationTypes?.indexOf(filters.educationType);
+        if (idx !== undefined && idx !== -1) {
+          const edId = collegeEducationIds[idx];
+          const options = await fetchReminderFilterOptions(activeCollegeId, edId);
+          setDropdownOptions(prev => ({
+            ...prev,
+            branches: options.branches,
+            sems: options.sems,
+            years: options.years
+          }));
+        }
+      }
+    };
+    if (activeCollegeId) {
+      fetchDynamicDropdowns();
+    }
+  }, [filters.educationType, activeCollegeId, collegeEducationTypes, collegeEducationIds]);
 
   useEffect(() => {
     const loadFilteredStudents = async () => {
@@ -169,7 +203,6 @@ const PaymentReminder = () => {
 
       const result = await fetchStudentsWithDues(activeCollegeId, payload);
       setStudentsData(result.data);
-      setAvailableYears(result.availableYears);
       setSelectedRows([]);
       setIsTableLoading(false);
     };
@@ -272,15 +305,14 @@ const PaymentReminder = () => {
     // Beautiful dynamic status badges
     status: (
       <span
-        className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${
-          student.status === "Sent"
-            ? "bg-[#E6FBEA] text-[#43C17A]"
-            : student.status === "Scheduled"
-              ? "bg-[#FFEDDA] text-[#FFBB70]"
-              : student.status === "Failed"
-                ? "bg-[#FFE5E5] text-[#FF4D4D]"
-                : "bg-gray-100 text-gray-500"
-        }`}
+        className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${student.status === "Sent"
+          ? "bg-[#E6FBEA] text-[#43C17A]"
+          : student.status === "Scheduled"
+            ? "bg-[#FFEDDA] text-[#FFBB70]"
+            : student.status === "Failed"
+              ? "bg-[#FFE5E5] text-[#FF4D4D]"
+              : "bg-gray-100 text-gray-500"
+          }`}
       >
         {student.status}
       </span>
@@ -340,7 +372,7 @@ const PaymentReminder = () => {
                   onChange={(v) => handleFilterChange("educationType", v)}
                 />
                 <FilterDropdown
-                  label="Branch"
+                  label={filters.educationType === "Inter" ? "Group" : "Branch"}
                   value={filters.branch}
                   options={dropdownOptions.branches}
                   onChange={(v) => handleFilterChange("branch", v)}
@@ -348,15 +380,17 @@ const PaymentReminder = () => {
                 <FilterDropdown
                   label="Year"
                   value={filters.year}
-                  options={availableYears}
+                  options={dropdownOptions.years}
                   onChange={(v) => handleFilterChange("year", v)}
                 />
-                <FilterDropdown
-                  label="Semester"
-                  value={filters.sem}
-                  options={dropdownOptions.sems}
-                  onChange={(v) => handleFilterChange("sem", v)}
-                />
+                {filters.educationType !== "Inter" && (
+                  <FilterDropdown
+                    label="Semester"
+                    value={filters.sem}
+                    options={dropdownOptions.sems}
+                    onChange={(v) => handleFilterChange("sem", v)}
+                  />
+                )}
                 <FilterDropdown
                   label="Due Period"
                   value={filters.duePeriod}
@@ -384,11 +418,10 @@ const PaymentReminder = () => {
         <div className="flex items-center gap-6">
           <button
             onClick={() => setActiveTab("dues")}
-            className={`flex items-center gap-2 pb-3 -mb-[13px] border-b-2 transition-colors cursor-pointer text-[17px] font-semibold ${
-              activeTab === "dues"
-                ? "border-[#43C17A] text-[#282828]"
-                : "border-transparent text-gray-400 hover:text-gray-600"
-            }`}
+            className={`flex items-center gap-2 pb-3 -mb-[13px] border-b-2 transition-colors cursor-pointer text-[17px] font-semibold ${activeTab === "dues"
+              ? "border-[#43C17A] text-[#282828]"
+              : "border-transparent text-gray-400 hover:text-gray-600"
+              }`}
           >
             <ListChecks
               size={22}
@@ -398,11 +431,10 @@ const PaymentReminder = () => {
           </button>
           <button
             onClick={() => setActiveTab("history")}
-            className={`flex items-center gap-2 pb-3 -mb-[13px] border-b-2 transition-colors cursor-pointer text-[17px] font-semibold ${
-              activeTab === "history"
-                ? "border-[#43C17A] text-[#282828]"
-                : "border-transparent text-gray-400 hover:text-gray-600"
-            }`}
+            className={`flex items-center gap-2 pb-3 -mb-[13px] border-b-2 transition-colors cursor-pointer text-[17px] font-semibold ${activeTab === "history"
+              ? "border-[#43C17A] text-[#282828]"
+              : "border-transparent text-gray-400 hover:text-gray-600"
+              }`}
           >
             <ClockCounterClockwise
               size={22}
@@ -420,7 +452,7 @@ const PaymentReminder = () => {
                 className="bg-[#5BB98C] hover:bg-[#4da57a] text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors cursor-pointer"
               >
                 {selectedRows.length === studentsData.length &&
-                studentsData.length > 0
+                  studentsData.length > 0
                   ? "Deselect All"
                   : "Select All"}
               </button>

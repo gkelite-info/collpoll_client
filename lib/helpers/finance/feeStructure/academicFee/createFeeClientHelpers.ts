@@ -54,3 +54,13 @@ export async function fetchFinanceManagerIdByUserId(userId: number) {
 
   return data?.financeManagerId || null;
 }
+
+export async function fetchCollegeBranches(collegeId: number, collegeEducationId: number) {
+  const { data } = await supabase
+    .from("college_branch")
+    .select("collegeBranchId, collegeBranchType, collegeBranchCode")
+    .eq("collegeId", collegeId)
+    .eq("collegeEducationId", collegeEducationId)
+    .eq("isActive", true);
+  return data || [];
+}

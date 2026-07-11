@@ -74,6 +74,8 @@ const Header = ({
   onBranchChange,
   year,
   onYearClick,
+  educationOptions,
+  onEducationChange,
 }: {
   educationType: string;
   branch: string;
@@ -81,6 +83,8 @@ const Header = ({
   onBranchChange: (val: string) => void;
   year: string;
   onYearClick: () => void;
+  educationOptions: DropdownOption[];
+  onEducationChange: (val: string) => void;
 }) => {
   const branchOptions =
     branches?.map((b) => ({
@@ -96,7 +100,12 @@ const Header = ({
         </h1>
 
         <div className="flex gap-4 text-[10px] font-semibold text-gray-500">
-          <Dropdown label="Education Type" value={educationType} disabled />
+          <Dropdown
+            label="Education Type"
+            value={educationType}
+            options={educationOptions}
+            onChange={onEducationChange}
+          />
           <Dropdown
             label="Branch"
             value={branch}
@@ -116,7 +125,12 @@ const Header = ({
         </div>
 
         <div className="bg-blue-00 flex gap-4 text-[10px] font-semibold text-gray-500 overflow-x-auto">
-          <Dropdown label="Education Type" value={educationType} disabled />
+          <Dropdown
+            label="Education Type"
+            value={educationType}
+            options={educationOptions}
+            onChange={onEducationChange}
+          />
           <Dropdown
             label="Branch"
             value={branch}
@@ -457,8 +471,15 @@ export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { collegeId, collegeEducationId, collegeEducationType, loading } =
-    useFinanceManager();
+  const {
+    collegeId,
+    collegeEducationId,
+    collegeEducationType,
+    collegeEducationTypes,
+    collegeEducationIds,
+    setEducation,
+    loading,
+  } = useFinanceManager();
 
   const [overallStudents, setOverallStudents] = useState<number>(0);
   const [branches, setBranches] = useState<any[]>([]);
@@ -485,14 +506,12 @@ export default function DashboardPage() {
   const [overallPending, setOverallPending] = useState<number>(0);
   const [pendingStudentsCount, setPendingStudentsCount] = useState<number>(0);
 
-  // ─── Loading states for shimmer ─────────────────────────────────────────────
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [loadingBranches, setLoadingBranches] = useState(true);
   const [loadingFinanceSummary, setLoadingFinanceSummary] = useState(true);
   const [loadingInsights, setLoadingInsights] = useState(true);
   const [loadingPending, setLoadingPending] = useState(true);
   const [loadingPendingStudents, setLoadingPendingStudents] = useState(true);
-  // ────────────────────────────────────────────────────────────────────────────
 
   const selectedBranchId =
     selectedBranch === "ALL"
@@ -767,6 +786,18 @@ export default function DashboardPage() {
         <div className="relative">
           <Header
             educationType={collegeEducationType ?? "-"}
+            educationOptions={
+              collegeEducationTypes?.map((type) => ({
+                label: type,
+                value: type,
+              })) || []
+            }
+            onEducationChange={(val) => {
+              const idx = collegeEducationTypes?.indexOf(val);
+              if (idx !== undefined && idx !== -1) {
+                setEducation(collegeEducationIds[idx], val);
+              }
+            }}
             branch={selectedBranch}
             year={selectedYear ?? "Year"}
             branches={branches}

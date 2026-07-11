@@ -8,16 +8,7 @@ import {
   Trash,
   PencilSimple,
 } from "@phosphor-icons/react";
-
-type FinanceCalendarCardEvent = {
-  title: string;
-  type?: string;
-  startTime: string;
-  endTime: string;
-  branch?: string;
-  year?: string;
-  section?: string;
-};
+import type { CalendarEvent } from "../types";
 
 const EVENT_STYLES = {
   meeting: {
@@ -52,12 +43,12 @@ const EventCard = ({
   onEdit,
   onClick,
 }: {
-  event: FinanceCalendarCardEvent;
+  event: CalendarEvent;
   onDelete?: () => void;
   onEdit?: () => void;
   onClick?: () => void;
 }) => {
-  const rawType = event.type?.toLowerCase() ?? "meeting";
+  const rawType = event.type?.toLowerCase();
 
   const eventType = (
     rawType in EVENT_STYLES ? rawType : "meeting"
@@ -144,9 +135,39 @@ const EventCard = ({
 
         <div className="px-3 py-2 shrink-0">
           <p className="text-sm font-medium" style={{ color: style.text }}>
-            {event.branch} - {event.year} - {event.section}
+            {[event.branch, event.year, event.section]
+              .filter(Boolean)
+              .join(" - ")}
           </p>
         </div>
+
+        {event.participantName && (
+          <div
+            className="flex items-center gap-3 px-4 pb-3 pt-2 text-sm font-medium"
+            style={{ color: style.text }}
+          >
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/70 text-xs font-bold">
+              {event.participantAvatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={event.participantAvatar}
+                  alt=""
+                  className="h-full w-full rounded-full object-cover"
+                />
+              ) : (
+                event.participantName.charAt(0)
+              )}
+            </div>
+            <span className="whitespace-nowrap text-base font-medium">
+              {event.participantName}
+            </span>
+            {event.participantId && (
+              <span className="ml-auto shrink-0 whitespace-nowrap pr-1 text-sm text-[#282828]">
+                ID : {event.participantId}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

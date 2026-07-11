@@ -1,7 +1,7 @@
 "use client";
 
 import { downloadFeePdf } from "@/lib/helpers/finance/downloadFeePdf";
-import { CaretDown, DownloadSimple, Pencil, Trash } from "@phosphor-icons/react";
+import { CaretDown, DownloadSimple, Pencil, Trash, Plus } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
@@ -21,7 +21,7 @@ export default function FeeStructureCard({
 }: FeeStructureCardProps) {
   const router = useRouter();
 
-  const [selectedId, setSelectedId] = useState(structures?.[0]?.feeStructureId);
+  const [selectedSessionId, setSelectedSessionId] = useState(structures?.[0]?.collegeSessionId);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -69,9 +69,9 @@ export default function FeeStructureCard({
   const currentData = useMemo(() => {
     if (!structures || structures.length === 0) return null;
     return (
-      structures.find((s) => s.feeStructureId === selectedId) || structures[0]
+      structures.find((s) => s.collegeSessionId === selectedSessionId) || structures[0]
     );
-  }, [structures, selectedId]);
+  }, [structures, selectedSessionId]);
 
   const sortedSessions = useMemo(() => {
     if (!structures || structures.length === 0) return [];
@@ -112,6 +112,25 @@ export default function FeeStructureCard({
     router.push(`?${params.toString()}`);
   };
 
+  const handleSetUp = () => {
+    const params = new URLSearchParams();
+    params.set("fee", "create-fee");
+    if (currentData) {
+      if (currentData.collegeBranchId) {
+        params.set("branchId", currentData.collegeBranchId.toString());
+      }
+      const sessionLabel = getSessionLabel(currentData);
+      if (sessionLabel && sessionLabel !== "Unknown Session") {
+        const parts = sessionLabel.split(/[-–]/);
+        if (parts.length >= 2) {
+          params.set("startYear", parts[0].trim());
+          params.set("endYear", parts[1].trim());
+        }
+      }
+    }
+    router.push(`?${params.toString()}`);
+  };
+
   const handleDelete = async () => {
     if (!currentData) return;
     setIsDeleting(true);
@@ -130,7 +149,7 @@ export default function FeeStructureCard({
       // If there's another session in this dropdown, switch to it safely
       const remaining = structures.filter((s) => s.feeStructureId !== targetId);
       if (remaining.length > 0) {
-        setSelectedId(remaining[0].feeStructureId);
+        setSelectedSessionId(remaining[0].collegeSessionId);
       }
 
       // Tell the parent to instantly remove it from UI state
@@ -221,13 +240,13 @@ export default function FeeStructureCard({
                       <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-20 overflow-hidden">
                         {sortedSessions.map((struct) => (
                           <button
-                            key={struct.feeStructureId}
+                            key={struct.collegeSessionId}
                             onClick={() => {
-                              setSelectedId(struct.feeStructureId);
+                              setSelectedSessionId(struct.collegeSessionId);
                               setIsDropdownOpen(false);
                             }}
                             className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer 
-                                ${selectedId === struct.feeStructureId
+                                ${selectedSessionId === struct.collegeSessionId
                                 ? "font-bold text-[#43C17A] bg-green-50"
                                 : "text-gray-700"
                               }
@@ -242,29 +261,41 @@ export default function FeeStructureCard({
                 </div>
 
                 <div className="flex gap-2">
-                  <button
-                    onClick={handleEdit}
-                    className="w-8 h-8 flex cursor-pointer items-center justify-center rounded-full bg-[#43C17A] text-white hover:bg-[#36a165] transition-colors"
-                    title="Edit Structure"
-                  >
-                    <Pencil size={16} />
-                  </button>
+                  {currentData.feeStructureId ? (
+                    <>
+                      <button
+                        onClick={handleEdit}
+                        className="w-8 h-8 flex cursor-pointer items-center justify-center rounded-full bg-[#43C17A] text-white hover:bg-[#36a165] transition-colors"
+                        title="Edit Structure"
+                      >
+                        <Pencil size={16} />
+                      </button>
 
-                  <button
-                    onClick={() => setIsDeleteModalOpen(true)}
-                    className="w-8 h-8 flex cursor-pointer items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
-                    title="Delete Structure"
-                  >
-                    <Trash size={16} weight="bold" />
-                  </button>
+                      <button
+                        onClick={() => setIsDeleteModalOpen(true)}
+                        className="w-8 h-8 flex cursor-pointer items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
+                        title="Delete Structure"
+                      >
+                        <Trash size={16} weight="bold" />
+                      </button>
 
-                  <button
-                    onClick={handleDownload}
-                    className="w-8 h-8 flex cursor-pointer items-center justify-center rounded-full bg-[#43C17A] text-white hover:bg-[#36a165] transition-colors"
-                    title="Download PDF"
-                  >
-                    <DownloadSimple size={16} weight="bold" />
-                  </button>
+                      <button
+                        onClick={handleDownload}
+                        className="w-8 h-8 flex cursor-pointer items-center justify-center rounded-full bg-[#43C17A] text-white hover:bg-[#36a165] transition-colors"
+                        title="Download PDF"
+                      >
+                        <DownloadSimple size={16} weight="bold" />
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleSetUp}
+                      className="flex cursor-pointer items-center gap-1 bg-[#1F2F56] text-white text-xs px-3 py-1.5 rounded-md hover:bg-[#16223e] transition-colors"
+                    >
+                      <Plus size={14} weight="bold" />
+                      <span>Set Up Fee</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

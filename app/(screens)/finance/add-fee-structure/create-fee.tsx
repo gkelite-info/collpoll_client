@@ -4,7 +4,6 @@ import { CaretDown, MinusCircle, X } from "@phosphor-icons/react";
 import AddFeeHeader from "./components/Header";
 import { useEffect, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
-import { getFinanceCollegeStructure } from "@/lib/helpers/finance/financeManagerContextAPI";
 
 import { saveCollegeFeeStructure } from "@/lib/helpers/finance/feeStructure/academicFee/collegeFeeStructureAPI";
 import { saveFeeType } from "@/lib/helpers/finance/feeStructure/academicFee/feeTypeMasterAPI";
@@ -22,13 +21,20 @@ import { useFinanceManager } from "@/app/utils/context/financeManager/useFinance
 import {
   fetchAvailableSessions,
   fetchFeeStructureEditData,
-  fetchFinanceManagerIdByUserId,
+  fetchCollegeBranches,
 } from "@/lib/helpers/finance/feeStructure/academicFee/createFeeClientHelpers";
 
 export default function CreateFee() {
   const { userId } = useUser();
   const router = useRouter();
-  const { collegeEducationType } = useFinanceManager();
+  const { 
+    collegeEducationType,
+    collegeId: fmCollegeId,
+    collegeEducationId: fmCollegeEducationId,
+    collegeName: fmCollegeName,
+    financeManagerId: fmId,
+    loading: fmLoading
+  } = useFinanceManager();
 
   const [collegeName, setCollegeName] = useState("");
   const [educationType, setEducationType] = useState("");
@@ -99,6 +105,18 @@ export default function CreateFee() {
     remarks: "",
   });
   const [additionalTotalFee, setAdditionalTotalFee] = useState(0);
+
+  const urlBranchId = searchParams.get("branchId");
+  const urlStartYear = searchParams.get("startYear");
+  const urlEndYear = searchParams.get("endYear");
+
+  useEffect(() => {
+    if (!editMode) {
+      if (urlBranchId) setSelectedBranch(Number(urlBranchId));
+      if (urlStartYear) setSessionStart(urlStartYear);
+      if (urlEndYear) setSessionEnd(urlEndYear);
+    }
+  }, [editMode, urlBranchId, urlStartYear, urlEndYear]);
 
   const todayDateStr = new Date().toISOString().split("T")[0];
 
@@ -288,17 +306,16 @@ export default function CreateFee() {
 
   useEffect(() => {
     const loadFinanceStructure = async () => {
-      if (!userId) return;
+      if (fmLoading || !fmCollegeId || !fmCollegeEducationId) return;
       try {
-        const data = await getFinanceCollegeStructure(userId);
+        setCollegeName(fmCollegeName || "");
+        setEducationType(collegeEducationType || "");
+        setCollegeId(fmCollegeId);
+        setCollegeEducationId(fmCollegeEducationId);
+        
+        const branchesData = await fetchCollegeBranches(fmCollegeId, fmCollegeEducationId);
+        setBranches(branchesData || []);
 
-        setCollegeName(data?.collegeName || "");
-        setEducationType(data?.educationType || "");
-        setCollegeId(data?.collegeId || null);
-        setCollegeEducationId(data?.collegeEducationId || null);
-        setBranches(data?.branches || []);
-
-        const fmId = await fetchFinanceManagerIdByUserId(userId);
         if (fmId) setFinanceManagerId(fmId);
       } catch (err) {
         console.error("Error loading structure:", err);
@@ -306,7 +323,7 @@ export default function CreateFee() {
       }
     };
     loadFinanceStructure();
-  }, [userId]);
+  }, [fmLoading, fmCollegeId, fmCollegeEducationId, fmCollegeName, collegeEducationType, fmId]);
 
   const handleAddCustomFeeOption = () => {
     if (newFeeName.trim()) {
@@ -450,6 +467,7 @@ export default function CreateFee() {
         error: structError,
       } = await saveCollegeFeeStructure(
         {
+          feeStructureId: editMode && editId ? Number(editId) : undefined,
           collegeId: collegeId,
           collegeEducationId: collegeEducationId,
           collegeBranchId: selectedBranch,
@@ -673,9 +691,9 @@ export default function CreateFee() {
         )}
       </AnimatePresence>
 
-      <div className="bg-red-00 flex flex-col">
-        <div className="bg-red-00 flex">
-          <AddFeeHeader button={false} />
+      <div className="flex flex-col w-full">
+        <div className="w-full">
+          <AddFeeHeader button={false} showBack={true} />
         </div>
 
         <div className="flex justify-center my-6 w-full">

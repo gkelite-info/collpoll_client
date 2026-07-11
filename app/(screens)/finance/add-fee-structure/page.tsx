@@ -6,44 +6,87 @@ import AddFeeHeader from "./components/Header";
 import CreateFee from "./create-fee";
 import FeePageSkeleton from "./FeePageSkeleton";
 import { useUser } from "@/app/utils/context/UserContext";
-import { getFinanceCollegeStructure } from "@/lib/helpers/finance/financeManagerContextAPI";
 import toast from "react-hot-toast";
 import { fetchAllFeeStructures } from "@/lib/helpers/finance/feeStructure/academicFee/collegeFeeStructureAPI";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import { supabase } from "@/lib/supabaseClient";
 
 function FeeContent() {
   const searchParams = useSearchParams();
   const fee = searchParams.get("fee");
-  const { userId } = useUser();
+  const { collegeId, collegeEducationId, collegeName, loading: fmLoading } = useFinanceManager();
 
   const [loading, setLoading] = useState(true);
   const [feeStructures, setFeeStructures] = useState<any[]>([]);
-  const [collegeDetails, setCollegeDetails] = useState<any>(null);
+  const [sessions, setSessions] = useState<any[]>([]);
 
   const groupedStructures = useMemo(() => {
     const groups: Record<number, any[]> = {};
 
-    feeStructures.forEach((struct) => {
-      const bId = struct.branchId;
+    sessions.forEach((session) => {
+      const bId = session.collegeBranchId;
+      if (!bId) return;
+
+      const branchCode = session.college_branch?.collegeBranchCode || "Unknown Branch";
+
+      const existingStruct = feeStructures.find(
+        (fs) => fs.sessionId === session.collegeSessionId
+      );
+
+      const mergedObj = {
+        feeStructureId: existingStruct?.feeStructureId || null,
+        collegeId: session.collegeId,
+        collegeEducationId: session.collegeEducationId,
+        collegeBranchId: bId,
+        collegeSessionId: session.collegeSessionId,
+        branchId: bId,
+        branchName: branchCode,
+        sessionName: session.sessionName,
+        totalAmount: existingStruct ? existingStruct.totalAmount : (session.totalFeeAmount || 0),
+        components: existingStruct ? existingStruct.components : [],
+        dueDate: existingStruct ? existingStruct.dueDate : null,
+        lateFeePerDay: existingStruct ? existingStruct.lateFeePerDay : 0,
+        remarks: existingStruct ? existingStruct.remarks : "",
+        isActive: existingStruct ? existingStruct.isActive : true,
+      };
+
       if (!groups[bId]) {
         groups[bId] = [];
       }
-      groups[bId].push(struct);
+      groups[bId].push(mergedObj);
     });
 
     return Object.values(groups);
-  }, [feeStructures]);
+  }, [feeStructures, sessions]);
 
   useEffect(() => {
     const loadData = async () => {
-      if (!userId) return;
+      if (fmLoading || !collegeId) return;
       try {
         setLoading(true);
-        const collegeData = await getFinanceCollegeStructure(userId);
-        setCollegeDetails(collegeData);
+        const data = await fetchAllFeeStructures(collegeId, collegeEducationId || undefined);
+        setFeeStructures(data);
 
-        if (collegeData.collegeId) {
-          const data = await fetchAllFeeStructures(collegeData.collegeId);
-          setFeeStructures(data);
+        if (collegeEducationId) {
+          const { data: sessionData, error: sessionErr } = await supabase
+            .from("college_session")
+            .select(`
+              collegeSessionId,
+              collegeId,
+              collegeEducationId,
+              collegeBranchId,
+              sessionName,
+              totalFeeAmount,
+              college_branch ( collegeBranchId, collegeBranchCode )
+            `)
+            .eq("collegeId", collegeId)
+            .eq("collegeEducationId", collegeEducationId)
+            .eq("is_deleted", false);
+
+          if (sessionErr) throw sessionErr;
+          setSessions(sessionData || []);
+        } else {
+          setSessions([]);
         }
       } catch (err) {
         console.error(err);
@@ -53,7 +96,7 @@ function FeeContent() {
       }
     };
     loadData();
-  }, [userId, fee]);
+  }, [collegeId, collegeEducationId, fmLoading, fee]);
 
   const availableYears = useMemo(() => {
     const years = new Set(feeStructures.map((f) => f.academicYear));
@@ -84,16 +127,23 @@ function FeeContent() {
         </div>
       )}
 
-      <div className="space-y-6">
-        {groupedStructures.map((group, index) => (
-          <FeeStructureCard
-            key={group?.[0]?.branchId || index}
-            structures={group}
-            collegeName={collegeDetails?.collegeName}
-            onDeleteSuccess={handleDeleteSuccess}
-          />
-        ))}
-      </div>
+      {groupedStructures.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+          <p className="text-lg font-medium">No fee structures found</p>
+          <p className="text-sm mt-1">Create a new fee structure to see it here.</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {groupedStructures.map((group, index) => (
+            <FeeStructureCard
+              key={group?.[0]?.feeStructureId || index}
+              structures={group}
+              collegeName={collegeName || undefined}
+              onDeleteSuccess={handleDeleteSuccess}
+            />
+          ))}
+        </div>
+      )}
     </>
   );
 }

@@ -16,6 +16,7 @@ import YearWiseFeeCollection from "../(dashboard)/components/yearWiseFeeCollecti
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { getBranchWiseCollection } from "@/lib/helpers/finance-manager/analytics/FetchFinanceAnalytics";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import FinanceEducationDropdown from "@/app/(screens)/finance-manager/components/FinanceEducationDropdown";
 
 const VerticalChartSkeleton = () => (
   <div className="w-full h-full bg-gray-50 rounded-xl animate-pulse flex items-end justify-around px-8 pb-8 pt-10 border border-gray-100">
@@ -205,10 +206,13 @@ function FinanceAnalyticsContent() {
 
   return (
     <div className="p-4 w-full space-y-6">
-      <h2 className="text-lg font-semibold text-[#43C17A]">
-        {collegeEducationType || "Education"}{" "}
-        <span className="text-gray-400">→</span> Branch Wise Collection
-      </h2>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h2 className="text-lg font-semibold text-[#43C17A]">
+          {collegeEducationType || "Education"}{" "}
+          <span className="text-gray-400">→</span> Branch Wise Collection
+        </h2>
+        <FinanceEducationDropdown />
+      </div>
 
       <div className="bg-white rounded-xl shadow-md p-6 space-y-6">
         {/* HEADER AREA - ALWAYS VISIBLE TO PREVENT LAYOUT SHIFT */}
