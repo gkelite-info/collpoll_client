@@ -46,7 +46,7 @@ export default function SubmitReimbursement({
               </span>
               <input
                 className="h-11 w-full rounded-[7px] border border-[#BFD0C2] px-3 text-[14px] text-[#14213A] placeholder-[#9CA3AF] outline-none focus:border-[#43C17A]"
-                placeholder="e.g., Client Lunch at Bistro"
+                placeholder="e.g., Clien t Lunch at Bistro"
               />
             </label>
             <div className="grid gap-4 sm:grid-cols-2">

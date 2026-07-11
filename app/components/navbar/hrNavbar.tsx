@@ -13,6 +13,7 @@ import {
   SmileyIcon,
   X,
   CurrencyDollar,
+  Receipt,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -98,6 +99,13 @@ export default function HrNavbar({ onClose }: HrNavbarProps) {
       path: "/hr/payroll",
     },
     {
+      icon: (isActive) => (
+        <Receipt size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Reimbursements",
+      path: "/hr/reimbursements",
+    },
+    {
       icon: (isActive) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
       label: t("Wellbeing"),
       path: `/hr/wellbeing`,
@@ -112,7 +120,11 @@ export default function HrNavbar({ onClose }: HrNavbarProps) {
   ], [t]);
 
   useEffect(() => {
-    const current = items.find((item) => item.path === pathname);
+    const current = items.find(
+      (item) =>
+        item.path === pathname ||
+        (item.path !== "/hr" && pathname.startsWith(`${item.path}/`)),
+    );
 
     if (current) {
       setActive(current.label);

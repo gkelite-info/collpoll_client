@@ -15,6 +15,8 @@ import AttendancePage from "./components/attendancePage";
 import ManageTaxPage from "./payroll/components/managetaxpage";
 import MyPayPage from "./payroll/components/mypaypage";
 import SummaryPage from "./payroll/components/summarypage";
+import ReimbursementsClient from "@/app/components/SharedReimbursements/ReimbursementsClient";
+import MyAttendanceRight from "./right";
 
 interface SharedAttendanceProps {
   userId?: string;
@@ -45,8 +47,8 @@ const MyAttendanceLeft = ({
   >(urlMainTab);
 
   const [activePayrollTab, setActivePayrollTab] = useState<
-    "summary" | "myPay" | "manageTax"
-  >(urlSubTab);
+    "summary" | "myPay" | "manageTax" | "reimbursements"
+  >(urlSubTab as any);
 
   const [profile, setProfile] = useState<UniversalProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -80,6 +82,7 @@ const MyAttendanceLeft = ({
     { id: "summary", label: "Summary" },
     { id: "myPay", label: "My Pay" },
     { id: "manageTax", label: "Manage Tax" },
+    { id: "reimbursements", label: "Reimbursements" },
   ];
 
   const handleMainTabClick = (id: string) => {
@@ -143,8 +146,11 @@ const MyAttendanceLeft = ({
   //   );
   // }
 
+  const showRightSidebar = !(activeMainTab === "payroll" && activePayrollTab === "reimbursements");
+
   return (
-    <div className="w-full flex-1 min-w-0 font-sans min-h-150 pt-4 px-2.5">
+    <div className="flex w-full items-start justify-between">
+      <div className="w-full flex-1 min-w-0 font-sans min-h-150 pt-4 px-2.5 relative">
       {onBack && (
         <button
           onClick={onBack}
@@ -232,6 +238,11 @@ const MyAttendanceLeft = ({
                   <ManageTaxPage />
                 </div>
               )}
+              {activePayrollTab === "reimbursements" && (
+                <div className="w-full text-left mt-2">
+                  <ReimbursementsClient />
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -251,6 +262,8 @@ const MyAttendanceLeft = ({
           </div>
         )}
       </div>
+      </div>
+      {showRightSidebar && <MyAttendanceRight />}
     </div>
   );
 };
