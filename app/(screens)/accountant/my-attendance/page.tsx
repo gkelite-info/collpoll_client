@@ -10,6 +10,7 @@ import AttendancePerformanceChart from "@/app/(screens)/finance/my-attendance/ch
 import AttendanceTable from "@/app/(screens)/finance/my-attendance/tables/attendanceTable";
 import type { AttendanceRecord } from "@/app/(screens)/finance/my-attendance/types";
 import { CheckSquare, DownloadSimple } from "@phosphor-icons/react";
+import ReimbursementsClient from "@/app/components/SharedReimbursements/ReimbursementsClient";
 
 const attendanceRecords: AttendanceRecord[] = [
   {
@@ -86,7 +87,7 @@ function AccountantMyAttendanceContent() {
     (searchParams.get("main") as "attendance" | "payroll" | "analytics") ||
     "payroll";
   const activeSub =
-    (searchParams.get("sub") as "summary" | "myPay" | "manageTax") ||
+    (searchParams.get("sub") as "summary" | "myPay" | "manageTax" | "reimbursements") ||
     "summary";
 
   const setQuery = (main: string, sub?: string) => {
@@ -96,9 +97,11 @@ function AccountantMyAttendanceContent() {
     router.push(`${pathname}?${params.toString()}`);
   };
 
+  const showRightSidebar = !(activeMain === "payroll" && activeSub === "reimbursements");
+
   return (
-    <div className="flex items-start justify-between">
-      <main className="min-h-150 w-full min-w-0 flex-1 px-2.5 pt-4 font-sans">
+    <div className="flex items-start justify-between relative">
+      <main className="min-h-150 w-full min-w-0 flex-1 px-2.5 pt-4 font-sans relative">
         <div className="mb-8 flex w-full justify-center px-20">
           <div className="relative flex w-full max-w-[700px] items-center justify-between rounded-full bg-[#E5E5E5] p-1">
             {[
@@ -127,14 +130,14 @@ function AccountantMyAttendanceContent() {
         {activeMain === "attendance" && <AttendancePanel />}
         {activeMain === "payroll" && (
           <PayrollPanel
-            activeSub={activeSub}
+            activeSub={activeSub as any}
             onSubChange={(sub) => setQuery("payroll", sub)}
           />
         )}
         {activeMain === "analytics" && <AnalyticsPanel />}
       </main>
 
-      <AttendanceRightPanel />
+      {showRightSidebar && <AttendanceRightPanel />}
     </div>
   );
 }
@@ -200,8 +203,8 @@ function PayrollPanel({
   activeSub,
   onSubChange,
 }: {
-  activeSub: "summary" | "myPay" | "manageTax";
-  onSubChange: (sub: "summary" | "myPay" | "manageTax") => void;
+  activeSub: "summary" | "myPay" | "manageTax" | "reimbursements";
+  onSubChange: (sub: "summary" | "myPay" | "manageTax" | "reimbursements") => void;
 }) {
   return (
     <div className="flex w-full flex-col items-center p-2">
@@ -210,11 +213,12 @@ function PayrollPanel({
           ["summary", "Summary"],
           ["myPay", "My Pay"],
           ["manageTax", "Manage Tax"],
+          ["reimbursements", "Reimbursements"],
         ].map(([id, label]) => (
           <button
             key={id}
             type="button"
-            onClick={() => onSubChange(id as "summary" | "myPay" | "manageTax")}
+            onClick={() => onSubChange(id as "summary" | "myPay" | "manageTax" | "reimbursements")}
             className={`cursor-pointer border-b-[2px] pb-1.5 text-[15px] transition-all duration-300 ${
               activeSub === id
                 ? "border-[#43C17A] text-[#43C17A]"
@@ -229,6 +233,7 @@ function PayrollPanel({
         {activeSub === "summary" && <SummaryPanel />}
         {activeSub === "myPay" && <MyPayPanel />}
         {activeSub === "manageTax" && <ManageTaxPanel />}
+        {activeSub === "reimbursements" && <ReimbursementsClient />}
       </div>
     </div>
   );
