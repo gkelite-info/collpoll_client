@@ -5,7 +5,7 @@ export async function fetchStaffOnboardingSummary(userId: number) {
     const [bankRes, aadhaarRes, panRes] = await Promise.all([
       supabase
         .from("staff_bank_details")
-        .select("bankName, accountNumber, ifscCode, accountHolderName, branch")
+        .select("bankName, accountNumber, ifscCode, accountHolderName, branch, pfNumber, esiNumber")
         .eq("userId", userId)
         .eq("isActive", true)
         .eq("isPrimary", true)

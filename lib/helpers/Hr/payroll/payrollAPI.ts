@@ -248,9 +248,13 @@ export async function getPayrollEntryDetails(entryId: number) {
       user:userId (
         fullName,
         email,
+        role,
+        gender,
+        dateOfJoining,
         collegeId,
         employee_ids ( employeeId ),
-        staff_bank_details ( pfNumber, esiNumber ),
+        staff_bank_details ( pfNumber, esiNumber, bankName, accountNumber ),
+        staff_pan_details ( panNumber ),
         employee_pay_profiles (
           employee_payroll_compliance_values ( amount, payroll_compliance_types ( title ) )
         )
@@ -273,7 +277,7 @@ export async function getPayrollEntryDetails(entryId: number) {
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
   const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Last day of month
 
-  const [leavesRes, holidaysRes, mediaRes] = await Promise.all([
+  const [leavesRes, holidaysRes, mediaRes, collegeRes] = await Promise.all([
     supabase
       .from("employee_leave_requests")
       .select("leaveType, leaveFromDate, leaveToDate")
@@ -293,6 +297,11 @@ export async function getPayrollEntryDetails(entryId: number) {
       .select("logoUrl, bannerUrl")
       .eq("collegeId", collegeId)
       .eq("is_deleted", false)
+      .maybeSingle(),
+    supabase
+      .from("colleges")
+      .select("collegeName, address, city, state, pincode")
+      .eq("collegeId", collegeId)
       .maybeSingle()
   ]);
 
@@ -301,6 +310,7 @@ export async function getPayrollEntryDetails(entryId: number) {
     leavesTaken: leavesRes.data || [],
     holidaysInMonth: holidaysRes.data || [],
     weekoffsConfig: [{ dayOfWeek: 0 }], // Default to Sunday
-    collegeMedia: mediaRes.data || null
+    collegeMedia: mediaRes.data || null,
+    college: (collegeRes && collegeRes.data) || null
   };
 }

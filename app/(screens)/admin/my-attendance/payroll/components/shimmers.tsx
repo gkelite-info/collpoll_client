@@ -72,62 +72,97 @@ export const PaySlipShimmer = () => (
   </div>
 );
 
-export const ModalDetailShimmer = () => (
-  <div className="flex flex-col gap-6 animate-pulse p-4">
-    <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
-      <div className="w-12 h-12 rounded-full bg-gray-200"></div>
-      <div className="flex flex-col gap-2">
-        <div className="h-5 bg-gray-200 rounded w-48"></div>
-        <div className="h-4 bg-gray-100 rounded w-32"></div>
-      </div>
-    </div>
-    <div className="grid grid-cols-2 gap-3">
-      <div className="h-16 bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 flex flex-col justify-between">
-        <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-        <div className="h-5 bg-gray-200 rounded w-1/4"></div>
-      </div>
-      <div className="h-16 bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 flex flex-col justify-between">
-        <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-        <div className="h-5 bg-gray-200 rounded w-1/4"></div>
-      </div>
-      <div className="h-[120px] bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 col-span-2 flex flex-col gap-3">
-        <div className="h-3 bg-gray-200 rounded w-1/4 mb-1"></div>
-        <div className="w-full flex justify-between">
-          <div className="h-3 bg-gray-100 rounded w-1/3"></div>
-          <div className="h-3 bg-gray-200 rounded w-8"></div>
-        </div>
-        <div className="w-full flex justify-between">
-          <div className="h-3 bg-gray-100 rounded w-1/4"></div>
-          <div className="h-3 bg-gray-200 rounded w-8"></div>
-        </div>
-        <div className="w-full flex justify-between">
-          <div className="h-3 bg-gray-100 rounded w-1/5"></div>
-          <div className="h-3 bg-gray-200 rounded w-8"></div>
+export const ModalDetailShimmer = ({ variant = "default" }: { variant?: "default" | "payslip" }) => {
+  if (variant === "payslip") {
+    return (
+      <div className="overflow-x-auto w-full">
+        <div className="max-w-3xl mx-auto bg-white p-4 w-[850px] min-w-[850px] animate-pulse">
+          <div className="border-2 border-gray-200 border-solid">
+            <div className="flex border-b-2 border-solid border-gray-200 p-4 items-center justify-center min-h-[120px] relative">
+              <div className="absolute left-6 w-20 h-20 bg-gray-200 rounded-full"></div>
+              <div className="flex flex-col items-center gap-2">
+                 <div className="w-64 h-6 bg-gray-200 rounded"></div>
+                 <div className="w-48 h-4 bg-gray-200 rounded"></div>
+                 <div className="w-56 h-4 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 p-4 gap-y-4 border-b-2 border-solid border-gray-200">
+              {[...Array(12)].map((_, i) => (
+                <div key={i} className="flex gap-4 items-center">
+                   <div className="w-32 h-4 bg-gray-200 rounded"></div>
+                   <div className="w-40 h-4 bg-gray-200 rounded"></div>
+                </div>
+              ))}
+            </div>
+            <div className="p-4 flex flex-col gap-3">
+              <div className="w-full h-6 bg-gray-200 rounded"></div>
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="w-full h-4 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-      <div className="h-16 bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 flex flex-col justify-between">
-        <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-        <div className="h-5 bg-gray-200 rounded w-1/4"></div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6 animate-pulse p-4">
+      <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
+        <div className="w-12 h-12 rounded-full bg-gray-200"></div>
+        <div className="flex flex-col gap-2">
+          <div className="h-5 bg-gray-200 rounded w-48"></div>
+          <div className="h-4 bg-gray-100 rounded w-32"></div>
+        </div>
       </div>
-      <div className="h-16 bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 flex flex-col justify-between">
-        <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-        <div className="h-5 bg-gray-200 rounded w-1/3"></div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="h-16 bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 flex flex-col justify-between">
+          <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-5 bg-gray-200 rounded w-1/4"></div>
+        </div>
+        <div className="h-16 bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 flex flex-col justify-between">
+          <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-5 bg-gray-200 rounded w-1/4"></div>
+        </div>
+        <div className="h-[120px] bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 col-span-2 flex flex-col gap-3">
+          <div className="h-3 bg-gray-200 rounded w-1/4 mb-1"></div>
+          <div className="w-full flex justify-between">
+            <div className="h-3 bg-gray-100 rounded w-1/3"></div>
+            <div className="h-3 bg-gray-200 rounded w-8"></div>
+          </div>
+          <div className="w-full flex justify-between">
+            <div className="h-3 bg-gray-100 rounded w-1/4"></div>
+            <div className="h-3 bg-gray-200 rounded w-8"></div>
+          </div>
+          <div className="w-full flex justify-between">
+            <div className="h-3 bg-gray-100 rounded w-1/5"></div>
+            <div className="h-3 bg-gray-200 rounded w-8"></div>
+          </div>
+        </div>
+        <div className="h-16 bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 flex flex-col justify-between">
+          <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-5 bg-gray-200 rounded w-1/4"></div>
+        </div>
+        <div className="h-16 bg-[#f8f9fa] rounded-xl border border-gray-100 p-3 flex flex-col justify-between">
+          <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-5 bg-gray-200 rounded w-1/3"></div>
+        </div>
+      </div>
+      <div className="flex flex-col gap-3 mt-2">
+        <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+        <div className="w-full flex justify-between">
+          <div className="h-4 bg-gray-100 rounded w-1/3"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/6"></div>
+        </div>
+        <div className="w-full flex justify-between">
+          <div className="h-4 bg-gray-100 rounded w-1/3"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/6"></div>
+        </div>
+        <div className="w-full flex justify-between mt-2 pt-2 border-t border-gray-100">
+          <div className="h-5 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-5 bg-gray-300 rounded w-1/5"></div>
+        </div>
       </div>
     </div>
-    <div className="flex flex-col gap-3 mt-2">
-      <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
-      <div className="w-full flex justify-between">
-        <div className="h-4 bg-gray-100 rounded w-1/3"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/6"></div>
-      </div>
-      <div className="w-full flex justify-between">
-        <div className="h-4 bg-gray-100 rounded w-1/3"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/6"></div>
-      </div>
-      <div className="w-full flex justify-between mt-2 pt-2 border-t border-gray-100">
-        <div className="h-5 bg-gray-200 rounded w-1/4"></div>
-        <div className="h-5 bg-gray-300 rounded w-1/5"></div>
-      </div>
-    </div>
-  </div>
-);
+  );
+};

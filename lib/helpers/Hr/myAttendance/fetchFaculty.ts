@@ -12,6 +12,13 @@ export interface FacultyProfileData {
   role: string;
   experience: string;
   image: string;
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  accountHolderName?: string;
+  branch?: string;
+  pfNumber?: string;
+  esiNumber?: string;
 }
 
 export const fetchFacultyProfile = async (
@@ -32,7 +39,16 @@ export const fetchFacultyProfile = async (
         collegeBranchCode,
         department,
         employee_ids (employeeId),
-        user_profile (profilePic)
+        user_profile (profilePic),
+        staff_bank_details (
+          bankName,
+          accountNumber,
+          ifscCode,
+          accountHolderName,
+          branch,
+          pfNumber,
+          esiNumber
+        )
       `
       )
       .eq("userId", userId)
@@ -50,6 +66,7 @@ export const fetchFacultyProfile = async (
 
     const employeeIds = Array.isArray(data.employee_ids) ? data.employee_ids[0] : data.employee_ids;
     const userProfile = Array.isArray(data.user_profile) ? data.user_profile[0] : data.user_profile;
+    const staffBankDetails = Array.isArray(data.staff_bank_details) ? data.staff_bank_details[0] : data.staff_bank_details;
 
     return {
       id: data.userId.toString(),
@@ -71,6 +88,13 @@ export const fetchFacultyProfile = async (
         ? `${data.professionalExperienceYears} years`
         : "-",
       image: userProfile?.profilePic || "/assets/images/defaultUser.png",
+      bankName: staffBankDetails?.bankName || "N/A",
+      accountNumber: staffBankDetails?.accountNumber || "N/A",
+      ifscCode: staffBankDetails?.ifscCode || "N/A",
+      accountHolderName: staffBankDetails?.accountHolderName || "N/A",
+      branch: staffBankDetails?.branch || "N/A",
+      pfNumber: staffBankDetails?.pfNumber || "N/A",
+      esiNumber: staffBankDetails?.esiNumber || "N/A",
     };
   } catch (err) {
     console.error("Unexpected error fetching user data:", err);
