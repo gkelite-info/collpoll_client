@@ -1,97 +1,178 @@
 "use client";
 
 import {
+  Buildings,
   Confetti,
   Money,
   OfficeChair,
   Plus,
+  Receipt,
   Wrench,
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
+import CardComponent from "@/app/utils/card";
+import TableComponent from "@/app/utils/table/table";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { useUser } from "@/app/utils/context/UserContext";
+import {
+  fetchAccountantExpenses,
+  type AccountantExpense,
+} from "@/lib/helpers/accountant/accountantExpensesAPI";
 import RecordNewExpenseModal from "../(dashboard)/modal/RecordNewExpenseModal";
 
-const summaryCards = [
-  {
-    label: "HIGHEST SPENDING",
-    title: "Salaries",
-    value: "Rs18.5 L",
-    helper: "Current",
-  },
-  {
-    label: "MOST RECORDS",
-    title: "Salaries",
-    value: "246",
-    helper: "Total Vouchers",
-  },
-  {
-    label: "TOTAL INSTITUTIONAL EXPENDITURE",
-    title: "",
-    value: "Rs2.84 Cr.",
-    helper: "",
-  },
+const breakdownColumns = [
+  { title: "CATEGORY", key: "category" },
+  { title: "EXPENSE RECORDS", key: "records" },
+  { title: "TOTAL SPENDING", key: "spending" },
+  { title: "LAST UPDATED", key: "updated" },
 ];
 
-const activeCategories = [
-  {
-    title: "Salaries",
-    value: "Rs18.5 L",
-    swatch: "bg-[#A6F19E]",
-  },
-  {
-    title: "Events",
-    value: "Rs4.2 L",
-    swatch: "bg-[#FFD5E1]",
-  },
-  {
-    title: "Infrastructure",
-    value: "Rs12.8 L",
-    swatch: "bg-[#8FF08A]",
-  },
-];
+type CategorySummary = {
+  category: string;
+  records: number;
+  spending: number;
+  lastUpdated: string | null;
+};
 
-const breakdownRows = [
-  {
-    category: "Salaries",
-    records: "246",
-    spending: "Rs18.5 L",
-    updated: "23 Oct, 2023",
-    slug: "salaries",
-    icon: Money,
-    tone: "bg-[#DFF3E7] text-[#147A3D]",
-  },
-  {
-    category: "Events",
-    records: "8",
-    spending: "Rs4.2 L",
-    updated: "22 Oct, 2023",
-    slug: "events",
-    icon: Confetti,
-    tone: "bg-[#F9E4EE] text-[#9C315B]",
-  },
-  {
-    category: "Furniture",
-    records: "32",
-    spending: "Rs2.8 L",
-    updated: "21 Oct, 2023",
-    slug: "furniture",
-    icon: OfficeChair,
-    tone: "bg-[#DFF3E7] text-[#147A3D]",
-  },
-  {
-    category: "Repairs & Maintenance",
-    records: "112",
-    spending: "Rs1.5 L",
-    updated: "20 Oct, 2023",
-    slug: "repairs-maintenance",
-    icon: Wrench,
-    tone: "bg-[#E7EFEA] text-[#237333]",
-  },
-];
+function SummaryCardsShimmer() {
+  return (
+    <section className="grid gap-6 md:grid-cols-3" aria-label="Loading expense summary">
+      {Array.from({ length: 3 }, (_, index) => (
+        <div
+          key={index}
+          className="h-[150px] animate-pulse rounded-lg bg-white px-6 py-5 shadow-[0_4px_12px_rgba(15,23,42,0.14)]"
+        >
+          <div className="h-9 w-9 rounded-md bg-slate-200" />
+          <div className="mt-4 h-3 w-36 rounded bg-slate-200" />
+          <div className="mt-3 h-7 w-28 rounded bg-slate-200" />
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function ActiveCategoriesShimmer() {
+  return (
+    <div className="custom-scrollbar flex gap-6 overflow-x-auto pb-3" aria-label="Loading expense categories">
+      {Array.from({ length: 3 }, (_, index) => (
+        <div
+          key={index}
+          className="h-[190px] w-[350px] min-w-[350px] animate-pulse rounded-lg bg-white p-7 shadow-[0_4px_12px_rgba(15,23,42,0.14)]"
+        >
+          <div className="h-11 w-11 rounded-lg bg-slate-200" />
+          <div className="mt-5 h-6 w-36 rounded bg-slate-200" />
+          <div className="mt-8 flex items-center justify-between gap-6">
+            <div className="h-4 w-24 rounded bg-slate-200" />
+            <div className="h-7 w-24 rounded bg-slate-200" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const formatAmount = (amount: number) => {
+  if (amount >= 10_000_000) return `Rs ${(amount / 10_000_000).toFixed(2)} Cr.`;
+  if (amount >= 100_000) return `Rs ${(amount / 100_000).toFixed(1)} L`;
+  if (amount >= 1_000) return `Rs ${(amount / 1_000).toFixed(1)} K`;
+  return `Rs ${amount.toLocaleString("en-IN")}`;
+};
+
+const categoryVisual = (category: string) => {
+  const normalized = category.toLowerCase();
+  if (normalized.includes("event")) return { icon: Confetti, background: "#F9E4EE", color: "#9C315B", tone: "bg-[#F9E4EE] text-[#9C315B]" };
+  if (normalized.includes("furniture")) return { icon: OfficeChair, background: "#DFF3E7", color: "#147A3D", tone: "bg-[#DFF3E7] text-[#147A3D]" };
+  if (normalized.includes("repair") || normalized.includes("maintenance")) return { icon: Wrench, background: "#E7EFEA", color: "#237333", tone: "bg-[#E7EFEA] text-[#237333]" };
+  if (normalized.includes("infrastructure")) return { icon: Buildings, background: "#DFF3E7", color: "#147A3D", tone: "bg-[#DFF3E7] text-[#147A3D]" };
+  return { icon: Money, background: "#DFF3E7", color: "#147A3D", tone: "bg-[#DFF3E7] text-[#147A3D]" };
+};
 
 export default function AccountantExpenseCategoriesPage() {
   const router = useRouter();
+  const { collegeId, loading: userLoading } = useUser();
   const [isRecordExpenseOpen, setIsRecordExpenseOpen] = useState(false);
+  const [expenses, setExpenses] = useState<AccountantExpense[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
+
+  const loadExpenses = useCallback(async () => {
+    if (!collegeId) {
+      if (!userLoading) setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const firstPage = await fetchAccountantExpenses({ collegeId, page: 1, itemsPerPage: 100 });
+      const allExpenses = [...firstPage.data];
+      const totalPages = Math.ceil(firstPage.total / firstPage.itemsPerPage);
+      for (let page = 2; page <= totalPages; page += 1) {
+        const nextPage = await fetchAccountantExpenses({ collegeId, page, itemsPerPage: 100 });
+        allExpenses.push(...nextPage.data);
+      }
+      setExpenses(allExpenses);
+    } catch (error) {
+      setExpenses([]);
+      toast.error(error instanceof Error ? error.message : "Unable to load expenses.", { id: "load-accountant-expenses" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [collegeId, userLoading]);
+
+  useEffect(() => {
+    void loadExpenses();
+  }, [loadExpenses]);
+
+  const categories = useMemo<CategorySummary[]>(() => {
+    const grouped = new Map<string, CategorySummary>();
+    expenses.forEach((expense) => {
+      const current = grouped.get(expense.category);
+      grouped.set(expense.category, {
+        category: expense.category,
+        records: (current?.records ?? 0) + 1,
+        spending: (current?.spending ?? 0) + expense.amount,
+        lastUpdated:
+          !current?.lastUpdated || new Date(expense.updatedAt) > new Date(current.lastUpdated)
+            ? expense.updatedAt
+            : current.lastUpdated,
+      });
+    });
+    return Array.from(grouped.values()).sort((a, b) => b.spending - a.spending);
+  }, [expenses]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(categories.length / itemsPerPage));
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [categories.length, currentPage]);
+
+  const highestSpending = categories[0];
+  const totalSpending = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const summaryCards = [
+    { label: "HIGHEST SPENDING", title: highestSpending?.category ?? "No expenses", value: formatAmount(highestSpending?.spending ?? 0), helper: "Current", icon: Money, iconBgColor: "#DFF3E7", iconColor: "#147A3D" },
+    { label: "TOTAL EXPENSE RECORDS", title: "", value: String(expenses.length), helper: "", icon: Receipt, iconBgColor: "#E8EEF8", iconColor: "#172B58" },
+    { label: "TOTAL INSTITUTIONAL EXPENDITURE", title: "", value: formatAmount(totalSpending), helper: "", icon: Buildings, iconBgColor: "#E8F4EC", iconColor: "#147A3D" },
+  ];
+  const activeCategories = categories;
+  const pageCategories = categories.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
+  const breakdownTableData = pageCategories.map((item) => {
+    const visual = categoryVisual(item.category);
+    const Icon = visual.icon;
+    const openCategory = () =>
+      router.push(`/accountant/expense-categories/${encodeURIComponent(item.category)}`);
+    const cellButtonClass = "-m-2 block w-[calc(100%+1rem)] cursor-pointer p-2 text-inherit";
+    return {
+      category: <button type="button" onClick={openCategory} className={`${cellButtonClass} text-left`}><span className="flex items-center gap-4 font-semibold text-[#282828]"><span className={`flex h-8 w-8 items-center justify-center rounded-full ${visual.tone}`}><Icon size={16} weight="fill" /></span>{item.category}</span></button>,
+      records: <button type="button" onClick={openCategory} className={`${cellButtonClass} font-semibold text-[#282828]`}>{item.records}</button>,
+      spending: <button type="button" onClick={openCategory} className={`${cellButtonClass} font-bold text-[#147A3D]`}>{formatAmount(item.spending)}</button>,
+      updated: <button type="button" onClick={openCategory} className={`${cellButtonClass} font-semibold text-[#525252]`}>{item.lastUpdated ? new Date(item.lastUpdated).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</button>,
+    };
+  });
 
   return (
     <main className="min-h-full w-full overflow-x-hidden bg-[#F4F4F4] px-4 py-5 pb-8">
@@ -116,146 +197,74 @@ export default function AccountantExpenseCategoriesPage() {
           </button>
         </section>
 
-        <section className="grid gap-6 md:grid-cols-3">
+        {isLoading ? <SummaryCardsShimmer /> : <section className="grid gap-6 md:grid-cols-3">
           {summaryCards.map((item) => (
-            <article
+            <CardComponent
               key={item.label}
-              className="flex h-[150px] flex-col justify-center rounded-lg bg-white px-7 shadow-[0_4px_12px_rgba(15,23,42,0.14)]"
-            >
-              <p className="text-[11px] font-bold tracking-wide text-[#6B7280]">
-                {item.label}
-              </p>
-              {item.title && (
-                <h2 className="mt-3 text-[20px] font-bold text-[#282828]">
-                  {item.title}
-                </h2>
-              )}
-              <div className={item.title ? "mt-3" : "mt-8"}>
-                <span className="text-[24px] font-bold text-[#147A3D]">
-                  {item.value}
-                </span>
-                {item.helper && (
-                  <span className="ml-3 text-[13px] font-medium text-[#8A8F98]">
-                    {item.helper}
-                  </span>
-                )}
-              </div>
-            </article>
+              icon={<item.icon size={19} weight="fill" />}
+              iconBgColor={item.iconBgColor}
+              iconColor={item.iconColor}
+              value={<div><p className="text-[11px] font-bold tracking-wide text-[#6B7280]">{item.label}</p>{item.title && <h2 className="mt-1 text-[18px] font-bold text-[#282828]">{item.title}</h2>}</div>}
+              label={<div><span className="text-[22px] font-bold text-[#147A3D]">{item.value}</span>{item.helper && <span className="ml-3 text-[13px] font-medium text-[#8A8F98]">{item.helper}</span>}</div>}
+              style="!h-[150px] bg-white !rounded-lg !px-6 !py-5 shadow-[0_4px_12px_rgba(15,23,42,0.14)]"
+            />
           ))}
-        </section>
+        </section>}
 
         <section>
           <h2 className="mb-4 text-[13px] font-bold tracking-wide text-[#6B7280]">
             ACTIVE CATEGORIES
           </h2>
-          <div className="grid gap-6 md:grid-cols-3">
-            {activeCategories.map((item) => (
-              <article
-                key={item.title}
-                className="flex h-[190px] flex-col justify-between rounded-lg bg-white p-7 shadow-[0_4px_12px_rgba(15,23,42,0.14)]"
-              >
-                <span className={`h-12 w-12 rounded-md ${item.swatch}`} />
-                <div>
-                  <div className="flex items-end justify-between gap-4">
-                    <div>
-                      <h3 className="text-[20px] font-bold text-[#282828]">
-                        {item.title}
-                      </h3>
-                      <p className="mt-5 text-[13px] font-medium text-[#525252]">
-                        Total Spending
-                      </p>
-                    </div>
-                    <p className="text-[24px] font-bold text-[#282828]">
-                      {item.value}
-                    </p>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+          {isLoading ? <ActiveCategoriesShimmer /> : <div className="custom-scrollbar flex gap-6 overflow-x-auto pb-3">
+            {activeCategories.map((item) => {
+              const visual = categoryVisual(item.category);
+              const Icon = visual.icon;
+              return (
+                <CardComponent
+                  key={item.category}
+                  icon={<Icon size={22} weight="fill" />}
+                  iconBgColor={visual.background}
+                  iconColor={visual.color}
+                  value={<span className="text-[20px] font-bold text-[#282828]">{item.category}</span>}
+                  label={<span className="flex items-end justify-between gap-4"><span className="text-[13px] font-medium text-[#525252]">Total Spending</span><span className="text-[22px] font-bold text-[#282828]">{formatAmount(item.spending)}</span></span>}
+                  style="!h-[190px] !w-[350px] !min-w-[350px] flex-none bg-white !rounded-lg !p-7 shadow-[0_4px_12px_rgba(15,23,42,0.14)]"
+                />
+              );
+            })}
+            {activeCategories.length === 0 && (
+              <p className="col-span-full py-10 text-center text-sm text-[#6B7280]">No expense categories found.</p>
+            )}
+          </div>}
         </section>
 
         <section className="overflow-hidden rounded-lg bg-white shadow-[0_4px_12px_rgba(15,23,42,0.12)]">
           <h2 className="px-7 py-6 text-[20px] font-bold text-[#282828]">
             Detailed Expenditure Breakdown
           </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-left">
-              <thead className="bg-[#F0F2F4]">
-                <tr className="text-[11px] font-bold tracking-wide text-[#525252]">
-                  <th className="px-7 py-4">CATEGORY</th>
-                  <th className="px-7 py-4">EXPENSE RECORDS</th>
-                  <th className="px-7 py-4">TOTAL SPENDING</th>
-                  <th className="px-7 py-4 text-right">LAST UPDATED</th>
-                </tr>
-              </thead>
-              <tbody>
-                {breakdownRows.map((item) => {
-                  const Icon = item.icon;
-
-                  return (
-                    <tr
-                      key={item.category}
-                      tabIndex={0}
-                      role="button"
-                      onClick={() =>
-                        router.push(`/accountant/expense-categories/${item.slug}`)
-                      }
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          router.push(`/accountant/expense-categories/${item.slug}`);
-                        }
-                      }}
-                      className="cursor-pointer border-b border-[#E6E8EB] text-[13px] font-semibold text-[#282828] transition-colors hover:bg-[#F7FBF8] focus:bg-[#F7FBF8] focus:outline-none"
-                    >
-                      <td className="px-7 py-5">
-                        <div className="flex items-center gap-4">
-                          <span
-                            className={`flex h-8 w-8 items-center justify-center rounded-full ${item.tone}`}
-                          >
-                            <Icon size={16} weight="fill" />
-                          </span>
-                          {item.category}
-                        </div>
-                      </td>
-                      <td className="px-7 py-5">{item.records}</td>
-                      <td className="px-7 py-5 font-bold text-[#147A3D]">
-                        {item.spending}
-                      </td>
-                      <td className="px-7 py-5 text-right text-[#525252]">
-                        {item.updated}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-[#F7F8F9] px-7 py-4">
-            <p className="text-[13px] font-medium text-[#525252]">
-              Showing 4 of 24 categories
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="h-9 cursor-pointer rounded-md border border-[#CBD5C9] bg-white px-4 text-[12px] font-semibold text-[#8A8F98]"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                className="h-9 cursor-pointer rounded-md border border-[#CBD5C9] bg-white px-5 text-[12px] font-semibold text-[#282828]"
-              >
-                Next
-              </button>
-            </div>
-          </div>
+          <TableComponent
+            columns={breakdownColumns}
+            tableData={breakdownTableData}
+            isLoading={isLoading}
+            stickyHeader={false}
+            tableClassName="min-w-[760px] text-[13px]"
+            emptyStateMessage="No expense records found."
+          />
+          {categories.length > itemsPerPage && (
+            <Pagination
+              currentPage={currentPage}
+              totalItems={categories.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              disabled={isLoading}
+              roundedBottom="rounded-b-lg"
+            />
+          )}
         </section>
       </div>
       <RecordNewExpenseModal
         isOpen={isRecordExpenseOpen}
         onClose={() => setIsRecordExpenseOpen(false)}
+        onSaved={loadExpenses}
       />
     </main>
   );

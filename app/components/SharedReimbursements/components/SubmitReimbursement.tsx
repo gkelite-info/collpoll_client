@@ -70,6 +70,22 @@ export default function SubmitReimbursement({ onBack, onSubmitted, initialReport
     ifscCode: initialReport?.ifscCode ?? "",
   });
   const isEditing = Boolean(initialReport);
+  const amount = Number(form.amountSpent);
+  const accountNumber = form.accountNumber.replace(/\s+/g, "");
+  const ifscCode = form.ifscCode.trim().toUpperCase();
+  const isFormValid =
+    form.expenseTitle.trim().length >= 3 &&
+    Boolean(form.expenseCategory) &&
+    Boolean(form.expenseDate) &&
+    form.expenseDate <= new Date().toISOString().split("T")[0] &&
+    Number.isFinite(amount) &&
+    amount > 0 &&
+    amount <= 99999999.99 &&
+    form.description.trim().length >= 10 &&
+    (files.length > 0 || Boolean(initialReport?.attachments.length)) &&
+    form.paymentBank.trim().length >= 2 &&
+    /^\d{6,30}$/.test(accountNumber) &&
+    /^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode);
 
   const update = (field: keyof typeof form, value: string) =>
     setForm((current) => ({ ...current, [field]: value }));
@@ -187,7 +203,7 @@ export default function SubmitReimbursement({ onBack, onSubmitted, initialReport
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="relative"><span className={labelClass}>Expense Category <b className="text-red-500">*</b></span><button type="button" aria-haspopup="listbox" aria-expanded={categoryOpen} onClick={() => setCategoryOpen((open) => !open)} className={`${inputClass} flex items-center justify-between text-left`}><span className="truncate">{form.expenseCategory}</span><ChevronDown size={17} className={`shrink-0 transition-transform ${categoryOpen ? "rotate-180" : ""}`}/></button>{categoryOpen && <div role="listbox" className="absolute z-30 mt-1 max-h-48 w-full overflow-y-auto rounded-[7px] border border-[#BFD0C2] bg-white py-1 shadow-lg">{expenseCategories.map((category) => <button key={category} type="button" role="option" aria-selected={form.expenseCategory === category} onClick={() => { update("expenseCategory", category); setCategoryOpen(false); }} className={`block w-full px-3 py-2 text-left text-[14px] hover:bg-[#EAF8F0] ${form.expenseCategory === category ? "bg-[#43C17A] font-medium text-white hover:bg-[#43C17A]" : "text-[#14213A]"}`}>{category}</button>)}</div>}</div>
               <label><span className={labelClass}>Expense Date <b className="text-red-500">*</b></span><input required type="date" max={new Date().toISOString().split("T")[0]} value={form.expenseDate} onChange={(e) => update("expenseDate", e.target.value)} className={inputClass} /></label>
-              <label><span className={labelClass}>Amount <b className="text-red-500">*</b></span><input required type="number" min="0.01" max="99999999.99" step="0.01" value={form.amountSpent} onChange={(e) => update("amountSpent", e.target.value)} className={inputClass} placeholder="₹ 0.00" /></label>
+              <label><span className={labelClass}>Amount <b className="text-red-500">*</b></span><input required type="number" min="0.01" max="99999999.99" step="0.01" value={form.amountSpent} onChange={(e) => update("amountSpent", e.target.value)} onWheel={(e) => e.currentTarget.blur()} className={inputClass} placeholder="₹ 0.00" /></label>
             </div>
           </FormCard>
           <FormCard icon={FileText} title={<>Description <b className="text-red-500">*</b></>}><textarea required minLength={10} value={form.description} onChange={(e) => update("description", e.target.value)} className="min-h-[110px] w-full resize-none rounded-[7px] border border-[#BFD0C2] p-3 text-[14px] text-[#14213A] outline-none focus:border-[#43C17A]" placeholder="Briefly describe the business purpose of this expense..." /></FormCard>
@@ -208,7 +224,7 @@ export default function SubmitReimbursement({ onBack, onSubmitted, initialReport
           </FormCard>
         </div>
       </div>
-      <div className="mt-7 flex justify-end gap-3"><button type="button" onClick={onBack} disabled={submitting} className="rounded-lg border border-[#BFD0C2] px-6 py-2.5 text-sm font-semibold text-[#4C5565] disabled:opacity-50">Cancel</button><button type="submit" disabled={submitting || userLoading} className="rounded-lg bg-[#43C17A] px-7 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{submitting ? (isEditing ? "Updating..." : "Submitting...") : (isEditing ? "Update Request" : "Submit Request")}</button></div>
+      <div className="mt-7 flex justify-end gap-3"><button type="button" onClick={onBack} disabled={submitting} className="rounded-lg border border-[#BFD0C2] px-6 py-2.5 text-sm font-semibold text-[#4C5565] disabled:opacity-50">Cancel</button><button type="submit" disabled={submitting || userLoading || !userId || !collegeId || !isFormValid} className="rounded-lg bg-[#43C17A] px-7 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{submitting ? (isEditing ? "Updating..." : "Submitting...") : (isEditing ? "Update Request" : "Submit Request")}</button></div>
     </form>
   );
 }
