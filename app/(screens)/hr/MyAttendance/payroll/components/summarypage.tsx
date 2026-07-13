@@ -153,6 +153,16 @@ export default function SummaryPage({ profile }: { profile?: any }) {
           <InfoRow label="Name on Account:" value={bank?.accountHolderName} />
           <InfoRow label="Branch:" value={bank?.branch} />
         </div>
+
+        <div className="mt-3 border-t border-gray-100 pt-3">
+          <h3 className="text-[15px] font-bold text-gray-800 mb-3 text-left">
+            Statutory Information
+          </h3>
+          <div className="flex flex-col space-y-0.5">
+            <InfoRow label="PF Number:" value={bank?.pfNumber?.toUpperCase()} />
+            <InfoRow label="ESI Number:" value={bank?.esiNumber?.toUpperCase()} />
+          </div>
+        </div>
       </div>
 
       {/* 3. AADHAAR INFORMATION */}

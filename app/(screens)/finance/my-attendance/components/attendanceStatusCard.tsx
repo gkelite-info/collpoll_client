@@ -29,7 +29,7 @@ const AttendanceStatusCard: React.FC<Props> = ({ stats }) => {
           <p className="text-[#282828] font-medium">Remaining Leaves</p>
           <p className="text-[#525252] font-semibold">{stats.remainingLeaves}</p>
         </div>
-        {(stats.lopDays ?? 0) > 0 && (
+        {stats.lopDays !== undefined && (
           <div className="flex items-center justify-between pt-1 border-t border-red-100">
             <p className="text-red-500 font-medium">LOP Days</p>
             <p className="text-red-500 font-semibold">{stats.lopDays}</p>
