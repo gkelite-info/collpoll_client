@@ -88,9 +88,11 @@ export default function ProfileInfo() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const currentUser = useUser();
+  const role: string | null = currentUser.role;
+
   const {
     userId,
-    role,
     fullName,
     email,
     mobile,
@@ -114,7 +116,7 @@ export default function ProfileInfo() {
     wellBeingCategoryName,
     wellBeingCategoryNames,
     identifierId
-  } = useUser();
+  } = currentUser;
 
   const [profileData, setProfileData] = useState<ProfileInfoData>({
     registrationId: String(identifierId || userId),

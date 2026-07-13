@@ -2,7 +2,7 @@ import type { ElementType, ReactNode } from "react";
 
 type FormCardProps = {
   icon: ElementType;
-  title: string;
+  title: ReactNode;
   action?: ReactNode;
   children: ReactNode;
 };
