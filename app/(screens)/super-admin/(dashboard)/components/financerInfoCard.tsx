@@ -52,9 +52,9 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
             <p className="text-md text-[#454545] mt-0 font-medium">
               Today’s Collections,
               <span className="text-[#089144] font-bold">
-                {item.todayCollection
-                  ? ` ₹${item.todayCollection.toLocaleString("en-IN")}`
-                  : ""}
+                <span className="text-[#089144] font-bold">
+                  {` ₹${item.todayCollection.toLocaleString("en-IN")}`}
+                </span>
               </span>
               {!item.show && " collected so far."}
             </p>

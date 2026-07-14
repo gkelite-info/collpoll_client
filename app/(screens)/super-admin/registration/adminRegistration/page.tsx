@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { InputField } from "../components/reusableComponents";
 import { useEffect, useState } from "react";
 import { saveCollegeAdmin } from "@/lib/helpers/collegeAdmin/collegeAdmin";
-import { CollegeDropdown, fetchCollegesForAdmin } from "@/lib/helpers/superadmin/collegeHelper";
+import { CollegeDropdownSelect } from "../components/CollegeDropdownSelect";
 import { useUser } from "@/app/utils/context/UserContext";
 
 type AdminForm = {
@@ -41,7 +41,6 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [colleges, setColleges] = useState<CollegeDropdown[]>([]);
   const { loading, role } = useUser();
 
   const handleChange = (key: keyof typeof form, value: string) => {
@@ -89,33 +88,12 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
     }
   };
 
-  useEffect(() => {
-    if (activeTab !== "admin") return;
-    if (loading) return;
-    if (role !== "SuperAdmin") return;
-
-    let cancelled = false;
-
-    const loadColleges = async () => {
-      const res = await fetchCollegesForAdmin();
-      if (cancelled) return;
-      if (!res.success) {
-        toast.error("Failed to load colleges");
-      } else {
-        setColleges(res.data);
-      }
-    };
-
-    loadColleges();
-
-    return () => { cancelled = true; };
-
-  }, [activeTab, loading, role]);
+  // College fetch logic has been moved to CollegeDropdownSelect component
 
   const validateCollegeId = async (collegeId: string) => {
     const { data, error } = await supabase
       .from("colleges")
-      .select("collegeId")
+      .select("collegeId, collegeCode")
       .eq("collegeId", Number(collegeId))
       .single();
 
@@ -127,6 +105,7 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
     return {
       success: true,
       collegeId: data.collegeId,
+      collegeCode: data.collegeCode,
     };
   };
 
@@ -210,12 +189,16 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
       if (!collegeValidation.success) throw new Error("Invalid College ID");
 
       const actualCollegeId = collegeValidation.collegeId;
+      const cCode = collegeValidation.collegeCode || "";
+      const redirectUrl = cCode.toUpperCase() === "GKELITE" || !cCode
+        ? "https://tektoncampus.com/login"
+        : `https://${cCode.toLowerCase()}.tektoncampus.com/login`;
 
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo: "https://tektoncampus.com/login",
+          emailRedirectTo: redirectUrl,
         },
       });
 
@@ -337,26 +320,10 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col">
-          <label className="text-[#333] font-semibold text-[15px] mb-1.5">
-            College <span className="text-red-500">*</span>
-          </label>
-
-          <select
-            value={form.collegeId}
-            onChange={(e) => handleChange("collegeId", e.target.value)}
-            className="border border-gray-300 rounded-lg px-2 py-2.5 text-sm
-               focus:outline-none focus:border-[#49C77F] cursor-pointer text-[#282828]"
-          >
-            <option value="">Select college</option>
-
-            {colleges.map((college) => (
-              <option key={college.collegeId} value={college.collegeId}>
-                {college.collegeName}
-              </option>
-            ))}
-          </select>
-        </div>
+          <CollegeDropdownSelect 
+            value={form.collegeId} 
+            onChange={(val) => handleChange("collegeId", val)} 
+          />
         <div className="flex flex-col">
           <label className="text-[#333] font-semibold text-[15px] mb-1.5">
             Role <span className="text-red-500">*</span>

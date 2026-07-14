@@ -7,6 +7,7 @@ type CreateCollegePayload = {
   address: string;
   countryCode: string;
   phoneNumber: string;
+  alternateMobile?: string;
   country: string;
   state: string;
   city: string;
@@ -44,6 +45,7 @@ export async function createCollege(payload: CreateCollegePayload, file: File) {
       address: payload.address,
       countryCode: payload.countryCode,
       phoneNumber: payload.phoneNumber,
+      alternateMobile: payload.alternateMobile || null,
       country: payload.country,
       state: payload.state,
       city: payload.city,

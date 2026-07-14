@@ -22,6 +22,7 @@ type AdminForm = {
     countryCode: string;
     phone: string;
     collegeId: string;
+    collegeCode?: string;
     educationTypes: string[];
     password: string;
     confirmPassword: string;
@@ -42,6 +43,7 @@ const initialFormState: AdminForm = {
     countryCode: "+91",
     phone: "",
     collegeId: "",
+    collegeCode: "",
     educationTypes: [],
     password: "",
     confirmPassword: "",
@@ -100,9 +102,16 @@ export default function AdminRegistration() {
                 .single();
 
             if (data?.collegeId) {
+                const { data: collegeData } = await supabase
+                    .from("colleges")
+                    .select("collegeCode")
+                    .eq("collegeId", data.collegeId)
+                    .single();
+
                 setForm((prev) => ({
                     ...prev,
                     collegeId: String(data.collegeId),
+                    collegeCode: collegeData?.collegeCode || "",
                 }));
             }
         };
@@ -207,9 +216,17 @@ export default function AdminRegistration() {
 
             setIsLoading(true);
 
+            const cCode = form.collegeCode || "";
+            const redirectUrl = cCode.toUpperCase() === "GKELITE" || !cCode
+                ? "https://tektoncampus.com/login"
+                : `https://${cCode.toLowerCase()}.tektoncampus.com/login`;
+
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: form.email,
                 password: form.password,
+                options: {
+                    emailRedirectTo: redirectUrl,
+                },
             });
 
             // if (authError || !authData.user) {
@@ -415,12 +432,10 @@ export default function AdminRegistration() {
             <div className="grid md:grid-cols-2 gap-6 mt-5">
                 <InputField
                     label="College ID"
-                    value={form.collegeId}
+                    value={form.collegeCode || form.collegeId}
                     disabled={true}
                     placeholder="Enter college ID"
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        handleChange("collegeId", e.target.value.toUpperCase())
-                    }
+                    onChange={() => { }}
                 />
 
                 <div className="flex flex-col w-full">
@@ -469,15 +484,14 @@ export default function AdminRegistration() {
                     type="date"
                     value={form.dateOfJoining}
                     required={true}
+                    max={new Date().toISOString().split("T")[0]}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         handleChange("dateOfJoining", e.target.value)
                     }
                 />
-
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 mt-5">
-
                 <InputField
                     label="Experience (Years)"
                     type="number"
@@ -503,7 +517,6 @@ export default function AdminRegistration() {
                         handleChange("employeeId", sanitized);
                     }}
                 />
-
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 mt-5">

@@ -1,6 +1,5 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { UserInfoCard } from "./financerInfoCard";
 import DashboardPage from "./gridDashMain";
 
@@ -12,7 +11,7 @@ const card = [
   {
     show: false,
     user: "User",
-    todayCollection: 245000,
+    todayCollection: 0,
     // image: superAdminImage ?? undefined,
     image: male ?? undefined,
     top: "lg:top-[-10px]",

@@ -819,12 +819,17 @@ const AddUserModal: React.FC<{
         //   },
         // );
 
+        const cCode = basicData.collegeCode || "";
+        const redirectUrl = cCode.toUpperCase() === "GKELITE" || !cCode
+          ? "https://tektoncampus.com/login"
+          : `https://${cCode.toLowerCase()}.tektoncampus.com/login`;
+
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: basicData.email,
           password: basicData.password!,
           options: {
             data: { full_name: basicData.fullName, role: basicData.role },
-            emailRedirectTo: `https://${basicData.collegeCode?.toLowerCase()}.tektoncampus.com/`,
+            emailRedirectTo: redirectUrl,
           },
         });
 
