@@ -189,8 +189,9 @@ export default function EducationalType() {
                 <button
                     onClick={handleSubmit}
                     className=" w-full bg-[#49C77F] text-white h-[42px] rounded-lg font-bold text-lg shadow-md hover:bg-[#3fb070] transition-all cursor-pointer"
+                    disabled={loading}
                 >
-                    Save
+                    {loading ? "Saving..." : "Save"}
                 </button>
             </div>
         </motion.div>

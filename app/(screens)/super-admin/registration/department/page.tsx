@@ -124,7 +124,9 @@ export default function Department() {
       await insertEducationDepartments(payload);
 
       toast.success("Departments saved successfully");
+      setEducations([]);
       setDepartments([]);
+      setEducationId("");
       setDepartmentName("");
       setDepartmentCode("");
       setEditingId(null);
@@ -253,16 +255,21 @@ export default function Department() {
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className={`bg-[#49C77F] text-white
-             h-[43px] w-[300px]
-             rounded-md font-semibold
-             flex items-center justify-center
-             hover:bg-[#3fb070] transition-colors
-      ${loading
-              ? "opacity-60 cursor-not-allowed"
-              : "hover:bg-[#3ab06d] cursor-pointer"
-            }
-    `}
+          //       className={`bg-[#49C77F] text-white
+          //          h-[43px] w-[300px]
+          //          rounded-md font-semibold
+          //          flex items-center justify-center
+          //          hover:bg-[#3fb070] transition-colors
+          //   ${loading
+          //           ? "opacity-60 cursor-not-allowed"
+          //           : "hover:bg-[#3ab06d] cursor-pointer"
+          //         }
+          // `}
+          className="disabled:cursor-not-allowed bg-[#49C77F] text-white
+           h-[43px] w-[300px]
+                    rounded-md font-semibold
+                    flex items-center justify-center
+                    hover:bg-[#3fb070] transition-colors cursor-pointer"
         >
           {loading ? "Saving..." : "Save"}
         </button>

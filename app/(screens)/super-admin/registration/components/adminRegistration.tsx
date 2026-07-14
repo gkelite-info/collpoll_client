@@ -153,11 +153,16 @@ export const AdminRegistration = () => {
                 return;
             }
  
+            const cCode = form.collegeCode || "";
+            const redirectUrl = cCode.toUpperCase() === "GKELITE" || !cCode
+                ? "https://tektoncampus.com/login"
+                : `https://${cCode.toLowerCase()}.tektoncampus.com/login`;
+
             const { data, error } = await supabase.auth.signUp({
                 email: form.email,
                 password: form.password,
                 options: {
-                    emailRedirectTo: "https://collpoll-client.vercel.app/login",
+                    emailRedirectTo: redirectUrl,
                 },
             });
             if (error) throw error;

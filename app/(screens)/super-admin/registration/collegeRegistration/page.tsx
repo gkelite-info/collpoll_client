@@ -13,6 +13,7 @@ const INITIAL_FORM_STATE = {
   email: "",
   countryCode: "+91",
   phone: "",
+  alternateMobile: "",
   country: "",
   state: "",
   city: "",
@@ -118,7 +119,7 @@ export default function CollegeRegistration() {
       return;
     }
 
-    if (name === "phone") {
+    if (name === "phone" || name === "alternateMobile") {
       const formatted = value.replace(/\D/g, "");
       if (formatted.length > 10) return;
       setFormData({ ...formData, [name]: formatted });
@@ -228,6 +229,10 @@ export default function CollegeRegistration() {
     else if (!/^\d{10}$/.test(phone))
       return toast.error("Phone must be exactly 10 digits");
 
+    if (formData.alternateMobile && !/^\d{10}$/.test(formData.alternateMobile)) {
+      return toast.error("Alternate Mobile must be exactly 10 digits");
+    }
+
     if (!selectedFile) return toast.error("Please upload a verification proof");
 
     if (formData.educationType.length === 0)
@@ -274,6 +279,7 @@ export default function CollegeRegistration() {
         address: formData.address,
         countryCode: formData.countryCode,
         phoneNumber: formData.phone,
+        alternateMobile: formData.alternateMobile,
         country: formData.country,
         state: formData.state,
         city: formData.city,
@@ -380,13 +386,33 @@ export default function CollegeRegistration() {
             />
             <input
               name="phone"
-              type="number"
+              type="tel"
               value={formData.phone}
               onChange={handleChange}
               placeholder="901763XXXX"
               maxLength={10}
               onWheel={(e) => e.currentTarget.blur()}
               className="border border-gray-300 rounded-lg px-4 py-2.5 text-gray-600  text-sm w-full focus:outline-none focus:border-[#49C77F]"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-col">
+          <label className="text-[#333] font-semibold text-[15px] mb-1.5">
+            Alternate Mobile
+          </label>
+          <div className="flex gap-2">
+            <input
+              name="alternateMobile"
+              type="tel"
+              value={formData.alternateMobile}
+              onChange={handleChange}
+              placeholder="901763XXXX"
+              maxLength={10}
+              onWheel={(e) => e.currentTarget.blur()}
+              className="border border-gray-300 rounded-lg px-4 py-2.5 text-gray-600 text-sm w-full focus:outline-none focus:border-[#49C77F]"
             />
           </div>
         </div>

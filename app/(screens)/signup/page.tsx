@@ -200,11 +200,22 @@ export default function Signup() {
     const { confirmPassword, ...payload } = formData;
 
     try {
+      const { data: collegeData } = await supabase
+        .from("colleges")
+        .select("collegeCode")
+        .eq("collegeId", formData.collegeId)
+        .single();
+
+      const cCode = collegeData?.collegeCode || "";
+      const redirectUrl = cCode.toUpperCase() === "GKELITE" || !cCode
+        ? "https://tektoncampus.com/login"
+        : `https://${cCode.toLowerCase()}.tektoncampus.com/login`;
+
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: "https://collpoll-client.vercel.app/login",
+          emailRedirectTo: redirectUrl,
         },
       });
       if (error) throw error;

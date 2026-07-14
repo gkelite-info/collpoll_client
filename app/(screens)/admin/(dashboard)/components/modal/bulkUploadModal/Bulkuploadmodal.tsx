@@ -184,6 +184,11 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                     const accessToken = session?.access_token;
                     if (!accessToken) throw new Error("No active session");
 
+                    const cCode = adminContext.collegeCode || "";
+                    const redirectUrl = cCode.toUpperCase() === "GKELITE" || !cCode
+                        ? "https://tektoncampus.com/login"
+                        : `https://${cCode.toLowerCase()}.tektoncampus.com/login`;
+
                     const createRes = await fetch("/api/admin/create-auth-user", {
                         method: "POST",
                         headers: {
@@ -196,7 +201,7 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                             password: row.password,
                             fullName: row.fullName,
                             role: row.role,
-                            emailRedirectTo: `https://${adminContext.collegeCode?.toLowerCase()}.tektoncampus.com/`,
+                            emailRedirectTo: redirectUrl,
                         }),
                     });
 
