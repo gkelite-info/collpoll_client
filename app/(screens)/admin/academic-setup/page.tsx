@@ -7,7 +7,7 @@ import ViewAcademicStructure, { AcademicViewData } from "./components/ViewAcadem
 import ViewSubjects, { SubjectViewData } from "./components/ViewSubjects";
 import AddSubject, { SubjectFormData, SubjectUIState } from "./components/AddSubject";
 import AttendanceEligibility from "./components/AttendanceEligibility";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import { getAcademicSubjectById, resolveSubjectUIFromIds, upsertAcademicSubject, resolveSubjectIds } from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
@@ -20,6 +20,8 @@ import CollegeTimingsStructure from "./components/collegetimings/CollegeTimingsS
 import CollegeMediaStructure from "./components/collegemedia/CollegeMediaStructure";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Suspense } from "react";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type Tab =
   | "view"
@@ -74,6 +76,8 @@ function AcademicSetupContent() {
   const [isFetchingSubject, setIsFetchingSubject] = useState(false);
 
   const { userId } = useUser();
+  const { collegeEducationType, loading: adminLoading } = useAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
 
   const tabs = [
     { id: "view", label: "View Academic Structure" },
@@ -92,21 +96,21 @@ function AcademicSetupContent() {
       : activeTab === "biometric-structure"
         ? {
           title: "Biometric Structure",
-          description: "Manage rooms and biometric devices in your institution.",
+          description: `Manage rooms and biometric devices in your ${isSchool ? "school" : "institution"}.`,
         }
         : activeTab === "college-timings"
           ? {
-            title: "College Timings Structure",
-            description: "Configure college operational hours and shifts.",
+            title: isSchool ? "School Timings Structure" : "College Timings Structure",
+            description: `Configure ${isSchool ? "school" : "college"} operational hours and shifts.`,
           }
           : activeTab === "college-media"
             ? {
-              title: "College Media",
-              description: "Upload and manage college logo and banner.",
+              title: isSchool ? "School Media" : "College Media",
+              description: `Upload and manage ${isSchool ? "school" : "college"} logo and banner.`,
             }
             : {
               title: "Academic Structure",
-              description: "Add new academic structures for your institution.",
+              description: `Add new academic structures for your ${isSchool ? "school" : "institution"}.`,
             };
 
   const handleEdit = (row: AcademicViewData) => {
@@ -242,6 +246,7 @@ function AcademicSetupContent() {
 
   return (
     <section className="min-h-[85vh] p-2 relative">
+      <Toaster position="top-right" containerStyle={{ zIndex: 99999 }} />
       <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-sm p-4 sm:p-6 md:p-8 min-h-[84vh]">
         {isFetchingSubject && (
           <div className="absolute inset-0 bg-white/70 z-50 flex items-center justify-center rounded-xl backdrop-blur-[1px]">
@@ -254,7 +259,14 @@ function AcademicSetupContent() {
           </div>
         )}
 
-        <div className="mb-6 border-b border-gray-100 pb-1">
+        {adminLoading ? (
+          <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+            <div className="w-8 h-8 border-4 border-[#43C17A] border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-[#16284F] font-medium text-sm">Loading options...</span>
+          </div>
+        ) : (
+          <>
+            <div className="mb-6 border-b border-gray-100 pb-1">
           <div className="flex flex-row items-center gap-2 sm:gap-3 text-base sm:text-lg md:text-xl font-bold w-full overflow-x-auto custom-scrollbar whitespace-nowrap pb-3">
             <button
               onClick={() => {
@@ -291,7 +303,7 @@ function AcademicSetupContent() {
                 : "text-[#282828] hover:text-[#16284F]"
                 }`}
             >
-              College Timings Structure
+              {isSchool ? "School Timings Structure" : "College Timings Structure"}
             </button>
             <span className="text-gray-300 font-light text-xl md:text-2xl flex-shrink-0">/</span>
             <button
@@ -303,7 +315,7 @@ function AcademicSetupContent() {
                 : "text-[#282828] hover:text-[#16284F]"
                 }`}
             >
-              College Media
+              {isSchool ? "School Media" : "College Media"}
             </button>
           </div>
         </div>
@@ -387,6 +399,8 @@ function AcademicSetupContent() {
 
         {activeTab === "college-media" && (
           <CollegeMediaStructure />
+        )}
+          </>
         )}
       </div>
     </section>

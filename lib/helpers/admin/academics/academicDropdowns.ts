@@ -8,7 +8,8 @@ export async function fetchEducations(collegeId: number) {
     .from("college_education")
     .select("collegeEducationId, collegeEducationType")
     .eq("collegeId", collegeId)
-    .eq("isActive", true);
+    .eq("isActive", true)
+    .is("deletedAt", null);
 
   if (error) throw error;
   return data ?? [];
@@ -53,7 +54,8 @@ export async function fetchBranches(
     .select("collegeBranchId, collegeBranchType, collegeBranchCode")
     .eq("collegeId", collegeId)
     .eq("collegeEducationId", collegeEducationId)
-    .eq("isActive", true);
+    .eq("isActive", true)
+    .is("deletedAt", null);
 
   if (error) throw error;
   return data ?? [];
@@ -65,15 +67,24 @@ export async function fetchBranches(
 export async function fetchAcademicYears(
   collegeId: number,
   collegeEducationId: number,
-  collegeBranchId: number,
+  collegeBranchId: number | null,
 ) {
-  const { data, error } = await supabase
+  let query = supabase
     .from("college_academic_year")
     .select("collegeAcademicYearId, collegeAcademicYear")
     .eq("collegeId", collegeId)
     .eq("collegeEducationId", collegeEducationId)
-    .eq("collegeBranchId", collegeBranchId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
     .order("collegeAcademicYear", { ascending: true });
+
+  if (collegeBranchId != null) {
+    query = query.eq("collegeBranchId", collegeBranchId);
+  } else {
+    query = query.is("collegeBranchId", null);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data ?? [];
@@ -93,7 +104,8 @@ export async function fetchSemesters(
     .eq("collegeId", collegeId)
     .eq("collegeEducationId", collegeEducationId)
     .eq("collegeAcademicYearId", collegeAcademicYearId)
-    .eq("isActive", true);
+    .eq("isActive", true)
+    .is("deletedAt", null);
 
   if (error) throw error;
   return data ?? [];
@@ -105,7 +117,7 @@ export async function fetchSemesters(
 export async function fetchSubjects(
   collegeId: number,
   collegeEducationId: number,
-  collegeBranchId: number,
+  collegeBranchId: number | null,
   collegeAcademicYearId: number,
   collegeSemesterId?: number | null
 ) {
@@ -120,9 +132,15 @@ export async function fetchSubjects(
     `)
     .eq("collegeId", collegeId)
     .eq("collegeEducationId", collegeEducationId)
-    .eq("collegeBranchId", collegeBranchId)
     .eq("collegeAcademicYearId", collegeAcademicYearId)
-    .eq("isActive", true);
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (collegeBranchId !== null && collegeBranchId !== undefined) {
+    query = query.eq("collegeBranchId", collegeBranchId);
+  } else {
+    query = query.is("collegeBranchId", null);
+  }
 
   if (collegeSemesterId) {
     query = query.eq("collegeSemesterId", collegeSemesterId);
@@ -142,17 +160,25 @@ export async function fetchSubjects(
 export async function fetchSections(
   collegeId: number,
   collegeEducationId: number,
-  collegeBranchId: number,
+  collegeBranchId: number | null,
   collegeAcademicYearId: number,
 ) {
-  const { data, error } = await supabase
+  let query = supabase
     .from("college_sections")
     .select("collegeSectionsId, collegeSections")
     .eq("collegeId", collegeId)
     .eq("collegeEducationId", collegeEducationId)
-    .eq("collegeBranchId", collegeBranchId)
     .eq("collegeAcademicYearId", collegeAcademicYearId)
-    .eq("isActive", true);
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (collegeBranchId !== null && collegeBranchId !== undefined) {
+    query = query.eq("collegeBranchId", collegeBranchId);
+  } else {
+    query = query.is("collegeBranchId", null);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data ?? [];

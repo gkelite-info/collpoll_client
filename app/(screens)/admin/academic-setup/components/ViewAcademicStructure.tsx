@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { fetchAdminBranchesWithDetails } from "@/lib/helpers/admin/academicSetupAPI";
+import { deleteAcademicSetup } from "@/lib/helpers/admin/academicSetup/academicSetupMasterAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { Pagination } from "./pagination";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
+import toast from "react-hot-toast";
 
 export type AcademicViewData = {
   id: string;
@@ -29,7 +33,15 @@ export default function ViewAcademicStructure({
   const [isFetching, setIsFetching] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const { collegeEducationType } = useAdmin();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // Delete Modal States
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [rowToDelete, setRowToDelete] = useState<AcademicViewData | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const { collegeId, collegeEducationType } = useAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
 
   useEffect(() => {
     const loadData = async () => {
@@ -44,7 +56,38 @@ export default function ViewAcademicStructure({
     };
 
     loadData();
-  }, [adminId, adminLoading, currentPage]);
+  }, [adminId, adminLoading, currentPage, refreshTrigger]);
+
+  const handleDeleteClick = (row: AcademicViewData) => {
+    setRowToDelete(row);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!rowToDelete || !collegeId) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await deleteAcademicSetup(rowToDelete.id, isSchool, collegeId);
+      
+      if (!response.success) {
+        if (response.reason === "DEPENDENCIES_EXIST") {
+          toast.error("This year has few registrations of faculty and students", { id: "delete-academic-setup" });
+        } else {
+          toast.error("Failed to delete the academic setup", { id: "delete-academic-setup" });
+        }
+      } else {
+        toast.success("Academic setup deleted successfully", { id: "delete-academic-setup" });
+        setIsDeleteModalOpen(false);
+        setRowToDelete(null);
+        setRefreshTrigger(prev => prev + 1);
+      }
+    } catch (error: any) {
+      toast.error(error?.message || "An error occurred while deleting", { id: "delete-academic-setup" });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   // const currentData = data.slice(startIndex, startIndex + ITEMS_PER_PAGE);
@@ -56,9 +99,9 @@ export default function ViewAcademicStructure({
           <thead className="bg-gray-100 text-gray-600 sticky top-0 z-10">
             <tr>
               <th className="p-4 text-left">Education Type</th>
-              <th className="p-4 text-left">{collegeEducationType === "Inter" ? "Group Code" : "Branch Code"}</th>
+              {!isSchool && <th className="p-4 text-left">{collegeEducationType === "Inter" ? "Group Code" : "Branch Code"}</th>}
               <th className="p-4 text-left">Year</th>
-              <th className="p-4 text-left">Batch</th>
+              {!isSchool && <th className="p-4 text-left">Batch</th>}
               <th className="p-4 text-left">Sections</th>
               <th className="p-4 text-left">Actions</th>
             </tr>
@@ -90,17 +133,11 @@ export default function ViewAcademicStructure({
                   className="hover:bg-gray-50 text-gray-800 transition border-b border-gray-50 last:border-b-0"
                 >
                   <td className="p-4">{row.degree}</td>
-                  <td className="p-4">{row.dept}</td>
-
-                  {/* <td className="p-4">
-                    {!row.year || row.year.length === 0
-                      ? "-"
-                      : row.year.map((y: any) => y.name || y).join(", ")}
-                  </td> */}
+                  {!isSchool && <td className="p-4">{row.dept}</td>}
 
                   <td className="p-4">{row.year || "-"}</td>
 
-                  <td className="p-4">{row.batch || "-"}</td>
+                  {!isSchool && <td className="p-4">{row.batch || "-"}</td>}
 
                   <td className="p-4">
                     {!row.sections || row.sections.length === 0
@@ -110,12 +147,20 @@ export default function ViewAcademicStructure({
                   </td>
 
                   <td className="p-4">
-                    <button
-                      className="text-[#16284F] cursor-pointer hover:text-emerald-500 font-semibold underline transition-colors"
-                      onClick={() => onEdit(row)}
-                    >
-                      Edit
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        className="text-[#16284F] cursor-pointer hover:text-emerald-500 font-semibold underline transition-colors"
+                        onClick={() => onEdit(row)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="text-red-500 cursor-pointer hover:text-red-700 font-semibold underline transition-colors"
+                        onClick={() => handleDeleteClick(row)}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -130,6 +175,20 @@ export default function ViewAcademicStructure({
           totalItems={totalItems}
           itemsPerPage={ITEMS_PER_PAGE}
           onPageChange={setCurrentPage}
+        />
+      )}
+
+      {isDeleteModalOpen && rowToDelete && (
+        <ConfirmDeleteModal
+          open={isDeleteModalOpen}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => {
+            setIsDeleteModalOpen(false);
+            setRowToDelete(null);
+          }}
+          isDeleting={isDeleting}
+          name={rowToDelete.year || rowToDelete.branch || rowToDelete.degree}
+          title="Delete Academic Setup"
         />
       )}
     </div>

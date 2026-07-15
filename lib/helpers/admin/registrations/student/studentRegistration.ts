@@ -13,7 +13,7 @@ export async function createStudent(
   payload: {
     userId: number;
     collegeEducationId: number;
-    collegeBranchId: number;
+    collegeBranchId: number | null;
     collegeSessionId?: number | null;
     createdBy: number;
     entryType: "Regular" | "Lateral" | "Transfer";
@@ -43,7 +43,7 @@ export async function createStudent(
 export async function createStudentAcademicHistory(payload: {
   studentId: number;
   collegeAcademicYearId: number;
-  collegeSemesterId: number;
+  collegeSemesterId: number | null;
   collegeSectionsId: number;
   promotedBy: number;
   isCurrent?: boolean;
@@ -66,7 +66,7 @@ export async function createStudentFeeObligation(
     collegeSessionId: number | null;
     collegeAcademicYearId: number;
     collegeEducationId: number;
-    collegeBranchId: number;
+    collegeBranchId: number | null;
     createdBy: number;
   },
   timestamp: string,

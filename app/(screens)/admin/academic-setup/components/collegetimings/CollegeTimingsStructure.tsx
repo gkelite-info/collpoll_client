@@ -4,6 +4,9 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import ViewCollegeTimings from "./ViewCollegeTimings";
 import AddCollegeTimings from "./AddCollegeTimings";
+import { Toaster } from "react-hot-toast";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type ActionTab = "view" | "add";
 
@@ -11,6 +14,8 @@ export default function CollegeTimingsStructure() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const { collegeEducationType } = useAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
 
   const queryAction = searchParams.get("action") as ActionTab | null;
   const activeTab = queryAction || "view";
@@ -22,12 +27,13 @@ export default function CollegeTimingsStructure() {
   };
 
   const tabs = [
-    { id: "view", label: "View College Timings" },
-    { id: "add", label: "Add College Timings" },
+    { id: "view", label: `View ${isSchool ? "School" : "College"} Timings` },
+    { id: "add", label: `Add ${isSchool ? "School" : "College"} Timings` },
   ];
 
   return (
     <div className="w-full">
+      <Toaster position="top-right" />
       <div className="flex justify-center mb-8">
         <div className="bg-gray-100 p-1.5 rounded-full max-w-full flex">
           <div className="relative flex items-center overflow-x-auto custom-scrollbar px-1 pb-0.5 rounded-full w-full">

@@ -6,6 +6,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import ConfirmDeleteModal from "../../calendar/components/ConfirmDeleteModal";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
+import { CaretDown } from "@phosphor-icons/react";
 import {
   fetchAcademicYears,
   fetchBranches,
@@ -18,6 +20,7 @@ import {
   upsertAttendancePolicy,
   type AttendancePolicyRow,
 } from "@/lib/helpers/admin/academicSetup/attendancePoliciesAPI";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type EducationOption = {
   collegeEducationId: number;
@@ -62,6 +65,9 @@ export default function AttendanceEligibility() {
   const [selectedBranchId, setSelectedBranchId] = useState("");
   const [selectedYearId, setSelectedYearId] = useState("");
   const [selectedSemesterId, setSelectedSemesterId] = useState("");
+
+  const selectedEducationOption = educations.find((e) => e.collegeEducationId === Number(selectedEducationId));
+  const isSchool = isSchoolEducation(selectedEducationOption?.collegeEducationType || collegeEducationType);
   const [minAttendance, setMinAttendance] = useState("");
   const [editingPolicyId, setEditingPolicyId] = useState<number | null>(null);
   const [policies, setPolicies] = useState<AttendancePolicyRow[]>([]);
@@ -72,11 +78,14 @@ export default function AttendanceEligibility() {
   const [isLoadingSemesters, setIsLoadingSemesters] = useState(false);
   const [isLoadingPolicies, setIsLoadingPolicies] = useState(false);
   const [isSavingPolicy, setIsSavingPolicy] = useState(false);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const [selectFocus, setSelectFocus] = useState({ education: false, branch: false, year: false, semester: false });
   const [isOpeningEdit, setIsOpeningEdit] = useState(false);
   const [deletingPolicyId, setDeletingPolicyId] = useState<number | null>(null);
   const [policyToDelete, setPolicyToDelete] =
     useState<AttendancePolicyRow | null>(null);
   const skipAutoLoadRef = useRef(false);
+  const isResettingRef = useRef(false);
   const isInitialLoading =
     adminLoading || isLoadingEducations || isLoadingPolicies;
 
@@ -104,7 +113,7 @@ export default function AttendanceEligibility() {
       const res = await fetchAttendancePolicies(educationIds);
 
       if (!res.success) {
-        toast.error(res.error || "Failed to load attendance policies");
+        toast.error(res.error || "Failed to load attendance policies", { id: "attendance-policy-load-err" });
         setPolicies([]);
         return;
       }
@@ -138,8 +147,7 @@ export default function AttendanceEligibility() {
         setSelectedEducationId(
           defaultEducation ? String(defaultEducation.collegeEducationId) : "",
         );
-      } catch (error) {
-        console.error("Failed to load attendance education options", error);
+      } catch {
         setEducations([]);
         setSelectedEducationId("");
       } finally {
@@ -157,6 +165,11 @@ export default function AttendanceEligibility() {
       return;
     }
     if (skipAutoLoadRef.current) return;
+    if (isSchool) {
+      setBranches([]);
+      setSelectedBranchId("");
+      return;
+    }
 
     const loadBranches = async () => {
       try {
@@ -174,8 +187,7 @@ export default function AttendanceEligibility() {
         );
 
         setBranches(branchData);
-      } catch (error) {
-        console.error("Failed to load attendance branch options", error);
+      } catch {
         setBranches([]);
       } finally {
         setIsLoadingBranches(false);
@@ -186,7 +198,12 @@ export default function AttendanceEligibility() {
   }, [collegeId, selectedEducationId]);
 
   useEffect(() => {
-    if (!collegeId || !selectedEducationId || !selectedBranchId) {
+    if (!collegeId || !selectedEducationId) {
+      setYears([]);
+      setSelectedYearId("");
+      return;
+    }
+    if (!isSchool && !selectedBranchId) {
       setYears([]);
       setSelectedYearId("");
       return;
@@ -204,12 +221,11 @@ export default function AttendanceEligibility() {
         const yearData = await fetchAcademicYears(
           collegeId,
           Number(selectedEducationId),
-          Number(selectedBranchId),
+          isSchool ? null : Number(selectedBranchId),
         );
 
         setYears(yearData);
       } catch (error) {
-        console.error("Failed to load attendance year options", error);
         setYears([]);
       } finally {
         setIsLoadingYears(false);
@@ -225,7 +241,7 @@ export default function AttendanceEligibility() {
       setSelectedSemesterId("");
       return;
     }
-    if (skipAutoLoadRef.current) return;
+    if (skipAutoLoadRef.current || isSchool) return;
 
     const loadSemesters = async () => {
       try {
@@ -241,7 +257,6 @@ export default function AttendanceEligibility() {
 
         setSemesters(semesterData);
       } catch (error) {
-        console.error("Failed to load attendance semester options", error);
         setSemesters([]);
       } finally {
         setIsLoadingSemesters(false);
@@ -252,12 +267,18 @@ export default function AttendanceEligibility() {
   }, [collegeId, selectedEducationId, selectedYearId]);
 
   const resetForm = () => {
+    isResettingRef.current = true;
     setEditingPolicyId(null);
     setSelectedBranchId("");
     setSelectedYearId("");
     setSelectedSemesterId("");
     setMinAttendance("");
     updateEditRoute(null);
+    
+    // Allow time for Next.js router to update the URL
+    setTimeout(() => {
+      isResettingRef.current = false;
+    }, 500);
   };
 
 
@@ -266,23 +287,25 @@ export default function AttendanceEligibility() {
 
     if (
       !selectedEducationId ||
-      !selectedBranchId ||
+      (!isSchool && !selectedBranchId) ||
       !selectedYearId ||
-      !selectedSemesterId
+      (!isSchool && !selectedSemesterId)
     ) {
-      toast.error("Please select all required fields");
+      toast.error("Please select all required fields", { id: "attendance-policy-req-fields" });
       return;
     }
 
     if (!adminId) {
-      toast.error("Admin not found");
+      toast.error("Admin not found", { id: "attendance-policy-admin-err" });
       return;
     }
 
     if (!/^\d{2}$/.test(minAttendance)) {
-      toast.error("Minimum attendance must be exactly 2 digits");
+      toast.error("Minimum attendance must be exactly 2 digits", { id: "attendance-policy-min-err" });
       return;
     }
+
+    const toastId = toast.loading(isEditing ? "Updating criteria..." : "Saving criteria...");
 
     try {
       setIsSavingPolicy(true);
@@ -291,28 +314,34 @@ export default function AttendanceEligibility() {
           collegeAttendancePolicyId: editingPolicyId,
         }),
         collegeEducationId: Number(selectedEducationId),
-        collegeBranchId: Number(selectedBranchId),
+        collegeBranchId: isSchool ? null : Number(selectedBranchId),
         collegeAcademicYearId: Number(selectedYearId),
-        collegeSemesterId: Number(selectedSemesterId),
+        collegeSemesterId: isSchool ? null : Number(selectedSemesterId),
         minAttendance: Number(minAttendance),
         createdBy: adminId,
       });
 
       if (!res.success) {
-        toast.error(res.error || "Failed to save criteria");
+        toast.dismiss(toastId);
+        toast.error(res.error || "Failed to save criteria", { id: `attendance-save-err-${Date.now()}` });
         return;
       }
 
+      toast.dismiss(toastId);
       toast.success(
         isEditing
           ? "Attendance criteria updated successfully"
           : "Attendance criteria saved successfully",
-        { id: "attendance-policy-save" },
+        { id: `attendance-save-success-${Date.now()}` },
       );
       resetForm();
       await loadPolicies(
         educations.map((education) => education.collegeEducationId),
       );
+    } catch (error) {
+      console.error("Error saving attendance policy:", error);
+      toast.dismiss(toastId);
+      toast.error("Failed to save criteria. Please try again.", { id: `attendance-save-err-${Date.now()}` });
     } finally {
       setIsSavingPolicy(false);
     }
@@ -323,21 +352,23 @@ export default function AttendanceEligibility() {
     options: { showToast?: boolean; updateRoute?: boolean } = {},
   ) => {
     if (!collegeId) {
-      toast.error("College not found");
+      toast.error(`${isSchool ? "School" : "College"} not found`, { id: "attendance-policy-col-err" });
       return;
     }
 
     try {
       setIsOpeningEdit(true);
 
+      const isPolicySchool = isSchoolEducation(policy.education);
+
       const [branchData, yearData, semesterData] = await Promise.all([
-        fetchBranches(collegeId, policy.collegeEducationId),
+        isPolicySchool ? Promise.resolve([]) : fetchBranches(collegeId, policy.collegeEducationId),
         fetchAcademicYears(
           collegeId,
           policy.collegeEducationId,
-          policy.collegeBranchId,
+          isPolicySchool ? null : policy.collegeBranchId,
         ),
-        fetchSemesters(
+        isPolicySchool ? Promise.resolve([]) : fetchSemesters(
           collegeId,
           policy.collegeEducationId,
           policy.collegeAcademicYearId,
@@ -350,9 +381,9 @@ export default function AttendanceEligibility() {
       setSemesters(semesterData);
       setEditingPolicyId(policy.collegeAttendancePolicyId);
       setSelectedEducationId(String(policy.collegeEducationId));
-      setSelectedBranchId(String(policy.collegeBranchId));
+      setSelectedBranchId(policy.collegeBranchId ? String(policy.collegeBranchId) : "");
       setSelectedYearId(String(policy.collegeAcademicYearId));
-      setSelectedSemesterId(String(policy.collegeSemesterId));
+      setSelectedSemesterId(policy.collegeSemesterId ? String(policy.collegeSemesterId) : "");
       setMinAttendance(
         String(policy.minAttendance).padStart(2, "0").slice(0, 2),
       );
@@ -366,9 +397,8 @@ export default function AttendanceEligibility() {
           id: "attendance-policy-edit-open",
         });
       }
-    } catch (error) {
-      console.error("Failed to open attendance policy for edit", error);
-      toast.error("Failed to open attendance criteria");
+    } catch {
+      toast.error("Failed to open attendance criteria", { id: "attendance-policy-open-err" });
     } finally {
       setIsOpeningEdit(false);
       window.setTimeout(() => {
@@ -382,6 +412,8 @@ export default function AttendanceEligibility() {
   };
 
   useEffect(() => {
+    if (isResettingRef.current) return;
+    
     const routePolicyId = Number(searchParams.get("attendancePolicyId"));
 
     if (!routePolicyId || policies.length === 0) return;
@@ -412,7 +444,7 @@ export default function AttendanceEligibility() {
       const res = await deleteAttendancePolicy(policyId);
 
       if (!res.success) {
-        toast.error(res.error || "Failed to delete criteria");
+        toast.error(res.error || "Failed to delete criteria", { id: "attendance-policy-del-err" });
         return;
       }
 
@@ -438,104 +470,148 @@ export default function AttendanceEligibility() {
           <AttendanceEligibilityFormShimmer />
         ) : (
           <form className="space-y-6" autoComplete="off">
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Field label="Education Type" required>
-                <select
-                  value={selectedEducationId}
-                  onChange={(event) => {
-                    setSelectedEducationId(event.target.value);
-                  }}
-                  disabled={educations.length === 0}
-                  className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full disabled:bg-gray-50 disabled:cursor-not-allowed"
-                >
-                  <option value="">Select Education</option>
-                  {educations.map((education) => (
-                    <option
-                      key={education.collegeEducationId}
-                      value={education.collegeEducationId}
-                    >
-                      {education.collegeEducationType}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label={branchLabel} required>
-                {isLoadingBranches ? (
-                  <ShimmerBlock className="h-[42px] w-full rounded-lg" />
-                ) : (
+                <div className="relative">
                   <select
-                    value={selectedBranchId}
+                    value={selectedEducationId}
+                    onClick={() => setSelectFocus(p => ({ ...p, education: !p.education }))}
+                    onBlur={() => setSelectFocus(p => ({ ...p, education: false }))}
                     onChange={(event) => {
-                      setSelectedBranchId(event.target.value);
+                      setSelectedEducationId(event.target.value);
+                      setSelectFocus(p => ({ ...p, education: false }));
                     }}
-                    disabled={!selectedEducationId || branches.length === 0}
-                    className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    disabled={educations.length === 0}
+                    className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full disabled:bg-gray-50 disabled:cursor-not-allowed appearance-none"
                   >
-                    <option value="">Select {branchLabel}</option>
-                    {branches.map((branch) => (
+                    <option value="">Select Education</option>
+                    {educations.map((education) => (
                       <option
-                        key={branch.collegeBranchId}
-                        value={branch.collegeBranchId}
+                        key={education.collegeEducationId}
+                        value={education.collegeEducationId}
                       >
-                        {branch.collegeBranchType || branch.collegeBranchCode || "-"}
+                        {education.collegeEducationType}
                       </option>
                     ))}
                   </select>
-                )}
+                  <CaretDown
+                    size={14}
+                    className={`absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200 ${selectFocus.education ? "rotate-180" : ""}`}
+                  />
+                </div>
               </Field>
-            </div>
 
-            <div className="grid grid-cols-2 gap-6">
+              {!isSchool && (
+                <Field label={branchLabel} required>
+                  {isLoadingBranches ? (
+                    <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse p-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
+                      Loading options...
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <select
+                      value={selectedBranchId}
+                      onChange={(event) => {
+                        setSelectedBranchId(event.target.value);
+                        setSelectFocus(p => ({ ...p, branch: false }));
+                      }}
+                        disabled={!selectedEducationId || branches.length === 0}
+                        onClick={() => setSelectFocus(p => ({ ...p, branch: !p.branch }))}
+                        onBlur={() => setSelectFocus(p => ({ ...p, branch: false }))}
+                        className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full disabled:bg-gray-50 disabled:cursor-not-allowed appearance-none"
+                      >
+                        <option value="">Select {branchLabel}</option>
+                        {branches.map((branch) => (
+                          <option
+                            key={branch.collegeBranchId}
+                            value={branch.collegeBranchId}
+                          >
+                            {branch.collegeBranchType || branch.collegeBranchCode || "-"}
+                          </option>
+                        ))}
+                      </select>
+                      <CaretDown
+                        size={14}
+                        className={`absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200 ${selectFocus.branch ? "rotate-180" : ""}`}
+                      />
+                    </div>
+                  )}
+                </Field>
+              )}
+
               <Field label="Year" required>
-                {isLoadingYears ? (
-                  <ShimmerBlock className="h-[42px] w-full rounded-lg" />
+                {isLoadingYears || (!selectedYearId && (isSchool ? selectedEducationId : selectedBranchId) && years.length === 0) ? (
+                  <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse p-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
+                    Loading options...
+                  </div>
                 ) : (
-                  <select
+                  <div className="relative">
+                    <select
                     value={selectedYearId}
                     onChange={(event) => {
                       setSelectedYearId(event.target.value);
+                      setSelectFocus(p => ({ ...p, year: false }));
                     }}
-                    disabled={!selectedBranchId || years.length === 0}
-                    className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full disabled:bg-gray-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="">Select Year</option>
-                    {years.map((year) => (
-                      <option
-                        key={year.collegeAcademicYearId}
-                        value={year.collegeAcademicYearId}
-                      >
-                        {year.collegeAcademicYear}
-                      </option>
-                    ))}
-                  </select>
+                      disabled={(!isSchool && !selectedBranchId) || years.length === 0}
+                      onClick={() => setSelectFocus(p => ({ ...p, year: !p.year }))}
+                      onBlur={() => setSelectFocus(p => ({ ...p, year: false }))}
+                      className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full disabled:bg-gray-50 disabled:cursor-not-allowed appearance-none"
+                    >
+                      <option value="">Select Year</option>
+                      {years.map((year) => (
+                        <option
+                          key={year.collegeAcademicYearId}
+                          value={year.collegeAcademicYearId}
+                        >
+                          {year.collegeAcademicYear}
+                        </option>
+                      ))}
+                    </select>
+                    <CaretDown
+                      size={14}
+                      className={`absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200 ${selectFocus.year ? "rotate-180" : ""}`}
+                    />
+                  </div>
                 )}
               </Field>
 
-              <Field label="Semester" required>
-                {isLoadingSemesters ? (
-                  <ShimmerBlock className="h-[42px] w-full rounded-lg" />
-                ) : (
-                  <select
-                    value={selectedSemesterId}
-                    onChange={(event) => {
-                      setSelectedSemesterId(event.target.value);
-                    }}
-                    disabled={!selectedYearId || semesters.length === 0}
-                    className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full disabled:bg-gray-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="">Select Semester</option>
-                    {semesters.map((semester) => (
-                      <option
-                        key={semester.collegeSemesterId}
-                        value={semester.collegeSemesterId}
+              {!isSchool && (
+                <Field label="Semester" required>
+                  {isLoadingSemesters ? (
+                    <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse p-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
+                      Loading options...
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <select
+                      value={selectedSemesterId}
+                      onChange={(event) => {
+                        setSelectedSemesterId(event.target.value);
+                        setSelectFocus(p => ({ ...p, semester: false }));
+                      }}
+                        disabled={!selectedYearId || semesters.length === 0}
+                        onClick={() => setSelectFocus(p => ({ ...p, semester: !p.semester }))}
+                        onBlur={() => setSelectFocus(p => ({ ...p, semester: false }))}
+                        className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full disabled:bg-gray-50 disabled:cursor-not-allowed appearance-none"
                       >
-                        {semester.collegeSemester}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </Field>
+                        <option value="">Select Semester</option>
+                        {semesters.map((semester) => (
+                          <option
+                            key={semester.collegeSemesterId}
+                            value={semester.collegeSemesterId}
+                          >
+                            {semester.collegeSemester}
+                          </option>
+                        ))}
+                      </select>
+                      <CaretDown
+                        size={14}
+                        className={`absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200 ${selectFocus.semester ? "rotate-180" : ""}`}
+                      />
+                    </div>
+                  )}
+                </Field>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-6">
@@ -603,9 +679,9 @@ export default function AttendanceEligibility() {
             <thead className="bg-gray-100">
               <tr>
                 <th className="p-3 text-left text-[#2D3748]">Education Type</th>
-                <th className="p-3 text-left text-[#2D3748]">{branchLabel}</th>
+                {!isSchoolEducation(collegeEducationType) && <th className="p-3 text-left text-[#2D3748]">{branchLabel}</th>}
                 <th className="p-3 text-left text-[#2D3748]">Year</th>
-                <th className="p-3 text-left text-[#2D3748]">Semester</th>
+                {!isSchoolEducation(collegeEducationType) && <th className="p-3 text-left text-[#2D3748]">Semester</th>}
                 <th className="p-3 text-left text-[#2D3748]">Min %</th>
                 <th className="p-3 text-left text-[#2D3748]">Action</th>
               </tr>
@@ -622,9 +698,9 @@ export default function AttendanceEligibility() {
                       className="hover:bg-gray-50 border-b border-gray-50 last:border-b-0"
                     >
                       <td className="p-3">{row.education}</td>
-                      <td className="p-3">{row.branch}</td>
+                      {!isSchoolEducation(collegeEducationType) && <td className="p-3">{row.branch}</td>}
                       <td className="p-3">{row.year}</td>
-                      <td className="p-3">{row.semester}</td>
+                      {!isSchoolEducation(collegeEducationType) && <td className="p-3">{row.semester}</td>}
                       <td className="p-3">{row.minAttendance}%</td>
                       <td className="p-3">
                         <button

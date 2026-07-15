@@ -1,5 +1,6 @@
 import { AcademicData } from "@/app/(screens)/admin/academic-setup/components/AddAcademicSetup";
 import { supabase } from "@/lib/supabaseClient";
+import { isSchoolEducation } from "./academicSetup/schoolHelper";
 
 type CollegeDegreeRow = {
   collegeDegreeId: number;
@@ -33,33 +34,37 @@ export async function fetchAdminBranchesWithDetails(adminId: number, page: numbe
 
     const validEduIds = adminEdus ? adminEdus.map((e) => e.collegeEducationId) : [];
 
+
+    const { data: educations, error: eduErr } = await supabase
+      .from("college_education")
+      .select("collegeEducationId, collegeEducationType, updatedAt")
+      .in("collegeEducationId", validEduIds)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    if (eduErr) throw eduErr;
+    if (!educations || educations.length === 0) return { data: [], total: 0 };
+
     const { data: branches, error: branchErr } = await supabase
       .from("college_branch")
-      .select(
-        `
+      .select(`
         collegeBranchId,
         collegeBranchType,
         collegeBranchCode,
         collegeEducationId,
-        updatedAt,
-        college_education!inner(collegeEducationType)
-      `,
-      )
-      // .eq("createdBy", adminId)
+        updatedAt
+      `)
       .eq("collegeId", adminCtx?.collegeId)
       .in("collegeEducationId", validEduIds)
       .eq("isActive", true)
       .is("deletedAt", null);
 
     if (branchErr) throw branchErr;
-    if (!branches || branches.length === 0) return { data: [], total: 0 };
-
-    const branchIds = branches.map((b) => b.collegeBranchId);
 
     const [yearsRes, sectionsRes, batchesRes] = await Promise.all([
-      supabase.from("college_academic_year").select("collegeAcademicYearId, collegeAcademicYear, collegeBranchId, updatedAt").in("collegeBranchId", branchIds).eq("isActive", true).is("deletedAt", null),
-      supabase.from("college_sections").select("collegeSectionsId, collegeSections, collegeBranchId, collegeAcademicYearId").in("collegeBranchId", branchIds).eq("isActive", true).is("deletedAt", null),
-      supabase.from("college_batches").select("collegeBatchId, collegeBatchName, collegeBranchId, collegeAcademicYearId").in("collegeBranchId", branchIds).eq("isActive", true).is("deletedAt", null)
+      supabase.from("college_academic_year").select("collegeAcademicYearId, collegeAcademicYear, collegeBranchId, collegeEducationId, updatedAt").in("collegeEducationId", validEduIds).eq("isActive", true).is("deletedAt", null),
+      supabase.from("college_sections").select("collegeSectionsId, collegeSections, collegeBranchId, collegeAcademicYearId, collegeEducationId").in("collegeEducationId", validEduIds).eq("isActive", true).is("deletedAt", null),
+      supabase.from("college_batches").select("collegeBatchId, collegeBatchName, collegeBranchId, collegeAcademicYearId, collegeEducationId").in("collegeEducationId", validEduIds).eq("isActive", true).is("deletedAt", null)
     ]);
 
     const years = yearsRes.data || [];
@@ -68,41 +73,88 @@ export async function fetchAdminBranchesWithDetails(adminId: number, page: numbe
 
     const flatYearlyData: any[] = [];
 
-    branches.forEach((branch: any) => {
-      const branchYears = years.filter((y) => y.collegeBranchId === branch.collegeBranchId);
+    educations.forEach((edu: any) => {
+      const isSchool = isSchoolEducation(edu.collegeEducationType);
 
-      if (branchYears.length === 0) {
-        flatYearlyData.push({
-          id: branch.collegeBranchId.toString(),
-          degree: branch.college_education?.collegeEducationType || "",
-          branch: branch.collegeBranchType,
-          dept: branch.collegeBranchCode,
-          year: "",
-          sections: [],
-          batch: "",
-          timestamp: new Date(branch.updatedAt || 0).getTime(),
-        });
-      } else {
-        branchYears.forEach((yearObj) => {
-          const yearSections = sections.filter((s) => s.collegeAcademicYearId === yearObj.collegeAcademicYearId);
-          const yearBatches = batches.filter((b) => b.collegeAcademicYearId === yearObj.collegeAcademicYearId);
+      if (isSchool) {
+        // Schools don't have branches, filter years directly by educationId and null branchId
+        const schoolYears = years.filter((y) => y.collegeEducationId === edu.collegeEducationId && y.collegeBranchId === null);
 
-          const uniqueSections = Array.from(new Set(yearSections.map((s) => s.collegeSections).filter(Boolean)));
-          const uniqueBatches = Array.from(new Set(yearBatches.map((b) => typeof b.collegeBatchName === "string" ? b.collegeBatchName.trim() : "").filter(Boolean)));
-
+        if (schoolYears.length === 0) {
           flatYearlyData.push({
-            id: `${branch.collegeBranchId}-${yearObj.collegeAcademicYearId}`,
-            degree: branch.college_education?.collegeEducationType || "",
-            branch: branch.collegeBranchType,
-            dept: branch.collegeBranchCode,
-            year: yearObj.collegeAcademicYear,
-            sections: uniqueSections,
-            batch: uniqueBatches[0] || "",
-            timestamp: Math.max(
-              new Date(branch.updatedAt || 0).getTime(),
-              new Date(yearObj.updatedAt || 0).getTime()
-            ),
+            id: `edu-${edu.collegeEducationId}`,
+            degree: edu.collegeEducationType,
+            branch: "",
+            dept: "",
+            year: "",
+            sections: [],
+            batch: "",
+            timestamp: new Date(edu.updatedAt || 0).getTime(),
           });
+        } else {
+          schoolYears.forEach((yearObj) => {
+            const yearSections = sections.filter((s) => s.collegeAcademicYearId === yearObj.collegeAcademicYearId && s.collegeBranchId === null);
+            const yearBatches = batches.filter((b) => b.collegeAcademicYearId === yearObj.collegeAcademicYearId && b.collegeBranchId === null);
+
+            const uniqueSections = Array.from(new Set(yearSections.map((s) => s.collegeSections).filter(Boolean)));
+            const uniqueBatches = Array.from(new Set(yearBatches.map((b) => typeof b.collegeBatchName === "string" ? b.collegeBatchName.trim() : "").filter(Boolean)));
+
+            flatYearlyData.push({
+              id: `edu-${edu.collegeEducationId}-yr-${yearObj.collegeAcademicYearId}`,
+              degree: edu.collegeEducationType,
+              branch: "",
+              dept: "",
+              year: yearObj.collegeAcademicYear,
+              sections: uniqueSections,
+              batch: uniqueBatches[0] || "",
+              timestamp: Math.max(
+                new Date(edu.updatedAt || 0).getTime(),
+                new Date(yearObj.updatedAt || 0).getTime()
+              ),
+            });
+          });
+        }
+      } else {
+        // Colleges use branches
+        const eduBranches = (branches || []).filter((b) => b.collegeEducationId === edu.collegeEducationId);
+
+        eduBranches.forEach((branch: any) => {
+          const branchYears = years.filter((y) => y.collegeBranchId === branch.collegeBranchId);
+
+          if (branchYears.length === 0) {
+            flatYearlyData.push({
+              id: branch.collegeBranchId.toString(),
+              degree: edu.collegeEducationType,
+              branch: branch.collegeBranchType,
+              dept: branch.collegeBranchCode,
+              year: "",
+              sections: [],
+              batch: "",
+              timestamp: new Date(branch.updatedAt || 0).getTime(),
+            });
+          } else {
+            branchYears.forEach((yearObj) => {
+              const yearSections = sections.filter((s) => s.collegeAcademicYearId === yearObj.collegeAcademicYearId);
+              const yearBatches = batches.filter((b) => b.collegeAcademicYearId === yearObj.collegeAcademicYearId);
+
+              const uniqueSections = Array.from(new Set(yearSections.map((s) => s.collegeSections).filter(Boolean)));
+              const uniqueBatches = Array.from(new Set(yearBatches.map((b) => typeof b.collegeBatchName === "string" ? b.collegeBatchName.trim() : "").filter(Boolean)));
+
+              flatYearlyData.push({
+                id: `${branch.collegeBranchId}-${yearObj.collegeAcademicYearId}`,
+                degree: edu.collegeEducationType,
+                branch: branch.collegeBranchType,
+                dept: branch.collegeBranchCode,
+                year: yearObj.collegeAcademicYear,
+                sections: uniqueSections,
+                batch: uniqueBatches[0] || "",
+                timestamp: Math.max(
+                  new Date(branch.updatedAt || 0).getTime(),
+                  new Date(yearObj.updatedAt || 0).getTime()
+                ),
+              });
+            });
+          }
         });
       }
     });

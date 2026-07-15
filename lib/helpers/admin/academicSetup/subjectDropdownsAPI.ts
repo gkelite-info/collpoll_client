@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { isSchoolEducation } from "./schoolHelper";
 
 export const fetchSubjectOptions = async (
   collegeId: number,
@@ -14,7 +15,9 @@ export const fetchSubjectOptions = async (
     (e) => e.collegeEducationType === ui.education,
   );
 
-  const { data: branchData } = selectedEdu
+  const isSchool = ui.education ? isSchoolEducation(ui.education) : false;
+
+  const { data: branchData } = selectedEdu && !isSchool
     ? await supabase
       .from("college_branch")
       .select("collegeBranchId, collegeBranchCode")
@@ -27,14 +30,25 @@ export const fetchSubjectOptions = async (
     (b) => b.collegeBranchCode === ui.branch,
   );
 
-  const { data: yearData } = selectedBranch
-    ? await supabase
+  let yearData: { collegeAcademicYearId: number; collegeAcademicYear: string }[] = [];
+  if (isSchool && selectedEdu) {
+    const res = await supabase
+      .from("college_academic_year")
+      .select("collegeAcademicYearId, collegeAcademicYear")
+      .eq("collegeEducationId", selectedEdu.collegeEducationId)
+      .is("collegeBranchId", null)
+      .eq("collegeId", collegeId)
+      .is("deletedAt", null);
+    yearData = res.data || [];
+  } else if (selectedBranch) {
+    const res = await supabase
       .from("college_academic_year")
       .select("collegeAcademicYearId, collegeAcademicYear")
       .eq("collegeBranchId", selectedBranch.collegeBranchId)
       .eq("collegeId", collegeId)
-      .is("deletedAt", null)
-    : { data: [] };
+      .is("deletedAt", null);
+    yearData = res.data || [];
+  }
 
   const selectedYear = yearData?.find((y) => y.collegeAcademicYear === ui.year);
 

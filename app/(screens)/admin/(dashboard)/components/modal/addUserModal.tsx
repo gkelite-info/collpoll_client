@@ -38,7 +38,7 @@ import { upsertPlacementEmployee } from "@/lib/helpers/admin/registrations/place
 import { createWellbeing } from "@/lib/helpers/admin/registrations/wellbeing/wellbeingRegistration";
 import { registerUserToHikvision } from "@/lib/helpers/biometric/registerUser";
 import { fetchAdminEducationTypes } from "@/lib/helpers/admin/adminEducationTypesAPI";
-// import { upsertPlacementOfficer } from "@/lib/helpers/admin/registrations/placement/placementRegistration";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type SubjectBlock = {
   id: number;
@@ -100,7 +100,17 @@ const AddUserModal: React.FC<{
     semesters: [],
   });
 
+  const [processingFields, setProcessingFields] = useState<Record<string, boolean>>({});
+  const handleWithLoader = (fieldId: string, action: () => void) => {
+    setProcessingFields((prev) => ({ ...prev, [fieldId]: true }));
+    setTimeout(() => {
+      action();
+      setProcessingFields((prev) => ({ ...prev, [fieldId]: false }));
+    }, 400);
+  };
+
   const [loading, setLoading] = useState(false);
+  const [isFetchingData, setIsFetchingData] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -226,6 +236,7 @@ const AddUserModal: React.FC<{
   useEffect(() => {
     if (isOpen) {
       const init = async () => {
+        setIsFetchingData(true);
         try {
           const {
             data: { user: authUser },
@@ -266,6 +277,8 @@ const AddUserModal: React.FC<{
           setDbData({ ...data, semesters: semesterData || [] });
         } catch (error) {
           toast.error("Failed to load college data");
+        } finally {
+          setIsFetchingData(false);
         }
       };
 
@@ -294,6 +307,8 @@ const AddUserModal: React.FC<{
       ),
     [dbData.educations, selectedEducationId],
   );
+
+  const isSelectedSchool = isSchoolEducation(selectedEducation?.collegeEducationType || collegeEducationType);
 
   const filteredBranches = useMemo(
     () =>
@@ -389,10 +404,12 @@ const AddUserModal: React.FC<{
   // );
 
   const studentAvailableYears = useMemo(() => {
-    if (!studentSelectedBranch) return [];
+    if (!isSelectedSchool && !studentSelectedBranch) return [];
 
     const years = dbData.years.filter(
-      (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
+      (y) => isSelectedSchool
+        ? y.collegeEducationId === studentSelectedEducation?.collegeEducationId
+        : y.collegeBranchId === studentSelectedBranch?.collegeBranchId,
     );
 
     return years.sort((a, b) => {
@@ -400,7 +417,7 @@ const AddUserModal: React.FC<{
       const numB = parseInt(b.collegeAcademicYear) || 0;
       return numA - numB;
     });
-  }, [studentSelectedBranch, dbData.years]);
+  }, [studentSelectedBranch, studentSelectedEducation, isSelectedSchool, dbData.years]);
 
   const studentSelectedYear = useMemo(
     () =>
@@ -439,7 +456,8 @@ const AddUserModal: React.FC<{
     const rawSections = dbData.sections.filter(
       (s) =>
         s.collegeAcademicYearId ===
-        studentSelectedYear.collegeAcademicYearId,
+        studentSelectedYear.collegeAcademicYearId &&
+        (isSelectedSchool ? s.collegeEducationId === studentSelectedEducation?.collegeEducationId : s.collegeBranchId === studentSelectedBranch?.collegeBranchId)
     );
     return Array.from(
       new Map(rawSections.map((s) => [s.collegeSections, s])).values()
@@ -723,7 +741,7 @@ const AddUserModal: React.FC<{
       return toast.error("Please select a gender.");
 
     if (isFaculty) {
-      if (!selectedEducationId || !selectedBranchId)
+      if (!selectedEducationId || (!selectedBranchId && !isSelectedSchool))
         return toast.error("Complete all academic fields for Faculty.");
       const incomplete = subjectBlocks.some(
         (b) => !b.yearId || !b.subjectId || b.sectionIds.length === 0,
@@ -737,10 +755,10 @@ const AddUserModal: React.FC<{
     if (isStudent) {
       if (
         !selectedEducationId ||
-        !selectedDepts.length ||
+        (!selectedDepts.length && !isSelectedSchool) ||
         !selectedYears.length ||
         (!["Inter"].includes(studentSelectedEducation?.collegeEducationType || "") &&
-          !selectedSemester.length) ||
+          !selectedSemester.length && !isSelectedSchool) ||
         !selectedEntryType.length ||
         !selectedSections.length
       ) {
@@ -1029,7 +1047,7 @@ const AddUserModal: React.FC<{
             { ...basicData, collegePublicId: basicData.collegeId },
             {
               educationId: selectedEducationId!,
-              branchId: selectedBranchId!,
+              branchId: selectedBranchId,
               yearId: block.yearId!,
               subjectId: block.subjectId!,
               sectionIds: block.sectionIds,
@@ -1046,11 +1064,11 @@ const AddUserModal: React.FC<{
 
       if (isStudent) {
         const eduId = studentSelectedEducation?.collegeEducationId;
-        const branchId = studentSelectedBranch?.collegeBranchId;
+        const branchId = isSelectedSchool ? null : studentSelectedBranch?.collegeBranchId;
         const yearId = studentSelectedYear?.collegeAcademicYearId;
         const semesterId = studentAvailableSemesters.find(
           (s) => s.collegeSemester.toString() === selectedSemester[0],
-        )?.collegeSemesterId;
+        )?.collegeSemesterId || null;
 
         const sectionId = studentAvailableSections.find(
           (s) => s.collegeSections === selectedSections[0],
@@ -1058,9 +1076,9 @@ const AddUserModal: React.FC<{
 
         if (
           !eduId ||
-          !branchId ||
+          (!branchId && !isSelectedSchool) ||
           !yearId ||
-          (!["Inter"].includes(studentSelectedEducation?.collegeEducationType || "") && !semesterId) ||
+          (!["Inter"].includes(studentSelectedEducation?.collegeEducationType || "") && !semesterId && !isSelectedSchool) ||
           !sectionId
         ) {
           throw new Error("Invalid academic selection data");
@@ -1275,12 +1293,12 @@ const AddUserModal: React.FC<{
             <div className="grid landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D3748]">
-                  College ID <span className="text-red-600">*</span>
+                  College Code <span className="text-red-600">*</span>
                 </label>
                 <div className="relative">
                   <input
                     type="text"
-                    value={basicData.collegeIntId}
+                    value={basicData.collegeCode}
                     readOnly
                     className="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-md px-3 py-1 text-sm outline-none cursor-not-allowed"
                   />
@@ -1367,7 +1385,7 @@ const AddUserModal: React.FC<{
                   placeholder="Select Education Type"
                   options={degreeOptions}
                   selectedValues={selectedFinanceEducationTypes}
-                  required={!isAccountant}
+                  required={isAccountant}
                   onChange={(value) =>
                     toggleMultiSelectValue(value, setSelectedFinanceEducationTypes)
                   }
@@ -1390,12 +1408,15 @@ const AddUserModal: React.FC<{
                     <select
                       value={selectedEducationId || ""}
                       onChange={(e) => {
-                        setSelectedEducationId(Number(e.target.value));
-                        setSelectedBranchId(null);
-                        setSelectedYearId(null);
-                        setSelectedSubjectId(null);
-                        setSelectedSectionIds([]);
-                        setSubjectBlocks([{ id: 1, yearId: null, subjectId: null, sectionIds: [] }]);
+                        const val = Number(e.target.value);
+                        handleWithLoader("education", () => {
+                          setSelectedEducationId(val);
+                          setSelectedBranchId(null);
+                          setSelectedYearId(null);
+                          setSelectedSubjectId(null);
+                          setSelectedSectionIds([]);
+                          setSubjectBlocks([{ id: Date.now(), yearId: null, subjectId: null, sectionIds: [] }]);
+                        });
                       }}
                       className="w-full border cursor-pointer border-gray-200 rounded-md px-3 py-1 text-sm appearance-none outline-none bg-white focus:ring-1 focus:ring-[#48C78E] text-gray-600"
                     >
@@ -1424,13 +1445,16 @@ const AddUserModal: React.FC<{
                       <select
                         value={selectedEducationId || ""}
                         onChange={(e) => {
-                          setSelectedEducationId(Number(e.target.value));
-                          setSelectedDepts([]);
-                          setSelectedYears([]);
-                          setSelectedSemester([]);
-                          setSelectedSections([]);
-                          setSelectedEntryType([]);
-                          setSelectedSessionType([]);
+                          const val = Number(e.target.value);
+                          handleWithLoader("education", () => {
+                            setSelectedEducationId(val);
+                            setSelectedDepts([]);
+                            setSelectedYears([]);
+                            setSelectedSemester([]);
+                            setSelectedSections([]);
+                            setSelectedEntryType([]);
+                            setSelectedSessionType([]);
+                          });
                         }}
                         className="w-full border cursor-pointer border-gray-200 rounded-md px-3 py-1 text-sm appearance-none outline-none bg-white focus:ring-1 focus:ring-[#48C78E] text-gray-600"
                       >
@@ -1686,55 +1710,59 @@ const AddUserModal: React.FC<{
 
             {isFaculty && (
               <>
-                {/* Branch stays outside — shared across all subject blocks */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-[#2D3748]">
-                    {selectedEducation?.collegeEducationType === "Inter"
-                      ? "Group Type"
-                      : "Branch Type"}{" "}
-                    <span className="text-red-600">*</span>
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={selectedBranchId || ""}
-                      disabled={!selectedEducation}
-                      onChange={(e) => {
-                        setSelectedBranchId(Number(e.target.value));
-                        setSubjectBlocks([
-                          {
-                            id: Date.now(),
-                            yearId: null,
-                            subjectId: null,
-                            sectionIds: [],
-                          },
-                        ]);
-                      }}
-                      className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
-                    >
-                      <option value="" disabled>
-                        {selectedEducation?.collegeEducationType === "Inter"
-                          ? "Select Group Type"
-                          : "Select Branch Type"}
-                      </option>
-                      {filteredBranches.map((b: any) => (
-                        <option
-                          key={b.collegeBranchId}
-                          value={b.collegeBranchId}
-                        >
-                          {b.collegeBranchCode}
+                {!isSelectedSchool && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#2D3748]">
+                      {selectedEducation?.collegeEducationType === "Inter"
+                        ? "Group Type"
+                        : "Branch Type"}{" "}
+                      <span className="text-red-600">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedBranchId || ""}
+                        disabled={!selectedEducation}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          handleWithLoader("branch", () => {
+                            setSelectedBranchId(val);
+                            setSubjectBlocks([
+                              {
+                                id: Date.now(),
+                                yearId: null,
+                                subjectId: null,
+                                sectionIds: [],
+                              },
+                            ]);
+                          });
+                        }}
+                        className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
+                      >
+                        <option value="" disabled>
+                          {selectedEducation?.collegeEducationType === "Inter"
+                            ? "Select Group Type"
+                            : "Select Branch Type"}
                         </option>
-                      ))}
-                    </select>
-                    <CaretDown
-                      size={14}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                    />
+                        {filteredBranches.map((b: any) => (
+                          <option
+                            key={b.collegeBranchId}
+                            value={b.collegeBranchId}
+                          >
+                            {b.collegeBranchCode}
+                          </option>
+                        ))}
+                      </select>
+                      <CaretDown
+                        size={14}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {subjectBlocks.map((block, index) => {
                   const blockFilteredYears = dbData.years
-                    .filter((y) => y.collegeBranchId == selectedBranchId)
+                    .filter((y) => isSelectedSchool ? y.collegeEducationId == selectedEducationId : y.collegeBranchId == selectedBranchId)
                     .sort((a, b) => {
                       const numA = parseInt(a.collegeAcademicYear) || 0;
                       const numB = parseInt(b.collegeAcademicYear) || 0;
@@ -1748,7 +1776,8 @@ const AddUserModal: React.FC<{
                   // );
 
                   const rawBlockSections = dbData.sections.filter(
-                    (s) => s.collegeAcademicYearId == block.yearId,
+                    (s) => s.collegeAcademicYearId == block.yearId &&
+                      (isSelectedSchool ? s.collegeEducationId == selectedEducationId : s.collegeBranchId == selectedBranchId)
                   );
                   const blockFilteredSections = Array.from(
                     new Map(rawBlockSections.map((s) => [s.collegeSections, s])).values()
@@ -1767,9 +1796,9 @@ const AddUserModal: React.FC<{
                           <button
                             type="button"
                             onClick={() => removeSubjectBlock(block.id)}
-                            className="text-gray-300 hover:text-red-400 transition-colors text-base leading-none"
+                            className="text-gray-300 hover:text-red-400 transition-colors text-base leading-none cursor-pointer"
                           >
-                            <X size={14} />
+                            <X size={14} className="cursor-pointer" />
                           </button>
                         )}
                       </div>
@@ -1782,26 +1811,28 @@ const AddUserModal: React.FC<{
                           <div className="relative">
                             <select
                               value={block.yearId || ""}
-                              disabled={!selectedBranchId}
+                              disabled={isSelectedSchool ? !selectedEducationId : !selectedBranchId}
                               onChange={(e) => {
                                 const yearId = Number(e.target.value);
-                                setSubjectBlocks((prev) =>
-                                  prev.map((b) =>
-                                    b.id === block.id
-                                      ? {
-                                        ...b,
-                                        yearId,
-                                        subjectId: null,
-                                        sectionIds: [],
-                                      }
-                                      : b,
-                                  ),
-                                );
+                                handleWithLoader(`year-${block.id}`, () => {
+                                  setSubjectBlocks((prev) =>
+                                    prev.map((b) =>
+                                      b.id === block.id
+                                        ? {
+                                          ...b,
+                                          yearId,
+                                          subjectId: null,
+                                          sectionIds: [],
+                                        }
+                                        : b,
+                                    ),
+                                  );
+                                });
                               }}
                               className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
                             >
                               <option value="" disabled>
-                                Select Year
+                                {isFetchingData || processingFields["education"] || processingFields["branch"] ? "Loading..." : "Select Year"}
                               </option>
                               {blockFilteredYears.map((y: any) => (
                                 <option
@@ -1829,16 +1860,18 @@ const AddUserModal: React.FC<{
                               disabled={!block.yearId}
                               onChange={(e) => {
                                 const subjectId = Number(e.target.value);
-                                setSubjectBlocks((prev) =>
-                                  prev.map((b) =>
-                                    b.id === block.id ? { ...b, subjectId } : b,
-                                  ),
-                                );
+                                handleWithLoader(`subject-${block.id}`, () => {
+                                  setSubjectBlocks((prev) =>
+                                    prev.map((b) =>
+                                      b.id === block.id ? { ...b, subjectId, sectionIds: [] } : b,
+                                    ),
+                                  );
+                                });
                               }}
                               className="w-full border border-gray-200 appearance-none rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
                             >
                               <option value="" disabled>
-                                Select Subject
+                                {isFetchingData || processingFields[`year-${block.id}`] ? "Loading..." : "Select Subject"}
                               </option>
                               {blockFilteredSubjects.map((s: any) => (
                                 <option
@@ -1858,8 +1891,8 @@ const AddUserModal: React.FC<{
                       </div>
 
                       <CustomMultiSelect
-                        label="Sections"
-                        placeholder="Select Sections"
+                        label={processingFields[`subject-${block.id}`] ? "Loading Sections..." : "Sections"}
+                        placeholder={processingFields[`subject-${block.id}`] ? "Loading..." : "Select Sections"}
                         options={blockFilteredSections.map(
                           (s: any) => s.collegeSections,
                         )}
@@ -1927,34 +1960,36 @@ const AddUserModal: React.FC<{
             {isStudent && (
               <>
                 <div className="grid grid-cols-2 gap-5">
-                  <CustomMultiSelect
-                    label={
-                      studentSelectedEducation?.collegeEducationType === "Inter"
-                        ? "Group Type"
-                        : "Branch Type"
-                    }
-                    placeholder={
-                      studentSelectedEducation?.collegeEducationType === "Inter"
-                        ? "Select Group"
-                        : "Select Branch"
-                    }
-                    options={branchOptions}
-                    selectedValues={selectedDepts}
-                    disabled={!selectedEducationId}
-                    onChange={(v) => {
-                      handleSingleSelect(v, setSelectedDepts);
-                      setSelectedYears([]);
-                      setSelectedSemester([]);
-                      setSelectedSections([]);
-                    }}
-                    onRemove={() => setSelectedDepts([])}
-                  />
+                  {!isSelectedSchool && (
+                    <CustomMultiSelect
+                      label={
+                        studentSelectedEducation?.collegeEducationType === "Inter"
+                          ? "Group Type"
+                          : "Branch Type"
+                      }
+                      placeholder={
+                        studentSelectedEducation?.collegeEducationType === "Inter"
+                          ? "Select Group"
+                          : "Select Branch"
+                      }
+                      options={branchOptions}
+                      selectedValues={selectedDepts}
+                      disabled={!selectedEducationId}
+                      onChange={(v) => {
+                        handleSingleSelect(v, setSelectedDepts);
+                        setSelectedYears([]);
+                        setSelectedSemester([]);
+                        setSelectedSections([]);
+                      }}
+                      onRemove={() => setSelectedDepts([])}
+                    />
+                  )}
                   <CustomMultiSelect
                     label="Year"
                     placeholder="Select Year"
                     options={yearOptions}
                     selectedValues={selectedYears}
-                    disabled={selectedDepts.length === 0}
+                    disabled={isSelectedSchool ? !selectedEducationId : selectedDepts.length === 0}
                     onChange={(v) => {
                       handleSingleSelect(v, setSelectedYears);
                       setSelectedSemester([]);
@@ -1964,7 +1999,7 @@ const AddUserModal: React.FC<{
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-5">
-                  {!["Inter"].includes(studentSelectedEducation?.collegeEducationType || "") && (
+                  {!["Inter"].includes(studentSelectedEducation?.collegeEducationType || "") && !isSelectedSchool && (
                     <CustomMultiSelect
                       label="Semester"
                       placeholder="Select Semester"
