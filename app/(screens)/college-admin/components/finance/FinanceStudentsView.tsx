@@ -1,11 +1,15 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { CaretRight } from "@phosphor-icons/react";
+import { CaretRight, CaretLeft } from "@phosphor-icons/react";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export default function FinanceStudentsView() {
     const router = useRouter();
     const sp = useSearchParams();
+    const { collegeEducationType } = useCollegeAdmin();
+    const isSchool = isSchoolEducation(collegeEducationType);
 
     const educationType = sp.get("type") ?? "B Tech";
     const branch = sp.get("branch") ?? "CSE";
@@ -90,8 +94,14 @@ export default function FinanceStudentsView() {
     return (
         <div className="flex flex-col">
             <div className="flex items-center gap-6 mb-6 text-sm text-[#6B7280]">
+                <button 
+                  onClick={() => router.push(`/college-admin/institution-management?tab=finance&view=education&type=${educationType}`)}
+                  className="cursor-pointer text-gray-500 hover:text-[#1E7745] transition-colors flex items-center justify-center"
+                >
+                  <CaretLeft size={20} weight="bold" />
+                </button>
                 <FilterLabel title="Education Type" value={educationType} />
-                <FilterLabel title="Branch" value={branch} />
+                {!isSchool && <FilterLabel title="Branch" value={branch} />}
                 <FilterLabel title="Year" value={year} />
                 <FilterLabel title="Academic Year" value={academicYear} />
             </div>

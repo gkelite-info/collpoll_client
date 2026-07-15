@@ -27,6 +27,7 @@ import StudentListView from "./StudentListView";
 import ParentListView from "./ParentListView";
 import FinanceListView from "./FinanceListView";
 import toast from "react-hot-toast";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 // ─── Static config (icons / colors only) ─────────────────────────────────────
 
@@ -154,7 +155,7 @@ const QuickLinkCard = ({
 
 // ─── AdminProfileCard ─────────────────────────────────────────────────────────
 
-const AdminProfileCard = ({ data }: { data: any }) => (
+const AdminProfileCard = ({ data, isSchool }: { data: any, isSchool: boolean }) => (
   <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col h-full">
     <div className="flex justify-between items-start mb-1">
       <h3 className="font-bold text-[#1F2937] text-lg">{data.fullName}</h3>
@@ -177,10 +178,12 @@ const AdminProfileCard = ({ data }: { data: any }) => (
         <span className="font-bold text-[#1E40AF]">{data.eduType}</span>
       </div>
 
-      <div className="flex justify-between items-center">
-        <span className="text-gray-600 font-medium">Branches:</span>
-        <span className="font-bold text-gray-800">{data.branchCount}</span>
-      </div>
+      {!isSchool && (
+        <div className="flex justify-between items-center">
+          <span className="text-gray-600 font-medium">Branches:</span>
+          <span className="font-bold text-gray-800">{data.branchCount}</span>
+        </div>
+      )}
 
       <div className="flex justify-between items-center">
         <span className="text-gray-600 font-medium">Mobile:</span>
@@ -390,7 +393,8 @@ const MeetingCard = () => (
 export default function CollegeAdminDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { collegeId, loading: contextLoading } = useCollegeAdmin();
+  const { collegeId, collegeEducationType, loading: contextLoading } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
 
   const SUBVIEW_MAP: Record<string, string> = {
     admins: "Admins",
@@ -418,8 +422,8 @@ export default function CollegeAdminDashboard() {
         ]);
         setStats(dashData);
         setTrend(trendData);
-      } catch (err) {
-        toast.error("Failed to load data");
+      } catch (err: any) {
+        toast.error("Failed to load dashboard data. Please try again.", { id: "dash-load-err" });
       } finally {
         setIsFetching(false);
       }
@@ -454,7 +458,9 @@ export default function CollegeAdminDashboard() {
   return (
     <div className="min-h-screen">
       <div className="grid grid-cols-2 landscape:grid-cols-4 md:grid-cols-2 landscape:md:grid-cols-4 lg:grid-cols-4 gap-3 mb-3 md:mb-3 lg:mb-6">
-        {statConfig.map((stat) =>
+        {statConfig
+          .filter(stat => !(isSchool && stat.key === "totalBranches"))
+          .map((stat) =>
           isLoading || !stats ? (
             <StatCardShimmer key={stat.id} />
           ) : (
@@ -508,7 +514,7 @@ export default function CollegeAdminDashboard() {
                 key={admin.adminId}
                 className="min-w-[260px] flex-shrink-0"
               >
-                <AdminProfileCard data={admin} />
+                <AdminProfileCard data={admin} isSchool={isSchool} />
               </div>
             ))}
         </div>

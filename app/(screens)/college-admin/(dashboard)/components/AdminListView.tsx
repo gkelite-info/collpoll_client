@@ -13,6 +13,7 @@ import { AdminListRow, AdminPageSummary, getAdminListData } from "@/lib/helpers/
 import CardComponent from "@/app/utils/card";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 
 const TABLE_COLUMNS = [
@@ -96,11 +97,12 @@ function CardsShimmer() {
   );
 }
 
-function TableShimmer() {
+function TableShimmer({ isSchool }: { isSchool: boolean }) {
+  const visibleColumns = TABLE_COLUMNS.filter(col => !(isSchool && col.key === "branches"));
   return (
     <div className="animate-pulse">
       <div className="flex gap-4 px-4 py-3 bg-gray-100 rounded-t-xl mb-1">
-        {TABLE_COLUMNS.map((col) => (
+        {visibleColumns.map((col) => (
           <div key={col.key} className="flex-1 h-4 bg-gray-300 rounded" />
         ))}
       </div>
@@ -109,7 +111,7 @@ function TableShimmer() {
           key={i}
           className={`flex gap-4 px-4 py-4 ${i % 2 === 0 ? "bg-white" : "bg-gray-50"} ${i === 5 ? "rounded-b-xl" : ""}`}
         >
-          {TABLE_COLUMNS.map((col) => (
+          {visibleColumns.map((col) => (
             <div
               key={col.key}
               className="flex-1 h-3.5 bg-gray-200 rounded"
@@ -123,7 +125,7 @@ function TableShimmer() {
 }
 
 
-function AdminDetailModal({ admin, onClose }: { admin: AdminDetailRow; onClose: () => void }) {
+function AdminDetailModal({ admin, onClose, isSchool }: { admin: AdminDetailRow; onClose: () => void; isSchool: boolean }) {
   const initials = admin.adminName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   
 
@@ -160,7 +162,7 @@ function AdminDetailModal({ admin, onClose }: { admin: AdminDetailRow; onClose: 
             { label: "Phone Number", value: admin.mobile },
             { label: "Gender", value: admin.gender },
             { label: "Educational Type", value: admin.educationType },
-            { label: "Branches", value: admin.branches },
+            ...(isSchool ? [] : [{ label: "Branches", value: admin.branches }]),
             { label: "Created By", value: admin.createdBy },
             { label: "Faculty", value: String(admin.faculty) },
             { label: "Students", value: String(admin.student) },
@@ -182,7 +184,9 @@ function AdminDetailModal({ admin, onClose }: { admin: AdminDetailRow; onClose: 
 
 
 export default function AdminListView({ onBack }: Props) {
-  const { collegeId, loading: contextLoading } = useCollegeAdmin();
+  const { collegeId, collegeEducationType, loading: contextLoading } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
+  const visibleColumns = TABLE_COLUMNS.filter(col => !(isSchool && col.key === "branches"));
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -289,7 +293,6 @@ export default function AdminListView({ onBack }: Props) {
         ) : (
           <div
             className="flex gap-3 mb-5 overflow-x-auto custom-scrollbar pb-3 landscape:pb-3 lg:pb-2"
-          // style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             {STAT_DEFS.map((def) => (
               <div key={def.key} className="flex-shrink-0">
@@ -330,11 +333,11 @@ export default function AdminListView({ onBack }: Props) {
         </div>
 
         {showShimmer ? (
-          <TableShimmer />
+          <TableShimmer isSchool={isSchool} />
         ) : rows.length === 0 ? (
           <p className="text-gray-400 text-sm mt-8 text-center">No admins found.</p>
         ) : (
-          <TableComponent columns={TABLE_COLUMNS} tableData={rows} height="55vh" />
+          <TableComponent columns={visibleColumns} tableData={rows} height="55vh" />
         )}
 
         {totalPages > 1 && !showShimmer && (
@@ -370,7 +373,7 @@ export default function AdminListView({ onBack }: Props) {
       </div>
 
       {selectedAdmin && (
-        <AdminDetailModal admin={selectedAdmin} onClose={() => setSelectedAdmin(null)} />
+        <AdminDetailModal admin={selectedAdmin} onClose={() => setSelectedAdmin(null)} isSchool={isSchool} />
       )}
     </div>
   );

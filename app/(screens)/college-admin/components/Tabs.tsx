@@ -1,6 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 const tabs = [
   { label: "Support Admins", value: "support-admins" },
@@ -14,6 +16,13 @@ export default function Tabs({ activeTab }: { activeTab: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { collegeEducationType } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
+
+  const filteredTabs = tabs.filter(tab => {
+    if (isSchool && tab.value === "branches") return false;
+    return true;
+  });
 
   const handleTabClick = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -24,7 +33,7 @@ export default function Tabs({ activeTab }: { activeTab: string }) {
   return (
     <div className="bg-[#E6E6E6] rounded-full p-2 shadow-sm overflow-x-auto">
       <div className="flex gap-3 min-w-max">
-        {tabs.map((tab) => {
+        {filteredTabs.map((tab) => {
           const isActive = activeTab === tab.value;
           return (
             <button

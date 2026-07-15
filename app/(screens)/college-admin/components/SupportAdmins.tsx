@@ -1,5 +1,8 @@
 "use client";
 
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+
 const data = [
     {
         name: "Shravani",
@@ -8,7 +11,7 @@ const data = [
         branches: 4,
         faculty: 210,
         students: 2850,
-        createdOn: "1/13/2026",
+        createdOn: "13/01/2026",
     },
     {
         name: "Arjun",
@@ -17,7 +20,7 @@ const data = [
         branches: 4,
         faculty: 210,
         students: 2850,
-        createdOn: "1/13/2026",
+        createdOn: "13/01/2026",
     },
     {
         name: "Deeksha",
@@ -26,7 +29,7 @@ const data = [
         branches: 4,
         faculty: 210,
         students: 2850,
-        createdOn: "1/13/2026",
+        createdOn: "13/01/2026",
     },
     {
         name: "Harsha",
@@ -35,7 +38,7 @@ const data = [
         branches: 4,
         faculty: 210,
         students: 2850,
-        createdOn: "1/13/2026",
+        createdOn: "13/01/2026",
     },
     {
         name: "Deeksha",
@@ -44,7 +47,7 @@ const data = [
         branches: 4,
         faculty: 210,
         students: 2850,
-        createdOn: "1/13/2026",
+        createdOn: "13/01/2026",
     },
     {
         name: "Harsha",
@@ -53,7 +56,7 @@ const data = [
         branches: 4,
         faculty: 210,
         students: 2850,
-        createdOn: "1/13/2026",
+        createdOn: "13/01/2026",
     },
     {
         name: "Deeksha",
@@ -62,7 +65,7 @@ const data = [
         branches: 4,
         faculty: 210,
         students: 2850,
-        createdOn: "1/13/2026",
+        createdOn: "13/01/2026",
     },
     {
         name: "Harsha",
@@ -71,7 +74,7 @@ const data = [
         branches: 4,
         faculty: 210,
         students: 2850,
-        createdOn: "1/13/2026",
+        createdOn: "13/01/2026",
     },
     {
         name: "Deeksha",
@@ -80,7 +83,7 @@ const data = [
         branches: 4,
         faculty: 210,
         students: 2850,
-        createdOn: "1/13/2026",
+        createdOn: "13/01/2026",
     },
     {
         name: "Harsha",
@@ -89,11 +92,14 @@ const data = [
         branches: 4,
         faculty: 210,
         students: 2850,
-        createdOn: "1/13/2026",
+        createdOn: "13/01/2026",
     },
 ];
 
 export default function SupportAdmins() {
+    const { collegeEducationType } = useCollegeAdmin();
+    const isSchool = isSchoolEducation(collegeEducationType);
+
     return (
         <div className="grid grid-cols-2 gap-4">
             {data.map((item, index) => (
@@ -124,10 +130,12 @@ export default function SupportAdmins() {
                             </span>
                         </div>
 
-                        <div className="flex justify-between">
-                            <span className="text-[#282828] text-sm">Branches:</span>
-                            <span className="text-[#282828] text-sm">{item.branches}</span>
-                        </div>
+                        {!isSchool && (
+                            <div className="flex justify-between">
+                                <span className="text-[#282828] text-sm">Branches:</span>
+                                <span className="text-[#282828] text-sm">{item.branches}</span>
+                            </div>
+                        )}
 
                         <div className="flex justify-between">
                             <span className="text-[#282828] text-sm">Faculty:</span>

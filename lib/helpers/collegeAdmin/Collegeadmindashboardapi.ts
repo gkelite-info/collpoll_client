@@ -129,7 +129,7 @@ export async function fetchCollegeAdminDashboardStats(
       gender: a.gender ?? "—",
       dateOfJoining: formatDateOfJoining(dateOfJoining),
       collegeEducationId: a.collegeEducationId,
-      eduType: (a.college_education as any)?.collegeEducationType ?? "N/A",
+      eduType: (a.college_education as any)?.collegeEducationType ?? (eduList.length === 1 ? eduList[0].collegeEducationType : "N/A"),
       branchCount: eduStat?.branchCount ?? 0,
       isActive: true,
     };

@@ -2,22 +2,26 @@
 
 import { useSearchParams } from "next/navigation";
 import CardComponent from "@/app/utils/card";
-import { CaretDown, CaretRight, CurrencyDollarSimple, Student } from "@phosphor-icons/react";
+import { CaretDown, CaretRight, CaretLeft, CurrencyDollarSimple, Student } from "@phosphor-icons/react";
 import TableComponent from "@/app/utils/table/table";
 import FinanceEducationCharts from "./FinanceEducationCharts";
 import { useRouter } from "next/navigation";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 
 export default function FinanceEducationView() {
   const sp = useSearchParams();
   const router = useRouter();
+  const { collegeEducationType } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
 
   const educationType = sp.get("type") ?? "B Tech";
   const selectedBranch = "CSE";
   const selectedAcademicYear = "2026";
 
   const columns = [
-    { title: "Branch", key: "branch" },
+    ...(!isSchool ? [{ title: "Branch", key: "branch" }] : []),
     { title: "Expected", key: "expected" },
     { title: "Collected", key: "collected" },
     { title: "Pending", key: "pending" },
@@ -111,6 +115,12 @@ export default function FinanceEducationView() {
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-4 mb-4 text-base font-regular text-[#6B7280]">
+        <button 
+          onClick={() => router.push('/college-admin/institution-management?tab=finance')}
+          className="cursor-pointer text-gray-500 hover:text-[#1E7745] transition-colors flex items-center justify-center"
+        >
+          <CaretLeft size={20} weight="bold" />
+        </button>
         <div className="flex items-center gap-2">
           <span>Education Type :</span>
           <span className="bg-[#43C17A1C] text-[#1E7745] px-3 py-1 rounded-full">
@@ -118,14 +128,15 @@ export default function FinanceEducationView() {
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span>Branch :</span>
-          <span className="bg-[#43C17A1C] text-[#43C17A;] px-3 py-1 rounded-full flex items-center gap-1">
-            {selectedBranch}
-            <CaretDown size={14} weight="bold" />
-          </span>
-
-        </div>
+        {!isSchool && (
+          <div className="flex items-center gap-2">
+            <span>Branch :</span>
+            <span className="bg-[#43C17A1C] text-[#43C17A;] px-3 py-1 rounded-full flex items-center gap-1">
+              {selectedBranch}
+              <CaretDown size={14} weight="bold" />
+            </span>
+          </div>
+        )}
 
         <div className="flex items-center gap-2">
           <span>Academic Year :</span>

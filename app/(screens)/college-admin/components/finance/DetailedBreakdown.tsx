@@ -3,9 +3,13 @@
 import { useRouter } from "next/navigation";
 import TableComponent from "@/app/utils/table/table";
 import { CaretRight } from "@phosphor-icons/react";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export default function DetailedBreakdown() {
   const router = useRouter();
+  const { collegeEducationType } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
 
   const handleRowClick = (educationType: string) => {
     router.push(
@@ -15,7 +19,7 @@ export default function DetailedBreakdown() {
 
   const columns = [
     { title: "Education Type", key: "education" },
-    { title: "Branches", key: "branches" },
+    ...(!isSchool ? [{ title: "Branches", key: "branches" }] : []),
     { title: "Expected Fee", key: "expected" },
     { title: "Collected", key: "collected" },
     { title: "Pending", key: "pending" },

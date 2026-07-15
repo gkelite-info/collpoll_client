@@ -1,6 +1,8 @@
 import { FC } from "react";
 import { Avatar } from "@/app/utils/Avatar";
 import { AdminProfile } from "./attendancePage";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 interface Props {
   profile: AdminProfile;
@@ -8,6 +10,9 @@ interface Props {
 }
 
 const FacultyInfoCard: FC<Props> = ({ profile, loading }) => {
+  const { collegeEducationType } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
+
   return (
     <div className="flex bg-white rounded-xl p-4 w-[70%] overflow-auto shadow-sm items-center gap-8 border border-gray-100/50">
       <div className="flex flex-col items-center gap-2 pl-2">
@@ -18,7 +23,7 @@ const FacultyInfoCard: FC<Props> = ({ profile, loading }) => {
       </div>
 
       <div className="grid grid-cols-[120px_1fr] gap-y-2 text-[13px]">
-        <div className="text-[#282828] font-semibold">College Admin ID</div>
+        <div className="text-[#282828] font-semibold">{isSchool ? "School Admin ID" : "College Admin ID"}</div>
         {loading === false && <div className="text-gray-500">{profile.adminId}</div>}
 
         <div className="text-[#282828] font-semibold">Mobile</div>

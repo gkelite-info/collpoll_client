@@ -10,6 +10,7 @@ export type CollegeAdminContextType = {
     userId: number | null;
     collegeId: number | null;
     collegeName: string | null;
+    collegeEducationType: string | null;
     isActive: boolean | null;
 };
 
@@ -29,6 +30,7 @@ export const CollegeAdminProvider = ({
         userId: null,
         collegeId: null,
         collegeName: null,
+        collegeEducationType: null,
         isActive: null,
     });
 
@@ -50,6 +52,7 @@ export const CollegeAdminProvider = ({
                     userId: admin.userId,
                     collegeId: admin.collegeId,
                     collegeName: admin.collegeName,
+                    collegeEducationType: admin.collegeEducationType,
                     isActive: admin.isActive,
                 });
             } catch (err) {

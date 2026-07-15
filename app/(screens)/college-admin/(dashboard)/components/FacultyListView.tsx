@@ -21,6 +21,7 @@ import {
 } from "@/lib/helpers/collegeAdmin/getFacultyListData";
 import { fetchCollegeAcademicYears } from "@/lib/helpers/admin/collegeAcademicYearAPI";
 import { fetchSubjectFacultyList } from "@/lib/helpers/admin/facultyCountAPI";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -172,11 +173,12 @@ function CardsShimmer() {
   );
 }
 
-function TableShimmer() {
+function TableShimmer({ isSchool }: { isSchool: boolean }) {
+  const visibleColumns = TABLE_COLUMNS.filter(col => !(isSchool && col.key === "branchCode"));
   return (
     <div className="animate-pulse">
       <div className="flex gap-4 px-4 py-3 bg-gray-100 rounded-t-xl mb-1">
-        {TABLE_COLUMNS.map((col) => (
+        {visibleColumns.map((col) => (
           <div key={col.key} className="flex-1 h-4 bg-gray-300 rounded" />
         ))}
       </div>
@@ -185,7 +187,7 @@ function TableShimmer() {
           key={i}
           className={`flex gap-4 px-4 py-4 ${i % 2 === 0 ? "bg-white" : "bg-gray-50"} ${i === 5 ? "rounded-b-xl" : ""}`}
         >
-          {TABLE_COLUMNS.map((col) => (
+          {visibleColumns.map((col) => (
             <div
               key={col.key}
               className="flex-1 h-3.5 bg-gray-200 rounded"
@@ -215,7 +217,8 @@ type Props = { onBack: () => void };
 
 
 export default function FacultyListView({ onBack }: Props) {
-  const { collegeId, loading: contextLoading } = useCollegeAdmin();
+  const { collegeId, collegeEducationType, loading: contextLoading } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -476,24 +479,26 @@ export default function FacultyListView({ onBack }: Props) {
             )}
           </div>
 
-          <div className="relative inline-block" ref={branchRef}>
-            <FilterPill label="Branch" value={selectedBranch} showCaret
-              onClick={(e) => { e.stopPropagation(); setBranchOpen((o) => !o); setEduOpen(false); setAdminOpen(false); setYearOpen(false); }}
-            />
-            {branchOpen && (
-              <div className="absolute top-8 left-0 bg-white shadow-lg rounded-xl text-sm w-36 z-50 border border-gray-100">
-                {["All", ...availableBranches].map((b) => (
-                  <div
-                    key={b}
-                    className={`px-3 py-2 cursor-pointer hover:bg-gray-50 ${selectedBranch === b ? "font-semibold text-[#43C17A]" : "text-[#282828]"}`}
-                    onClick={(e) => { e.stopPropagation(); handleBranchChange(b); }}
-                  >
-                    {b}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {!isSchool && (
+            <div className="relative inline-block" ref={branchRef}>
+              <FilterPill label="Branch" value={selectedBranch} showCaret
+                onClick={(e) => { e.stopPropagation(); setBranchOpen((o) => !o); setEduOpen(false); setAdminOpen(false); setYearOpen(false); }}
+              />
+              {branchOpen && (
+                <div className="absolute top-8 left-0 bg-white shadow-lg rounded-xl text-sm w-36 z-50 border border-gray-100">
+                  {["All", ...availableBranches].map((b) => (
+                    <div
+                      key={b}
+                      className={`px-3 py-2 cursor-pointer hover:bg-gray-50 ${selectedBranch === b ? "font-semibold text-[#43C17A]" : "text-[#282828]"}`}
+                      onClick={(e) => { e.stopPropagation(); handleBranchChange(b); }}
+                    >
+                      {b}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="relative inline-block" ref={adminRef}>
             <FilterPill label="Support Admin" value={selectedAdmin} showCaret
@@ -570,11 +575,11 @@ export default function FacultyListView({ onBack }: Props) {
         </div>
 
         {showShimmer ? (
-          <TableShimmer />
+          <TableShimmer isSchool={isSchool} />
         ) : tableData.length === 0 ? (
           <p className="text-gray-400 text-sm mt-8 text-center">No faculty found.</p>
         ) : (
-          <TableComponent columns={TABLE_COLUMNS} tableData={tableData} height="55vh" />
+          <TableComponent columns={TABLE_COLUMNS.filter(col => !(isSchool && col.key === "branchCode"))} tableData={tableData} height="55vh" />
         )}
 
         {totalPages > 1 && !showShimmer && (

@@ -8,6 +8,9 @@ type CollegeAdminJoin = {
 
     college: {
         collegeName: string;
+        college_education?: {
+            collegeEducationType: string;
+        }[] | null;
     };
 };
 
@@ -20,7 +23,10 @@ export async function fetchCollegeAdminContext(userId: number) {
       collegeId,
       isActive,
       college:collegeId!inner (
-        collegeName
+        collegeName,
+        college_education (
+          collegeEducationType
+        )
       )
     `)
         .eq("userId", userId)
@@ -36,5 +42,6 @@ export async function fetchCollegeAdminContext(userId: number) {
         collegeId: data.collegeId,
         collegeName: data.college.collegeName,
         isActive: data.isActive,
+        collegeEducationType: data.college.college_education?.[0]?.collegeEducationType || null,
     };
 }

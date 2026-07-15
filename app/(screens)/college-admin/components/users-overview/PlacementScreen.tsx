@@ -1,12 +1,16 @@
 import TableComponent from "@/app/utils/table/table";
 import DonutCard from "./Donut";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export default function PlacementScreen() {
+  const { collegeEducationType } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const columns = [
     { title: "Placement Manager", key: "name" },
     { title: "Manager ID", key: "id" },
     { title: "Education Type", key: "education" },
-    { title: "Branch", key: "branch" },
+    ...(!isSchool ? [{ title: "Branch", key: "branch" }] : []),
     { title: "Admin", key: "admin" },
   ];
 

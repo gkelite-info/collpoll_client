@@ -22,7 +22,6 @@ export default function CollegeAdminClubsClient() {
 
   const [selectedClubData, setSelectedClubData] = useState<any>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
-
   useEffect(() => {
     if (clubId) {
       const fetchClubDetails = async () => {
