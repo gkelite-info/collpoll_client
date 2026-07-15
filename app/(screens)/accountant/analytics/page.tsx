@@ -2,9 +2,8 @@
 
 import { Suspense } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AnalyticsOverviewScreen } from "./components/AnalyticsOverviewScreen";
-import { RevenueManagementScreen } from "./components/RevenueManagementScreen";
-import { StudentFeesScreen } from "./components/StudentFeesScreen";
+import { AnalyticsOverviewScreen, RevenueManagementScreen, StudentFeesScreen } from "./components/screens";
+import { AnalyticsPageShimmer } from "./components/shimmers/AnalyticsPageShimmer";
 
 type AnalyticsView = "overview" | "revenue" | "studentFees";
 
@@ -49,7 +48,7 @@ function AccountantAnalyticsContent() {
 
 export default function AccountantAnalyticsPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<AnalyticsPageShimmer />}>
       <AccountantAnalyticsContent />
     </Suspense>
   );

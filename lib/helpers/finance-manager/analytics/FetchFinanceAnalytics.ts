@@ -691,6 +691,7 @@ export async function getFinanceAnalyticsOverview(
     { data: obligations, error: obligationError },
     { count: studentCount },
     { count: managerCount },
+    { data: collegeRevenue, error: collegeRevenueError },
   ] = await Promise.all([
     supabase
       .from("college_education")
@@ -757,9 +758,18 @@ export async function getFinanceAnalyticsOverview(
       .eq("isActive", true)
       .eq("is_deleted", false)
       .is("deletedAt", null),
+    supabase
+      .from("college_revenue_records")
+      .select("amount")
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("isActive", true)
+      .eq("is_deleted", false)
+      .is("deletedAt", null),
   ]);
 
   if (obligationError) throw obligationError;
+  if (collegeRevenueError) throw collegeRevenueError;
 
   let totalFees = 0;
   let collected = 0;
@@ -774,11 +784,18 @@ export async function getFinanceAnalyticsOverview(
   });
 
   const pending = Math.max(totalFees - collected, 0);
+  const otherRevenue = (collegeRevenue ?? []).reduce(
+    (total, revenue) => total + Number(revenue.amount ?? 0),
+    0,
+  );
   const educationType = education?.collegeEducationType || "Education";
 
   return {
     summaryCards: [
-      { label: "Total Revenue Collected", value: formatCleanShortCurrency(collected) },
+      {
+        label: "Total Revenue Collected",
+        value: formatCleanShortCurrency(collected + otherRevenue),
+      },
       { label: "Total Pending Fees", value: formatCleanShortCurrency(pending) },
       {
         label: "Total Students",

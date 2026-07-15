@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, MagnifyingGlass, PencilSimple, Trash } from "@phosphor-icons/react";
+import { CalendarBlank, Eye, MagnifyingGlass, PencilSimple, Trash, X } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
@@ -31,15 +31,25 @@ export function ExpenseRecordsTable({
   onDelete: (expense: AccountantExpense) => void;
 }) {
   const [search, setSearch] = useState("");
+  const [selectedDateKey, setSelectedDateKey] = useState("");
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  
+  const formatDateKey = (dateKey: string) =>
+    new Date(`${dateKey}T00:00:00`).toLocaleDateString("en-GB");
+
   const filteredRows = useMemo(() => {
+    let result = rows;
+    if (selectedDateKey) {
+      result = result.filter((row) => row.expenseDate === selectedDateKey);
+    }
     const query = search.trim().toLowerCase();
-    if (!query) return rows;
-    return rows.filter((row) =>
+    if (!query) return result;
+    return result.filter((row) =>
       [row.expenseName, row.remarks ?? "", row.category, row.paymentMethod].some((value) =>
         value.toLowerCase().includes(query),
       ),
     );
-  }, [rows, search]);
+  }, [rows, search, selectedDateKey]);
 
   const openAttachment = async (row: AccountantExpense) => {
     const attachment = row.attachments[0];
@@ -58,16 +68,72 @@ export function ExpenseRecordsTable({
     <section className="overflow-hidden rounded-xl bg-white shadow-[0_4px_12px_rgba(15,23,42,0.12)]">
       <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-5">
         <h2 className="text-[15px] font-bold text-[#17213D]">Expense Records</h2>
-        <label className="flex h-9 min-w-[320px] items-center gap-3 rounded-md border border-[#E2E6EA] px-4 text-[#6B7280]">
-          <MagnifyingGlass size={14} weight="bold" />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by expense name, category, or remarks..."
-            className="w-full bg-transparent text-[11px] font-medium outline-none placeholder:text-[#7B8190]"
-          />
-        </label>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="relative self-start sm:self-auto">
+            {!isDatePickerOpen ? (
+              <button
+                type="button"
+                onClick={() => setIsDatePickerOpen(true)}
+                className="flex cursor-pointer items-center gap-2 rounded-md bg-[#DAE9E1] px-4 py-1.5 text-sm font-bold tracking-wide text-[#43C17A] transition-colors hover:bg-[#cbe6d7]"
+                title="Select date"
+              >
+                <CalendarBlank size={18} weight="fill" />
+                {selectedDateKey
+                  ? formatDateKey(selectedDateKey)
+                  : new Date().toLocaleDateString("en-GB")}
+              </button>
+            ) : (
+              <div className="flex h-9 items-center gap-2 rounded-md border border-[#43C17A] bg-white p-1 shadow-sm">
+                <CalendarBlank
+                  size={18}
+                  className="ml-2 text-[#43C17A]"
+                  weight="fill"
+                />
+                <input
+                  type="date"
+                  value={selectedDateKey}
+                  onChange={(event) => {
+                    if (event.target.value) {
+                      setSelectedDateKey(event.target.value);
+                      setIsDatePickerOpen(false);
+                    }
+                  }}
+                  className="cursor-pointer rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-700 outline-none focus:border-[#43C17A]"
+                />
+                {selectedDateKey && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedDateKey("");
+                      setIsDatePickerOpen(false);
+                    }}
+                    className="cursor-pointer rounded px-1 text-xs font-medium text-red-500 hover:text-red-700"
+                  >
+                    Clear
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsDatePickerOpen(false)}
+                  className="cursor-pointer rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                  title="Close"
+                >
+                  <X size={14} weight="bold" />
+                </button>
+              </div>
+            )}
+          </div>
+          <label className="flex h-9 min-w-[320px] items-center gap-3 rounded-md border border-[#E2E6EA] px-4 text-[#6B7280]">
+            <MagnifyingGlass size={14} weight="bold" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by expense name, category, or remarks..."
+              className="w-full bg-transparent text-[11px] font-medium outline-none placeholder:text-[#7B8190]"
+            />
+          </label>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[820px] border-collapse text-left">

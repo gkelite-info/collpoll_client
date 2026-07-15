@@ -57,6 +57,7 @@ export async function fetchFinanceManagerDashboardCards(
     studentsResult,
     financeManagerEducationsResult,
     obligationsResult,
+    collegeRevenueResult,
   ] = await Promise.all([
     supabase
       .from("students")
@@ -131,18 +132,27 @@ export async function fetchFinanceManagerDashboardCards(
       .is("students.deletedAt", null)
       .eq("isActive", true)
       .is("deletedAt", null),
+    supabase
+      .from("college_revenue_records")
+      .select("amount")
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("isActive", true)
+      .eq("is_deleted", false)
+      .is("deletedAt", null),
   ]);
 
   if (studentsResult.error) throw studentsResult.error;
   if (financeManagerEducationsResult.error) throw financeManagerEducationsResult.error;
   if (obligationsResult.error) throw obligationsResult.error;
+  if (collegeRevenueResult.error) throw collegeRevenueResult.error;
 
   const obligations = obligationsResult.data ?? [];
   const obligationIds = obligations
     .map((obligation) => Number(obligation.studentFeeObligationId))
     .filter(Boolean);
 
-  let totalRevenueCollected = 0;
+  let studentFeeRevenueCollected = 0;
 
   if (obligationIds.length > 0) {
     const { data: transactions, error: transactionError } = await supabase
@@ -165,7 +175,7 @@ export async function fetchFinanceManagerDashboardCards(
 
       if (ledgerError) throw ledgerError;
 
-      totalRevenueCollected = (ledgers ?? []).reduce(
+      studentFeeRevenueCollected = (ledgers ?? []).reduce(
         (sum, ledger) => sum + Number(ledger.amount ?? 0),
         0,
       );
@@ -176,10 +186,18 @@ export async function fetchFinanceManagerDashboardCards(
     (sum, obligation) => sum + Number(obligation.totalAmount ?? 0),
     0,
   );
+  const collegeRevenueCollected = (collegeRevenueResult.data ?? []).reduce(
+    (sum, revenue) => sum + Number(revenue.amount ?? 0),
+    0,
+  );
 
   return {
-    totalRevenueCollected,
-    totalPendingFees: Math.max(totalObligationAmount - totalRevenueCollected, 0),
+    totalRevenueCollected:
+      studentFeeRevenueCollected + collegeRevenueCollected,
+    totalPendingFees: Math.max(
+      totalObligationAmount - studentFeeRevenueCollected,
+      0,
+    ),
     totalStudents: studentsResult.count ?? 0,
     activeFinanceExecutives: financeManagerEducationsResult.count ?? 0,
   };
