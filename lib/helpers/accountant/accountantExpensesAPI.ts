@@ -29,6 +29,7 @@ export type AccountantExpense = {
   category: string;
   amount: number;
   expenseDate: string;
+  collegeEducationId: number | null;
   paymentMethod: string;
   remarks: string | null;
   collegeId: number;
@@ -62,12 +63,21 @@ export type UpdateAccountantExpenseInput = Omit<
 
 export type FetchAccountantExpensesInput = {
   collegeId: number;
+  collegeEducationIds?: number[];
   page?: number;
   itemsPerPage?: number;
   category?: string;
   search?: string;
   fromDate?: string;
   toDate?: string;
+};
+
+export type AccountantExpenseSummary = {
+  totalExpenses: number;
+  transactionCount: number;
+  topCategory: string;
+  monthlyExpenses: number[];
+  categoryBreakdown: Array<{ category: string; amount: number }>;
 };
 
 type AccountantExpenseRow = Omit<
@@ -284,6 +294,7 @@ export async function createAccountantExpense(
 
 export async function fetchAccountantExpenses({
   collegeId,
+  collegeEducationIds,
   page = 1,
   itemsPerPage = 10,
   category,
@@ -299,13 +310,24 @@ export async function fetchAccountantExpenses({
   let query = supabase
     .from("accountant_expenses")
     .select(
-      "accountantExpenseId, expenseName, category, amount, expenseDate, paymentMethod, remarks, collegeId, createdBy, isActive, createdAt, updatedAt, createdByUser:users!accountant_expenses_createdBy_fkey(fullName)",
+      "accountantExpenseId, expenseName, category, amount, expenseDate, collegeEducationId, paymentMethod, remarks, collegeId, createdBy, isActive, createdAt, updatedAt, createdByUser:users!accountant_expenses_createdBy_fkey(fullName)",
       { count: "exact" },
     )
     .eq("collegeId", collegeId)
     .eq("is_deleted", false)
     .is("deletedAt", null);
 
+  if (collegeEducationIds) {
+    if (collegeEducationIds.length === 0) {
+      return {
+        data: [],
+        total: 0,
+        page: safePage,
+        itemsPerPage: safeItemsPerPage,
+      };
+    }
+    query = query.in("collegeEducationId", collegeEducationIds);
+  }
   if (category?.trim()) query = query.eq("category", category.trim());
   if (search?.trim()) query = query.ilike("expenseName", `%${search.trim()}%`);
   if (fromDate) query = query.gte("expenseDate", fromDate);
@@ -330,6 +352,82 @@ export async function fetchAccountantExpenses({
   };
 }
 
+export async function fetchAccountantExpenseSummary(
+  collegeId: number | null | undefined,
+  collegeEducationIds: number[],
+): Promise<AccountantExpenseSummary> {
+  const emptySummary: AccountantExpenseSummary = {
+    totalExpenses: 0,
+    transactionCount: 0,
+    topCategory: "-",
+    monthlyExpenses: Array<number>(12).fill(0),
+    categoryBreakdown: [],
+  };
+  if (!collegeId || collegeEducationIds.length === 0) return emptySummary;
+
+  const pageSize = 1_000;
+  const rows: Array<{
+    amount: number | string | null;
+    category: string;
+    expenseDate: string;
+  }> = [];
+  let from = 0;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("accountant_expenses")
+      .select("amount, category, expenseDate")
+      .eq("collegeId", collegeId)
+      .in("collegeEducationId", collegeEducationIds)
+      .eq("isActive", true)
+      .eq("is_deleted", false)
+      .is("deletedAt", null)
+      .order("expenseDate", { ascending: false })
+      .range(from, from + pageSize - 1);
+
+    if (error) throw error;
+    const pageRows = (data ?? []) as typeof rows;
+    rows.push(...pageRows);
+    if (pageRows.length < pageSize) break;
+    from += pageSize;
+  }
+
+  const monthlyExpenses = Array<number>(12).fill(0);
+  const currentYear = new Date().getFullYear();
+  const categories = new Map<string, { category: string; amount: number }>();
+  let totalExpenses = 0;
+
+  rows.forEach((row) => {
+    const amount = Number(row.amount) || 0;
+    totalExpenses += amount;
+
+    const date = new Date(`${row.expenseDate}T00:00:00`);
+    if (!Number.isNaN(date.getTime()) && date.getFullYear() === currentYear) {
+      monthlyExpenses[date.getMonth()] += amount;
+    }
+
+    const category = row.category.trim();
+    const key = category.toLocaleLowerCase("en-IN");
+    const current = categories.get(key);
+    categories.set(key, {
+      category: current?.category ?? category,
+      amount: (current?.amount ?? 0) + amount,
+    });
+  });
+
+  const categoryBreakdown = Array.from(categories.values()).sort(
+    (a, b) => b.amount - a.amount,
+  );
+
+  return {
+    totalExpenses,
+    transactionCount: rows.length,
+    topCategory: categoryBreakdown[0]?.category ?? "-",
+    monthlyExpenses,
+    categoryBreakdown,
+  };
+}
+
 export async function fetchAccountantExpenseById(
   accountantExpenseId: number,
   collegeId: number,
@@ -337,7 +435,7 @@ export async function fetchAccountantExpenseById(
   const { data, error } = await supabase
     .from("accountant_expenses")
     .select(
-      "accountantExpenseId, expenseName, category, amount, expenseDate, paymentMethod, remarks, collegeId, createdBy, isActive, createdAt, updatedAt, createdByUser:users!accountant_expenses_createdBy_fkey(fullName)",
+      "accountantExpenseId, expenseName, category, amount, expenseDate, collegeEducationId, paymentMethod, remarks, collegeId, createdBy, isActive, createdAt, updatedAt, createdByUser:users!accountant_expenses_createdBy_fkey(fullName)",
     )
     .eq("accountantExpenseId", accountantExpenseId)
     .eq("collegeId", collegeId)
