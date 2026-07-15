@@ -1,7 +1,7 @@
 "use client";
 
-import { FileText, FloppyDisk, X } from "@phosphor-icons/react";
-import { FormEvent, useEffect, useState } from "react";
+import { CaretDown, FileText, FloppyDisk, X } from "@phosphor-icons/react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
 import {
@@ -9,6 +9,10 @@ import {
   updateAccountantExpense,
   type AccountantExpense,
 } from "@/lib/helpers/accountant/accountantExpensesAPI";
+import {
+  fetchAccountantEducationOptions,
+  type AccountantEducationOption,
+} from "@/lib/helpers/accountant/accountantRevenueAPI";
 
 type RecordNewExpenseModalProps = {
   isOpen: boolean;
@@ -34,16 +38,28 @@ export default function RecordNewExpenseModal({
   initialCategory,
   initialExpense,
 }: RecordNewExpenseModalProps) {
-  const { userId, collegeId } = useUser();
+  const { userId, collegeId, accountantId } = useUser();
   const [expenseName, setExpenseName] = useState(initialExpense?.expenseName ?? "");
   const [category, setCategory] = useState(initialExpense?.category ?? initialCategory ?? "");
   const [amount, setAmount] = useState(initialExpense ? String(initialExpense.amount) : "");
   const [expenseDate, setExpenseDate] = useState(initialExpense?.expenseDate ?? "");
   const [paymentMethod, setPaymentMethod] = useState(initialExpense?.paymentMethod ?? "");
+  const [educationOptions, setEducationOptions] = useState<
+    AccountantEducationOption[]
+  >([]);
+  const [selectedEducationIds, setSelectedEducationIds] = useState<number[]>(
+    initialExpense?.collegeEducationId ? [initialExpense.collegeEducationId] : [],
+  );
+  const [isEducationOpen, setIsEducationOpen] = useState(false);
+  const [isEducationLoading, setIsEducationLoading] = useState(false);
   const [remarks, setRemarks] = useState(initialExpense?.remarks ?? "");
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const educationDropdownRef = useRef<HTMLDivElement>(null);
   const numericAmount = Number(amount);
+  const selectedEducations = educationOptions.filter(
+    (option) => selectedEducationIds.includes(option.collegeEducationId),
+  );
   const isValid =
     expenseName.trim().length >= 3 &&
     Boolean(category) &&
@@ -52,6 +68,7 @@ export default function RecordNewExpenseModal({
     Boolean(expenseDate) &&
     expenseDate <= new Date().toISOString().split("T")[0] &&
     Boolean(paymentMethod) &&
+    selectedEducationIds.length > 0 &&
     Boolean(userId) &&
     Boolean(collegeId);
 
@@ -61,34 +78,50 @@ export default function RecordNewExpenseModal({
     setAmount(initialExpense ? String(initialExpense.amount) : "");
     setExpenseDate(initialExpense?.expenseDate ?? "");
     setPaymentMethod(initialExpense?.paymentMethod ?? "");
+    setSelectedEducationIds(initialExpense?.collegeEducationId ? [initialExpense.collegeEducationId] : []);
+    setIsEducationOpen(false);
     setRemarks(initialExpense?.remarks ?? "");
     setAttachments([]);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!isValid || !userId || !collegeId) return;
+    if (!isValid || !userId || !collegeId || selectedEducationIds.length === 0) return;
 
     setIsSaving(true);
     try {
-      const expenseInput = {
-        expenseName,
-        category,
-        amount: numericAmount,
-        expenseDate,
-        paymentMethod,
-        remarks,
-        collegeId,
-        createdBy: userId,
-      };
       if (initialExpense) {
+        const expenseInput = {
+          expenseName,
+          category,
+          amount: numericAmount,
+          expenseDate,
+          paymentMethod,
+          remarks,
+          collegeId,
+          createdBy: userId,
+          collegeEducationId: selectedEducationIds[0],
+        };
         await updateAccountantExpense({
           ...expenseInput,
           accountantExpenseId: initialExpense.accountantExpenseId,
           newAttachments: attachments,
         });
       } else {
-        await createAccountantExpense({ ...expenseInput, attachments });
+        for (const educationId of selectedEducationIds) {
+          const expenseInput = {
+            expenseName,
+            category,
+            amount: numericAmount,
+            expenseDate,
+            paymentMethod,
+            remarks,
+            collegeId,
+            createdBy: userId,
+            collegeEducationId: educationId,
+          };
+          await createAccountantExpense({ ...expenseInput, attachments });
+        }
       }
       toast.success(initialExpense ? "Expense updated successfully." : "Expense recorded successfully.");
       resetForm();
@@ -100,6 +133,7 @@ export default function RecordNewExpenseModal({
       setIsSaving(false);
     }
   };
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -110,6 +144,78 @@ export default function RecordNewExpenseModal({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setExpenseName(initialExpense?.expenseName ?? "");
+    setCategory(initialExpense?.category ?? initialCategory ?? "");
+    setAmount(initialExpense ? String(initialExpense.amount) : "");
+    setExpenseDate(initialExpense?.expenseDate ?? "");
+    setPaymentMethod(initialExpense?.paymentMethod ?? "");
+    setSelectedEducationIds(initialExpense?.collegeEducationId ? [initialExpense.collegeEducationId] : []);
+    setRemarks(initialExpense?.remarks ?? "");
+    setAttachments([]);
+    setIsEducationOpen(false);
+  }, [initialCategory, initialExpense, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !accountantId || !collegeId) return;
+
+    let isCurrent = true;
+    setIsEducationLoading(true);
+
+    fetchAccountantEducationOptions(accountantId, collegeId)
+      .then((options) => {
+        if (!isCurrent) return;
+
+        setEducationOptions(options);
+        setSelectedEducationIds((currentIds) => {
+          if (
+            currentIds.length > 0 &&
+            currentIds.every((id) =>
+              options.some((option) => option.collegeEducationId === id)
+            )
+          ) {
+            return currentIds;
+          }
+          return options.length === 1 ? [options[0].collegeEducationId] : [];
+        });
+      })
+      .catch((error) => {
+        if (!isCurrent) return;
+        setEducationOptions([]);
+        setSelectedEducationIds([]);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Unable to load assigned education types.",
+        );
+      })
+      .finally(() => {
+        if (isCurrent) setIsEducationLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [accountantId, collegeId, isOpen]);
+
+  useEffect(() => {
+    if (!isEducationOpen) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        educationDropdownRef.current &&
+        !educationDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsEducationOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isEducationOpen]);
 
   if (!isOpen) return null;
 
@@ -164,9 +270,130 @@ export default function RecordNewExpenseModal({
                 <option value="Infrastructure">Infrastructure</option>
                 <option value="Utilities">Utilities</option>
                 <option value="Internet & Network">Internet & Network</option>
+                <option value="Sports">Sports</option>
+                <option value="Safety and Security">Safety and Security</option>
+                <option value="Administration">Administration</option>
                 <option value="Other">Other</option>
               </select>
             </label>
+
+            <div
+              ref={educationDropdownRef}
+              className="relative flex flex-col gap-1.5"
+            >
+              <span className="text-[12px] font-semibold text-[#282828]">
+                Education Type <RequiredMark />
+              </span>
+              <div
+                role="button"
+                tabIndex={isEducationLoading || educationOptions.length === 0 ? -1 : 0}
+                aria-haspopup="listbox"
+                aria-expanded={isEducationOpen}
+                aria-disabled={isEducationLoading || educationOptions.length === 0}
+                onClick={() => {
+                  if (!isEducationLoading && educationOptions.length > 0) {
+                    setIsEducationOpen((isOpen) => !isOpen);
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    if (!isEducationLoading && educationOptions.length > 0) {
+                      setIsEducationOpen((isOpen) => !isOpen);
+                    }
+                  }
+                }}
+                className="flex min-h-9 w-full cursor-pointer items-center justify-between gap-3 rounded-md border border-[#BFCDBE] bg-[#F2F3F4] px-3 py-1 text-left text-[12px] font-medium text-[#282828] outline-none focus:border-[#43C17A] aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
+              >
+                {selectedEducations.length > 0 ? (
+                  <span className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+                    {selectedEducations.map((selectedEducation) => (
+                      <span
+                        key={selectedEducation.collegeEducationId}
+                        className="flex max-w-full items-center gap-1.5 rounded-full bg-[#DFF3E7] py-1 pl-2.5 pr-1 text-[11px] font-bold text-[#086C20]"
+                      >
+                        <span className="truncate">
+                          {selectedEducation.collegeEducationType}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${selectedEducation.collegeEducationType}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedEducationIds((current) =>
+                              current.filter(
+                                (id) => id !== selectedEducation.collegeEducationId
+                              )
+                            );
+                          }}
+                          className="flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-[#BFE5CC]"
+                        >
+                          <X size={10} weight="bold" />
+                        </button>
+                      </span>
+                    ))}
+                  </span>
+                ) : (
+                  <span className="truncate">
+                    {isEducationLoading
+                      ? "Loading education types..."
+                      : educationOptions.length > 0
+                          ? "Select an education type"
+                        : "No assigned education types"}
+                  </span>
+                )}
+                <CaretDown
+                  size={14}
+                  weight="bold"
+                  className={`shrink-0 transition-transform ${
+                    isEducationOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </div>
+
+              {isEducationOpen && (
+                <div
+                  role="listbox"
+                  className="absolute left-0 right-0 top-full z-20 mt-1 max-h-44 overflow-y-auto rounded-md border border-[#BFCDBE] bg-white p-1 shadow-lg"
+                >
+                  {educationOptions.map((option) => {
+                    const isSelected = selectedEducationIds.includes(
+                      option.collegeEducationId
+                    );
+
+                    return (
+                      <button
+                        key={option.collegeEducationId}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedEducationIds((current) => {
+                            if (current.includes(option.collegeEducationId)) {
+                              return current.filter(
+                                (id) => id !== option.collegeEducationId
+                              );
+                            }
+                            return [...current, option.collegeEducationId];
+                          });
+                        }}
+                        className={`block w-full cursor-pointer rounded px-3 py-2 text-left text-[12px] font-medium hover:bg-[#EAF6EE] ${
+                          isSelected
+                            ? "bg-[#DFF3E7] font-bold text-[#086C20]"
+                            : "text-[#282828]"
+                        }`}
+                      >
+                        {option.collegeEducationType}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <span className="text-[10px] font-medium text-[#6B7280]">
+                Select an assigned education type. Use × to remove it.
+              </span>
+            </div>
 
             <label className="flex flex-col gap-1.5">
               <span className="text-[12px] font-semibold text-[#282828]">

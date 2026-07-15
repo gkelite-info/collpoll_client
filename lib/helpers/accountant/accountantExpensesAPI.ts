@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { fetchAccountantEducationOptions } from "./accountantRevenueAPI";
 
 export const ACCOUNTANT_EXPENSE_ATTACHMENTS_BUCKET =
   "accountant-expense-attachments";
@@ -37,6 +38,7 @@ export type AccountantExpense = {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  collegeEducationId: number | null;
   attachments: AccountantExpenseAttachment[];
 };
 
@@ -49,6 +51,7 @@ export type CreateAccountantExpenseInput = {
   remarks?: string | null;
   collegeId: number;
   createdBy: number;
+  collegeEducationId: number;
   attachments?: File[];
 };
 
@@ -68,6 +71,15 @@ export type FetchAccountantExpensesInput = {
   search?: string;
   fromDate?: string;
   toDate?: string;
+  collegeEducationIds?: number[];
+};
+
+export type AccountantExpenseSummary = {
+  totalExpenses: number;
+  transactionCount: number;
+  topCategory: string;
+  monthlyExpenses: number[];
+  categoryBreakdown: Array<{ category: string; amount: number }>;
 };
 
 type AccountantExpenseRow = Omit<
@@ -101,6 +113,12 @@ function validateExpense(input: CreateAccountantExpenseInput) {
   }
   if (!Number.isInteger(input.createdBy) || input.createdBy <= 0) {
     throw new Error("A valid creator is required.");
+  }
+  if (
+    !Number.isInteger(input.collegeEducationId) ||
+    input.collegeEducationId <= 0
+  ) {
+    throw new Error("Select an education type.");
   }
   if ((input.remarks?.trim().length ?? 0) > 255) {
     throw new Error("Remarks cannot exceed 255 characters.");
@@ -211,6 +229,39 @@ async function fetchAttachments(expenseIds: number[]) {
   return (data ?? []) as AccountantExpenseAttachment[];
 }
 
+async function validateAssignedEducationType(input: {
+  collegeId: number;
+  createdBy: number;
+  collegeEducationId: number;
+}) {
+  const { data: accountant, error } = await supabase
+    .from("accountants")
+    .select("accountantId")
+    .eq("userId", input.createdBy)
+    .eq("collegeId", input.collegeId)
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!accountant) {
+    throw new Error("An active accountant registration is required.");
+  }
+
+  const assignedOptions = await fetchAccountantEducationOptions(
+    accountant.accountantId,
+    input.collegeId,
+  );
+  const assignedIds = new Set(
+    assignedOptions.map((education) => education.collegeEducationId),
+  );
+
+  if (!assignedIds.has(input.collegeEducationId)) {
+    throw new Error("Select an education type assigned to this accountant.");
+  }
+}
+
 function withAttachments(
   rows: AccountantExpenseRow[],
   attachments: AccountantExpenseAttachment[],
@@ -236,6 +287,7 @@ export async function createAccountantExpense(
 ) {
   validateExpense(input);
   validateAttachments(input.attachments ?? []);
+  await validateAssignedEducationType(input);
 
   const now = new Date().toISOString();
   let accountantExpenseId: number | null = null;
@@ -251,6 +303,7 @@ export async function createAccountantExpense(
         paymentMethod: input.paymentMethod,
         remarks: input.remarks?.trim() || null,
         collegeId: input.collegeId,
+        collegeEducationId: input.collegeEducationId,
         createdBy: input.createdBy,
         isActive: true,
         is_deleted: false,
@@ -290,6 +343,7 @@ export async function fetchAccountantExpenses({
   search,
   fromDate,
   toDate,
+  collegeEducationIds,
 }: FetchAccountantExpensesInput) {
   const safePage = Math.max(1, Math.trunc(page));
   const safeItemsPerPage = Math.min(100, Math.max(1, Math.trunc(itemsPerPage)));
@@ -299,17 +353,31 @@ export async function fetchAccountantExpenses({
   let query = supabase
     .from("accountant_expenses")
     .select(
-      "accountantExpenseId, expenseName, category, amount, expenseDate, paymentMethod, remarks, collegeId, createdBy, isActive, createdAt, updatedAt, createdByUser:users!accountant_expenses_createdBy_fkey(fullName)",
+      "accountantExpenseId, expenseName, category, amount, expenseDate, paymentMethod, remarks, collegeId, collegeEducationId, createdBy, isActive, createdAt, updatedAt, createdByUser:users!accountant_expenses_createdBy_fkey(fullName)",
       { count: "exact" },
     )
     .eq("collegeId", collegeId)
     .eq("is_deleted", false)
     .is("deletedAt", null);
 
+  if (collegeEducationIds) {
+    if (collegeEducationIds.length === 0) {
+      return {
+        data: [],
+        total: 0,
+        page: safePage,
+        itemsPerPage: safeItemsPerPage,
+      };
+    }
+    query = query.in("collegeEducationId", collegeEducationIds);
+  }
   if (category?.trim()) query = query.eq("category", category.trim());
   if (search?.trim()) query = query.ilike("expenseName", `%${search.trim()}%`);
   if (fromDate) query = query.gte("expenseDate", fromDate);
   if (toDate) query = query.lte("expenseDate", toDate);
+  if (collegeEducationIds?.length) {
+    query = query.in("collegeEducationId", collegeEducationIds);
+  }
 
   const { data, error, count } = await query
     .order("expenseDate", { ascending: false })
@@ -318,15 +386,116 @@ export async function fetchAccountantExpenses({
 
   if (error) throw error;
   const rows = (data ?? []) as AccountantExpenseRow[];
-  const attachments = await fetchAttachments(
-    rows.map((row) => row.accountantExpenseId),
-  );
+  const expenseIds = rows.map((row) => row.accountantExpenseId);
+  const attachments = await fetchAttachments(expenseIds);
 
   return {
     data: withAttachments(rows, attachments),
     total: count ?? 0,
     page: safePage,
     itemsPerPage: safeItemsPerPage,
+  };
+}
+
+export async function fetchAccountantExpenseSummary(
+  collegeId: number | null | undefined,
+  collegeEducationIds: number[],
+): Promise<AccountantExpenseSummary> {
+  if (!collegeId || collegeEducationIds.length === 0) {
+    return {
+      totalExpenses: 0,
+      transactionCount: 0,
+      topCategory: "-",
+      monthlyExpenses: Array<number>(12).fill(0),
+      categoryBreakdown: [],
+    };
+  }
+
+  const pageSize = 1_000;
+  let from = 0;
+  let totalExpenses = 0;
+  let transactionCount = 0;
+  const currentYear = new Date().getFullYear();
+  const monthlyExpenses = Array<number>(12).fill(0);
+  const categories = new Map<string, { label: string; amount: number }>();
+  const seenExpenseRecords = new Set<string>();
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("accountant_expenses")
+      .select(
+        "expenseName, amount, category, expenseDate, paymentMethod, createdBy",
+      )
+      .eq("collegeId", collegeId)
+      .in("collegeEducationId", collegeEducationIds)
+      .eq("isActive", true)
+      .eq("is_deleted", false)
+      .is("deletedAt", null)
+      .range(from, from + pageSize - 1);
+
+    if (error) throw error;
+    const rows = data ?? [];
+
+    rows.forEach((row) => {
+      if (collegeEducationIds.length > 1) {
+        const recordKey = [
+          row.expenseName?.trim().toLocaleLowerCase("en-IN") ?? "",
+          row.category?.trim().toLocaleLowerCase("en-IN") ?? "",
+          Number(row.amount) || 0,
+          row.expenseDate,
+          row.paymentMethod?.trim().toLocaleLowerCase("en-IN") ?? "",
+          row.createdBy,
+        ].join("|");
+        if (seenExpenseRecords.has(recordKey)) return;
+        seenExpenseRecords.add(recordKey);
+      }
+
+      transactionCount += 1;
+      const amount = Number(row.amount) || 0;
+      const label = row.category?.trim() || "Uncategorized";
+      const key = label.toLocaleLowerCase("en-IN");
+      const current = categories.get(key);
+      const [expenseYear, expenseMonth] = row.expenseDate
+        .split("-")
+        .map(Number);
+
+      totalExpenses += amount;
+      if (
+        expenseYear === currentYear &&
+        expenseMonth >= 1 &&
+        expenseMonth <= 12
+      ) {
+        monthlyExpenses[expenseMonth - 1] += amount;
+      }
+      categories.set(key, {
+        label: current?.label ?? label,
+        amount: (current?.amount ?? 0) + amount,
+      });
+    });
+
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
+
+  const topCategory = Array.from(categories.values()).reduce<
+    { label: string; amount: number } | null
+  >(
+    (highest, category) =>
+      !highest || category.amount > highest.amount ? category : highest,
+    null,
+  );
+
+  return {
+    totalExpenses,
+    transactionCount,
+    topCategory: topCategory?.label ?? "-",
+    monthlyExpenses,
+    categoryBreakdown: Array.from(categories.values())
+      .map((category) => ({
+        category: category.label,
+        amount: category.amount,
+      }))
+      .sort((a, b) => b.amount - a.amount),
   };
 }
 
@@ -337,7 +506,7 @@ export async function fetchAccountantExpenseById(
   const { data, error } = await supabase
     .from("accountant_expenses")
     .select(
-      "accountantExpenseId, expenseName, category, amount, expenseDate, paymentMethod, remarks, collegeId, createdBy, isActive, createdAt, updatedAt, createdByUser:users!accountant_expenses_createdBy_fkey(fullName)",
+      "accountantExpenseId, expenseName, category, amount, expenseDate, paymentMethod, remarks, collegeId, collegeEducationId, createdBy, isActive, createdAt, updatedAt, createdByUser:users!accountant_expenses_createdBy_fkey(fullName)",
     )
     .eq("accountantExpenseId", accountantExpenseId)
     .eq("collegeId", collegeId)
@@ -356,6 +525,7 @@ export async function updateAccountantExpense(
 ) {
   validateExpense(input);
   validateAttachments(input.newAttachments ?? []);
+  await validateAssignedEducationType(input);
   const now = new Date().toISOString();
 
   const { data, error } = await supabase
@@ -367,6 +537,7 @@ export async function updateAccountantExpense(
       expenseDate: input.expenseDate,
       paymentMethod: input.paymentMethod,
       remarks: input.remarks?.trim() || null,
+      collegeEducationId: input.collegeEducationId,
       updatedAt: now,
     })
     .eq("accountantExpenseId", input.accountantExpenseId)
@@ -420,6 +591,7 @@ export async function deleteAccountantExpense(
     .eq("accountantExpenseId", accountantExpenseId)
     .eq("is_deleted", false);
   if (attachmentError) throw attachmentError;
+
 }
 
 export async function getAccountantExpenseAttachmentSignedUrl(

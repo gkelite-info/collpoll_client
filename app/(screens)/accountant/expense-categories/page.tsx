@@ -2,15 +2,18 @@
 
 import {
   Buildings,
+  CalendarBlank,
+  CaretDown,
   Confetti,
   Money,
   OfficeChair,
   Plus,
   Receipt,
   Wrench,
+  X,
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
@@ -21,6 +24,10 @@ import {
   type AccountantExpense,
 } from "@/lib/helpers/accountant/accountantExpensesAPI";
 import RecordNewExpenseModal from "../(dashboard)/modal/RecordNewExpenseModal";
+import {
+  fetchAccountantEducationOptions,
+  type AccountantEducationOption,
+} from "@/lib/helpers/accountant/accountantRevenueAPI";
 
 const breakdownColumns = [
   { title: "CATEGORY", key: "category" },
@@ -91,12 +98,23 @@ const categoryVisual = (category: string) => {
 
 export default function AccountantExpenseCategoriesPage() {
   const router = useRouter();
-  const { collegeId, loading: userLoading } = useUser();
+  const { accountantId, collegeId, loading: userLoading } = useUser();
   const [isRecordExpenseOpen, setIsRecordExpenseOpen] = useState(false);
   const [expenses, setExpenses] = useState<AccountantExpense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 4;
+  const [selectedDateKey, setSelectedDateKey] = useState("");
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [educationOptions, setEducationOptions] = useState<
+    AccountantEducationOption[]
+  >([]);
+  const [selectedEducationIds, setSelectedEducationIds] = useState<number[]>([]);
+  const [isEducationFilterOpen, setIsEducationFilterOpen] = useState(false);
+  const educationFilterRef = useRef<HTMLDivElement>(null);
+  const itemsPerPage = 10;
+
+  const formatDateKey = (dateKey: string) =>
+    new Date(`${dateKey}T00:00:00`).toLocaleDateString("en-GB");
 
   const loadExpenses = useCallback(async () => {
     if (!collegeId) {
@@ -126,9 +144,88 @@ export default function AccountantExpenseCategoriesPage() {
     void loadExpenses();
   }, [loadExpenses]);
 
+  useEffect(() => {
+    if (userLoading || !accountantId || !collegeId) return;
+
+    let isCurrent = true;
+
+    fetchAccountantEducationOptions(accountantId, collegeId)
+      .then((options) => {
+        if (!isCurrent) return;
+        setEducationOptions(options);
+        setSelectedEducationIds((currentIds) =>
+          currentIds.filter((currentId) =>
+            options.some(
+              (option) => option.collegeEducationId === currentId,
+            ),
+          ),
+        );
+      })
+      .catch((error) => {
+        if (!isCurrent) return;
+        setEducationOptions([]);
+        setSelectedEducationIds([]);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Unable to load assigned education types.",
+          { id: "load-accountant-expense-educations" },
+        );
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [accountantId, collegeId, userLoading]);
+
+  useEffect(() => {
+    if (!isEducationFilterOpen) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        educationFilterRef.current &&
+        !educationFilterRef.current.contains(event.target as Node)
+      ) {
+        setIsEducationFilterOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isEducationFilterOpen]);
+
+  const educationExpenses = useMemo(
+    () =>
+      selectedEducationIds.length > 0
+        ? expenses.filter(
+            (expense) =>
+              expense.collegeEducationId !== null &&
+              selectedEducationIds.includes(expense.collegeEducationId),
+          )
+        : expenses,
+    [expenses, selectedEducationIds],
+  );
+
+  const educationFilterLabel = useMemo(() => {
+    if (selectedEducationIds.length === 0) return "All";
+
+    const selectedNames = educationOptions
+      .filter((option) =>
+        selectedEducationIds.includes(option.collegeEducationId),
+      )
+      .map((option) => option.collegeEducationType);
+
+    if (selectedNames.length <= 2) return selectedNames.join(", ");
+    return `${selectedNames[0]} +${selectedNames.length - 1}`;
+  }, [educationOptions, selectedEducationIds]);
+
   const categories = useMemo<CategorySummary[]>(() => {
     const grouped = new Map<string, CategorySummary>();
-    expenses.forEach((expense) => {
+    const filteredExpenses = selectedDateKey
+      ? educationExpenses.filter((e) => e.expenseDate === selectedDateKey)
+      : educationExpenses;
+
+    filteredExpenses.forEach((expense) => {
       const current = grouped.get(expense.category);
       grouped.set(expense.category, {
         category: expense.category,
@@ -141,7 +238,7 @@ export default function AccountantExpenseCategoriesPage() {
       });
     });
     return Array.from(grouped.values()).sort((a, b) => b.spending - a.spending);
-  }, [expenses]);
+  }, [educationExpenses, selectedDateKey]);
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(categories.length / itemsPerPage));
@@ -149,10 +246,13 @@ export default function AccountantExpenseCategoriesPage() {
   }, [categories.length, currentPage]);
 
   const highestSpending = categories[0];
-  const totalSpending = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const totalSpending = educationExpenses.reduce(
+    (sum, expense) => sum + expense.amount,
+    0,
+  );
   const summaryCards = [
     { label: "HIGHEST SPENDING", title: highestSpending?.category ?? "No expenses", value: formatAmount(highestSpending?.spending ?? 0), helper: "Current", icon: Money, iconBgColor: "#DFF3E7", iconColor: "#147A3D" },
-    { label: "TOTAL EXPENSE RECORDS", title: "", value: String(expenses.length), helper: "", icon: Receipt, iconBgColor: "#E8EEF8", iconColor: "#172B58" },
+    { label: "TOTAL EXPENSE RECORDS", title: "", value: String(educationExpenses.length), helper: "", icon: Receipt, iconBgColor: "#E8EEF8", iconColor: "#172B58" },
     { label: "TOTAL INSTITUTIONAL EXPENDITURE", title: "", value: formatAmount(totalSpending), helper: "", icon: Buildings, iconBgColor: "#E8F4EC", iconColor: "#147A3D" },
   ];
   const activeCategories = categories;
@@ -187,14 +287,95 @@ export default function AccountantExpenseCategoriesPage() {
               utilization metrics.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsRecordExpenseOpen(true)}
-            className="flex h-11 cursor-pointer items-center gap-2 rounded-full bg-[#172B58] px-6 text-[13px] font-bold text-white"
-          >
-            <Plus size={16} weight="bold" />
-            Record New Expense
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            {educationOptions.length > 0 && (
+              <div ref={educationFilterRef} className="relative">
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={isEducationFilterOpen}
+                  onClick={() =>
+                    setIsEducationFilterOpen((isOpen) => !isOpen)
+                  }
+                  className="flex h-11 min-w-[145px] max-w-[240px] cursor-pointer items-center justify-between gap-3 rounded-xl border border-[#E3E8EF] bg-white py-2 pl-5 pr-4 text-[14px] font-bold text-[#17213D] shadow-[0_3px_10px_rgba(15,23,42,0.12)] outline-none focus:border-[#714EF2]"
+                >
+                  <span className="truncate">{educationFilterLabel}</span>
+                  <CaretDown
+                    size={17}
+                    weight="bold"
+                    className={`shrink-0 text-[#714EF2] transition-transform ${
+                      isEducationFilterOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {isEducationFilterOpen && (
+                  <div
+                    role="listbox"
+                    aria-multiselectable="true"
+                    className="absolute right-0 top-full z-30 mt-2 min-w-full overflow-hidden rounded-xl border border-[#E3E8EF] bg-white p-2 shadow-xl"
+                  >
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={selectedEducationIds.length === 0}
+                      onClick={() => {
+                        setSelectedEducationIds([]);
+                        setCurrentPage(1);
+                      }}
+                      className={`block w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-bold hover:bg-[#F4F4F4] ${
+                        selectedEducationIds.length === 0
+                          ? "bg-[#F0EBFF] text-[#714EF2]"
+                          : "text-[#17213D]"
+                      }`}
+                    >
+                      All
+                    </button>
+                    {educationOptions.map((education) => {
+                      const isSelected = selectedEducationIds.includes(
+                        education.collegeEducationId,
+                      );
+
+                      return (
+                        <button
+                          key={education.collegeEducationId}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => {
+                            setSelectedEducationIds((currentIds) =>
+                              isSelected
+                                ? currentIds.filter(
+                                    (id) =>
+                                      id !== education.collegeEducationId,
+                                  )
+                                : [...currentIds, education.collegeEducationId],
+                            );
+                            setCurrentPage(1);
+                          }}
+                          className={`block w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold hover:bg-[#F4F4F4] ${
+                            isSelected
+                              ? "bg-[#F0EBFF] text-[#714EF2]"
+                              : "text-[#17213D]"
+                          }`}
+                        >
+                          {education.collegeEducationType}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsRecordExpenseOpen(true)}
+              className="flex h-11 cursor-pointer items-center gap-2 rounded-full bg-[#172B58] px-6 text-[13px] font-bold text-white"
+            >
+              <Plus size={16} weight="bold" />
+              Record New Expense
+            </button>
+          </div>
         </section>
 
         {isLoading ? <SummaryCardsShimmer /> : <section className="grid gap-6 md:grid-cols-3">
@@ -238,9 +419,65 @@ export default function AccountantExpenseCategoriesPage() {
         </section>
 
         <section className="overflow-hidden rounded-lg bg-white shadow-[0_4px_12px_rgba(15,23,42,0.12)]">
-          <h2 className="px-7 py-6 text-[20px] font-bold text-[#282828]">
-            Detailed Expenditure Breakdown
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-4 px-7 py-6">
+            <h2 className="text-[20px] font-bold text-[#282828]">
+              Detailed Expenditure Breakdown
+            </h2>
+            <div className="relative self-start sm:self-auto">
+              {!isDatePickerOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setIsDatePickerOpen(true)}
+                  className="flex cursor-pointer items-center gap-2 rounded-md bg-[#DAE9E1] px-4 py-1.5 text-sm font-bold tracking-wide text-[#43C17A] transition-colors hover:bg-[#cbe6d7]"
+                  title="Select date"
+                >
+                  <CalendarBlank size={18} weight="fill" />
+                  {selectedDateKey
+                    ? formatDateKey(selectedDateKey)
+                    : new Date().toLocaleDateString("en-GB")}
+                </button>
+              ) : (
+                <div className="flex h-8 items-center gap-2 rounded-md border border-[#43C17A] bg-white p-1 shadow-sm">
+                  <CalendarBlank
+                    size={18}
+                    className="ml-2 text-[#43C17A]"
+                    weight="fill"
+                  />
+                  <input
+                    type="date"
+                    value={selectedDateKey}
+                    onChange={(event) => {
+                      if (event.target.value) {
+                        setSelectedDateKey(event.target.value);
+                        setIsDatePickerOpen(false);
+                      }
+                    }}
+                    className="cursor-pointer rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-700 outline-none focus:border-[#43C17A]"
+                  />
+                  {selectedDateKey && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDateKey("");
+                        setIsDatePickerOpen(false);
+                      }}
+                      className="cursor-pointer rounded px-1 text-xs font-medium text-red-500 hover:text-red-700"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsDatePickerOpen(false)}
+                    className="cursor-pointer rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                    title="Close"
+                  >
+                    <X size={14} weight="bold" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
           <TableComponent
             columns={breakdownColumns}
             tableData={breakdownTableData}
