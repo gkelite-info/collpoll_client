@@ -27,15 +27,15 @@ const getAttendancePolicyErrorMessage = (error: unknown) => {
     }
   }
 
-  return getErrorMessage(error) || "Failed to save attendance policy";
+  return "Failed to save attendance criteria. Please try again.";
 };
 
 export type AttendancePolicyPayload = {
   collegeAttendancePolicyId?: number;
   collegeEducationId: number;
-  collegeBranchId: number;
+  collegeBranchId: number | null;
   collegeAcademicYearId: number;
-  collegeSemesterId: number;
+  collegeSemesterId: number | null;
   minAttendance: number;
   createdBy: number;
 };
@@ -148,18 +148,29 @@ export const upsertAttendancePolicy = async (
     };
 
     if (collegeAttendancePolicyId) {
-      const { data: duplicatePolicy, error: duplicateError } = await supabase
+      let query = supabase
         .from("college_attendance_policies")
         .select("collegeAttendancePolicyId")
-        .eq("collegeBranchId", payload.collegeBranchId)
         .eq("collegeAcademicYearId", payload.collegeAcademicYearId)
-        .eq("collegeSemesterId", payload.collegeSemesterId)
-        .neq("collegeAttendancePolicyId", collegeAttendancePolicyId)
-        .maybeSingle();
+        .neq("collegeAttendancePolicyId", collegeAttendancePolicyId);
+
+      if (payload.collegeBranchId === null) {
+        query = query.is("collegeBranchId", null);
+      } else {
+        query = query.eq("collegeBranchId", payload.collegeBranchId);
+      }
+
+      if (payload.collegeSemesterId === null) {
+        query = query.is("collegeSemesterId", null);
+      } else {
+        query = query.eq("collegeSemesterId", payload.collegeSemesterId);
+      }
+
+      const { data: duplicatePolicies, error: duplicateError } = await query.limit(1);
 
       if (duplicateError) throw duplicateError;
 
-      if (duplicatePolicy) {
+      if (duplicatePolicies && duplicatePolicies.length > 0) {
         return {
           success: false,
           error:
@@ -195,17 +206,30 @@ export const upsertAttendancePolicy = async (
       throw insertResult.error;
     }
 
-    const { data: existingPolicy, error: existingError } = await supabase
+    let existingQuery = supabase
       .from("college_attendance_policies")
       .select("collegeAttendancePolicyId")
-      .eq("collegeBranchId", payload.collegeBranchId)
-      .eq("collegeAcademicYearId", payload.collegeAcademicYearId)
-      .eq("collegeSemesterId", payload.collegeSemesterId)
-      .single();
+      .eq("collegeAcademicYearId", payload.collegeAcademicYearId);
 
-    if (existingError || !existingPolicy) {
+    if (payload.collegeBranchId === null) {
+      existingQuery = existingQuery.is("collegeBranchId", null);
+    } else {
+      existingQuery = existingQuery.eq("collegeBranchId", payload.collegeBranchId);
+    }
+
+    if (payload.collegeSemesterId === null) {
+      existingQuery = existingQuery.is("collegeSemesterId", null);
+    } else {
+      existingQuery = existingQuery.eq("collegeSemesterId", payload.collegeSemesterId);
+    }
+
+    const { data: existingPolicies, error: existingError } = await existingQuery.limit(1);
+
+    if (existingError || !existingPolicies || existingPolicies.length === 0) {
       throw existingError || insertResult.error;
     }
+
+    const existingPolicy = existingPolicies[0];
 
     const { data, error } = await supabase
       .from("college_attendance_policies")

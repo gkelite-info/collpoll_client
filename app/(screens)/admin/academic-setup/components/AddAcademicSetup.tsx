@@ -8,6 +8,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { saveAcademicSetupMaster } from "@/lib/helpers/admin/academicSetup/academicSetupMasterAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export type AcademicData = {
   id?: string;
@@ -57,6 +58,7 @@ export default function AddAcademicSetup({
   });
   const [tempCustomInput, setTempCustomInput] = useState("");
   const { collegeEducationType } = useAdmin();
+  const [selectFocus, setSelectFocus] = useState({ degree: false, dept: false, batch: false });
 
   useEffect(() => {
     if (editData) {
@@ -157,7 +159,27 @@ export default function AddAcademicSetup({
     }
   }, [form.degree, academicOptions]);
 
+  const isSchool = isSchoolEducation(form.degree || collegeEducationType);
+
   const getYearOptions = () => {
+    if (isSchool) {
+      return [
+        "Nursery",
+        "LKG",
+        "UKG",
+        "1st Class",
+        "2nd Class",
+        "3rd Class",
+        "4th Class",
+        "5th Class",
+        "6th Class",
+        "7th Class",
+        "8th Class",
+        "9th Class",
+        "10th Class"
+      ];
+    }
+
     let maxYears;
     switch (form.degree.toLowerCase()) {
       case "b.tech":
@@ -192,20 +214,25 @@ export default function AddAcademicSetup({
 
   const handleSave = async () => {
     if (userLoading || !userId) {
-      toast.error("User session not ready");
+      toast.error("User session not ready", { id: "academic-setup-session" });
       return;
     }
 
-    if (
-      !form.degree.trim() ||
-      !form.branch.trim() ||
-      !form.dept.trim() ||
-      !form.year.trim()
-    ) {
-      toast.error(
-        "Education, Branch, Branch Code and Academic Year are required",
-      );
-      return;
+    if (isSchool) {
+      if (!form.degree.trim() || !form.year.trim()) {
+        toast.error("Education and Academic Year are required", { id: "academic-setup-req" });
+        return;
+      }
+    } else {
+      if (
+        !form.degree.trim() ||
+        !form.branch.trim() ||
+        !form.dept.trim() ||
+        !form.year.trim()
+      ) {
+        toast.error("Education, Branch, Branch Code and Academic Year are required", { id: "academic-setup-req" });
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -222,6 +249,7 @@ export default function AddAcademicSetup({
           sections: form.sections,
           batch: form.batch,
         },
+        editDataId: editData?.id,
       },
         {
           adminId: adminCtx.adminId,
@@ -229,14 +257,13 @@ export default function AddAcademicSetup({
         },
       );
 
-      toast.success("Academic setup saved successfully!");
+      toast.success("Academic setup saved successfully!", { id: "academic-setup-save-success" });
 
       if (onSuccess) {
         setTimeout(() => onSuccess(), 1000);
       }
-    } catch (err) {
-      console.error(err);
-      toast.error("Something went wrong while saving");
+    } catch (err: any) {
+      toast.error(err?.message || "Something went wrong while saving", { id: "academic-setup-save-error" });
     } finally {
       setIsLoading(false);
     }
@@ -327,22 +354,20 @@ export default function AddAcademicSetup({
   return (
     <div className="bg-white rounded-xl p-6 space-y-6">
       <Toaster position="top-right" />
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-[#16284F] font-medium mb-1">
             Education Type <span className="text-red-500">*</span>
           </label>
-          {/* <input
-            type="text"
-            value={form.degree || (userLoading ? "Loading..." : "")}
-            disabled
-            placeholder="Loading..."
-            className="w-full border border-[#CCCCCC] bg-gray-50 text-gray-500 outline-none rounded-lg px-4 py-2 cursor-not-allowed"
-          /> */}
           <div className="relative">
             <select
               value={form.degree}
-              onChange={(e) => setForm({ ...form, degree: e.target.value, dept: "" })}
+              onClick={() => setSelectFocus(p => ({ ...p, degree: !p.degree }))}
+              onBlur={() => setSelectFocus(p => ({ ...p, degree: false }))}
+              onChange={(e) => {
+                setForm({ ...form, degree: e.target.value, dept: "" });
+                setSelectFocus(p => ({ ...p, degree: false }));
+              }}
               className="w-full appearance-none border border-[#CCCCCC] cursor-pointer outline-none text-[#2D3748] rounded-lg px-4 py-2 focus:border-[#48C78E] focus:ring-1 focus:ring-[#48C78E]"
             >
               <option value="" disabled>{isFetchingOptions ? "Loading educations..." : "Select Education"}</option>
@@ -354,67 +379,75 @@ export default function AddAcademicSetup({
             </select>
             <CaretDown
               size={14}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+              className={`absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200 ${selectFocus.degree ? "rotate-180" : ""}`}
             />
           </div>
         </div>
-        <div>
-          <label className="block text-sm text-[#16284F] font-medium mb-1">
-            {form.degree === "Inter" ? "Group Type" : "Branch Type"} <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            value={form.branch}
-            onChange={(e) => {
-              const value = e.target.value;
-              const formatted = value
-                .toLowerCase()
-                .replace(/\b\w/g, (char) => char.toUpperCase());
-              setForm((prev) => ({ ...prev, branch: formatted }));
-            }}
-            placeholder={form.degree === "Inter" ? "Enter Group" : "Enter Branch"}
-            className="w-full border border-[#CCCCCC] text-[#2D3748] outline-none rounded-lg px-4 py-2 focus:border-[#48C78E] focus:ring-1 focus:ring-[#48C78E]"
-          />
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm text-[#16284F] font-medium mb-1">
-            {form.degree === "Inter" ? "Group Type" : "Branch Code"} <span className="text-red-500">*</span>
-          </label>
-          {customMode.dept ? (
-            renderCustomInput("dept", form.degree === "Inter" ? "Enter Group Code" : "Enter Branch Code")
-          ) : (
-            <div className="relative">
-              <select
-                value={form.dept}
-                onChange={(e) => handleSingleSelectChange("dept", e.target.value)}
-                className="w-full appearance-none border border-[#CCCCCC] cursor-pointer outline-none text-[#2D3748] rounded-lg px-4 py-2"
-                disabled={!form.degree}
-              >
-                <option value="" disabled>
-                  {form.degree === "Inter" ? "Select Group Code" : "Select Branch Code"}
-                </option>
-                {availableDepts.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
+        {!isSchool && (
+          <div>
+            <label className="block text-sm text-[#16284F] font-medium mb-1">
+              {form.degree === "Inter" ? "Group Type" : "Branch Type"} <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={form.branch}
+              onChange={(e) => {
+                const value = e.target.value;
+                const formatted = value
+                  .toLowerCase()
+                  .replace(/\b\w/g, (char) => char.toUpperCase());
+                setForm((prev) => ({ ...prev, branch: formatted }));
+              }}
+              placeholder={form.degree === "Inter" ? "Enter Group" : "Enter Branch"}
+              className="w-full border border-[#CCCCCC] text-[#2D3748] outline-none rounded-lg px-4 py-2 focus:border-[#48C78E] focus:ring-1 focus:ring-[#48C78E]"
+            />
+          </div>
+        )}
+
+        {!isSchool && (
+          <div>
+            <label className="block text-sm text-[#16284F] font-medium mb-1">
+              {form.degree === "Inter" ? "Group Type" : "Branch Code"} <span className="text-red-500">*</span>
+            </label>
+            {customMode.dept ? (
+              renderCustomInput("dept", form.degree === "Inter" ? "Enter Group Code" : "Enter Branch Code")
+            ) : (
+              <div className="relative">
+                <select
+                  value={form.dept}
+                  onClick={() => setSelectFocus(p => ({ ...p, dept: !p.dept }))}
+                  onBlur={() => setSelectFocus(p => ({ ...p, dept: false }))}
+                  onChange={(e) => {
+                    handleSingleSelectChange("dept", e.target.value);
+                    setSelectFocus(p => ({ ...p, dept: false }));
+                  }}
+                  className="w-full appearance-none border border-[#CCCCCC] cursor-pointer outline-none text-[#2D3748] rounded-lg px-4 py-2"
+                  disabled={!form.degree}
+                >
+                  <option value="" disabled>
+                    {form.degree === "Inter" ? "Select Group Code" : "Select Branch Code"}
                   </option>
-                ))}
-                {!availableDepts.includes(form.dept) && form.dept && (
-                  <option value={form.dept}>{form.dept}</option>
-                )}
-                <option className="text-[#43C17A] font-semibold" value="+ other">
-                  + Other
-                </option>
-              </select>
-              <CaretDown
-                size={14}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-              />
-            </div>
-          )}
-        </div>
+                  {availableDepts.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                  {!availableDepts.includes(form.dept) && form.dept && (
+                    <option value={form.dept}>{form.dept}</option>
+                  )}
+                  <option className="text-[#43C17A] font-semibold" value="+ other">
+                    + Other
+                  </option>
+                </select>
+                <CaretDown
+                  size={14}
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200 ${selectFocus.dept ? "rotate-180" : ""}`}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         <div>
           <CustomMultiSelect
@@ -425,11 +458,10 @@ export default function AddAcademicSetup({
             onChange={(val) => setForm({ ...form, year: val })}
             onRemove={(_val) => setForm({ ...form, year: "" })}
             mandatory={true}
+            singleSelect={true}
           />
         </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-6">
         <div>
           {customMode.sections ? (
             <div className="space-y-1">
@@ -471,39 +503,46 @@ export default function AddAcademicSetup({
           )}
         </div>
 
-        <div>
-          <label className="block text-sm text-[#16284F] font-medium mb-1">
-            Batch Type <span className="text-gray-400 font-normal ml-1">(Optional)</span>
-          </label>
-          {customMode.batch ? (
-            renderCustomInput("batch", "Enter Custom Batch")
-          ) : (
-            <div className="relative">
-              <select
-                value={form.batch || ""}
-                onChange={(e) => handleSingleSelectChange("batch", e.target.value)}
-                className="w-full appearance-none border border-[#CCCCCC]  cursor-pointer outline-none text-[#2D3748] rounded-lg px-4 py-1.5"
-              >
-                <option value="">{isFetchingOptions ? "Loading batches..." : "Select Batch (Optional)"}</option>
-                {availableBatches.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
+        {!isSchool && (
+          <div>
+            <label className="block text-sm text-[#16284F] font-medium mb-1">
+              Batch Type <span className="text-gray-400 font-normal ml-1">(Optional)</span>
+            </label>
+            {customMode.batch ? (
+              renderCustomInput("batch", "Enter Custom Batch")
+            ) : (
+              <div className="relative">
+                <select
+                  value={form.batch || ""}
+                  onClick={() => setSelectFocus(p => ({ ...p, batch: !p.batch }))}
+                  onBlur={() => setSelectFocus(p => ({ ...p, batch: false }))}
+                  onChange={(e) => {
+                    handleSingleSelectChange("batch", e.target.value);
+                    setSelectFocus(p => ({ ...p, batch: false }));
+                  }}
+                  className="w-full appearance-none border border-[#CCCCCC]  cursor-pointer outline-none text-[#2D3748] rounded-lg px-4 py-1.5"
+                >
+                  <option value="">{isFetchingOptions ? "Loading batches..." : "Select Batch (Optional)"}</option>
+                  {availableBatches.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                  {!availableBatches.includes(form.batch || "") && form.batch && (
+                    <option value={form.batch}>{form.batch}</option>
+                  )}
+                  <option className="text-[#43C17A] font-semibold" value="+ other">
+                    + Other
                   </option>
-                ))}
-                {!availableBatches.includes(form.batch || "") && form.batch && (
-                  <option value={form.batch}>{form.batch}</option>
-                )}
-                <option className="text-[#43C17A] font-semibold" value="+ other">
-                  + Other
-                </option>
-              </select>
-              <CaretDown
-                size={14}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-              />
-            </div>
-          )}
-        </div>
+                </select>
+                <CaretDown
+                  size={14}
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200 ${selectFocus.batch ? "rotate-180" : ""}`}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
       <div className="flex justify-center px-auto max-w-md mx-auto">
@@ -582,6 +621,7 @@ interface MultiSelectProps {
   isGrouped?: boolean;
   direction?: "up" | "down";
   mandatory?: boolean;
+  singleSelect?: boolean;
 }
 
 const CustomMultiSelect: React.FC<MultiSelectProps> = ({
@@ -595,6 +635,7 @@ const CustomMultiSelect: React.FC<MultiSelectProps> = ({
   isGrouped = false,
   direction = "down",
   mandatory = false,
+  singleSelect = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -631,7 +672,7 @@ const CustomMultiSelect: React.FC<MultiSelectProps> = ({
               ? `${selectedValues.length} selected`
               : placeholder}
           </span>
-          <CaretDown size={14} className="text-gray-400 shrink-0" />
+          <CaretDown size={14} className={`text-gray-400 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
         </div>
 
         {isOpen && !disabled && (
@@ -646,7 +687,7 @@ const CustomMultiSelect: React.FC<MultiSelectProps> = ({
                   key={opt}
                   onClick={() => {
                     onChange(opt);
-                    if (opt === "+ other") setIsOpen(false);
+                    if (opt === "+ other" || singleSelect) setIsOpen(false);
                   }}
                   className={`flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${opt === "+ other"
                     ? "text-[#43C17A] font-semibold"

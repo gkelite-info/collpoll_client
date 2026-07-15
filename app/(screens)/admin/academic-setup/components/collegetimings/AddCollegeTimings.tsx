@@ -9,6 +9,8 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { getCollegeTimings, upsertCollegeTimings, DayTimingPayload } from "@/lib/helpers/collegeTimings/collegeTimingsAPI";
 import CollegeTimingsShimmer from "./CollegeTimingsShimmer";
 import TimeDropdown, { parseTime, TIME_OPTIONS_15, TIME_OPTIONS_5 } from "./TimeDropdown";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type BreakTiming = {
   startTime: string;
@@ -35,7 +37,7 @@ const DEFAULT_TIMINGS: DayTiming[] = [
   { day: "Sunday", isOpen: false, openAt: "", lunchFrom: "", lunchTo: "", closeAt: "", breaks: [] },
 ];
 
-const validateTimings = (timings: DayTiming[]) => {
+const validateTimings = (timings: DayTiming[], isSchool: boolean) => {
   for (const t of timings) {
     if (!t.isOpen) continue;
     if (!t.openAt || !t.closeAt) {
@@ -53,7 +55,7 @@ const validateTimings = (timings: DayTiming[]) => {
       const lf = parseTime(t.lunchFrom);
       const lt = parseTime(t.lunchTo);
       if (lt <= lf) return `Lunch To must be after Lunch From on ${t.day}.`;
-      if (lf < openMins || lt > closeMins) return `Lunch time must be within college hours on ${t.day}.`;
+      if (lf < openMins || lt > closeMins) return `Lunch time must be within ${isSchool ? "school" : "college"} hours on ${t.day}.`;
       intervals.push({start: lf, end: lt, name: "Lunch"});
     } else if ((t.lunchFrom && !t.lunchTo) || (!t.lunchFrom && t.lunchTo)) {
       return `Please select both Lunch From and Lunch To on ${t.day}.`;
@@ -65,7 +67,7 @@ const validateTimings = (timings: DayTiming[]) => {
       const bs = parseTime(b.startTime);
       const be = parseTime(b.endTime);
       if (be <= bs) return `Break ${i+1} End must be after Start on ${t.day}.`;
-      if (bs < openMins || be > closeMins) return `Break ${i+1} must be within college hours on ${t.day}.`;
+      if (bs < openMins || be > closeMins) return `Break ${i+1} must be within ${isSchool ? "school" : "college"} hours on ${t.day}.`;
       intervals.push({start: bs, end: be, name: `Break ${i+1}`});
     }
 
@@ -85,6 +87,8 @@ const validateTimings = (timings: DayTiming[]) => {
 export default function AddCollegeTimings() {
   const router = useRouter();
   const { collegeId, userId } = useUser();
+  const { collegeEducationType } = useAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const [timings, setTimings] = useState<DayTiming[]>(DEFAULT_TIMINGS);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -216,15 +220,14 @@ export default function AddCollegeTimings() {
       return;
     }
 
-    const validationError = validateTimings(timings);
+    const validationError = validateTimings(timings, isSchool);
     if (validationError) {
       toast.error(validationError, { id: "val-err" });
       return;
     }
 
     setIsSaving(true);
-    const toastId = "save-timings";
-    toast.loading("Saving college timings...", { id: toastId });
+    const toastId = toast.loading(`Saving ${isSchool ? "school" : "college"} timings...`);
 
     const payload: DayTimingPayload[] = timings.map(t => ({
       dayOfWeek: t.day,
@@ -239,16 +242,26 @@ export default function AddCollegeTimings() {
     const res = await upsertCollegeTimings(collegeId, userId || 0, payload);
 
     setIsSaving(false);
+    toast.dismiss(toastId);
 
     if (res.success) {
-      toast.success("College timings saved successfully!", { id: toastId, duration: 3000 });
+      toast.success(`${isSchool ? "School" : "College"} timings saved successfully!`, { id: `timing-success-${Date.now()}`, duration: 3000 });
       setTimeout(() => {
         const params = new URLSearchParams(window.location.search);
         params.set("action", "view");
         router.replace(`${window.location.pathname}?${params.toString()}`);
       }, 1000);
     } else {
-      toast.error(res.error || "Failed to save timings.", { id: toastId, duration: 4000 });
+      const isKnownError = res.error && [
+        "These timings are already configured.",
+        "Invalid college or admin reference.",
+        "Network error. Please check your connection.",
+        "The request timed out. Please try again.",
+        "Failed to save changes. Please try again later."
+      ].includes(res.error);
+      
+      const errorMsg = isKnownError ? res.error : `Failed to save ${isSchool ? "school" : "college"} timings. Please try again.`;
+      toast.error(errorMsg, { id: `timing-err-${Date.now()}`, duration: 4000 });
     }
   };
 
@@ -265,7 +278,7 @@ export default function AddCollegeTimings() {
             Manage Operational Hours
           </h2>
           <p className="text-[#5C5C5C] text-sm mt-1">
-            Set the default college opening, closing, and lunch hours for each day of the week.
+            Set the default {isSchool ? "school" : "college"} opening, closing, and lunch hours for each day of the week.
           </p>
         </div>
         <button
@@ -467,7 +480,7 @@ export default function AddCollegeTimings() {
                       transition={{ duration: 0.2 }}
                       className="text-sm text-gray-400 italic pt-1 lg:pt-0"
                     >
-                      College is closed on {dayData.day}.
+                      {isSchool ? "School" : "College"} is closed on {dayData.day}.
                     </motion.div>
                   )}
                 </AnimatePresence>

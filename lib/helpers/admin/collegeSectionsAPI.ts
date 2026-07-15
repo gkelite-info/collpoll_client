@@ -19,10 +19,10 @@ export type CollegeSectionsRow = {
 export async function fetchCollegeSections(
     collegeId: number,
     collegeEducationId: number,
-    collegeBranchId: number,
+    collegeBranchId: number | null,
     collegeAcademicYearId: number
 ) {
-    const { data, error } = await supabase
+    let query = supabase
         .from("college_sections")
         .select(`
       collegeSectionsId,
@@ -39,10 +39,17 @@ export async function fetchCollegeSections(
     `)
         .eq("collegeId", collegeId)
         .eq("collegeEducationId", collegeEducationId)
-        .eq("collegeBranchId", collegeBranchId)
         .eq("collegeAcademicYearId", collegeAcademicYearId)
         .eq("isActive", true)
-        .is("deletedAt", null)
+        .is("deletedAt", null);
+
+    if (collegeBranchId === null) {
+        query = query.is("collegeBranchId", null);
+    } else {
+        query = query.eq("collegeBranchId", collegeBranchId);
+    }
+
+    const { data, error } = await query;
 
     // if (error) {
     //     if (error.code === "PGRST116") return null;
@@ -58,7 +65,7 @@ export async function saveCollegeSections(
     payload: {
         collegeSections: string[];
         collegeEducationId: number;
-        collegeBranchId: number;
+        collegeBranchId: number | null;
         collegeAcademicYearId: number;
         collegeId: number;
     },
@@ -66,15 +73,22 @@ export async function saveCollegeSections(
 ) {
     const now = new Date().toISOString();
 
-    await supabase
+    let deleteQuery = supabase
         .from("college_sections")
         .update({
             isActive: false,
             deletedAt: now,
         })
         .eq("collegeId", payload.collegeId)
-        .eq("collegeBranchId", payload.collegeBranchId)
         .eq("collegeAcademicYearId", payload.collegeAcademicYearId);
+
+    if (payload.collegeBranchId === null) {
+        deleteQuery = deleteQuery.is("collegeBranchId", null);
+    } else {
+        deleteQuery = deleteQuery.eq("collegeBranchId", payload.collegeBranchId);
+    }
+
+    await deleteQuery;
 
     const rows = payload.collegeSections.map((section) => ({
         collegeSections: section,

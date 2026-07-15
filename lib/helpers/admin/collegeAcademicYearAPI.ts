@@ -20,7 +20,7 @@ export async function fetchCollegeAcademicYears(
     collegeId: number | null,
     collegeBranchId: number | null
 ) {
-    const { data, error } = await supabase
+    let query = supabase
         .from("college_academic_year")
         .select(`
       collegeAcademicYearId,
@@ -35,10 +35,16 @@ export async function fetchCollegeAcademicYears(
       deletedAt
     `)
         .eq("collegeId", collegeId)
-        .eq("collegeBranchId", collegeBranchId)
         .eq("isActive", true)
-        .is("deletedAt", null)
-        .order("collegeAcademicYearId", { ascending: true });
+        .is("deletedAt", null);
+
+    if (collegeBranchId === null) {
+        query = query.is("collegeBranchId", null);
+    } else {
+        query = query.eq("collegeBranchId", collegeBranchId);
+    }
+
+    const { data, error } = await query.order("collegeAcademicYearId", { ascending: true });
 
     if (error) {
         console.error("fetchCollegeAcademicYears error:", error);
@@ -67,17 +73,23 @@ export async function fetchAcademicYearOptions(
 
 export async function fetchExistingAcademicYear(
     collegeAcademicYear: any,
-    collegeBranchId: number,
+    collegeBranchId: number | null,
     collegeId: number
 ) {
-    const { data, error } = await supabase
+    let query = supabase
         .from("college_academic_year")
         .select("collegeAcademicYearId")
-        .eq("collegeBranchId", collegeBranchId)
         .eq("collegeId", collegeId)
         .eq("collegeAcademicYear", collegeAcademicYear)
-        .is("deletedAt", null)
-        .single();
+        .is("deletedAt", null);
+
+    if (collegeBranchId === null) {
+        query = query.is("collegeBranchId", null);
+    } else {
+        query = query.eq("collegeBranchId", collegeBranchId);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) {
         if (error.code === "PGRST116") {
@@ -94,7 +106,7 @@ export async function saveCollegeAcademicYear(
         id?: number;
         collegeAcademicYear: string;
         collegeEducationId: number;
-        collegeBranchId: number;
+        collegeBranchId: number | null;
         collegeId: number;
     },
     adminId: number
@@ -119,8 +131,7 @@ export async function saveCollegeAcademicYear(
         .single();
 
     if (error) {
-        console.error("saveCollegeAcademicYear error:", error);
-        return { success: false, error };
+        throw error;
     }
 
     return {

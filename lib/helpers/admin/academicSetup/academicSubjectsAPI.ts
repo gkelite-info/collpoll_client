@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { isSchoolEducation } from "./schoolHelper";
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "Something went wrong";
@@ -6,14 +7,14 @@ const getErrorMessage = (error: unknown) =>
 export type SubjectDBPayload = {
   collegeSubjectId?: number;
   subjectName: string;
-  subjectCode: string;
+  subjectCode?: string; // Optional for schools
   subjectKey?: string | null;
-  credits: number;
+  credits?: number | null; // Optional for schools
   image?: string | null;
   collegeEducationId: number;
-  collegeBranchId: number;
+  collegeBranchId: number | null;
   collegeAcademicYearId: number;
-  collegeSemesterId: number;
+  collegeSemesterId: number | null;
   collegeId: number;
   createdBy: number;
 };
@@ -36,21 +37,25 @@ export const resolveSubjectUIFromIds = async ({
         .select("collegeEducationType")
         .eq("collegeEducationId", collegeEducationId)
         .single(),
-      supabase
-        .from("college_branch")
-        .select("collegeBranchCode")
-        .eq("collegeBranchId", collegeBranchId)
-        .single(),
+      collegeBranchId
+        ? supabase
+            .from("college_branch")
+            .select("collegeBranchCode")
+            .eq("collegeBranchId", collegeBranchId)
+            .single()
+        : Promise.resolve({ data: null }),
       supabase
         .from("college_academic_year")
         .select("collegeAcademicYear")
         .eq("collegeAcademicYearId", collegeAcademicYearId)
         .single(),
-      supabase
-        .from("college_semester")
-        .select("collegeSemester")
-        .eq("collegeSemesterId", collegeSemesterId)
-        .single(),
+      collegeSemesterId
+        ? supabase
+            .from("college_semester")
+            .select("collegeSemester")
+            .eq("collegeSemesterId", collegeSemesterId)
+            .single()
+        : Promise.resolve({ data: null }),
     ]);
 
   return {
@@ -74,6 +79,8 @@ export const resolveSubjectIds = async ({
   semester: string;
   collegeId: number;
 }) => {
+  const isSchool = isSchoolEducation(education);
+
   const { data: edu, error: eduErr } = await supabase
     .from("college_education")
     .select("collegeEducationId")
@@ -83,52 +90,65 @@ export const resolveSubjectIds = async ({
     .single();
   if (eduErr || !edu) throw new Error("Education not found");
 
-  const { data: br, error: brErr } = await supabase
-    .from("college_branch")
-    .select("collegeBranchId")
-    .eq("collegeBranchCode", branch)
-    .eq("collegeEducationId", edu.collegeEducationId)
-    .is("deletedAt", null)
-    .single();
-  if (brErr || !br) throw new Error("Branch not found");
+  let collegeBranchId: number | null = null;
+  
+  if (!isSchool) {
+    const { data: br, error: brErr } = await supabase
+      .from("college_branch")
+      .select("collegeBranchId")
+      .eq("collegeBranchCode", branch)
+      .eq("collegeEducationId", edu.collegeEducationId)
+      .is("deletedAt", null)
+      .single();
+    if (brErr || !br) throw new Error("Branch not found");
+    collegeBranchId = br.collegeBranchId;
+  }
 
-  const { data: yr, error: yrErr } = await supabase
+  let yearQuery = supabase
     .from("college_academic_year")
     .select("collegeAcademicYearId")
     .eq("collegeAcademicYear", year)
-    .eq("collegeBranchId", br.collegeBranchId)
-    .is("deletedAt", null)
-    .single();
+    .is("deletedAt", null);
+
+  if (collegeBranchId !== null && collegeBranchId !== undefined) {
+    yearQuery = yearQuery.eq("collegeBranchId", collegeBranchId);
+  } else {
+    yearQuery = yearQuery.is("collegeBranchId", null);
+  }
+
+  const { data: yr, error: yrErr } = await yearQuery.single();
   if (yrErr || !yr) throw new Error("Academic year not found");
 
   let collegeSemesterId: number | null = null;
 
-  if (education === "Inter") {
-    const { data: sem } = await supabase
-      .from("college_semester")
-      .select("collegeSemesterId")
-      .eq("collegeAcademicYearId", yr.collegeAcademicYearId)
-      .limit(1)
-      .single();
+  if (!isSchool) {
+    if (education === "Inter") {
+      const { data: sem } = await supabase
+        .from("college_semester")
+        .select("collegeSemesterId")
+        .eq("collegeAcademicYearId", yr.collegeAcademicYearId)
+        .limit(1)
+        .single();
 
-    collegeSemesterId = sem?.collegeSemesterId || null;
-  } else {
-    const { data: sem, error: semErr } = await supabase
-      .from("college_semester")
-      .select("collegeSemesterId")
-      .eq("collegeSemester", Number(semester))
-      .eq("collegeAcademicYearId", yr.collegeAcademicYearId)
-      .is("deletedAt", null)
-      .single();
-    if (semErr || !sem) throw new Error("Semester not found");
-    collegeSemesterId = sem.collegeSemesterId;
+      collegeSemesterId = sem?.collegeSemesterId || null;
+    } else {
+      const { data: sem, error: semErr } = await supabase
+        .from("college_semester")
+        .select("collegeSemesterId")
+        .eq("collegeSemester", Number(semester))
+        .eq("collegeAcademicYearId", yr.collegeAcademicYearId)
+        .is("deletedAt", null)
+        .single();
+      if (semErr || !sem) throw new Error("Semester not found");
+      collegeSemesterId = sem.collegeSemesterId;
+    }
   }
 
   return {
     collegeEducationId: edu.collegeEducationId,
-    collegeBranchId: br.collegeBranchId,
+    collegeBranchId,
     collegeAcademicYearId: yr.collegeAcademicYearId,
-    collegeSemesterId: collegeSemesterId as number,
+    collegeSemesterId,
   };
 };
 
@@ -192,9 +212,9 @@ export const upsertAcademicSubject = async (payload: SubjectDBPayload) => {
 
     const formattedData = {
       ...rest,
-      subjectCode: payload.subjectCode.toUpperCase(),
+      subjectCode: payload.subjectCode ? payload.subjectCode.toUpperCase() : null,
       subjectKey: payload.subjectKey ? payload.subjectKey.toUpperCase() : null,
-      credits: Number(payload.credits),
+      credits: payload.credits ? Number(payload.credits) : null,
       image: payload.image?.trim() || null,
       updatedAt: now,
     };

@@ -37,7 +37,6 @@ export async function upsertCollegeSemesters(
         .select("collegeSemesterId");
 
     if (error) {
-        console.error("upsertCollegeSemesters error:", error);
         throw error;
     }
 

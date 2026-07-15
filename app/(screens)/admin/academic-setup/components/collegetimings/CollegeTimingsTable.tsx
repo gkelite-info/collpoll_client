@@ -1,6 +1,6 @@
 import CollegeTimingsShimmer from "./CollegeTimingsShimmer";
 
-export default function CollegeTimingsTable({ timings, isLoading }: { timings: any[]; isLoading: boolean }) {
+export default function CollegeTimingsTable({ timings, isLoading, isSchool }: { timings: any[]; isLoading: boolean, isSchool?: boolean }) {
   if (isLoading) {
     return <CollegeTimingsShimmer />;
   }
@@ -8,7 +8,7 @@ export default function CollegeTimingsTable({ timings, isLoading }: { timings: a
   if (!timings || timings.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-500">
-        No college timings found.
+        No {isSchool ? "school" : "college"} timings found.
       </div>
     );
   }

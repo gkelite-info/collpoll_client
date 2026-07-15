@@ -38,7 +38,6 @@ export async function upsertCollegeBranches(
         .select("collegeBranchId");
 
     if (error) {
-        console.error("upsertCollegeBranches error:", error);
         throw error;
     }
 

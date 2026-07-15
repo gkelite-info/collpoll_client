@@ -1,6 +1,7 @@
 "use client";
 
 import { Upload, X } from "lucide-react";
+import { CaretDown } from "@phosphor-icons/react";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -8,6 +9,7 @@ import { validateSubjectImageFile } from "@/lib/helpers/admin/academicSetup/subj
 import { fetchSubjectOptions } from "@/lib/helpers/admin/academicSetup/subjectDropdownsAPI";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export type SubjectFormData = {
   id?: number;
@@ -104,6 +106,7 @@ export default function AddSubject({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [selectFocus, setSelectFocus] = useState({ education: false, branch: false, year: false, semester: false });
 
   const loadOptions = async () => {
     if (!userId) return;
@@ -113,7 +116,7 @@ export default function AddSubject({
       const newOptions = await fetchSubjectOptions(collegeId, ui);
       setOptions(newOptions);
     } catch {
-      toast.error("Failed to load dropdowns");
+      toast.error("Failed to load dropdowns", { id: "add-subject-load-dropdowns" });
     } finally {
       setIsLoadingOptions(false);
       if (onFormReady) onFormReady();
@@ -193,7 +196,7 @@ export default function AddSubject({
       };
       reader.readAsDataURL(file);
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error) || "Invalid subject image");
+      toast.error(getErrorMessage(error) || "Invalid subject image", { id: "add-subject-invalid-image" });
       e.target.value = "";
     }
   };
@@ -210,27 +213,33 @@ export default function AddSubject({
     if (input) input.value = "";
   };
 
+  const isSchool = isSchoolEducation(ui.education || collegeEducationType);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!ui.education) return toast.error("Please select Education");
-    if (!ui.branch) return toast.error("Please select Branch");
-    if (!ui.year) return toast.error("Please select Year");
+    if (!ui.education) return toast.error("Please select Education", { id: "add-subject-edu-req" });
+    
+    if (!isSchool) {
+      if (!ui.branch) return toast.error("Please select Branch", { id: "add-subject-branch-req" });
+    }
+    
+    if (!ui.year) return toast.error("Please select Year", { id: "add-subject-year-req" });
 
-    if (!["Inter"].includes(ui.education)) {
-      if (!ui.semester) return toast.error("Please select Semester");
+    if (!isSchool && !["Inter"].includes(ui.education)) {
+      if (!ui.semester) return toast.error("Please select Semester", { id: "add-subject-sem-req" });
     }
     if (!form.subjectName.trim())
-      return toast.error("Please enter Subject Name");
-    if (!form.subjectCode.trim())
-      return toast.error("Please enter Subject Code");
-    if (!form.subjectKey.trim()) return toast.error("Please enter Subject Key");
-    // if (!form.image && !imageFile && !imagePreview) {
-    //   return toast.error("Please upload Subject Image");
-    // }
+      return toast.error("Please enter Subject Name", { id: "add-subject-name-req" });
+      
+    if (!isSchool) {
+      if (!form.subjectCode.trim())
+        return toast.error("Please enter Subject Code", { id: "add-subject-code-req" });
+      if (!form.subjectKey.trim()) return toast.error("Please enter Subject Key", { id: "add-subject-key-req" });
+    }
 
-    if (!["Inter"].includes(ui.education)) {
-      if (!form.credits) return toast.error("Please enter Credits");
+    if (!isSchool && !["Inter"].includes(ui.education)) {
+      if (!form.credits) return toast.error("Please enter Credits", { id: "add-subject-credits-req" });
     }
 
     setIsSubmitting(true);
@@ -247,7 +256,7 @@ export default function AddSubject({
   return (
     <div className="w-full mx-auto bg-white p-8 rounded-xl">
       <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
               Education Type <span className="text-red-500">*</span>
@@ -257,68 +266,104 @@ export default function AddSubject({
                 Loading options...
               </div>
             ) : (
-              <select
-                name="education"
-                value={ui.education}
-                onChange={handleChange}
-                className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full"
-              >
-                <option value="">Select Education</option>
-                {options.educations.map((e) => (
-                  <option key={e.id}>{e.label}</option>
-                ))}
-              </select>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[#16284F] mb-1">
-              {ui.education === "Inter" ? "Group Type" : "Branch Type"} <span className="text-red-500">*</span>
-            </label>
-            {isLoadingOptions && ui.education && !ui.branch ? (
-              <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse p-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
-                Loading options...
-              </div>
-            ) : (
-              <select
-                name="branch"
-                value={ui.branch}
-                onChange={handleChange}
-                disabled={!ui.education}
-                className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full disabled:bg-gray-50 disabled:cursor-not-allowed"
-              >
-                <option value="">{ui.education === "Inter" ? "Select Group" : "Select Branch"}</option>
-                {ui.education &&
-                  options.branches.map((b) => (
-                    <option key={b.id}>{b.label}</option>
+              <div className="relative">
+                <select
+                  name="education"
+                  value={ui.education}
+                  onClick={() => setSelectFocus(p => ({ ...p, education: !p.education }))}
+                  onBlur={() => setSelectFocus(p => ({ ...p, education: false }))}
+                  onChange={(e) => {
+                    handleChange(e);
+                    setSelectFocus(p => ({ ...p, education: false }));
+                  }}
+                  className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full appearance-none"
+                >
+                  <option value="">Select Education</option>
+                  {options.educations.map((e) => (
+                    <option key={e.id}>{e.label}</option>
                   ))}
-              </select>
+                </select>
+                <CaretDown
+                  size={14}
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200 ${selectFocus.education ? "rotate-180" : ""}`}
+                />
+              </div>
             )}
           </div>
-        </div>
-        <div className="grid grid-cols-2 gap-6">
+
+          {!isSchool && (
+            <div>
+              <label className="block text-sm font-medium text-[#16284F] mb-1">
+                {ui.education === "Inter" ? "Group Type" : "Branch Type"} <span className="text-red-500">*</span>
+              </label>
+              {isLoadingOptions && ui.education && !ui.branch ? (
+                <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse p-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
+                  Loading options...
+                </div>
+              ) : (
+                <div className="relative">
+                  <select
+                    name="branch"
+                    value={ui.branch}
+                    disabled={!ui.education}
+                    onClick={() => setSelectFocus(p => ({ ...p, branch: !p.branch }))}
+                    onBlur={() => setSelectFocus(p => ({ ...p, branch: false }))}
+                    onChange={(e) => {
+                      handleChange(e);
+                      setSelectFocus(p => ({ ...p, branch: false }));
+                    }}
+                    className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full appearance-none disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">{ui.education === "Inter" ? "Select Group" : "Select Branch"}</option>
+                    {ui.education &&
+                      options.branches.map((b) => (
+                        <option key={b.id}>{b.label}</option>
+                      ))}
+                  </select>
+                  <CaretDown
+                    size={14}
+                    className={`absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200 ${selectFocus.branch ? "rotate-180" : ""}`}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
               Year <span className="text-red-500">*</span>
             </label>
-            {isLoadingOptions && ui.branch && !ui.year ? (
+            {isLoadingOptions && (isSchool ? ui.education : ui.branch) && !ui.year ? (
               <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse p-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
                 Loading options...
               </div>
             ) : (
-              <select
-                name="year"
-                value={ui.year}
-                onChange={handleChange}
-                className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full"
-              >
-                <option value="">Select Year</option>
-                {options.years.map((y) => (
-                  <option key={y.id}>{y.label}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  name="year"
+                  value={ui.year}
+                  onClick={() => setSelectFocus(p => ({ ...p, year: !p.year }))}
+                  onBlur={() => setSelectFocus(p => ({ ...p, year: false }))}
+                  onChange={(e) => {
+                    handleChange(e);
+                    setSelectFocus(p => ({ ...p, year: false }));
+                  }}
+                  className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full appearance-none"
+                >
+                  <option value="">Select Year</option>
+                  {options.years.map((y) => (
+                    <option key={y.id}>{y.label}</option>
+                  ))}
+                </select>
+                <CaretDown
+                  size={14}
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200 ${selectFocus.year ? "rotate-180" : ""}`}
+                />
+              </div>
             )}
           </div>
-          {!["Inter"].includes(ui.education) && (
+
+          {!isSchool && !["Inter"].includes(ui.education) && (
             <div>
               <label className="block text-sm font-medium text-[#16284F] mb-1">
                 Semester <span className="text-red-500">*</span>
@@ -328,20 +373,32 @@ export default function AddSubject({
                   Loading options...
                 </div>
               ) : (
-                <select
-                  name="semester"
-                  value={ui.semester}
-                  onChange={handleChange}
-                  className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full"
-                >
-                  <option value="">Select Semester</option>
-                  {options.semesters.map((s) => (
-                    <option key={s.id}>{s.label}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    name="semester"
+                    value={ui.semester}
+                    onClick={() => setSelectFocus(p => ({ ...p, semester: !p.semester }))}
+                    onBlur={() => setSelectFocus(p => ({ ...p, semester: false }))}
+                    onChange={(e) => {
+                      handleChange(e);
+                      setSelectFocus(p => ({ ...p, semester: false }));
+                    }}
+                    className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full appearance-none"
+                  >
+                    <option value="">Select Semester</option>
+                    {options.semesters.map((s) => (
+                      <option key={s.id}>{s.label}</option>
+                    ))}
+                  </select>
+                  <CaretDown
+                    size={14}
+                    className={`absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200 ${selectFocus.semester ? "rotate-180" : ""}`}
+                  />
+                </div>
               )}
             </div>
           )}
+
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
               Subject Name <span className="text-red-500">*</span>
@@ -356,7 +413,7 @@ export default function AddSubject({
           </div>
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
-              Subject Code <span className="text-red-500">*</span>
+              Subject Code {!isSchool && <span className="text-red-500">*</span>}
             </label>
             <input
               name="subjectCode"
@@ -368,7 +425,7 @@ export default function AddSubject({
           </div>
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
-              Subject Key <span className="text-red-500">*</span>
+              Subject Key {!isSchool && <span className="text-red-500">*</span>}
             </label>
             <input
               name="subjectKey"
@@ -379,15 +436,16 @@ export default function AddSubject({
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[#16284F] mb-1">
-              Credits
-              {ui.education === "Inter" ? (
-                <span className="ml-1 text-[#16284F] text-sm">(Optional)</span>
-              ) : (
-                <span className="text-red-500 ml-1">*</span>
-              )}
-            </label>
+          {!isSchool && (
+            <div>
+              <label className="block text-sm font-medium text-[#16284F] mb-1">
+                Credits
+                {ui.education === "Inter" ? (
+                  <span className="ml-1 text-[#16284F] text-sm">(Optional)</span>
+                ) : (
+                  <span className="text-red-500 ml-1">*</span>
+                )}
+              </label>
             <input
               type="number"
               name="credits"
@@ -413,6 +471,8 @@ export default function AddSubject({
               className="text-[#16284F] border border-[#CCCCCC] outline-none px-3 py-2 rounded-lg w-full"
             />
           </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
               Subject Image
@@ -430,57 +490,53 @@ export default function AddSubject({
                 onClick={() =>
                   document.getElementById("subjectImageInput")?.click()
                 }
-                className="w-full rounded-lg border border-[#CCCCCC] bg-white text-left shadow-sm hover:bg-white transition-colors cursor-pointer"
+                className="w-full rounded-lg border border-[#CCCCCC] bg-white text-left shadow-sm hover:bg-white transition-colors cursor-pointer overflow-hidden h-[42px]"
               >
-                <div className="flex items-center justify-between gap-4 px-4 py-2.5">
+                <div className="flex items-center justify-between gap-4 px-3 py-1">
                   <span className="truncate text-sm text-gray-400">
                     e.g. Upload subject image
                   </span>
-                  <span className="flex shrink-0 items-center gap-1.5 rounded-xl bg-[#49C77F] px-4 py-2 text-sm font-semibold text-white">
+                  <span className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#49C77F] px-3 py-1 text-sm font-semibold text-white">
                     <Upload size={14} />
                     Upload
                   </span>
                 </div>
               </button>
             ) : (
-              <div className="rounded-xl border border-[#D7D7D7] bg-white p-3 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
+              <div className="rounded-lg border border-[#CCCCCC] bg-white px-3 py-1 shadow-sm h-[42px] flex items-center">
+                <div className="flex w-full items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 truncate">
                     <img
                       src={imagePreview}
                       alt={form.subjectName || "Subject preview"}
-                      className="h-11 w-11 rounded-lg border border-[#DCE7E2] object-cover"
+                      className="h-8 w-8 rounded border border-[#DCE7E2] object-cover shrink-0"
                     />
-                    <div>
-                      <p className="max-w-[220px] truncate font-medium text-[#16284F]">
-                        {imageFile ? imageFile.name : "Current subject image"}
+                    <div className="truncate">
+                      <p className="max-w-[150px] truncate font-medium text-sm text-[#16284F] leading-tight">
+                        {imageFile ? imageFile.name : "Current image"}
                       </p>
-                      <p className="text-sm text-[#5C5C5C]">
-                        {imageFile
-                          ? "Ready to upload on save"
-                          : "Existing uploaded image"}
+                      <p className="text-[10px] text-[#5C5C5C] leading-none mt-0.5">
+                        {imageFile ? "Ready to upload" : "Existing image"}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() =>
                         document.getElementById("subjectImageInput")?.click()
                       }
-                      className="rounded-lg border border-[#D8D8D8] bg-white px-3 py-2 text-sm text-[#16284F] hover:bg-[#F8FAFC] transition-colors cursor-pointer"
+                      className="rounded border border-[#D8D8D8] bg-white px-2 py-1 text-xs font-medium text-[#16284F] hover:bg-[#F8FAFC] transition-colors cursor-pointer"
                     >
                       Change
                     </button>
                     <button
                       type="button"
                       onClick={clearImageSelection}
-                      className="rounded-lg border border-[#F3C5C5] bg-white px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                      className="rounded border border-[#F3C5C5] bg-white px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-1"
                     >
-                      <span className="flex items-center gap-1">
-                        <X size={14} />
-                        Remove
-                      </span>
+                      <X size={12} />
+                      Remove
                     </button>
                   </div>
                 </div>

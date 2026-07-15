@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import Image from "next/image";
 import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
 import imageCompression from 'browser-image-compression';
@@ -11,6 +11,8 @@ import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { getCollegeMedia, upsertCollegeMedia } from "@/lib/helpers/admin/academicSetup/collegeMediaAPI";
 import { uploadCollegeMediaFile, deleteCollegeMediaByUrl, validateMediaFile } from "@/lib/helpers/admin/academicSetup/collegeMediaStorageAPI";
 import ConfirmDeleteModal from "../../../calendar/components/ConfirmDeleteModal";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type Tab = "logo" | "banner";
 
@@ -30,6 +32,8 @@ export default function CollegeMediaStructure() {
   const [mediaToDelete, setMediaToDelete] = useState<Tab | null>(null);
 
   const { userId, collegeId, adminId } = useUser();
+  const { collegeEducationType } = useAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs: { id: Tab; label: string }[] = [
@@ -56,7 +60,7 @@ export default function CollegeMediaStructure() {
         setOriginalBanner(res.data.bannerUrl || null);
       }
     } catch (error) {
-      toast.error("Failed to load college media");
+      toast.error(`Failed to load ${isSchool ? "school" : "college"} media`, { id: "media-load-err" });
     } finally {
       setIsFetching(false);
     }
@@ -90,7 +94,7 @@ export default function CollegeMediaStructure() {
       }
 
       if (fileToUpload.size > 5 * 1024 * 1024) {
-        toast.error("Image is still too large after compression (Max 5MB).");
+        toast.error("Image is still too large after compression (Max 5MB).", { id: "media-size-err" });
         if (fileInputRef.current) fileInputRef.current.value = "";
         return;
       }
@@ -105,7 +109,7 @@ export default function CollegeMediaStructure() {
         setBannerUrl(previewUrl);
       }
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || "Failed to process image.", { id: "media-process-err" });
     }
 
     if (fileInputRef.current) {
@@ -124,20 +128,21 @@ export default function CollegeMediaStructure() {
     if (mediaToDelete === "logo" && logoFile) {
       setLogoFile(null);
       setLogoUrl(originalLogo);
-      toast.success("Logo removed successfully");
+      toast.success("Logo removed successfully", { id: `logo-rm-success-${Date.now()}` });
       setIsDeleteModalOpen(false);
       setMediaToDelete(null);
       return;
     } else if (mediaToDelete === "banner" && bannerFile) {
       setBannerFile(null);
       setBannerUrl(originalBanner);
-      toast.success("Banner removed successfully");
+      toast.success("Banner removed successfully", { id: `banner-rm-success-${Date.now()}` });
       setIsDeleteModalOpen(false);
       setMediaToDelete(null);
       return;
     }
 
     setIsSaving(true);
+    const toastId = toast.loading(`Removing ${mediaToDelete === "logo" ? "logo" : "banner"}...`);
     try {
       if (mediaToDelete === "logo") {
         if (originalLogo) {
@@ -157,7 +162,8 @@ export default function CollegeMediaStructure() {
           setLogoUrl(null);
           setOriginalLogo(null);
           if (res.data?.collegeMediaId) setMediaId(res.data.collegeMediaId);
-          toast.success("Logo removed successfully");
+          toast.dismiss(toastId);
+          toast.success("Logo removed successfully", { id: `logo-rm-db-success-${Date.now()}` });
         } else {
           throw new Error(res.error);
         }
@@ -179,13 +185,15 @@ export default function CollegeMediaStructure() {
           setBannerUrl(null);
           setOriginalBanner(null);
           if (res.data?.collegeMediaId) setMediaId(res.data.collegeMediaId);
-          toast.success("Banner removed successfully");
+          toast.dismiss(toastId);
+          toast.success("Banner removed successfully", { id: `banner-rm-db-success-${Date.now()}` });
         } else {
           throw new Error(res.error);
         }
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to remove media");
+      toast.dismiss(toastId);
+      toast.error(error.message || "Failed to remove media", { id: `media-rm-err-${Date.now()}` });
     } finally {
       setIsDeleteModalOpen(false);
       setMediaToDelete(null);
@@ -196,8 +204,10 @@ export default function CollegeMediaStructure() {
   const handleSave = async () => {
     if (!userId || !collegeId) return;
 
+    let toastId = "";
     try {
       setIsSaving(true);
+      toastId = toast.loading(`Saving ${isSchool ? "school" : "college"} media...`);
 
       let finalLogoUrl = logoUrl;
       let finalBannerUrl = bannerUrl;
@@ -236,7 +246,8 @@ export default function CollegeMediaStructure() {
         throw new Error(res.error);
       }
 
-      toast.success("College media saved successfully");
+      toast.dismiss(toastId);
+      toast.success(`${isSchool ? "School" : "College"} media saved successfully`, { id: `media-save-success-${Date.now()}` });
 
       if (res.data) {
         setMediaId(res.data.collegeMediaId);
@@ -249,7 +260,10 @@ export default function CollegeMediaStructure() {
       }
 
     } catch (error: any) {
-      toast.error(error.message || "Failed to save media");
+      toast.dismiss(toastId);
+      const isKnownError = error.message && (error.message.includes("network") || error.message.includes("timeout") || error.message.includes("reference"));
+      const errorMsg = isKnownError ? error.message : `Failed to save ${isSchool ? "school" : "college"} media. Please try again.`;
+      toast.error(errorMsg, { id: `media-save-err-${Date.now()}` });
     } finally {
       setIsSaving(false);
     }
@@ -261,6 +275,7 @@ export default function CollegeMediaStructure() {
 
   return (
     <div className="relative min-h-[500px]">
+      <Toaster position="top-right" />
       {isFetching && (
         <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center rounded-xl backdrop-blur-[1px]">
           <div className="flex flex-col items-center gap-3">
@@ -380,8 +395,8 @@ export default function CollegeMediaStructure() {
         onConfirm={confirmRemoveMedia}
         isDeleting={isSaving}
         loadingText="Removing..."
-        title={`Remove ${mediaToDelete === "logo" ? "Logo" : "Banner"}`}
-        itemName={mediaToDelete === "logo" ? "college logo" : "college banner"}
+        title="Remove"
+        name={mediaToDelete === "logo" ? `${isSchool ? "school" : "college"} logo` : `${isSchool ? "school" : "college"} banner`}
         confirmText="Remove"
         actionType="remove"
       />

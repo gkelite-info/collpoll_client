@@ -2,11 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { getCollegeTimings } from "@/lib/helpers/collegeTimings/collegeTimingsAPI";
 import CollegeTimingsTable from "./CollegeTimingsTable";
 
 export default function ViewCollegeTimings() {
   const { collegeId } = useUser();
+  const { collegeEducationType } = useAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const [isLoading, setIsLoading] = useState(true);
   const [tableData, setTableData] = useState<any[]>([]);
 
@@ -27,10 +31,10 @@ export default function ViewCollegeTimings() {
   return (
     <div className="w-full animate-in fade-in zoom-in-95 duration-200">
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-5">
-        <h2 className="text-xl font-bold text-[#16284F]">College Timings</h2>
+        <h2 className="text-xl font-bold text-[#16284F]">{isSchool ? "School Timings" : "College Timings"}</h2>
       </div>
 
-      <CollegeTimingsTable timings={tableData} isLoading={isLoading} />
+      <CollegeTimingsTable timings={tableData} isLoading={isLoading} isSchool={isSchool} />
     </div>
   );
 }

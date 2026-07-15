@@ -49,20 +49,28 @@ export const fetchModalInitialData = async (collegeId: number) => {
         supabase
           .from("college_education")
           .select("*")
-          .eq("collegeId", collegeId),
-        supabase.from("college_branch").select("*").eq("collegeId", collegeId),
+          .eq("collegeId", collegeId)
+          .is("deletedAt", null),
+        supabase
+          .from("college_branch")
+          .select("*")
+          .eq("collegeId", collegeId)
+          .is("deletedAt", null),
         supabase
           .from("college_academic_year")
           .select("*")
-          .eq("collegeId", collegeId),
+          .eq("collegeId", collegeId)
+          .is("deletedAt", null),
         supabase
           .from("college_sections")
           .select("*")
-          .eq("collegeId", collegeId),
+          .eq("collegeId", collegeId)
+          .is("deletedAt", null),
         supabase
           .from("college_subjects")
           .select("*")
-          .eq("collegeId", collegeId),
+          .eq("collegeId", collegeId)
+          .is("deletedAt", null),
       ],
     );
 
@@ -90,7 +98,7 @@ export const persistFaculty = async (
   basicData: UserBasicData,
   selections: {
     educationId: number;
-    branchId: number;
+    branchId: number | null;
     yearId: number;
     subjectId: number;
     sectionIds: number[];

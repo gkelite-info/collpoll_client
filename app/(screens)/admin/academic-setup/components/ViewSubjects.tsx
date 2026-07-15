@@ -8,6 +8,7 @@ import {
   deleteAcademicSubject,
 } from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
 import { fetchAdminAssignedEducationsList } from "@/lib/helpers/admin/academicSetupAPI";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Pagination } from "./pagination";
@@ -64,7 +65,8 @@ export default function ViewSubjects({
   const [subjects, setSubjects] = useState<SubjectViewData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const { collegeEducationType, collegeEducationId } = useAdmin();
+  const { collegeEducationType } = useAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const [isDeleting, setIsDeleting] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
@@ -147,7 +149,8 @@ export default function ViewSubjects({
     startIndex,
     startIndex + ITEMS_PER_PAGE,
   );
-  const tableColumnCount = collegeEducationType === "Inter" ? 9 : 10;
+  
+  const tableColumnCount = isSchool ? 5 : (collegeEducationType === "Inter" ? 8 : 9);
 
   return (
     <div className="w-[95%] mx-auto bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
@@ -159,13 +162,15 @@ export default function ViewSubjects({
               <th className="p-3 text-left text-[#2D3748]">Subject</th>
               <th className="p-3 text-left text-[#2D3748]">Subject Code</th>
               <th className="p-3 text-left text-[#2D3748]">Subject Key</th>
-              <th className="p-3 text-left text-[#2D3748]">Credits</th>
+              {!isSchool && <th className="p-3 text-left text-[#2D3748]">Credits</th>}
               <th className="p-3 text-left text-[#2D3748]">Education</th>
-              <th className="p-3 text-left text-[#2D3748]">
-                {collegeEducationType === "Inter" ? "Group" : "Branch"}
-              </th>
+              {!isSchool && (
+                <th className="p-3 text-left text-[#2D3748]">
+                  {collegeEducationType === "Inter" ? "Group" : "Branch"}
+                </th>
+              )}
               <th className="p-3 text-left text-[#2D3748]">Year</th>
-              {!(collegeEducationType === "Inter") && (
+              {!isSchool && !(collegeEducationType === "Inter") && (
                 <th className="p-3 text-left text-[#2D3748]">Sem</th>
               )}
               <th className="p-3 text-left text-[#2D3748]">Action</th>
@@ -210,11 +215,11 @@ export default function ViewSubjects({
                   <td className="p-3 text-[#2D3748]">{row.subjectName}</td>
                   <td className="p-3 text-[#2D3748]">{row.subjectCode}</td>
                   <td className="p-3 text-[#2D3748]">{row.subjectKey}</td>
-                  <td className="p-3 text-[#2D3748]">{row.credits}</td>
+                  {!isSchool && <td className="p-3 text-[#2D3748]">{row.credits}</td>}
                   <td className="p-3 text-[#2D3748]">{row.education}</td>
-                  <td className="p-3 text-[#2D3748]">{row.branch}</td>
+                  {!isSchool && <td className="p-3 text-[#2D3748]">{row.branch}</td>}
                   <td className="p-3 text-[#2D3748]">{row.year}</td>
-                  {!(collegeEducationType === "Inter") && (
+                  {!isSchool && !(collegeEducationType === "Inter") && (
                     <td className="p-3 text-[#2D3748]">{row.semester}</td>
                   )}
                   <td className="p-3">
