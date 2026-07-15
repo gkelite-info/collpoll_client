@@ -128,5 +128,25 @@ export const reminders = [
   },
 ] as const;
 
-export type Reminder = (typeof reminders)[number];
-export type SummaryCardItem = (typeof summaryCards)[number];
+export type Reminder = {
+  id?: number;
+  title: string;
+  type: string;
+  category: string;
+  amount: string;
+  dueDate: string;
+  dueMeta: string;
+  status: "DUE TODAY" | "UPCOMING" | "OVERDUE" | "COMPLETED";
+  icon: (typeof reminders)[number]["icon"];
+  tone: keyof typeof toneClasses;
+  repeat?: string;
+  notifyBefore?: string;
+  description?: string | null;
+  rawDueDate?: string;
+};
+export type SummaryCardItem = {
+  label: string;
+  value: string;
+  icon: (typeof summaryCards)[number]["icon"];
+  tone: keyof typeof toneClasses;
+};

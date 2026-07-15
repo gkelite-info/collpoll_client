@@ -14,8 +14,8 @@ export function ReminderDetailsModal({
 
   const Icon = reminder.icon;
   const dueDate =
-    reminder.dueDate === "25 Jun 2026"
-      ? "25 Jun 2026 (Today)"
+    reminder.status === "DUE TODAY"
+      ? `${reminder.dueDate} (Today)`
       : reminder.dueDate;
 
   return (
@@ -97,7 +97,7 @@ export function ReminderDetailsModal({
                 </p>
                 <p className="mt-2 flex items-center gap-1.5 text-[12px] font-medium text-[#252525]">
                   <ClockClockwise size={12} weight="bold" />
-                  Monthly
+                  {reminder.repeat ?? "One Time"}
                 </p>
               </div>
               <div>
@@ -106,7 +106,7 @@ export function ReminderDetailsModal({
                 </p>
                 <p className="mt-2 flex items-center gap-1.5 text-[12px] font-medium text-[#252525]">
                   <Bell size={12} weight="bold" />
-                  1 day before (24 Jun 2026)
+                  {reminder.notifyBefore ?? "1 day before"}
                 </p>
               </div>
               <div>
@@ -139,7 +139,7 @@ export function ReminderDetailsModal({
               Description
             </p>
             <p className="mt-3 text-[11px] font-normal italic leading-relaxed text-[#252525]">
-              &quot;Monthly electricity bill payment for main building.&quot;
+              &quot;{reminder.description || "No description added."}&quot;
             </p>
           </div>
         </div>

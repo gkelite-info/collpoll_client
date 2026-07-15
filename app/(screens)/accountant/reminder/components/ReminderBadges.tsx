@@ -3,7 +3,7 @@ export function TypeBadge({ type }: { type: string }) {
 
   return (
     <span
-      className={`rounded-full px-3 py-1 text-[9px] font-bold ${
+      className={`inline-block whitespace-nowrap rounded-full px-3 py-1 text-[9px] font-bold ${
         isReceive
           ? "bg-[#E4FAED] text-[#1A9B55]"
           : "bg-[#FFE8E7] text-[#FF4B4B]"
@@ -17,6 +17,7 @@ export function TypeBadge({ type }: { type: string }) {
 export function StatusBadge({ status }: { status: string }) {
   const isOverdue = status === "OVERDUE";
   const isDueToday = status === "DUE TODAY";
+  const isCompleted = status === "COMPLETED";
 
   return (
     <span
@@ -25,7 +26,9 @@ export function StatusBadge({ status }: { status: string }) {
           ? "bg-[#FFE8E7] text-[#FF4B4B]"
           : isDueToday
             ? "bg-[#FFF0DF] text-[#FF8B25]"
-            : "bg-[#E8F1FF] text-[#3478F6]"
+            : isCompleted
+              ? "bg-[#F0E7FF] text-[#7D4DFF]"
+              : "bg-[#E8F1FF] text-[#3478F6]"
       }`}
     >
       {status}
