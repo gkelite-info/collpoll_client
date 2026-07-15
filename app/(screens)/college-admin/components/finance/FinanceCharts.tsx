@@ -94,13 +94,14 @@ const FeeCollectionBar = () => {
                 fill: "#6D28D9",
                 cornerRadius: 8,
                 strokeWidth: 0,
-                maxWidth: 45,
+                maxBarWidth: 30,
             },
         ],
 
         axes: {
             bottom: {
                 type: "category",
+                paddingInner: 0.6,
                 line: {
                     width: 1,
                     stroke: "#E5E7EB",
@@ -139,8 +140,10 @@ const FeeCollectionBar = () => {
 
             </div>
 
-            <div className="">
-                <AgCharts options={options} />
+            <div className="overflow-x-auto custom-scrollbar">
+                <div style={{ minWidth: "500px" }}>
+                    <AgCharts options={options} />
+                </div>
             </div>
         </div>
     );

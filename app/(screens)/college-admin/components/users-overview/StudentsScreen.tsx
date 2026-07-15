@@ -6,15 +6,20 @@ import {
   LegendModule,
 } from "ag-charts-community";
 import TableComponent from "@/app/utils/table/table";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 ModuleRegistry.registerModules([DonutSeriesModule, LegendModule]);
 
 export default function StudentsScreen() {
+  const { collegeEducationType } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
+
   const columns = [
     { title: "Student Name", key: "name" },
     { title: "Student ID", key: "id" },
     { title: "Education Type", key: "education" },
-    { title: "Branch", key: "branch" },
+    ...(!isSchool ? [{ title: "Branch", key: "branch" }] : []),
     { title: "Support Admin", key: "admin" },
     { title: "year", key: "year" },
   ];
@@ -35,7 +40,7 @@ export default function StudentsScreen() {
           <h3 className="font-bold text-gray-800">Total Students : 4,620</h3>
           <div className="flex gap-4 items-center text-sm">
             <span className="text-gray-500">Education Type : <span className="text-emerald-500 bg-emerald-50 px-3 py-1 rounded-md ml-1">B Tech</span></span>
-            <span className="text-gray-500">Branch : <span className="text-emerald-500 bg-emerald-50 px-3 py-1 rounded-md ml-1">CSE ▾</span></span>
+            {!isSchool && <span className="text-gray-500">Branch : <span className="text-emerald-500 bg-emerald-50 px-3 py-1 rounded-md ml-1">CSE ▾</span></span>}
             <span className="text-gray-500">Year : <span className="text-emerald-500 bg-emerald-50 px-3 py-1 rounded-md ml-1">2026 ▾</span></span>
           </div>
         </div>

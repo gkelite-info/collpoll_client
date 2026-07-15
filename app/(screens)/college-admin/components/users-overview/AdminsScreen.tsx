@@ -123,9 +123,13 @@
 import TableComponent from "@/app/utils/table/table";
 import { useState } from "react";
 import AdminModal from "./AdminDetailsModel"; // Ensure this filename matches exactly
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export default function AdminsScreen() {
   const [selectedAdmin, setSelectedAdmin] = useState<any>(null);
+  const { collegeEducationType } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
 
   const handleView = (adminData: any) => {
     setSelectedAdmin(adminData);
@@ -134,13 +138,13 @@ export default function AdminsScreen() {
   const columns = [
     { title: "Admin Name", key: "name" },
     { title: "Education Type", key: "education" },
-    { title: "Branches", key: "branch" },
+    ...(!isSchool ? [{ title: "Branches", key: "branch" }] : []),
     { title: "Admin under", key: "adminUnder" },
     { title: "Faculty", key: "faculty" },
     { title: "Student", key: "student" },
     { title: "Parent", key: "parent" },
     { title: "Finance", key: "finance" },
-    { title: "Placement", key: "placement" },
+    ...(!isSchool ? [{ title: "Placement", key: "placement" }] : []),
     { title: "Action", key: "action" },
   ];
 
@@ -342,7 +346,7 @@ export default function AdminsScreen() {
 
   return (
     <div className="relative">
-      <h3 className="text-lg font-semibold mb-4">Admins : 16</h3>
+      <h3 className="text-lg font-semibold mb-4 text-[#282828]">Admins : 16</h3>
       <TableComponent columns={columns} tableData={data} height="55vh" />
       {selectedAdmin && (
         <AdminModal

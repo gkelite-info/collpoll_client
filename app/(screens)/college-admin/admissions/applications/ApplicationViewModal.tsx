@@ -19,6 +19,8 @@ import {
 } from '@phosphor-icons/react';
 import { getApplicationById } from '@/lib/api/gkeliteApi';
 import Image from 'next/image';
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 interface ApplicationViewModalProps {
   applicationId: number | null;
@@ -29,6 +31,8 @@ interface ApplicationViewModalProps {
 export default function ApplicationViewModal({ applicationId, isOpen, onClose }: ApplicationViewModalProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const { collegeEducationType } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
 
   useEffect(() => {
     if (isOpen && applicationId) {
@@ -144,7 +148,7 @@ export default function ApplicationViewModal({ applicationId, isOpen, onClose }:
                     <InfoCard icon={<Calendar />} label="Date of Birth" value={new Date(data.dateOfBirth).toLocaleDateString('en-GB')} />
                     <InfoCard icon={<User />} label="Gender" value={data.gender} className="capitalize" />
                     <InfoCard icon={<GraduationCap />} label="Application For" value={data.applicationFor} />
-                    <InfoCard icon={<GraduationCap />} label="College" value={data.college} />
+                    <InfoCard icon={<GraduationCap />} label={isSchool ? "School" : "College"} value={data.college} />
                     
                     {/* Status Badges */}
                     <div className="col-span-1 sm:col-span-2 flex gap-4 mt-2">

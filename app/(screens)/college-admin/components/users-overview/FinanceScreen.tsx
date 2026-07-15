@@ -1,11 +1,15 @@
 import TableComponent from "@/app/utils/table/table";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export default function FinanceScreen() {
+  const { collegeEducationType } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const columns = [
     { title: "Finance Manager", key: "name" },
     { title: "Manager ID", key: "id" },
     { title: "Education Type", key: "education" },
-    { title: "Branch", key: "branch" },
+    ...(!isSchool ? [{ title: "Branch", key: "branch" }] : []),
     { title: "Admin", key: "admin" },
   ];
 

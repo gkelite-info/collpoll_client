@@ -14,6 +14,7 @@ import { AgCharts } from "ag-charts-react";
 import { ModuleRegistry, AllCommunityModule } from "ag-charts-community";
 import type { AgPolarChartOptions } from "ag-charts-community";
 import { EduTypeDistribution, getParentListData, ParentListData } from "@/lib/helpers/collegeAdmin/Getparentlistdata";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -130,11 +131,12 @@ function FilterPill({ label, value, showCaret = false, onClick }: {
 
 // ── ADDED: TableShimmer (same as AdminListView / FacultyListView / StudentListView)
 
-function TableShimmer() {
+function TableShimmer({ isSchool }: { isSchool: boolean }) {
+  const visibleColumns = TABLE_COLUMNS.filter(col => !(isSchool && col.key === "branchCode"));
   return (
     <div className="animate-pulse">
       <div className="flex gap-4 px-4 py-3 bg-gray-100 rounded-t-xl mb-1">
-        {TABLE_COLUMNS.map((col) => (
+        {visibleColumns.map((col) => (
           <div key={col.key} className="flex-1 h-4 bg-gray-300 rounded" />
         ))}
       </div>
@@ -143,7 +145,7 @@ function TableShimmer() {
           key={i}
           className={`flex gap-4 px-4 py-4 ${i % 2 === 0 ? "bg-white" : "bg-gray-50"} ${i === 5 ? "rounded-b-xl" : ""}`}
         >
-          {TABLE_COLUMNS.map((col) => (
+          {visibleColumns.map((col) => (
             <div
               key={col.key}
               className="flex-1 h-3.5 bg-gray-200 rounded"
@@ -169,7 +171,8 @@ const ROWS_PER_PAGE = 10;
 type Props = { onBack: () => void };
 
 export default function ParentListView({ onBack }: Props) {
-  const { collegeId, loading: contextLoading } = useCollegeAdmin();
+  const { collegeId, collegeEducationType, loading: contextLoading } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const router = useRouter();       // ← ADDED
   const searchParams = useSearchParams(); // ← ADDED
 
@@ -365,21 +368,23 @@ export default function ParentListView({ onBack }: Props) {
         <div className="flex flex-wrap items-center gap-4 mb-4">
           <FilterPill label="Education Type" value={selectedEduType || "All"} />
 
-          <div className="relative">
-            <FilterPill label="Branch" value={selectedBranch} showCaret
-              onClick={(e) => { e.stopPropagation(); setBranchOpen((o) => !o); setYearOpen(false); }}
-            />
-            {branchOpen && (
-              <div className="absolute top-8 left-0 bg-white shadow-lg rounded-xl text-sm w-36 z-50 border border-gray-100">
-                {["All", ...availableBranches].map((b) => (
-                  <div key={b}
-                    className={`px-3 py-2 cursor-pointer hover:bg-gray-50 ${selectedBranch === b ? "font-semibold text-[#43C17A]" : "text-[#282828]"}`}
-                    onClick={(e) => { e.stopPropagation(); setSelectedBranch(b); setSelectedYear("All"); setCurrentPage(1); setBranchOpen(false); }}
-                  >{b}</div>
-                ))}
-              </div>
-            )}
-          </div>
+          {!isSchool && (
+            <div className="relative">
+              <FilterPill label="Branch" value={selectedBranch} showCaret
+                onClick={(e) => { e.stopPropagation(); setBranchOpen((o) => !o); setYearOpen(false); }}
+              />
+              {branchOpen && (
+                <div className="absolute top-8 left-0 bg-white shadow-lg rounded-xl text-sm w-36 z-50 border border-gray-100">
+                  {["All", ...availableBranches].map((b) => (
+                    <div key={b}
+                      className={`px-3 py-2 cursor-pointer hover:bg-gray-50 ${selectedBranch === b ? "font-semibold text-[#43C17A]" : "text-[#282828]"}`}
+                      onClick={(e) => { e.stopPropagation(); setSelectedBranch(b); setSelectedYear("All"); setCurrentPage(1); setBranchOpen(false); }}
+                    >{b}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="relative">
             <FilterPill label="Year" value={selectedYear} showCaret
@@ -412,13 +417,13 @@ export default function ParentListView({ onBack }: Props) {
           )}
         </div>
 
-        {/* ── CHANGED: TableShimmer instead of plain pulse div ── */}
+        {/* ── CHANGED: use TableShimmer instead of plain pulse div ── */}
         {showShimmer ? (
-          <TableShimmer />
+          <TableShimmer isSchool={isSchool} />
         ) : tableData.length === 0 ? (
           <p className="text-gray-400 text-sm mt-8 text-center">No parents found.</p>
         ) : (
-          <TableComponent columns={TABLE_COLUMNS} tableData={tableData} height="55vh" />
+          <TableComponent columns={TABLE_COLUMNS.filter(col => !(isSchool && col.key === "branchCode"))} tableData={tableData} height="55vh" />
         )}
 
         {/* ── ADDED: hide pagination during shimmer ── */}

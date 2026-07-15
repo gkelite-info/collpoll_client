@@ -15,6 +15,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { Eye, EyeSlash } from "@phosphor-icons/react";
 import { upsertIdentifier } from "@/lib/helpers/identifiers/upsertIdentifier";
 import { CustomMultiSelect } from "@/app/(screens)/admin/(dashboard)/components/modal/userModalComponents";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type AdminForm = {
     fullName: string;
@@ -79,6 +81,9 @@ export default function AdminRegistration() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [educations, setEducations] = useState<CollegeEducation[]>([]);
+    
+    const { collegeEducationType } = useCollegeAdmin();
+    const isSchool = isSchoolEducation(collegeEducationType);
 
     const handleChange = (key: keyof AdminForm, value: string) => {
         if (key === "fullName") {
@@ -431,10 +436,10 @@ export default function AdminRegistration() {
             </div>
             <div className="grid md:grid-cols-2 gap-6 mt-5">
                 <InputField
-                    label="College ID"
+                    label={isSchool ? "School ID" : "College ID"}
                     value={form.collegeCode || form.collegeId}
                     disabled={true}
-                    placeholder="Enter college ID"
+                    placeholder={isSchool ? "Enter school ID" : "Enter college ID"}
                     onChange={() => { }}
                 />
 

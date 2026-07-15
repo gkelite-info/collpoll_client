@@ -10,6 +10,8 @@ import type {
   AgCartesianChartOptions,
   AgPolarChartOptions,
 } from "ag-charts-community";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -22,8 +24,15 @@ const COLORS = {
 
 
 const EducationDonut = () => {
+  const { collegeEducationType } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
+
   const options = useMemo<AgPolarChartOptions>(() => ({
-    data: [
+    data: isSchool ? [
+      { branch: "SSC", value: 40 },
+      { branch: "CBSE", value: 35 },
+      { branch: "IB", value: 25 },
+    ] : [
       { branch: "ECE", value: 25 },
       { branch: "CIVIL", value: 15 },
       { branch: "MECH", value: 20 },
@@ -40,7 +49,11 @@ const EducationDonut = () => {
         legendItemKey: "branch",
         innerRadiusRatio: 0.6,
         strokeWidth: 0,
-        fills: [
+        fills: isSchool ? [
+          COLORS.ece,
+          COLORS.civil,
+          COLORS.cse,
+        ] : [
           COLORS.ece,
           COLORS.civil,
           COLORS.mech,
@@ -81,8 +94,25 @@ const EducationDonut = () => {
 };
 
 const YearWiseTrend = () => {
+  const { collegeEducationType } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
+
   const options = useMemo<AgCartesianChartOptions>(() => ({
-    data: [
+    data: isSchool ? [
+      { year: "Nursery", value: 30 },
+      { year: "LKG", value: 35 },
+      { year: "UKG", value: 38 },
+      { year: "1st Class", value: 40 },
+      { year: "2nd Class", value: 42 },
+      { year: "3rd Class", value: 45 },
+      { year: "4th Class", value: 43 },
+      { year: "5th Class", value: 46 },
+      { year: "6th Class", value: 48 },
+      { year: "7th Class", value: 50 },
+      { year: "8th Class", value: 55 },
+      { year: "9th Class", value: 60 },
+      { year: "10th Class", value: 65 },
+    ] : [
       { year: "1st Year", value: 30 },
       { year: "2nd Year", value: 45 },
       { year: "3rd Year", value: 25 },
@@ -127,12 +157,16 @@ const YearWiseTrend = () => {
   }), []);
 
   return (
-    <div className="bg-white rounded-[15px] p-4">
+    <div className="bg-white rounded-[15px] p-4 flex flex-col">
       <h3 className="text-lg font-semibold text-[#282828] mb-3">
         Year-Wise Trend
       </h3>
 
-      <AgCharts options={options} />
+      <div className="overflow-x-auto custom-scrollbar flex-1">
+        <div style={{ minWidth: isSchool ? "1000px" : "100%" }}>
+          <AgCharts options={options} />
+        </div>
+      </div>
     </div>
   );
 };

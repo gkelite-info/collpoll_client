@@ -12,8 +12,10 @@ import FacultyScreen from "./FacultyScreen";
 import FinanceScreen from "./FinanceScreen";
 import PlacementScreen from "./PlacementScreen";
 import DonutCard from "./Donut";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
-const educationDistribution = [
+const educationDistributionCollege = [
   {
     title: "B.Tech",
     total: 4620,
@@ -76,10 +78,49 @@ const educationDistribution = [
   },
 ];
 
+const educationDistributionSchool = [
+  {
+    title: "SSC",
+    total: 3000,
+    data: [
+      { role: "Admins", value: 15 },
+      { role: "Students", value: 2000 },
+      { role: "Parents", value: 2000 },
+      { role: "Faculty", value: 100 },
+      { role: "Finance", value: 20 },
+    ],
+  },
+  {
+    title: "CBSE",
+    total: 1500,
+    data: [
+      { role: "Admins", value: 10 },
+      { role: "Students", value: 1000 },
+      { role: "Parents", value: 1000 },
+      { role: "Faculty", value: 50 },
+      { role: "Finance", value: 10 },
+    ],
+  },
+  {
+    title: "IB",
+    total: 980,
+    data: [
+      { role: "Admins", value: 5 },
+      { role: "Students", value: 650 },
+      { role: "Parents", value: 650 },
+      { role: "Faculty", value: 40 },
+      { role: "Finance", value: 5 },
+    ],
+  },
+];
+
 function UsersOverview() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const type = searchParams.get("type") ?? "admins";
+  const { collegeEducationType } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
+  const activeDistribution = isSchool ? educationDistributionSchool : educationDistributionCollege;
 
   const cards = [
     {
@@ -142,7 +183,7 @@ function UsersOverview() {
       inlineActiveStyle: { backgroundColor: "#E646FF" },
       iconColor: "#E646FF",
     },
-  ];
+  ].filter((card) => !(isSchool && card.key === "placement"));
 
   const renderScreen = () => {
     switch (type) {
@@ -163,11 +204,11 @@ function UsersOverview() {
 
   return (
     <div className="space-y-6 overflow-hidden">
-      <h2 className="text-lg font-semibold">
+      <h2 className="text-lg font-semibold text-[#282828]">
         Total Users : <span className="text-green-600">5480</span>
       </h2>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-2">
+      <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
         {cards.map((card, index) => {
           const isActive = type === card.key;
 
@@ -177,7 +218,7 @@ function UsersOverview() {
               onClick={() =>
                 router.push(`?tab=users-overview&type=${card.key}`)
               }
-              className="cursor-pointer"
+              className="cursor-pointer min-w-[160px] flex-shrink-0"
             >
               <CardComponent
                 key={index}
@@ -200,7 +241,7 @@ function UsersOverview() {
 
       {type !== "admins" && (
         <div>
-          <h3 className="text-md font-bold text-gray-700 mb-4">
+          <h3 className="text-md font-bold text-[#282828] mb-4">
             User Distribution by Education Type
           </h3>
           <div
@@ -212,7 +253,7 @@ function UsersOverview() {
               columnGap: 15,
             }}
           >
-            {educationDistribution.map((item, index) => (
+            {activeDistribution.map((item, index) => (
               <DonutCard key={index} {...item} />
             ))}
           </div>

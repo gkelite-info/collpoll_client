@@ -1,5 +1,8 @@
 "use client";
 
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+
 const data = [
   {
     name: "B.Tech",
@@ -58,6 +61,9 @@ const data = [
 ];
 
 export default function EducationTypesGrid() {
+  const { collegeEducationType } = useCollegeAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
+
   return (
     <div className="grid grid-cols-2 gap-5">
       {data.map((item, index) => (
@@ -93,15 +99,19 @@ export default function EducationTypesGrid() {
               </span>
             </div>
 
-            <div className="flex justify-between text-sm text-[#282828]">
-              <span>Semesters:</span>
-              <span>{item.semesters}</span>
-            </div>
+            {!isSchool && (
+              <>
+                <div className="flex justify-between text-sm text-[#282828]">
+                  <span>Semesters:</span>
+                  <span>{item.semesters}</span>
+                </div>
 
-            <div className="flex justify-between text-sm text-[#282828]">
-              <span>Branches:</span>
-              <span>{item.branches}</span>
-            </div>
+                <div className="flex justify-between text-sm text-[#282828]">
+                  <span>Branches:</span>
+                  <span>{item.branches}</span>
+                </div>
+              </>
+            )}
 
             <div className="flex justify-between text-sm text-[#282828]">
               <span>Faculty:</span>

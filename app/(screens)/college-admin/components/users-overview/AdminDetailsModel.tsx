@@ -2,6 +2,8 @@
 
 import { X } from "@phosphor-icons/react";
 import { Avatar } from "@/app/utils/Avatar";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 interface AdminModalProps {
     admin: any;
@@ -9,6 +11,9 @@ interface AdminModalProps {
 }
 
 export default function AdminModal({ admin, onClose }: AdminModalProps) {
+    const { collegeEducationType } = useCollegeAdmin();
+    const isSchool = isSchoolEducation(collegeEducationType);
+
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
@@ -49,12 +54,12 @@ export default function AdminModal({ admin, onClose }: AdminModalProps) {
                     <DetailRow label="Phone Number" value={admin.phone} />
                     <DetailRow label="Gender" value={admin.gender} />
                     <DetailRow label="Educational Type" value={admin.education} />
-                    <DetailRow label="Branches" value={admin.branch} />
+                    {!isSchool && <DetailRow label="Branches" value={admin.branch} />}
                     <DetailRow label="Faculty" value={admin.faculty} />
                     <DetailRow label="Students" value={admin.student} />
                     <DetailRow label="Parents" value={admin.parent} />
                     <DetailRow label="Finance" value={admin.finance} />
-                    <DetailRow label="Placement" value={admin.placement} />
+                    {!isSchool && <DetailRow label="Placement" value={admin.placement} />}
                 </div>
             </div>
         </div>
