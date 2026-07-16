@@ -104,7 +104,7 @@ export default function AccountantExpenseCategoriesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedDateKey, setSelectedDateKey] = useState("");
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const [educationOptions, setEducationOptions] = useState<
     AccountantEducationOption[]
   >([]);
@@ -277,8 +277,8 @@ export default function AccountantExpenseCategoriesPage() {
   return (
     <main className="min-h-full w-full overflow-x-hidden bg-[#F4F4F4] px-4 py-5 pb-8">
       <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-5">
-        <section className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+        <section className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+          <div className="flex-1 lg:pr-4">
             <h1 className="text-[28px] font-bold leading-tight text-[#282828]">
               Expense Categories
             </h1>
@@ -287,7 +287,44 @@ export default function AccountantExpenseCategoriesPage() {
               utilization metrics.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <div className="relative flex items-center">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => dateInputRef.current?.showPicker()}
+                onKeyDown={(e) => e.key === 'Enter' && dateInputRef.current?.showPicker()}
+                className={`flex h-10 cursor-pointer items-center gap-2 rounded-xl px-4 text-[13px] font-bold transition-colors ${
+                  selectedDateKey ? "bg-[#E4FAED] text-[#1A9B55]" : "border border-[#E3E8EF] bg-white text-[#17213D] shadow-[0_3px_10px_rgba(15,23,42,0.12)] hover:border-[#714EF2]"
+                }`}
+              >
+                <CalendarBlank size={17} weight="bold" />
+                <span>
+                  {selectedDateKey
+                    ? formatDateKey(selectedDateKey)
+                    : "Select Date"}
+                </span>
+                {selectedDateKey && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedDateKey("");
+                    }}
+                    className="ml-1 flex items-center justify-center rounded-full p-1 hover:bg-[#cbe6d7]"
+                  >
+                    <X size={12} weight="bold" />
+                  </button>
+                )}
+              </div>
+              <input
+                ref={dateInputRef}
+                type="date"
+                value={selectedDateKey}
+                onChange={(e) => setSelectedDateKey(e.target.value)}
+                className="absolute left-1/2 top-1/2 -z-10 h-0 w-0 -translate-x-1/2 -translate-y-1/2 opacity-0"
+              />
+            </div>
             {educationOptions.length > 0 && (
               <div ref={educationFilterRef} className="relative">
                 <button
@@ -297,11 +334,11 @@ export default function AccountantExpenseCategoriesPage() {
                   onClick={() =>
                     setIsEducationFilterOpen((isOpen) => !isOpen)
                   }
-                  className="flex h-11 min-w-[145px] max-w-[240px] cursor-pointer items-center justify-between gap-3 rounded-xl border border-[#E3E8EF] bg-white py-2 pl-5 pr-4 text-[14px] font-bold text-[#17213D] shadow-[0_3px_10px_rgba(15,23,42,0.12)] outline-none focus:border-[#714EF2]"
+                  className="flex h-10 min-w-[120px] max-w-[200px] cursor-pointer items-center justify-between gap-3 rounded-xl border border-[#E3E8EF] bg-white py-2 pl-4 pr-3 text-[13px] font-bold text-[#17213D] shadow-[0_3px_10px_rgba(15,23,42,0.12)] outline-none focus:border-[#714EF2]"
                 >
                   <span className="truncate">{educationFilterLabel}</span>
                   <CaretDown
-                    size={17}
+                    size={15}
                     weight="bold"
                     className={`shrink-0 text-[#714EF2] transition-transform ${
                       isEducationFilterOpen ? "rotate-180" : ""
@@ -370,9 +407,9 @@ export default function AccountantExpenseCategoriesPage() {
             <button
               type="button"
               onClick={() => setIsRecordExpenseOpen(true)}
-              className="flex h-11 cursor-pointer items-center gap-2 rounded-full bg-[#172B58] px-6 text-[13px] font-bold text-white"
+              className="flex h-10 cursor-pointer items-center gap-2 rounded-full bg-[#172B58] px-5 text-[13px] font-bold text-white"
             >
-              <Plus size={16} weight="bold" />
+              <Plus size={15} weight="bold" />
               Record New Expense
             </button>
           </div>
@@ -423,60 +460,6 @@ export default function AccountantExpenseCategoriesPage() {
             <h2 className="text-[20px] font-bold text-[#282828]">
               Detailed Expenditure Breakdown
             </h2>
-            <div className="relative self-start sm:self-auto">
-              {!isDatePickerOpen ? (
-                <button
-                  type="button"
-                  onClick={() => setIsDatePickerOpen(true)}
-                  className="flex cursor-pointer items-center gap-2 rounded-md bg-[#DAE9E1] px-4 py-1.5 text-sm font-bold tracking-wide text-[#43C17A] transition-colors hover:bg-[#cbe6d7]"
-                  title="Select date"
-                >
-                  <CalendarBlank size={18} weight="fill" />
-                  {selectedDateKey
-                    ? formatDateKey(selectedDateKey)
-                    : new Date().toLocaleDateString("en-GB")}
-                </button>
-              ) : (
-                <div className="flex h-8 items-center gap-2 rounded-md border border-[#43C17A] bg-white p-1 shadow-sm">
-                  <CalendarBlank
-                    size={18}
-                    className="ml-2 text-[#43C17A]"
-                    weight="fill"
-                  />
-                  <input
-                    type="date"
-                    value={selectedDateKey}
-                    onChange={(event) => {
-                      if (event.target.value) {
-                        setSelectedDateKey(event.target.value);
-                        setIsDatePickerOpen(false);
-                      }
-                    }}
-                    className="cursor-pointer rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-700 outline-none focus:border-[#43C17A]"
-                  />
-                  {selectedDateKey && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedDateKey("");
-                        setIsDatePickerOpen(false);
-                      }}
-                      className="cursor-pointer rounded px-1 text-xs font-medium text-red-500 hover:text-red-700"
-                    >
-                      Clear
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setIsDatePickerOpen(false)}
-                    className="cursor-pointer rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-                    title="Close"
-                  >
-                    <X size={14} weight="bold" />
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
           <TableComponent
             columns={breakdownColumns}

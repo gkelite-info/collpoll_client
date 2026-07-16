@@ -9,6 +9,10 @@ import {
   fetchTransferStudentByRollNo,
   hasTransferTcNoForAnotherStudent,
 } from "@/lib/helpers/accountant/transferCertificatesAPI";
+import {
+  fetchAccountantEducationTypes,
+  type AccountantEducationTypeOption,
+} from "@/lib/helpers/accountant/bonafideCertificatesAPI";
 
 export type TransferCertificateData = {
   collegeTcId?: number;
@@ -56,6 +60,85 @@ function getTodayIsoDate() {
   const day = String(today.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+function getAcademicYearOptions(startYear = 2020) {
+  const currentYear = new Date().getFullYear();
+
+  return Array.from({ length: currentYear - startYear + 1 }, (_, index) => {
+    const year = startYear + index;
+    return `${year}-${year + 1}`;
+  });
+}
+
+function TextField({
+  label,
+  value,
+  placeholder,
+  required,
+  readOnly,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  placeholder?: string;
+  required?: boolean;
+  readOnly?: boolean;
+  onChange?: (value: string) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-2">
+      <span className={fieldLabelClass}>
+        {label} {required && <RequiredMark />}
+      </span>
+      <input
+        readOnly={readOnly}
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange?.(event.target.value)}
+        className={`${inputClass} ${readOnly ? "bg-[#F8FAFC]" : ""}`}
+      />
+    </label>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  options,
+  placeholder,
+  required,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ label: string; value: string }>;
+  placeholder?: string;
+  required?: boolean;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-2">
+      <span className={fieldLabelClass}>
+        {label} {required && <RequiredMark />}
+      </span>
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        className={`${inputClass} cursor-pointer appearance-none disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#8A96A8]`}
+      >
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }
 
 function getErrorMessage(error: unknown) {
@@ -113,9 +196,59 @@ export function TransferCreateForm({
   onPreview: (data: TransferCertificateData) => void;
   onUploadHeader: (data: TransferCertificateData) => Promise<void> | void;
 }) {
-  const { collegeId } = useUser();
-  const [searchQuery, setSearchQuery] = useState("");
+  const { collegeId, loading: userLoading } = useUser();
+  const [searchQuery, setSearchQuery] = useState(""); // Can be removed later
   const [isFetching, setIsFetching] = useState(false);
+
+  // New Search Fields State
+  const academicYearOptions = useMemo(() => getAcademicYearOptions(), []);
+  const [educationTypes, setEducationTypes] = useState<AccountantEducationTypeOption[]>([]);
+  const [selectedEducationId, setSelectedEducationId] = useState("");
+  const [searchAcademicYear, setSearchAcademicYear] = useState("");
+  const [searchStudentName, setSearchStudentName] = useState("");
+  const [isLoadingEducationTypes, setIsLoadingEducationTypes] = useState(true);
+
+  useEffect(() => {
+    if (userLoading) return;
+
+    let isActive = true;
+
+    async function loadEducationTypes() {
+      if (!collegeId) {
+        setEducationTypes([]);
+        setIsLoadingEducationTypes(false);
+        return;
+      }
+
+      setIsLoadingEducationTypes(true);
+
+      try {
+        const options = await fetchAccountantEducationTypes(collegeId);
+        if (!isActive) return;
+        setEducationTypes(options);
+      } catch (error) {
+        if (!isActive) return;
+        console.error("Failed to load education types", error);
+      } finally {
+        if (isActive) setIsLoadingEducationTypes(false);
+      }
+    }
+
+    loadEducationTypes();
+
+    return () => {
+      isActive = false;
+    };
+  }, [collegeId, userLoading]);
+
+  const educationOptions = useMemo(
+    () =>
+      educationTypes.map((education) => ({
+        label: education.collegeEducationType,
+        value: String(education.collegeEducationId),
+      })),
+    [educationTypes],
+  );
 
   // Student Details State
   const [studentId, setStudentId] = useState<number | null>(null);
@@ -207,21 +340,33 @@ export function TransferCreateForm({
   }, [initialCertificate]);
 
   const handleSearch = async () => {
-    const query = searchQuery.trim();
-    if (!query) {
-      toast.error("Please enter roll number or admission number.");
+    if (!collegeId) {
+      toast.error("College context is unavailable for this account.");
+      return;
+    }
+
+    if (!selectedEducationId) {
+      toast.error("Select an education type first.");
+      return;
+    }
+
+    if (!rollNo.trim() && !searchStudentName.trim()) {
+      toast.error("Enter the student roll no. or student name.");
       return;
     }
 
     setIsFetching(true);
     try {
       const student = await fetchTransferStudentByRollNo({
-        collegeId: collegeId ?? 0,
-        rollNo: query,
+        collegeId,
+        collegeEducationId: Number(selectedEducationId),
+        rollNo,
+        studentName: searchStudentName,
+        courseYear: searchAcademicYear,
       });
 
       if (!student) {
-        toast.error("No active student found for this roll number.");
+        toast.error("No active student found for these details.");
         return;
       }
 
@@ -384,60 +529,89 @@ export function TransferCreateForm({
       {/* Main Form Container */}
       <div className="rounded-lg border border-[#E7ECF3] bg-white p-6 shadow-[0_2px_10px_rgba(15,23,42,0.06)] flex flex-col gap-8">
         
-        {/* Student Search Section */}
         <div>
-          <div className="flex flex-wrap items-start justify-between gap-4 pb-2">
-            <div>
-              <h2 className="text-[18px] font-bold text-[#17213D]">Student Search</h2>
-            </div>
+          <h2 className="mb-4 text-[18px] font-bold text-[#17213D]">
+            1. Search Student
+          </h2>
+
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <SelectField
+              label="Education Type"
+              value={selectedEducationId}
+              placeholder={isLoadingEducationTypes ? "Loading..." : "Select Education Type"}
+              options={educationOptions}
+              disabled={isLoadingEducationTypes}
+              onChange={(value) => {
+                setSelectedEducationId(value);
+                setStudentId(null);
+                setAdmissionNo("");
+              }}
+              required
+            />
+            <SelectField
+              label="Year"
+              value={academicYear}
+              options={academicYearOptions.map((year) => ({
+                label: year,
+                value: year,
+              }))}
+              onChange={(value) => {
+                setAcademicYear(value);
+              }}
+              required
+            />
+            <TextField
+              label="Roll Number"
+              value={rollNo}
+              placeholder="Enter roll no"
+              onChange={(value) => {
+                setRollNo(value);
+                setStudentId(null);
+                setAdmissionNo("");
+              }}
+              required
+            />
           </div>
 
-          <div className="mt-6 flex flex-col gap-6">
-            {/* Search Input Box with actions */}
-            <div className="flex w-full flex-wrap items-center justify-between gap-4">
-              <div className="relative flex h-11 w-full max-w-[690px] items-center rounded-md border border-[#D7DEE8] bg-white px-4 text-[#8A96A8] focus-within:border-[#43C17A] transition-all lg:max-w-[48%]">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  placeholder="Enter Hall Ticket No. / Roll No. / Admission No."
-                  className="min-w-0 flex-1 bg-transparent text-[13px] font-medium text-[#17213D] outline-none placeholder:text-[#8A96A8] pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={handleSearch}
-                  disabled={isFetching}
-                  className="absolute right-4 cursor-pointer text-[#7B8AA3] hover:text-[#17213D] transition-colors disabled:cursor-not-allowed"
-                  aria-label="Search student"
-                >
-                  <MagnifyingGlass size={18} weight="bold" />
-                </button>
-              </div>
-
-              <div className="ml-auto flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleSearch}
-                  disabled={isFetching}
-                  className="h-11 cursor-pointer rounded-md bg-[#43C17A] px-7 text-[13px] font-bold text-white shadow-[0_8px_18px_rgba(67,193,122,0.18)] transition-colors hover:bg-[#349c61] disabled:cursor-not-allowed disabled:bg-[#A8DEC0]"
-                >
-                  {isFetching ? "Getting..." : "Get Details"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleClear}
-                  className="h-11 rounded-md border border-[#D7DEE8] bg-white px-7 text-[13px] font-bold text-[#303642] hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  Clear
-                </button>
-              </div>
+          <div className="mt-5 grid items-end gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <SelectField
+              label="Academic Year"
+              value={searchAcademicYear}
+              placeholder="Select Year"
+              options={[
+                { label: "1st Year", value: "1st Year" },
+                { label: "2nd Year", value: "2nd Year" },
+                { label: "3rd Year", value: "3rd Year" },
+                { label: "4th Year", value: "4th Year" },
+              ]}
+              onChange={(value) => {
+                setSearchAcademicYear(value);
+                setStudentId(null);
+                setAdmissionNo("");
+              }}
+            />
+            <TextField
+              label="Student Name"
+              value={searchStudentName}
+              placeholder="Enter student name"
+              onChange={(value) => {
+                setSearchStudentName(value);
+                setStudentId(null);
+                setAdmissionNo("");
+              }}
+            />
+            <div>
+              <button
+                type="button"
+                onClick={handleSearch}
+                disabled={isFetching}
+                className="h-10 w-full cursor-pointer rounded-md bg-[#43C17A] px-7 text-[13px] font-bold text-white shadow-[0_8px_18px_rgba(67,193,122,0.18)] transition-colors hover:bg-[#349c61] disabled:cursor-not-allowed disabled:bg-[#A8DEC0]"
+              >
+                {isFetching ? "Getting..." : "Get Details"}
+              </button>
             </div>
-
-            <div className="rounded-md border border-[#BFEBD3] bg-[#F0FDF6] px-4 py-3 text-[12px] font-semibold text-[#16803A]">
-              Enter the student roll number or hall ticket number, then click Get Details to auto-fill the student values for this college.
-            </div>
+          </div>
+        </div>
 
             {/* Student Details (Auto Filled) Panel (White background box, border #E2E8F0) */}
             <div className="rounded-md border border-[#E2E8F0] bg-white p-5">
@@ -451,6 +625,7 @@ export function TransferCreateForm({
                   <input
                     type="text"
                     value={rollNo}
+                    placeholder="Enter Roll No."
                     onChange={(e) => setRollNo(e.target.value)}
                     className="h-10 rounded-md border border-[#E2E8F0] bg-[#F1F3F7] px-3 text-[13px] font-medium text-[#17213D] outline-none w-full focus:border-[#43C17A] focus:bg-white transition-colors"
                   />
@@ -461,6 +636,7 @@ export function TransferCreateForm({
                   <input
                     type="text"
                     value={admissionNo}
+                    placeholder="Enter Admission No."
                     onChange={(e) => setAdmissionNo(e.target.value)}
                     className="h-10 rounded-md border border-[#E2E8F0] bg-[#F1F3F7] px-3 text-[13px] font-medium text-[#17213D] outline-none w-full focus:border-[#43C17A] focus:bg-white transition-colors"
                   />
@@ -471,6 +647,7 @@ export function TransferCreateForm({
                   <input
                     type="text"
                     value={studentName}
+                    placeholder="Enter Student Name"
                     onChange={(e) => setStudentName(e.target.value)}
                     className="h-10 rounded-md border border-[#E2E8F0] bg-[#F1F3F7] px-3 text-[13px] font-medium text-[#17213D] outline-none w-full focus:border-[#43C17A] focus:bg-white transition-colors"
                   />
@@ -481,6 +658,7 @@ export function TransferCreateForm({
                   <input
                     type="text"
                     value={fatherName}
+                    placeholder="Enter Father's Name"
                     onChange={(e) => setFatherName(e.target.value)}
                     className="h-10 rounded-md border border-[#E2E8F0] bg-[#F1F3F7] px-3 text-[13px] font-medium text-[#17213D] outline-none w-full focus:border-[#43C17A] focus:bg-white transition-colors"
                   />
@@ -491,6 +669,7 @@ export function TransferCreateForm({
                   <input
                     type="text"
                     value={motherName}
+                    placeholder="Enter Mother's Name"
                     onChange={(e) => setMotherName(e.target.value)}
                     className="h-10 rounded-md border border-[#E2E8F0] bg-[#F1F3F7] px-3 text-[13px] font-medium text-[#17213D] outline-none w-full focus:border-[#43C17A] focus:bg-white transition-colors"
                   />
@@ -501,6 +680,7 @@ export function TransferCreateForm({
                   <input
                     type="text"
                     value={course}
+                    placeholder="Enter Course"
                     onChange={(e) => setCourse(e.target.value)}
                     className="h-10 rounded-md border border-[#E2E8F0] bg-[#F1F3F7] px-3 text-[13px] font-medium text-[#17213D] outline-none w-full focus:border-[#43C17A] focus:bg-white transition-colors"
                   />
@@ -511,6 +691,7 @@ export function TransferCreateForm({
                   <input
                     type="text"
                     value={subCourse}
+                    placeholder="Enter Sub Course"
                     onChange={(e) => setSubCourse(e.target.value)}
                     className="h-10 rounded-md border border-[#E2E8F0] bg-[#F1F3F7] px-3 text-[13px] font-medium text-[#17213D] outline-none w-full focus:border-[#43C17A] focus:bg-white transition-colors"
                   />
@@ -521,6 +702,7 @@ export function TransferCreateForm({
                   <input
                     type="text"
                     value={courseYear}
+                    placeholder="Enter Course Year"
                     onChange={(e) => setCourseYear(e.target.value)}
                     className="h-10 rounded-md border border-[#E2E8F0] bg-[#F1F3F7] px-3 text-[13px] font-medium text-[#17213D] outline-none w-full focus:border-[#43C17A] focus:bg-white transition-colors"
                   />
@@ -531,6 +713,7 @@ export function TransferCreateForm({
                   <input
                     type="text"
                     value={academicYear}
+                    placeholder="Enter Academic Year"
                     onChange={(e) => setAcademicYear(e.target.value)}
                     className="h-10 rounded-md border border-[#E2E8F0] bg-[#F1F3F7] px-3 text-[13px] font-medium text-[#17213D] outline-none w-full focus:border-[#43C17A] focus:bg-white transition-colors"
                   />
@@ -541,14 +724,13 @@ export function TransferCreateForm({
                   <input
                     type="text"
                     value={batchCode}
+                    placeholder="Enter Batch Code"
                     onChange={(e) => setBatchCode(e.target.value)}
                     className="h-10 rounded-md border border-[#E2E8F0] bg-[#F1F3F7] px-3 text-[13px] font-medium text-[#17213D] outline-none w-full focus:border-[#43C17A] focus:bg-white transition-colors"
                   />
                 </label>
               </div>
             </div>
-          </div>
-        </div>
 
         {/* TC Details Section */}
         <div className="border-t border-[#F1F5F9] pt-6">
