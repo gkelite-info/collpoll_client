@@ -493,105 +493,102 @@ export async function fetchBonafideStudentByRollNo({
   collegeId,
   collegeEducationId,
   rollNo,
+  studentName,
+  courseYear,
 }: {
   collegeId: number;
   collegeEducationId: number;
-  rollNo: string;
+  rollNo?: string;
+  studentName?: string;
+  courseYear?: string;
 }): Promise<BonafideStudentDetails | null> {
-  if (!collegeId || !collegeEducationId || !rollNo.trim()) return null;
+  if (!collegeId || !collegeEducationId || (!rollNo?.trim() && !studentName?.trim())) return null;
 
-  const { data, error } = await supabase
-    .from("student_pins")
+  let query = supabase
+    .from("students")
     .select(
       `
-      pinNumber,
-      students:studentId (
-        studentId,
-        batch,
-        collegeEducationId,
+      studentId,
+      batch,
+      collegeEducationId,
+      users!inner (
+        fullName
+      ),
+      student_pins!inner (
+        pinNumber
+      ),
+      college_education:collegeEducationId (
+        collegeEducationType
+      ),
+      college_branch:collegeBranchId (
+        collegeBranchCode
+      ),
+      student_academic_history (
+        isCurrent,
+        updatedAt,
+        college_academic_year:collegeAcademicYearId (
+          collegeAcademicYear
+        )
+      ),
+      parents (
+        isActive,
+        is_deleted,
+        deletedAt,
         users:userId (
           fullName
-        ),
-        college_education:collegeEducationId (
-          collegeEducationType
-        ),
-        college_branch:collegeBranchId (
-          collegeBranchCode
-        ),
-        student_academic_history (
-          isCurrent,
-          updatedAt,
-          college_academic_year:collegeAcademicYearId (
-            collegeAcademicYear
-          )
-        ),
-        parents (
-          isActive,
-          is_deleted,
-          deletedAt,
-          users:userId (
-            fullName
-          )
         )
       )
     `,
     )
     .eq("collegeId", collegeId)
-    .eq("pinNumber", rollNo.trim())
+    .eq("collegeEducationId", collegeEducationId)
     .eq("isActive", true)
-    .is("deletedAt", null)
-    .eq("students.collegeId", collegeId)
-    .eq("students.collegeEducationId", collegeEducationId)
-    .eq("students.isActive", true)
-    .eq("students.status", "Active")
-    .is("students.deletedAt", null)
-    .maybeSingle<{
-      pinNumber: string | null;
-      students: Related<{
-        studentId: number;
-        batch: string | null;
-        collegeEducationId: number;
-        users?: Related<{ fullName?: string | null }>;
-        college_education?: Related<{ collegeEducationType?: string | null }>;
-        college_branch?: Related<{ collegeBranchCode?: string | null }>;
-        student_academic_history?: Array<{
-          isCurrent: boolean | null;
-          updatedAt: string | null;
-          college_academic_year?: Related<{ collegeAcademicYear?: string | null }>;
-        }> | null;
-        parents?: Array<{
-          isActive: boolean | null;
-          is_deleted: boolean | null;
-          deletedAt: string | null;
-          users?: Related<{ fullName?: string | null }>;
-        }> | null;
-      }>;
-    }>();
+    .eq("status", "Active")
+    .is("deletedAt", null);
+
+  if (rollNo?.trim()) {
+    query = query.eq("student_pins.pinNumber", rollNo.trim());
+  }
+
+  if (studentName?.trim()) {
+    query = query.ilike("users.fullName", `%${studentName.trim()}%`);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
+  if (!data || data.length === 0) return null;
 
-  const student = getFirstRelated(data?.students);
-  if (!student) return null;
+  for (const rawStudent of data) {
+    const studentUser = getFirstRelated(rawStudent.users);
+    const pin = getFirstRelated(rawStudent.student_pins);
+    const education = getFirstRelated(rawStudent.college_education);
+    const branch = getFirstRelated(rawStudent.college_branch);
+    const academicHistoryRows = rawStudent.student_academic_history ?? [];
+    const parent = (rawStudent.parents ?? []).find(
+      (item) => item.isActive !== false && !item.is_deleted && !item.deletedAt,
+    );
+    const parentUser = getFirstRelated(parent?.users);
+    
+    const computedCourseYear = getCourseYearLabel(academicHistoryRows);
 
-  const user = getFirstRelated(student.users);
-  const education = getFirstRelated(student.college_education);
-  const branch = getFirstRelated(student.college_branch);
-  const academicHistoryRows = student.student_academic_history ?? [];
-  const parent = (student.parents ?? []).find(
-    (item) => item.isActive !== false && !item.is_deleted && !item.deletedAt,
-  );
-  const parentUser = getFirstRelated(parent?.users);
+    if (courseYear?.trim() && computedCourseYear !== courseYear.trim()) {
+      continue;
+    }
 
-  return {
-    studentId: student.studentId,
-    rollNo: data?.pinNumber ?? rollNo.trim(),
-    studentName: user?.fullName?.trim() || `Student ${student.studentId}`,
-    fatherName: parentUser?.fullName?.trim() ?? "-",
-    course: education?.collegeEducationType ?? "-",
-    subCourse: branch?.collegeBranchCode ?? "-",
-    courseYear: getCourseYearLabel(academicHistoryRows),
-    batchCode: student.batch ?? "-",
-  };
+    return {
+      studentId: rawStudent.studentId,
+      rollNo: pin?.pinNumber ?? rollNo?.trim() ?? "-",
+      studentName: studentUser?.fullName?.trim() || `Student ${rawStudent.studentId}`,
+      fatherName: parentUser?.fullName?.trim() ?? "-",
+      course: education?.collegeEducationType ?? "-",
+      subCourse: branch?.collegeBranchCode ?? "-",
+      courseYear: computedCourseYear,
+      batchCode: rawStudent.batch ?? "-",
+    };
+  }
+
+  return null;
 }
 
 export async function createBonafideCertificate(

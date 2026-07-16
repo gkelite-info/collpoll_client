@@ -3,11 +3,10 @@ import {
   MagnifyingGlass,
   PencilSimple,
   Trash,
-  CalendarBlank,
 } from "@phosphor-icons/react";
 
 import { StatusBadge, TypeBadge } from "./ReminderBadges";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { toneClasses, type Reminder } from "./reminderData";
 import { Pagination } from "../../../admin/academic-setup/components/pagination";
 
@@ -24,8 +23,6 @@ export function RemindersTable({
   onCategoryChange,
   selectedStatus,
   onStatusChange,
-  selectedDate,
-  onDateChange,
 }: {
   reminders: Reminder[];
   isLoading: boolean;
@@ -39,13 +36,10 @@ export function RemindersTable({
   onCategoryChange: (val: string) => void;
   selectedStatus: string;
   onStatusChange: (val: string) => void;
-  selectedDate: string;
-  onDateChange: (val: string) => void;
 }) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const dateInputRef = useRef<HTMLInputElement>(null);
 
   // Reset page when filters change (reminders array changes)
   useEffect(() => {
@@ -87,33 +81,6 @@ export function RemindersTable({
           />
         </label>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex items-center">
-            <button
-              type="button"
-              onClick={() => dateInputRef.current?.showPicker()}
-              className={`flex h-9 cursor-pointer items-center gap-2 rounded-full px-4 text-[13px] font-bold transition-colors ${
-                selectedDate ? "bg-[#E4FAED] text-[#1A9B55]" : "bg-white border border-[#DDE5EE] text-[#7B8AA3] hover:text-[#17213D]"
-              }`}
-            >
-              <CalendarBlank size={16} weight="bold" />
-              <span>
-                {selectedDate
-                  ? (() => {
-                      const parts = selectedDate.split("-");
-                      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-                      return selectedDate;
-                    })()
-                  : "Select Date"}
-              </span>
-            </button>
-            <input
-              ref={dateInputRef}
-              type="date"
-              value={selectedDate}
-              onChange={(e) => onDateChange(e.target.value)}
-              className="absolute left-1/2 top-1/2 -z-10 h-0 w-0 -translate-x-1/2 -translate-y-1/2 opacity-0"
-            />
-          </div>
           <div className="relative">
             <select
               value={selectedCategory}

@@ -615,54 +615,73 @@ export async function hasTransferTcNoForAnotherStudent({
 
 export async function fetchTransferStudentByRollNo({
   collegeId,
+  collegeEducationId,
   rollNo,
+  studentName,
+  courseYear,
 }: {
   collegeId: number;
-  rollNo: string;
+  collegeEducationId: number;
+  rollNo?: string;
+  studentName?: string;
+  courseYear?: string;
 }): Promise<TransferStudentDetails | null> {
-  if (!collegeId || !rollNo.trim()) return null;
+  if (!collegeId || !collegeEducationId || (!rollNo?.trim() && !studentName?.trim())) return null;
 
-  const { data, error } = await supabase
-    .from("student_pins")
-    .select(TRANSFER_STUDENT_LOOKUP_SELECT)
+  let query = supabase
+    .from("students")
+    .select(TRANSFER_STUDENT_SELECT)
     .eq("collegeId", collegeId)
-    .eq("pinNumber", rollNo.trim())
+    .eq("collegeEducationId", collegeEducationId)
     .eq("isActive", true)
-    .is("deletedAt", null)
-    .eq("students.collegeId", collegeId)
-    .eq("students.isActive", true)
-    .is("students.deletedAt", null)
-    .maybeSingle<{
-      pinNumber: string | null;
-      students: Related<TransferStudentRelation>;
-    }>();
+    .is("deletedAt", null);
+
+  if (rollNo?.trim()) {
+    query = query.eq("student_pins.pinNumber", rollNo.trim());
+  }
+
+  if (studentName?.trim()) {
+    query = query.ilike("users.fullName", `%${studentName.trim()}%`);
+  }
+
+  const { data, error } = await query.returns<TransferStudentRelation[]>();
 
   if (error) throw error;
+  if (!data || data.length === 0) return null;
 
-  const student = getFirstRelated(data?.students);
-  if (!student) return null;
+  for (const rawStudent of data) {
+    const studentUser = getFirstRelated(rawStudent.users);
+    const pin = getFirstRelated(rawStudent.student_pins);
+    const education = getFirstRelated(rawStudent.college_education);
+    const branch = getFirstRelated(rawStudent.college_branch);
+    const academicHistoryRows = rawStudent.student_academic_history ?? [];
+    const parents = getParentNames(rawStudent as any);
+    
+    const computedCourseYear = getCourseYearLabel(academicHistoryRows);
 
-  const user = getFirstRelated(student.users);
-  const education = getFirstRelated(student.college_education);
-  const branch = getFirstRelated(student.college_branch);
-  const academicHistory = student.student_academic_history ?? [];
-  const parents = getParentNames(student);
-  const admissionNo = await fetchBonafideAdmissionNo(collegeId, student.studentId);
+    if (courseYear?.trim() && computedCourseYear !== courseYear.trim()) {
+      continue;
+    }
 
-  return {
-    studentId: student.studentId,
-    rollNo: data?.pinNumber ?? rollNo.trim(),
-    admissionNo,
-    studentName: user?.fullName?.trim() || `Student ${student.studentId}`,
-    fatherName: parents.fatherName,
-    motherName: parents.motherName,
-    course: education?.collegeEducationType ?? "",
-    subCourse: branch?.collegeBranchCode ?? "",
-    courseYear: getCourseYearLabel(academicHistory),
-    academicYear: getCurrentAcademicYear(academicHistory),
-    batchCode: student.batch ?? "",
-    dateOfBirth: "",
-  };
+    const admissionNo = await fetchBonafideAdmissionNo(collegeId, rawStudent.studentId);
+
+    return {
+      studentId: rawStudent.studentId,
+      rollNo: pin?.pinNumber ?? rollNo?.trim() ?? "-",
+      admissionNo,
+      studentName: studentUser?.fullName?.trim() || `Student ${rawStudent.studentId}`,
+      fatherName: parents.fatherName,
+      motherName: parents.motherName,
+      course: education?.collegeEducationType ?? "",
+      subCourse: branch?.collegeBranchCode ?? "",
+      courseYear: computedCourseYear,
+      academicYear: getCurrentAcademicYear(academicHistoryRows),
+      batchCode: rawStudent.batch ?? "",
+      dateOfBirth: "",
+    };
+  }
+
+  return null;
 }
 
 export async function saveTransferCertificate(payload: SaveTransferCertificatePayload) {

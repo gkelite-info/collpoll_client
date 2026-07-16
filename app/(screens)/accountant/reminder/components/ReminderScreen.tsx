@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Plus } from "@phosphor-icons/react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { Plus, CalendarBlank } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 
 import { useUser } from "@/app/utils/context/UserContext";
@@ -113,6 +113,7 @@ export function ReminderScreen() {
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [selectedStatus, setSelectedStatus] = useState("All Statuses");
   const [selectedDate, setSelectedDate] = useState("");
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
@@ -236,14 +237,43 @@ export function ReminderScreen() {
               Track and manage all your payment reminders.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsAddReminderOpen(true)}
-            className="flex h-10 cursor-pointer items-center gap-2 rounded-md bg-[#43C17A] px-6 text-[13px] font-bold text-white shadow-[0_6px_14px_rgba(67,193,122,0.18)]"
-          >
-            <Plus size={14} weight="bold" />
-            Add Reminder
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="relative flex items-center">
+              <button
+                type="button"
+                onClick={() => dateInputRef.current?.showPicker()}
+                className={`flex h-10 cursor-pointer items-center gap-2 rounded-full px-5 text-[13px] font-bold transition-colors ${
+                  selectedDate ? "bg-[#E4FAED] text-[#1A9B55]" : "bg-white border border-[#DDE5EE] text-[#7B8AA3] hover:text-[#17213D]"
+                }`}
+              >
+                <CalendarBlank size={16} weight="bold" />
+                <span>
+                  {selectedDate
+                    ? (() => {
+                        const parts = selectedDate.split("-");
+                        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                        return selectedDate;
+                      })()
+                    : "Select Date"}
+                </span>
+              </button>
+              <input
+                ref={dateInputRef}
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="absolute left-1/2 top-1/2 -z-10 h-0 w-0 -translate-x-1/2 -translate-y-1/2 opacity-0"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAddReminderOpen(true)}
+              className="flex h-10 cursor-pointer items-center gap-2 rounded-md bg-[#43C17A] px-6 text-[13px] font-bold text-white shadow-[0_6px_14px_rgba(67,193,122,0.18)]"
+            >
+              <Plus size={14} weight="bold" />
+              Add Reminder
+            </button>
+          </div>
         </section>
 
         <section className="grid gap-5 md:grid-cols-4">
@@ -268,8 +298,6 @@ export function ReminderScreen() {
           onCategoryChange={setSelectedCategory}
           selectedStatus={selectedStatus}
           onStatusChange={setSelectedStatus}
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
         />
       </div>
 

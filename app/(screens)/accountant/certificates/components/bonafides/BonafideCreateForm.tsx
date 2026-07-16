@@ -141,6 +141,8 @@ export function BonafideCreateForm({
     academicYearOptions[academicYearOptions.length - 1] ?? "",
   );
   const [rollNo, setRollNo] = useState("");
+  const [searchStudentName, setSearchStudentName] = useState("");
+  const [searchAcademicYear, setSearchAcademicYear] = useState("");
   const [admissionNo, setAdmissionNo] = useState("");
   const [studentDetails, setStudentDetails] =
     useState<BonafideStudentDetails | null>(null);
@@ -244,6 +246,7 @@ export function BonafideCreateForm({
     }
 
     if (!rollNo.trim()) {
+      toast.error("Enter the student roll no.");
       setFormMessage("Enter the student roll no.");
       return;
     }
@@ -368,7 +371,7 @@ export function BonafideCreateForm({
           1. Search Student
         </h2>
 
-        <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1fr_1fr_200px]">
+        <div className="mt-5 grid gap-5 lg:grid-cols-3">
           <SelectField
             label="Education Type"
             value={selectedEducationId}
@@ -385,7 +388,7 @@ export function BonafideCreateForm({
             required
           />
           <SelectField
-            label="Academic Year"
+            label="Year"
             value={academicYear}
             options={academicYearOptions.map((year) => ({
               label: year,
@@ -399,15 +402,41 @@ export function BonafideCreateForm({
             required
           />
           <TextField
-            label="Hall Ticket No."
+            label="Roll Number"
             value={rollNo}
-            placeholder="Enter student roll no."
+            placeholder="Enter roll no."
             onChange={(value) => {
               setRollNo(value);
               setStudentDetails(null);
               setAdmissionNo("");
             }}
             required
+          />
+          <SelectField
+            label="Academic Year"
+            value={searchAcademicYear}
+            placeholder="Select Year"
+            options={[
+              { label: "1st Year", value: "1st Year" },
+              { label: "2nd Year", value: "2nd Year" },
+              { label: "3rd Year", value: "3rd Year" },
+              { label: "4th Year", value: "4th Year" },
+            ]}
+            onChange={(value) => {
+              setSearchAcademicYear(value);
+              setStudentDetails(null);
+              setAdmissionNo("");
+            }}
+          />
+          <TextField
+            label="Student Name"
+            value={searchStudentName}
+            placeholder="Enter name"
+            onChange={(value) => {
+              setSearchStudentName(value);
+              setStudentDetails(null);
+              setAdmissionNo("");
+            }}
           />
           <div className="flex flex-col justify-end">
             <button
@@ -437,7 +466,7 @@ export function BonafideCreateForm({
         </h2>
 
         <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          <TextField label="Roll No." value={studentDetails?.rollNo ?? ""} readOnly />
+          <TextField label="Roll No." value={studentDetails?.rollNo ?? ""} placeholder="Enter roll no." readOnly />
           <TextField
             label="Admission No."
             value={admissionNo}
@@ -447,26 +476,30 @@ export function BonafideCreateForm({
           <TextField
             label="Student Name"
             value={studentDetails?.studentName ?? ""}
+            placeholder="Enter student name"
             readOnly
           />
           <TextField
             label="Father Name"
             value={studentDetails?.fatherName ?? ""}
+            placeholder="Enter father name"
             readOnly
           />
           <TextField
             label="Course"
             value={studentDetails?.course || selectedEducationType}
+            placeholder="Enter course"
             readOnly
           />
-          <TextField label="Sub Course" value={studentDetails?.subCourse ?? ""} readOnly />
+          <TextField label="Sub Course" value={studentDetails?.subCourse ?? ""} placeholder="Enter sub course" readOnly />
           <TextField
-            label="Course Year"
+            label="Academic Year"
             value={studentDetails?.courseYear ?? ""}
+            placeholder="Enter academic year"
             readOnly
           />
-          <TextField label="Academic Year" value={studentDetails ? academicYear : ""} readOnly />
-          <TextField label="Batch Code" value={studentDetails?.batchCode ?? ""} readOnly />
+          <TextField label="Year" value={studentDetails ? academicYear : ""} placeholder="Enter year" readOnly />
+          <TextField label="Batch Code" value={studentDetails?.batchCode ?? ""} placeholder="Enter batch code" readOnly />
         </div>
       </section>
 
@@ -476,13 +509,6 @@ export function BonafideCreateForm({
         </h2>
 
         <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          <TextField
-            label="Bonafide No."
-            value={bonafideNo}
-            placeholder="Enter Bonafide No."
-            onChange={setBonafideNo}
-            required
-          />
           <label className="flex flex-col gap-2">
             <span className={fieldLabelClass}>
               Date <RequiredMark />
