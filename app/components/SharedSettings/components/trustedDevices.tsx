@@ -125,7 +125,7 @@ const TrustedDevicesList: React.FC<TrustedDevicesListProps> = ({
     router.back();
   };
 
-  const isNOtVisible = !['WellbeingExecutive', 'WellbeingManager'].includes(role!)
+  const isNOtVisible = !['WellbeingExecutive', 'WellbeingManager', 'CollegeAdmin'].includes(role!)
   return (
     <div className="min-h-screen p-2 sm:p-2 max-md:bg-[#F4F5F6] max-md:p-0">
       <div className="mx-auto font-sans w-full">

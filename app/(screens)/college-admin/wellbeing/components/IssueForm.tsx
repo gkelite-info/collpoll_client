@@ -93,6 +93,10 @@ export default function IssueForm({
 }: IssueFormProps) {
   const router = useRouter();
   const { fullName, email, collegeId, userId, role, loading: userLoading } = useUser();
+  const isSchoolStr = typeof document !== 'undefined'
+    ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
+    : null;
+  const isSchool = isSchoolStr === "true";
   const isEditing = Boolean(editingIssue);
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -419,7 +423,7 @@ export default function IssueForm({
                     ) : (
                       <div className="h-4 w-4 flex-shrink-0 rounded-full border border-gray-400 bg-transparent" />
                     )}
-                    {option}
+                    {option === "college" ? (isSchool ? "school" : "college") : option}
                   </button>
                 );
               })}

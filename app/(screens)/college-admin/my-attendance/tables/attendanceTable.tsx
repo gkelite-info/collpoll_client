@@ -3,6 +3,30 @@ import { CaretDown, CheckSquare, XSquare, Question } from "@phosphor-icons/react
 import { AttendanceRecord } from "../types";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import TableBodyShimmer from "@/app/components/shimmers/TableBodyShimmer";
+import { useUser } from "@/app/utils/context/UserContext";
+
+const parseRowDate = (dateStr: string): Date | null => {
+  if (!dateStr) return null;
+  const parts = dateStr.split("/");
+  if (parts.length !== 3) return null;
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // 0-indexed month
+  const year = parseInt(parts[2], 10);
+  return new Date(year, month, day);
+};
+
+const parseJoiningDate = (dateStr: string | null): Date | null => {
+  if (!dateStr || dateStr === "Not Provided" || dateStr === "N/A" || dateStr === "—") return null;
+  const parts = dateStr.split("/");
+  if (parts.length === 3) {
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const year = parseInt(parts[2], 10);
+    return new Date(year, month, day);
+  }
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? null : d;
+};
 
 interface Props {
   title?: string;
@@ -14,6 +38,7 @@ interface Props {
   onPageChange?: (page: number) => void;
   onMonthYearChange?: (month: number, year: number) => void;
   loading?: boolean;
+  dateOfJoining?: string | null;
 }
 
 const months = [
@@ -48,7 +73,10 @@ const AttendanceTable: React.FC<Props> = ({
   onPageChange,
   onMonthYearChange,
   loading = false,
+  dateOfJoining: propDateOfJoining,
 }) => {
+  const { dateOfJoining: contextDateOfJoining } = useUser();
+  const dateOfJoining = propDateOfJoining !== undefined ? propDateOfJoining : contextDateOfJoining;
   const [isMonthOpen, setIsMonthOpen] = useState(false);
   const [isYearOpen, setIsYearOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -227,26 +255,40 @@ const AttendanceTable: React.FC<Props> = ({
                 </td>
               </tr>
             ) : (
-              records.map((row, idx) => (
-                <tr
-                  key={idx}
-                  className="border-b border-gray-100 last:border-none text-gray-500 text-[12.5px] hover:bg-gray-50 transition-colors"
-                >
-                  <td className="py-1.5 px-3">{row.date}</td>
-                  <td className="py-1.5 px-3">{row.checkIn}</td>
-                  <td className="py-1.5 px-3">{row.checkOut}</td>
-                  <td className="py-1.5 px-3">{row.totalHours}</td>
-                  <td className="py-1.5 px-3">
-                    <div className={`flex items-center gap-1.5 ${getStatusDisplay(row.status).color} font-semibold`}>
-                      {getStatusDisplay(row.status).icon}
-                      <span>{row.status || '—'}</span>
-                    </div>
-                  </td>
-                  <td className="py-1.5 px-3">{row.reason ?? "—"}</td>
-                  <td className="py-1.5 px-3">{row.lateBy}</td>
-                  <td className="py-1.5 px-3">{row.earlyOut}</td>
-                </tr>
-              ))
+              records.map((row, idx) => {
+                const rowDateObj = parseRowDate(row.date);
+                const joiningDateObj = parseJoiningDate(dateOfJoining);
+                if (rowDateObj && joiningDateObj) {
+                  rowDateObj.setHours(0, 0, 0, 0);
+                  joiningDateObj.setHours(0, 0, 0, 0);
+                }
+                const isBeforeJoining = rowDateObj && joiningDateObj && rowDateObj < joiningDateObj;
+
+                return (
+                  <tr
+                    key={idx}
+                    className="border-b border-gray-100 last:border-none text-gray-500 text-[12.5px] hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="py-1.5 px-3">{row.date}</td>
+                    <td className="py-1.5 px-3">{isBeforeJoining ? "—" : row.checkIn}</td>
+                    <td className="py-1.5 px-3">{isBeforeJoining ? "—" : row.checkOut}</td>
+                    <td className="py-1.5 px-3">{isBeforeJoining ? "—" : row.totalHours}</td>
+                    <td className="py-1.5 px-3">
+                      {isBeforeJoining ? (
+                        <span>—</span>
+                      ) : (
+                        <div className={`flex items-center gap-1.5 ${getStatusDisplay(row.status).color} font-semibold`}>
+                          {getStatusDisplay(row.status).icon}
+                          <span>{row.status || '—'}</span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-1.5 px-3">{isBeforeJoining ? "—" : (row.reason ?? "—")}</td>
+                    <td className="py-1.5 px-3">{isBeforeJoining ? "—" : row.lateBy}</td>
+                    <td className="py-1.5 px-3">{isBeforeJoining ? "—" : row.earlyOut}</td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

@@ -58,7 +58,7 @@ export default function CurrentPassword() {
     }
   };
 
-  const isNotVisible = !['WellbeingManager'].includes(role!)
+  const isNotVisible = !['WellbeingExecutive', 'WellbeingManager', 'CollegeAdmin'].includes(role!)
 
   return (
     <main className="min-h-screen p-2 max-md:p-0 max-md:bg-[#F4F5F6]">
