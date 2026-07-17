@@ -11,8 +11,13 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { fetchResumePersonalDetails } from "@/lib/helpers/student/Resume/Resumepersonaldetailsapi";
 
+const isSchoolStr = typeof document !== 'undefined'
+  ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
+  : null;
+const isSchool = isSchoolStr === "true";
+
 const DEFAULT_ACHIEVEMENTS = [
-  "College Topper",
+  isSchool ? "School Topper" : "College Topper",
   "Department Topper",
   "Top in Class",
   "Top 10 in Class",

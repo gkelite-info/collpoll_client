@@ -442,12 +442,22 @@ export default function LeaveRequestDetailsModal({
       })
       .replace(",", "");
 
-  const formatRoleLabel = (role: string) =>
-    role
+  const isSchoolStr = typeof document !== 'undefined'
+    ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
+    : null;
+  const isSchool = isSchoolStr === "true";
+
+  const formatRoleLabel = (role: string) => {
+    let formatted = role
       .replace(/([a-z])([A-Z])/g, "$1 $2")
       .replace(/\bHr\b/g, "HR")
       .replace(/\bH R\b/g, "HR")
       .trim();
+    if (isSchool) {
+      formatted = formatted.replace(/\bCollege\b/gi, "School");
+    }
+    return formatted;
+  };
 
   if (!request) return null;
 

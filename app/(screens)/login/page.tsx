@@ -189,7 +189,11 @@ export default function LoginPage() {
         "wellbeing manager": "/wellbeing-manager",
       };
 
-      const redirectPath = roleRouteMap[role] || "/login";
+      let redirectPath = roleRouteMap[role] || "/login";
+
+      if (role === "collegeadmin" && res.user.isSchool) {
+        redirectPath = "/school-admin";
+      }
 
       toast.success("Login successful!");
       await refreshUserContext();

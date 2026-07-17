@@ -58,6 +58,7 @@ const AttendancePage = () => {
   const [infoLoading, setInfoLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -117,6 +118,7 @@ const AttendancePage = () => {
         setTotalItems(0);
       } finally {
         setTableLoading(false);
+        setInitialLoad(false);
       }
     };
 
@@ -131,7 +133,7 @@ const AttendancePage = () => {
         ...mockProfile,
         name: fullName || mockProfile.name,
         mobile: mobile || mockProfile.mobile,
-        adminId: identifierId || (collegeAdminId ? String(collegeAdminId) : null),
+        adminId: identifierId || "Not Provided",
         EducationType: collegeEducationType!,
         email: email ?? mockProfile.email,
         joiningDate: formatDate(dateOfJoining),
@@ -147,7 +149,7 @@ const AttendancePage = () => {
 
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full pb-5">
       <div className="flex gap-4 mb-4 w-full">
         {infoLoading || !profile
           ? <FacultyInfoCardShimmer />
@@ -160,11 +162,12 @@ const AttendancePage = () => {
         {(statsLoading || !stats) ? <AttendanceStatusCardShimmer /> : <AttendanceStatusCard stats={stats} />}
       </div>
 
-      {tableLoading
-        ? <AttendanceTableShimmer />
-        :
+      {initialLoad ? (
+        <AttendanceTableShimmer />
+      ) : (
         <AttendanceTable
           records={records}
+          loading={tableLoading}
           month={
             [
               "JAN", "FEB", "MAR", "APR",
@@ -182,7 +185,7 @@ const AttendancePage = () => {
             setCurrentPage(1);
           }}
         />
-      }
+      )}
     </div>
   );
 };

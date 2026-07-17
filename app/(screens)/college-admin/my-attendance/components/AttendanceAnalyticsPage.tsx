@@ -37,7 +37,8 @@ const AttendanceAnalyticsPage = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [tableLoading, setTableLoading] = useState(true)
+  const [tableLoading, setTableLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [chartLoading, setChartLoading] = useState(true);
   const [workingDays, setWorkingDays] = useState(0);
   const [workingDaysLoading, setWorkingDaysLoading] = useState(true);
@@ -77,7 +78,7 @@ const AttendanceAnalyticsPage = () => {
         ...mockProfile,
         name: fullName,
         department: collegeBranchCode || "",
-        employeeId: identifierId || collegeAdminId || userId || "",
+        employeeId: identifierId || "Not Provided",
         collegeEducationType: collegeEducationType || "",
         experience: professionalExperienceYears ? `${professionalExperienceYears} ${Number(professionalExperienceYears) > 1 ? 'years' : 'year'} ` : "—",
         workingDays,
@@ -105,7 +106,10 @@ const AttendanceAnalyticsPage = () => {
       }).catch(() => {
         setRecords([]);
         setTotalItems(0)
-      }).finally(() => setTableLoading(false));
+      }).finally(() => {
+        setTableLoading(false);
+        setInitialLoad(false);
+      });
 
   }, [userId, selectedMonth, selectedYear, currentPage]);
 
@@ -135,12 +139,13 @@ const AttendanceAnalyticsPage = () => {
         :
         <AttendancePerformanceChart data={chartData} />
       }
-      {tableLoading
-        ? <AttendanceTableShimmer />
-        :
+      {initialLoad ? (
+        <AttendanceTableShimmer />
+      ) : (
         <AttendanceTable
           title="Daily Attendance Record"
           records={records}
+          loading={tableLoading}
           month={[
             "JAN", "FEB", "MAR", "APR",
             "MAY", "JUN", "JUL", "AUG",
@@ -156,7 +161,7 @@ const AttendanceAnalyticsPage = () => {
             setCurrentPage(1);
           }}
         />
-      }
+      )}
     </div>
   );
 };

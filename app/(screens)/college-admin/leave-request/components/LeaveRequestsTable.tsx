@@ -60,9 +60,24 @@ const calculateDays = (fromDate: string, toDate: string) => {
   return String(Math.floor(diff / 86_400_000) + 1).padStart(2, "0");
 };
 
+const getDisplayRole = (role: string, isSchool: boolean) => {
+  const map: Record<string, string> = {
+    FinanceManager: "Finance Manager",
+    Accountant: "Accountant",
+    CollegeAdmin: isSchool ? "School Admin" : "College Admin",
+    CollegeHr: isSchool ? "School HR" : "College HR",
+    PlacementOfficer: "Placement Officer",
+    WellbeingExecutive: "Wellbeing Executive",
+    WellbeingManager: "Wellbeing Manager",
+    SuperAdmin: "Super Admin",
+  };
+  return map[role] || titleCase(role);
+};
+
 const mapDbRequestToCollegeAdminRow = (
   request: EmployeeLeaveRequestRecord,
   serialNumber: number,
+  isSchool: boolean,
 ): CollegeAdminLeaveRequest => {
   const employeeCode = request.employee?.employeeId ?? String(request.employeeId);
   const requesterName = request.user?.fullName ?? "Employee";
@@ -75,7 +90,7 @@ const mapDbRequestToCollegeAdminRow = (
     serialNo: String(serialNumber).padStart(2, "0"),
     employeeId: employeeCode,
     name: requesterName,
-    role: titleCase(request.role),
+    role: getDisplayRole(request.role, isSchool),
     photo: request.user?.profileUrl ?? "",
     requestedDate: formatDbDate(request.createdAt.slice(0, 10)),
     dateRange: `${fromDate} - ${toDate}`,
@@ -87,7 +102,7 @@ const mapDbRequestToCollegeAdminRow = (
       {
         id: `${request.employeeLeaveRequestId}-request`,
         senderName: requesterName,
-        senderRole: titleCase(request.role),
+        senderRole: getDisplayRole(request.role, isSchool),
         message: `I submitted a ${leaveType.toLowerCase()} leave request from ${fromDate} to ${toDate}.`,
         time: new Date(request.createdAt).toLocaleTimeString("en-US", {
           hour: "2-digit",
@@ -130,6 +145,11 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function LeaveRequestsTable() {
+  const isSchoolStr = typeof document !== 'undefined'
+    ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
+    : null;
+  const isSchool = isSchoolStr === "true";
+  
   const { userId, loading: userLoading } = useUser();
   const { collegeId, collegeAdminId, loading: collegeAdminLoading } =
     useCollegeAdmin();
@@ -200,6 +220,7 @@ export default function LeaveRequestsTable() {
           mapDbRequestToCollegeAdminRow(
             request,
             (page - 1) * ITEMS_PER_PAGE + index + 1,
+            isSchool
           ),
         ),
       );

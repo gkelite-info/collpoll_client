@@ -103,6 +103,11 @@ function ShimmerBlock({ className }: { className?: string }) {
 }
 
 const DriveClient = () => {
+  const isSchoolStr = typeof document !== 'undefined'
+    ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
+    : null;
+  const isSchool = isSchoolStr === "true";
+
   const { collegeId, userId } = useUser();
   const t = useTranslations("Drive.student"); // Hook
 
@@ -215,7 +220,7 @@ const DriveClient = () => {
   // Action Logic functions preserved exactly as requested
   const handleCreateFolder = async (data: { name: string; color: string }) => {
     if (!collegeId || !userId) {
-      showToast(t("Missing college or user info"), "error");
+      showToast(t(isSchool ? "Missing school or user info" : "Missing college or user info"), "error");
       return;
     }
 
@@ -560,7 +565,7 @@ const DriveClient = () => {
         onClose={() => setIsFilesModalOpen(false)}
         folderName={
           selectedFolder
-            ? `${collegeName ?? "College"} ( ${selectedFolder.name} )`
+            ? `${collegeName ?? (isSchool ? "School" : "College")} ( ${selectedFolder.name} )`
             : ""
         }
         driveFolderId={selectedFolder?.driveFolderId ?? null}

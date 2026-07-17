@@ -42,6 +42,22 @@ const nextConfig: NextConfig = {
         source: "/hikvision/:path*",
         destination: "http://192.168.31.170/:path*",
       },
+      {
+        source: "/school-admin/school-management/:path*",
+        destination: "/college-admin/institution-management/:path*",
+      },
+      {
+        source: "/school-admin/school-management",
+        destination: "/college-admin/institution-management",
+      },
+      {
+        source: "/school-admin/:path*",
+        destination: "/college-admin/:path*",
+      },
+      {
+        source: "/school-admin",
+        destination: "/college-admin",
+      },
     ];
   },
   experimental: {
