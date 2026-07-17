@@ -1,0 +1,519 @@
+# Per-College Dynamic Branding & Theming System
+
+A production-grade, SaaS-level solution to allow each of your 100+ colleges to have their own custom branding colors across all 13+ portals and 200+ screens, while keeping a sensible default and never breaking existing functionality.
+
+## Problem Statement
+
+Currently, branding colors like `#43C17A` (primary green), `#1E7745` (dark green), `#272372` (secondary purple) are **hardcoded** directly into Tailwind class names across 600+ file occurrences. This means:
+- Every college sees the exact same green/purple theme
+- Changing a college's brand requires editing 600+ lines of code
+- It's impossible to serve different themes to different tenants at runtime
+
+## Architecture Overview
+
+```mermaid
+graph TD
+    A["Supabase DB: college_branding table"] -->|API Fetch on Login| B["BrandingProvider (React Context)"]
+    B -->|Sets CSS Variables on :root| C["document.documentElement.style"]
+    C -->|Tailwind v4 @theme references CSS vars| D["All 200+ Screens Auto-Themed"]
+    E["Super Admin Panel"] -->|CRUD branding per college| A
+```
+
+> [!IMPORTANT]
+> **Core Principle**: We replace hardcoded hex colors with CSS custom properties (variables). Tailwind v4's `@theme inline` already maps CSS vars to utility classes. We extend this pattern so that the variables can be overridden at runtime per-college.
+
+---
+
+## Phase 1: Database Schema (Supabase + Sequelize Models)
+
+### 1.1 Supabase Table: `college_branding`
+
+This table stores the branding configuration for each college. Colleges without a row here will use the platform defaults.
+
+| Column | Type | Default | Description |
+|--------|------|---------|-------------|
+| `id` | `INTEGER` (PK, auto-increment) | — | Primary key |
+| `collegeId` | `INTEGER` (FK → `college.collegeId`, UNIQUE) | — | One branding per college |
+| `primaryColor` | `VARCHAR(9)` | `'#43C17A'` | Main brand color (navbar bg, buttons, links) |
+| `primaryDark` | `VARCHAR(9)` | `'#1E7745'` | Darker shade for hover states |
+| `primaryLight` | `VARCHAR(9)` | `'#E6F9EF'` | Light tint for backgrounds/badges |
+| `primaryForeground` | `VARCHAR(9)` | `'#FFFFFF'` | Text color on primary backgrounds |
+| `secondaryColor` | `VARCHAR(9)` | `'#272372'` | Secondary accent (calendar, badges) |
+| `secondaryForeground` | `VARCHAR(9)` | `'#FFFFFF'` | Text on secondary backgrounds |
+| `accentColor` | `VARCHAR(9)` | `'#43C17A'` | Ring, scrollbar, selection highlight |
+| `navbarBg` | `VARCHAR(9)` | `'#43C17A'` | Sidebar/navbar background |
+| `navbarActiveBg` | `VARCHAR(9)` | `'#F4F4F4'` | Active nav item background |
+| `navbarActiveText` | `VARCHAR(9)` | `'#43C17A'` | Active nav item text color |
+| `navbarHoverBg` | `VARCHAR(20)` | `'rgba(80,214,137,0.3)'` | Nav hover overlay |
+| `scrollbarThumb` | `VARCHAR(9)` | `'#43C17A'` | Custom scrollbar thumb color |
+| `logoUrl` | `TEXT` | `NULL` | Optional custom logo URL |
+| `faviconUrl` | `TEXT` | `NULL` | Optional custom favicon URL |
+| `isActive` | `BOOLEAN` | `true` | Enable/disable custom branding |
+| `createdAt` | `TIMESTAMPTZ` | `NOW()` | — |
+| `updatedAt` | `TIMESTAMPTZ` | `NOW()` | — |
+| `is_deleted` | `BOOLEAN` | `false` | Soft delete |
+| `deletedAt` | `TIMESTAMPTZ` | `NULL` | Soft delete timestamp |
+
+### 1.2 Sequelize Model
+
+```javascript
+// models/CollegeBranding.js
+module.exports = (sequelize, DataTypes) => {
+  const CollegeBranding = sequelize.define('college_branding', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    collegeId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      unique: true,
+      references: {
+        model: 'college',
+        key: 'collegeId',
+      },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    },
+    primaryColor: {
+      type: DataTypes.STRING(9),
+      defaultValue: '#43C17A',
+      allowNull: false,
+    },
+    primaryDark: {
+      type: DataTypes.STRING(9),
+      defaultValue: '#1E7745',
+      allowNull: false,
+    },
+    primaryLight: {
+      type: DataTypes.STRING(9),
+      defaultValue: '#E6F9EF',
+      allowNull: false,
+    },
+    primaryForeground: {
+      type: DataTypes.STRING(9),
+      defaultValue: '#FFFFFF',
+      allowNull: false,
+    },
+    secondaryColor: {
+      type: DataTypes.STRING(9),
+      defaultValue: '#272372',
+      allowNull: false,
+    },
+    secondaryForeground: {
+      type: DataTypes.STRING(9),
+      defaultValue: '#FFFFFF',
+      allowNull: false,
+    },
+    accentColor: {
+      type: DataTypes.STRING(9),
+      defaultValue: '#43C17A',
+      allowNull: false,
+    },
+    navbarBg: {
+      type: DataTypes.STRING(9),
+      defaultValue: '#43C17A',
+      allowNull: false,
+    },
+    navbarActiveBg: {
+      type: DataTypes.STRING(9),
+      defaultValue: '#F4F4F4',
+      allowNull: false,
+    },
+    navbarActiveText: {
+      type: DataTypes.STRING(9),
+      defaultValue: '#43C17A',
+      allowNull: false,
+    },
+    navbarHoverBg: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'rgba(80,214,137,0.3)',
+      allowNull: false,
+    },
+    scrollbarThumb: {
+      type: DataTypes.STRING(9),
+      defaultValue: '#43C17A',
+      allowNull: false,
+    },
+    logoUrl: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    faviconUrl: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      allowNull: false,
+    },
+    is_deleted: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    deletedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+  }, {
+    tableName: 'college_branding',
+    timestamps: true,
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+    paranoid: false,
+  });
+
+  CollegeBranding.associate = (models) => {
+    CollegeBranding.belongsTo(models.College, {
+      foreignKey: 'collegeId',
+      as: 'college',
+    });
+  };
+
+  return CollegeBranding;
+};
+```
+
+### 1.3 Sequelize Migration
+
+```javascript
+// migrations/XXXXXX-create-college-branding.js
+'use strict';
+
+module.exports = {
+  async up(queryInterface, Sequelize) {
+    await queryInterface.createTable('college_branding', {
+      id: {
+        type: Sequelize.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+        allowNull: false,
+      },
+      collegeId: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        unique: true,
+        references: { model: 'college', key: 'collegeId' },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE',
+      },
+      primaryColor: { type: Sequelize.STRING(9), defaultValue: '#43C17A', allowNull: false },
+      primaryDark: { type: Sequelize.STRING(9), defaultValue: '#1E7745', allowNull: false },
+      primaryLight: { type: Sequelize.STRING(9), defaultValue: '#E6F9EF', allowNull: false },
+      primaryForeground: { type: Sequelize.STRING(9), defaultValue: '#FFFFFF', allowNull: false },
+      secondaryColor: { type: Sequelize.STRING(9), defaultValue: '#272372', allowNull: false },
+      secondaryForeground: { type: Sequelize.STRING(9), defaultValue: '#FFFFFF', allowNull: false },
+      accentColor: { type: Sequelize.STRING(9), defaultValue: '#43C17A', allowNull: false },
+      navbarBg: { type: Sequelize.STRING(9), defaultValue: '#43C17A', allowNull: false },
+      navbarActiveBg: { type: Sequelize.STRING(9), defaultValue: '#F4F4F4', allowNull: false },
+      navbarActiveText: { type: Sequelize.STRING(9), defaultValue: '#43C17A', allowNull: false },
+      navbarHoverBg: { type: Sequelize.STRING(20), defaultValue: 'rgba(80,214,137,0.3)', allowNull: false },
+      scrollbarThumb: { type: Sequelize.STRING(9), defaultValue: '#43C17A', allowNull: false },
+      logoUrl: { type: Sequelize.TEXT, allowNull: true },
+      faviconUrl: { type: Sequelize.TEXT, allowNull: true },
+      isActive: { type: Sequelize.BOOLEAN, defaultValue: true, allowNull: false },
+      is_deleted: { type: Sequelize.BOOLEAN, defaultValue: false },
+      deletedAt: { type: Sequelize.DATE, allowNull: true },
+      createdAt: { type: Sequelize.DATE, defaultValue: Sequelize.literal('NOW()'), allowNull: false },
+      updatedAt: { type: Sequelize.DATE, defaultValue: Sequelize.literal('NOW()'), allowNull: false },
+    });
+
+    // Index for fast lookup
+    await queryInterface.addIndex('college_branding', ['collegeId'], {
+      unique: true,
+      name: 'idx_college_branding_collegeId',
+    });
+  },
+
+  async down(queryInterface) {
+    await queryInterface.dropTable('college_branding');
+  },
+};
+```
+
+### 1.4 Supabase RLS (Row Level Security)
+
+```sql
+-- Enable RLS
+ALTER TABLE college_branding ENABLE ROW LEVEL SECURITY;
+
+-- Policy: College admins can read their own college's branding
+CREATE POLICY "college_branding_read_own"
+ON college_branding
+FOR SELECT
+USING (
+  "collegeId" IN (
+    SELECT ca."collegeId"
+    FROM college_admin ca
+    WHERE ca."userId" = auth.uid()::integer
+      AND ca.is_deleted = false
+  )
+  OR
+  "collegeId" IN (
+    SELECT a."collegeId"
+    FROM admin a
+    WHERE a."userId" = auth.uid()::integer
+      AND a.is_deleted = false
+  )
+  OR
+  "collegeId" IN (
+    SELECT f."collegeId"
+    FROM faculty f
+    WHERE f."userId" = auth.uid()::integer
+      AND f.is_deleted = false
+  )
+  OR
+  "collegeId" IN (
+    SELECT s."collegeId"
+    FROM student s
+    WHERE s."userId" = auth.uid()::integer
+      AND s.is_deleted = false
+  )
+  OR
+  "collegeId" IN (
+    SELECT p."collegeId"
+    FROM parent p
+    WHERE p."userId" = auth.uid()::integer
+      AND p.is_deleted = false
+  )
+);
+
+-- Policy: Only super admins and college admins can update branding
+CREATE POLICY "college_branding_update_own"
+ON college_branding
+FOR UPDATE
+USING (
+  "collegeId" IN (
+    SELECT ca."collegeId"
+    FROM college_admin ca
+    WHERE ca."userId" = auth.uid()::integer
+      AND ca.is_deleted = false
+  )
+);
+
+-- Policy: Only super admins can insert (via service role or explicit policy)
+CREATE POLICY "college_branding_insert_super_admin"
+ON college_branding
+FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM super_admin sa
+    WHERE sa."userId" = auth.uid()::integer
+      AND sa.is_deleted = false
+  )
+);
+```
+
+---
+
+## Phase 2: CSS Variable Token System
+
+### 2.1 Update `globals.css` — Define Branding Tokens
+
+We add a new set of CSS custom properties specifically for branding. These act as the **single source of truth** that all components reference.
+
+#### [MODIFY] [globals.css](file:///d:/collpoll_client/app/globals.css)
+
+```css
+/* ============================================================
+   BRANDING TOKENS (Dynamic Per-College)
+   These CSS variables are the ONLY place branding colors live.
+   They are overridden at runtime by the BrandingProvider.
+   ============================================================ */
+:root {
+  --brand-primary: #43C17A;
+  --brand-primary-dark: #1E7745;
+  --brand-primary-light: #E6F9EF;
+  --brand-primary-foreground: #FFFFFF;
+  --brand-secondary: #272372;
+  --brand-secondary-foreground: #FFFFFF;
+  --brand-accent: #43C17A;
+
+  /* Navbar-specific */
+  --brand-navbar-bg: #43C17A;
+  --brand-navbar-active-bg: #F4F4F4;
+  --brand-navbar-active-text: #43C17A;
+  --brand-navbar-hover-bg: rgba(80, 214, 137, 0.3);
+
+  /* Scrollbar */
+  --brand-scrollbar-thumb: #43C17A;
+}
+```
+
+### 2.2 Update `@theme inline` to Reference Brand Tokens
+
+The existing `@theme inline` block in `globals.css` already defines `--color-primary`. We update it to reference the branding tokens:
+
+```css
+@theme inline {
+  --font-sans: "Jost", sans-serif;
+  --color-primary: var(--brand-primary);
+  --color-primary-foreground: var(--brand-primary-foreground);
+  --color-secondary: var(--brand-secondary);
+  --color-secondary-foreground: var(--brand-secondary-foreground);
+  --color-ring: var(--brand-accent);
+  /* ... rest stays the same */
+}
+```
+
+### 2.3 Update Scrollbar & Selection to Use Variables
+
+```css
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--brand-scrollbar-thumb);
+}
+.custom-scrollbar {
+  scrollbar-color: var(--brand-scrollbar-thumb) #f4f4f4 !important;
+}
+::selection {
+  background-color: color-mix(in srgb, var(--brand-primary) 30%, transparent);
+}
+```
+
+---
+
+## Phase 3: React Context — BrandingProvider
+
+### 3.1 Create Branding API Helper
+
+#### [NEW] `app/utils/context/branding/brandingAPI.ts`
+
+Fetches the branding configuration from Supabase for a given `collegeId`.
+
+### 3.2 Create Branding Context & Provider
+
+#### [NEW] `app/utils/context/branding/useBranding.tsx`
+
+This context:
+1. Reads `collegeId` from the user's existing context (admin, faculty, student, etc.)
+2. Fetches the branding row from `college_branding`
+3. Applies all CSS variables to `document.documentElement.style`
+4. Falls back to defaults if no custom branding exists
+5. Provides a `branding` object for JS-level access (e.g., AG-Charts fill colors)
+
+### 3.3 Wire into Root Layout
+
+#### [MODIFY] [layout.tsx](file:///d:/collpoll_client/app/layout.tsx)
+
+Wrap the app tree with `<BrandingProvider>` after the `UserProvider` so it has access to user context.
+
+---
+
+## Phase 4: Gradual Migration of Hardcoded Colors
+
+> [!WARNING]
+> This is the largest phase. There are **600+ occurrences** of `#43C17A` alone across the codebase. We will migrate in **batches by portal**, not all at once.
+
+### 4.1 Migration Strategy — Replacement Map
+
+| Hardcoded Value | CSS Variable | Tailwind Class |
+|----------------|-------------|---------------|
+| `bg-[#43C17A]` | `var(--brand-navbar-bg)` | `bg-[var(--brand-navbar-bg)]` |
+| `text-[#43C17A]` | `var(--brand-primary)` | `text-[var(--brand-primary)]` |
+| `text-[#1E7745]` | `var(--brand-primary-dark)` | `text-[var(--brand-primary-dark)]` |
+| `bg-[#43C17A1C]` | — | `bg-[color-mix(in_srgb,var(--brand-primary)_11%,transparent)]` |
+| `bg-[#272372]` | `var(--brand-secondary)` | `bg-[var(--brand-secondary)]` |
+| `hover:bg-[#50D689]/30` | `var(--brand-navbar-hover-bg)` | `hover:bg-[var(--brand-navbar-hover-bg)]` |
+| JS: `fill: "#43C17A"` | Read from context | `const { branding } = useBranding(); fill: branding.primaryColor` |
+
+### 4.2 Migration Order (By Portal Priority)
+
+| Batch | Portal | Estimated Files | Priority |
+|-------|--------|----------------|----------|
+| 1 | **Navbars** (all 13) | ~13 files | 🔴 Highest — most visible |
+| 2 | **College Admin** portal | ~30 files | 🔴 High |
+| 3 | **Admin** portal | ~25 files | 🟡 Medium |
+| 4 | **Faculty** portal | ~40 files | 🟡 Medium |
+| 5 | **Student** portal | ~50 files | 🟡 Medium |
+| 6 | **Parent** portal | ~15 files | 🟢 Lower |
+| 7 | **Finance / HR / Placement** | ~30 files | 🟢 Lower |
+| 8 | **Shared Utils** (table, card, etc.) | ~20 files | 🟢 Lower |
+| 9 | **Profile** module | ~25 files | 🟢 Lower |
+
+### 4.3 Example: Navbar Migration (Batch 1)
+
+**Before** (hardcoded):
+```tsx
+<div className="bg-[#43C17A] flex flex-col ...">
+  <Link className={`${isActive ? "text-[#43C17A]" : "text-white"}`}>
+```
+
+**After** (dynamic):
+```tsx
+<div className="bg-[var(--brand-navbar-bg)] flex flex-col ...">
+  <Link className={`${isActive ? "text-[var(--brand-navbar-active-text)]" : "text-white"}`}>
+```
+
+### 4.4 Example: AG-Charts Migration (JS Colors)
+
+**Before**:
+```tsx
+const options = { series: [{ fill: "#43C17A" }] };
+```
+
+**After**:
+```tsx
+const { branding } = useBranding();
+const options = { series: [{ fill: branding.primaryColor }] };
+```
+
+---
+
+## Phase 5: Super Admin Branding Management UI
+
+#### [NEW] `app/(screens)/super-admin/branding/page.tsx`
+
+A dedicated screen in the Super Admin portal where the platform owner can:
+- View all colleges and their current branding
+- Edit colors using a color picker for any college
+- Preview the theme in real-time
+- Reset a college to default branding
+- Upload custom logos and favicons
+
+---
+
+## Phase 6: Caching & Performance
+
+### 6.1 Client-Side Caching
+- Cache branding in `localStorage` with a TTL of 24 hours
+- On login, check cache first → if fresh, apply instantly (zero flicker)
+- If stale or missing, fetch from DB → update cache
+
+### 6.2 SSR Considerations
+- CSS variables with defaults in `:root` ensure SSR renders correctly with default branding
+- Client-side hydration then overrides with college-specific values
+- No FOUC (Flash of Unstyled Content) because defaults match the current look
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Unit test the `BrandingProvider` to ensure CSS variables are applied correctly
+- Test fallback to defaults when no `college_branding` row exists
+- Test RLS policies with different user roles
+
+### Manual Verification
+- Log in as different colleges and verify distinct branding
+- Verify no flicker on page load (cache-first strategy)
+- Verify all 13 navbars, buttons, scrollbars, charts pick up custom colors
+- Verify Super Admin panel can CRUD branding configurations
+- Verify college users cannot read/modify other colleges' branding (RLS)
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Q1**: Do you want colleges themselves to be able to customize their branding (via College Admin settings), or should only the Super Admin control this?
+
+> [!IMPORTANT]
+> **Q2**: Do you need different branding per portal within the same college (e.g., Student portal = blue, Faculty portal = green), or is it one unified brand per college across all portals?
+
+> [!IMPORTANT]
+> **Q3**: Should we also support custom fonts per college, or just colors and logos?
+
+> [!IMPORTANT]
+> **Q4**: For the backend Sequelize models, do you have a separate backend server repo, or should the models be created as Supabase SQL migrations only?

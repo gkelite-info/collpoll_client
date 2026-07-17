@@ -98,8 +98,20 @@ export default function SummaryPage() {
 
   const isInter = ["Inter"].includes(role);
 
-  const systemId =
-    identifierId || (collegeAdminId ? String(collegeAdminId) : String(userId));
+  const systemId = identifierId || "Not Provided";
+    
+  const isSchoolStr = typeof document !== 'undefined'
+    ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
+    : null;
+  const isSchool = isSchoolStr === "true";
+
+  const getDisplayRole = (r: string) => {
+    if (r === "CollegeAdmin") return isSchool ? "SchoolAdmin" : "CollegeAdmin";
+    if (r === "CollegeHr") return isSchool ? "SchoolHR" : "CollegeHR";
+    return r;
+  };
+  
+  const displayRole = getDisplayRole(role || "");
 
   return (
     <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-4 text-left">
@@ -112,13 +124,13 @@ export default function SummaryPage() {
             {fullName}
           </h2>
           <span className="text-xs font-semibold text-[#43C17A] bg-[#43C17A]/10 px-2 py-0.5 rounded mt-1">
-            {role}
+            {displayRole}
           </span>
         </div>
         <div className="flex flex-col items-center justify-center space-y-0.5">
-          <InfoRow label={`${role} ID`} value={systemId} />
+          <InfoRow label={`${displayRole} ID`} value={systemId} />
           <InfoRow
-            label={isInter ? "Group" : "college Name"}
+            label={isInter ? "Group" : (isSchool ? "School Name" : "College Name")}
             value={collegeName}
           />
           <InfoRow label="Mobile" value={mobile} />

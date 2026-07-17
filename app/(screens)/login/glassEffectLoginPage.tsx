@@ -146,7 +146,11 @@ export default function LoginPage() {
         collegehr: "/hr",
       };
 
-      const redirectPath = roleRouteMap[role] || "/login";
+      let redirectPath = roleRouteMap[role] || "/login";
+
+      if (role === "collegeadmin" && res.user.isSchool) {
+        redirectPath = "/school-admin";
+      }
 
       toast.success("Login successful!");
       window.location.href = redirectPath;

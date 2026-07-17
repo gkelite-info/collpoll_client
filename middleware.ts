@@ -245,10 +245,47 @@ export async function middleware(request: NextRequest) {
                 }
             }
 
-            if (!pathname.startsWith(userLandingPage)) {
+            let actualLandingPage = userLandingPage;
+            if (normalizedRole === "College-Admin") {
+                let isSchoolStr = request.cookies.get("isSchool")?.value;
+
+                if (!isSchoolStr) {
+                    const { data: eduData } = await supabase
+                        .from("college_education")
+                        .select("collegeEducationType")
+                        .eq("collegeId", userProfile.collegeId)
+                        .eq("isActive", true);
+                        
+                    const isSchoolBool = eduData?.some((e: any) => {
+                        const type = e.collegeEducationType;
+                        return type ? ["CBSE", "SSC", "ICSE", "ISC", "IB"].includes(type.trim().toUpperCase()) : false;
+                    }) || false;
+                    
+                    isSchoolStr = String(isSchoolBool);
+                    response.cookies.set("isSchool", isSchoolStr, { path: "/" });
+                }
+
+                if (isSchoolStr === "true") {
+                    actualLandingPage = "/school-admin";
+                }
+            }
+
+            if (!pathname.startsWith(actualLandingPage)) {
                 const url = request.nextUrl.clone();
-                url.pathname = userLandingPage;
-                url.search = '';
+                const wrongBasePath = actualLandingPage === "/school-admin" ? "/college-admin" : "/school-admin";
+                
+                if (pathname.startsWith(wrongBasePath)) {
+                   let replacedPath = pathname.replace(wrongBasePath, actualLandingPage);
+                   if (actualLandingPage === "/school-admin") {
+                       replacedPath = replacedPath.replace("/institution-management", "/school-management");
+                   } else {
+                       replacedPath = replacedPath.replace("/school-management", "/institution-management");
+                   }
+                   url.pathname = replacedPath;
+                } else {
+                   url.pathname = actualLandingPage;
+                   url.search = '';
+                }
                 return applyNoStoreHeaders(NextResponse.redirect(url));
             }
             return response;

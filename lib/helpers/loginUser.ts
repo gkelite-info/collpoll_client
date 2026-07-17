@@ -1,7 +1,8 @@
 "use server";
 
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { createClient } from "../supabaseServer";
+import { isSchoolEducation } from "./admin/academicSetup/schoolHelper";
 
 export async function loginUser(email: string, password: string) {
   try {
@@ -139,10 +140,22 @@ export async function loginUser(email: string, password: string) {
       }
     }
 
+    let isSchool = false;
+    if (userProfile.collegeId) {
+      const { data: eduData } = await supabase
+        .from("college_education")
+        .select("collegeEducationType")
+        .eq("collegeId", userProfile.collegeId)
+        .eq("isActive", true);
+      isSchool = eduData?.some((e) => isSchoolEducation(e.collegeEducationType)) || false;
+      const cookieStore = await cookies();
+      cookieStore.set("isSchool", String(isSchool), { path: "/" });
+    }
+
     return {
       success: true,
       session: authData.session,
-      user: userProfile,
+      user: { ...userProfile, isSchool },
     };
   } catch (err) {
     console.error("Login Server Action Error:", err);

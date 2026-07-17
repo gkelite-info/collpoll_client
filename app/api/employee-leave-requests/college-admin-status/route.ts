@@ -25,6 +25,9 @@ export async function PATCH(request: NextRequest) {
   try {
     const payload = (await request.json()) as StatusPayload;
     const { employeeLeaveRequestId, status, collegeAdminId, userId } = payload;
+    
+    const isSchool = request.cookies.get("isSchool")?.value === "true";
+    const adminLabel = isSchool ? "School Admin" : "College Admin";
 
     if (!employeeLeaveRequestId || !status || !collegeAdminId || !userId) {
       return NextResponse.json(
@@ -55,7 +58,7 @@ export async function PATCH(request: NextRequest) {
 
     if (!collegeAdmin?.collegeId) {
       return NextResponse.json(
-        { error: "College Admin session was not found." },
+        { error: `${adminLabel} session was not found.` },
         { status: 403 },
       );
     }
@@ -74,15 +77,17 @@ export async function PATCH(request: NextRequest) {
     if (leaveRequestError) throw leaveRequestError;
 
     if (!leaveRequest) {
+      const institutionLabel = isSchool ? "school" : "college";
       return NextResponse.json(
-        { error: "Leave request was not found for this college." },
+        { error: `Leave request was not found for this ${institutionLabel}.` },
         { status: 404 },
       );
     }
 
     if (!editableRequesterRoles.has(leaveRequest.role as string)) {
+      const hrLabel = isSchool ? "School HR" : "College HR";
       return NextResponse.json(
-        { error: "College Admin can edit only HR requests." },
+        { error: `Only ${hrLabel} leave requests can be edited.` },
         { status: 403 },
       );
     }
@@ -100,7 +105,7 @@ export async function PATCH(request: NextRequest) {
 
     if (!tag) {
       return NextResponse.json(
-        { error: "This leave request is not tagged to this College Admin." },
+        { error: `This leave request is not tagged to this ${adminLabel}.` },
         { status: 403 },
       );
     }

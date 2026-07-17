@@ -21,6 +21,13 @@ export default function ProfilePersonalDetails() {
     const [isLoading, setIsloading] = useState(false);
     const [isPageLoading, setIsPageLoading] = useState(true);
     const isSuperAdmin = role === "SuperAdmin";
+    const isSchoolStr = typeof document !== 'undefined'
+        ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
+        : null;
+    const isSchool = isSchoolStr === "true";
+    const showWorkStatus = isSchool 
+        ? (role !== "Student" && role !== "Parent")
+        : (role !== "Parent");
 
     const inputBaseStyles = "w-full border rounded-md px-3 py-2 outline-none transition-all";
     const disabledStyles = "bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed pr-10";
@@ -114,8 +121,8 @@ export default function ProfilePersonalDetails() {
             return toast.error("Enter valid LinkedIn URL");
         }
         if (!isSuperAdmin) {
-            if (!collegeId) return toast.error("College ID is required!");
-            if (!collegeCode) return toast.error("CollegeCode is required");
+            if (!collegeId) return toast.error(isSchool ? "School ID is required!" : "College ID is required!");
+            if (!collegeCode) return toast.error(isSchool ? "School Code is required!" : "CollegeCode is required");
         }
         setIsloading(true);
         const [userRes, pdRes] = await Promise.all([
@@ -206,7 +213,7 @@ export default function ProfilePersonalDetails() {
                     {!isSuperAdmin && (
                         <div>
                             <label className="block text-sm font-medium text-[#282828] mb-1">
-                                College Code
+                                {isSchool ? "School Code" : "College Code"}
                             </label>
                             <div className="relative">
                                 <input
@@ -247,31 +254,8 @@ export default function ProfilePersonalDetails() {
                             className="w-full border rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
                         />
                     </div>
-                    {!isSuperAdmin && (
-                        <div>
-                            <label className="block text-sm font-medium text-[#282828] mb-1">
-                                College ID<span className="text-red-500">*</span>
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    placeholder="Enter College ID"
-                                    value={collegeId !== null ? collegeId : ""}
-                                    onChange={(e) => {
-                                        let clean = e.target.value.replace(/\D/g, "");
-                                        if (clean === "0") clean = "";
-                                        if (clean.startsWith("0")) clean = clean.replace(/^0+/, "");
-                                    }}
-                                    disabled
-                                    className={`${inputBaseStyles} ${disabledStyles}`}
-                                // className="w-full cursor-not-allowed border rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
-                                />
-                                <Lock className="absolute cursor-not-allowed right-2 top-3 text-gray-400" size={16} />
-                            </div>
-                        </div>
-                    )}
                 </div>
-                {!(role === "Parent") && (
+                {showWorkStatus && (
                     <div className="mt-6">
                         <label className="block text-sm font-medium text-[#282828] mb-2">
                             Work Status

@@ -7,6 +7,11 @@ interface Props {
 }
 
 const FacultyInfoCard: React.FC<Props> = ({ profile }) => {
+  const isSchoolStr = typeof document !== 'undefined'
+    ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
+    : null;
+  const isSchool = isSchoolStr === "true";
+
   return (
     <div className="flex bg-white rounded-xl p-4 w-[70%] shadow-sm items-center gap-8 border border-gray-100/50">
       {/* Avatar & Name */}
@@ -18,7 +23,7 @@ const FacultyInfoCard: React.FC<Props> = ({ profile }) => {
       </div>
 
       <div className="grid grid-cols-[120px_1fr] gap-y-2 text-[13px]">
-        <div className="text-[#282828] font-semibold">ID</div>
+        <div className="text-[#282828] font-semibold">{isSchool ? "School Staff ID" : "College Staff ID"}</div>
         <div className="text-gray-500">{profile.id}</div>
 
         <div className="text-[#282828] font-semibold">Department</div>

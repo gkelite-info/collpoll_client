@@ -10,63 +10,19 @@ import {
   fetchUserAttendanceRecords,
   fetchUserAttendanceStats,
 } from "@/lib/helpers/Hr/attendance/AttendanceAnalyticsAPI";
+import AttendanceTableShimmer from "@/app/(screens)/college-admin/my-attendance/shimmers/AttendanceTableShimmer";
+import AttendanceStatusCardShimmer from "@/app/(screens)/college-admin/my-attendance/shimmers/AttendanceStatusCardShimmer";
 
 interface Props {
   userId: number;
   profile: UniversalProfileData;
 }
 
-// 🟢 Custom Status Card Skeleton
-const StatusCardSkeleton = () => (
-  <div className="bg-white rounded-xl p-4 w-[30%] shadow-sm flex flex-col justify-between border border-gray-100/50 min-h-[160px]">
-    {[1, 2, 3, 4].map((i) => (
-      <div key={i} className="mb-2 last:mb-0">
-        <div className="h-3 w-32 bg-gray-200 rounded animate-pulse mb-2" />
-        <div className="h-4 w-12 bg-gray-200 rounded animate-pulse" />
-      </div>
-    ))}
-  </div>
-);
-
-// 🟢 Custom Table Skeleton
-const TableSkeletonOverlay = () => (
-  <div className="absolute inset-0 z-10 bg-white rounded-lg flex flex-col border border-gray-100 shadow-sm">
-    <div className="flex justify-between items-end mb-2.5 p-4 pb-0">
-      <div className="h-5 w-40 bg-gray-200 rounded animate-pulse" />
-      <div className="flex gap-2">
-        <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" />
-        <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" />
-      </div>
-    </div>
-    <div className="mt-1 mx-4 border border-gray-100 rounded-lg overflow-hidden">
-      <div className="bg-[#F2F2F2] flex gap-4 p-3 border-b border-gray-100">
-        {[...Array(7)].map((_, i) => (
-          <div
-            key={i}
-            className="h-3 flex-1 bg-gray-300 rounded animate-pulse"
-          />
-        ))}
-      </div>
-      <div className="p-3 space-y-5 mt-2">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="flex gap-4">
-            {[...Array(7)].map((_, j) => (
-              <div
-                key={j}
-                className="h-3 flex-1 bg-gray-100 rounded animate-pulse"
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
 const AttendancePage = ({ userId, profile }: Props) => {
   const [stats, setStats] = useState<AttendanceStats | null>(null);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   const currentDate = new Date();
   const defaultMonth = currentDate
@@ -89,13 +45,15 @@ const AttendancePage = ({ userId, profile }: Props) => {
 
   useEffect(() => {
     fetchUserAttendanceStats(userId).then(setStats);
+    loadRecords(defaultMonth, defaultYear);
   }, [userId]);
 
   const loadRecords = async (month: string, year: string) => {
-    setLoading(true);
+    setTableLoading(true);
     const data = await fetchUserAttendanceRecords(userId, month, year);
     setRecords(data as AttendanceRecord[]);
-    setLoading(false);
+    setTableLoading(false);
+    setInitialLoad(false);
   };
 
   return (
@@ -106,19 +64,22 @@ const AttendancePage = ({ userId, profile }: Props) => {
         {stats ? (
           <AttendanceStatusCard stats={stats} />
         ) : (
-          <StatusCardSkeleton />
+          <AttendanceStatusCardShimmer />
         )}
       </div>
 
-      <div className="relative flex-1 min-h-[350px]">
-        {loading && <TableSkeletonOverlay />}
-
-        <AttendanceTable
-          records={records}
-          month={defaultMonth}
-          year={defaultYear}
-          onDateChange={loadRecords}
-        />
+      <div className="flex-1 min-h-[350px]">
+        {initialLoad ? (
+          <AttendanceTableShimmer />
+        ) : (
+          <AttendanceTable
+            records={records}
+            month={defaultMonth}
+            year={defaultYear}
+            onDateChange={loadRecords}
+            loading={tableLoading}
+          />
+        )}
       </div>
     </div>
   );

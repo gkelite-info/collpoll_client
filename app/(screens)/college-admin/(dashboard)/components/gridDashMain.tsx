@@ -7,6 +7,7 @@ import {
   UserGear,
   Buildings,
   UsersThree,
+  Books,
 } from "@phosphor-icons/react";
 import {
   FeeCollectionTrend,
@@ -54,6 +55,14 @@ const statConfig = [
     label: "Branches",
     color: "bg-[#E2F9EB]",
     icon: Buildings,
+    iconColor: "text-[#10B981]",
+  },
+  {
+    id: 5,
+    key: "totalClasses",
+    label: "Classes",
+    color: "bg-[#E2F9EB]",
+    icon: Books,
     iconColor: "text-[#10B981]",
   },
   {
@@ -459,7 +468,10 @@ export default function CollegeAdminDashboard() {
     <div className="min-h-screen">
       <div className="grid grid-cols-2 landscape:grid-cols-4 md:grid-cols-2 landscape:md:grid-cols-4 lg:grid-cols-4 gap-3 mb-3 md:mb-3 lg:mb-6">
         {statConfig
-          .filter(stat => !(isSchool && stat.key === "totalBranches"))
+          .filter(stat => {
+            if (isSchool) return stat.key !== "totalBranches";
+            return stat.key !== "totalClasses";
+          })
           .map((stat) =>
           isLoading || !stats ? (
             <StatCardShimmer key={stat.id} />
@@ -478,7 +490,9 @@ export default function CollegeAdminDashboard() {
 
       <div className="bg-white p-4 rounded-xl shadow-sm mb-3 md:mb-3 lg:mb-6">
         <div className="grid grid-cols-2 landscape:grid-cols-3 md:grid-cols-3 landscape:md:grid-cols-3 lg:grid-cols-6 landscape:lg:grid-cols-6 gap-4">
-          {quickLinks.map((link) => (
+          {quickLinks
+            .filter(link => !(isSchool && link === "Placement"))
+            .map((link) => (
             <QuickLinkCard
               key={link}
               title={link}

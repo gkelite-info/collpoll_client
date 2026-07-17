@@ -11,7 +11,11 @@ interface Props {
 
 const FacultyInfoCard: FC<Props> = ({ profile, loading }) => {
   const { collegeEducationType } = useCollegeAdmin();
-  const isSchool = isSchoolEducation(collegeEducationType);
+  
+  const isSchoolStr = typeof document !== 'undefined'
+    ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
+    : null;
+  const isSchool = isSchoolStr === "true";
 
   return (
     <div className="flex bg-white rounded-xl p-4 w-[70%] overflow-auto shadow-sm items-center gap-8 border border-gray-100/50">

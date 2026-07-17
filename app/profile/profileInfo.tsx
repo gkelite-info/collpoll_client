@@ -119,7 +119,7 @@ export default function ProfileInfo() {
   } = currentUser;
 
   const [profileData, setProfileData] = useState<ProfileInfoData>({
-    registrationId: String(identifierId || userId),
+    registrationId: role === "SuperAdmin" ? String(userId ?? "") : String(identifierId || "Not Provided"),
     email: email || "",
     phone: mobile || "",
     educationType: collegeEducationType || "",
@@ -175,10 +175,7 @@ export default function ProfileInfo() {
     });
 
     setProfileData({
-      registrationId:
-        role === "SuperAdmin"
-          ? String(userId ?? "")
-          : String(identifierId ?? registrationId ?? ""),
+      registrationId: role === "SuperAdmin" ? String(userId ?? "") : String(identifierId || "Not Provided"),
       email: email || "",
       phone: mobile || "",
       educationType: collegeEducationType || "",

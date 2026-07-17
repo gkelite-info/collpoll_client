@@ -116,6 +116,13 @@ export default function ClientLayout({
 
     const resolveRoleDashboard = (rawRole: string | null) => {
       const normalizedRole = normalizeRole(rawRole);
+      const isSchoolStr = typeof document !== 'undefined'
+        ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
+        : null;
+
+      if (normalizedRole === "College-Admin" && (pathname.startsWith("/school-admin") || isSchoolStr === "true")) {
+        return "/school-admin";
+      }
       return normalizedRole ? getLandingPageForRole(normalizedRole) : null;
     };
 
@@ -216,110 +223,7 @@ export default function ClientLayout({
     };
   }, [matchesRouteSegment, pathname, refreshUserContext, role, router]);
 
-  useEffect(() => {
-    let isMounted = true;
 
-    const resolveRoleDashboard = (rawRole: string | null) => {
-      const normalizedRole = normalizeRole(rawRole);
-      return normalizedRole ? getLandingPageForRole(normalizedRole) : null;
-    };
-
-    const redirectForAuthState = async () => {
-      if (isExemptedRoute(pathname)) return;
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!isMounted) return;
-
-      if (!user) {
-        if (!isPublicRoute(pathname)) {
-          router.replace("/login");
-          router.refresh();
-        }
-        return;
-      }
-
-      if (isAuthOnlyRoute(pathname) || pathname === "/") {
-        let dashboardPath = resolveRoleDashboard(role);
-
-        if (!dashboardPath) {
-          await refreshUserContext();
-          const { data: profile } = await supabase
-            .from("users")
-            .select("role")
-            .eq("auth_id", user.id)
-            .maybeSingle();
-
-          if (!isMounted) return;
-
-          dashboardPath = resolveRoleDashboard(profile?.role ?? null);
-        }
-
-        if (dashboardPath && pathname !== dashboardPath) {
-          router.replace(dashboardPath);
-          router.refresh();
-        }
-        return;
-      }
-
-      if (!isPublicRoute(pathname) && !isAuthProtectedRoute(pathname)) {
-        let dashboardPath = resolveRoleDashboard(role);
-
-        if (!dashboardPath) {
-          await refreshUserContext();
-          const { data: profile } = await supabase
-            .from("users")
-            .select("role")
-            .eq("auth_id", user.id)
-            .maybeSingle();
-
-          if (!isMounted) return;
-
-          dashboardPath = resolveRoleDashboard(profile?.role ?? null);
-        }
-
-        const isStudentLegacyPath =
-          dashboardPath === "/stu_dashboard" && isLegacyStudentRoute(pathname);
-
-        if (
-          dashboardPath &&
-          !matchesRouteSegment(dashboardPath) &&
-          !isStudentLegacyPath
-        ) {
-          router.replace(dashboardPath);
-          router.refresh();
-        }
-      }
-    };
-
-    const handlePageShow = () => {
-      redirectForAuthState();
-    };
-
-    const handleFocus = () => {
-      redirectForAuthState();
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        redirectForAuthState();
-      }
-    };
-
-    redirectForAuthState();
-    window.addEventListener("pageshow", handlePageShow);
-    window.addEventListener("focus", handleFocus);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener("pageshow", handlePageShow);
-      window.removeEventListener("focus", handleFocus);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [matchesRouteSegment, pathname, refreshUserContext, role, router]);
 
   // const wellbeingRouteShimmer = useMemo(() => {
   //   if (pathname.startsWith("/wellbeing-manager")) {
@@ -385,7 +289,10 @@ export default function ClientLayout({
       if (pathname.startsWith("/accountant"))
         return <AccountantNavbar onClose={onClose} />;
       if (pathname.startsWith("/finance")) return <FinanceNavbar />;
-      if (pathname.startsWith("/college-admin"))
+      if (
+        pathname.startsWith("/college-admin") ||
+        pathname.startsWith("/school-admin")
+      )
         return <CollegeAdminNavbar onClose={onClose} />;
       if (pathname.startsWith("/hr")) return <HrNavbar onClose={onClose} />;
       if (pathname.startsWith("/wellbeing-executive")) {

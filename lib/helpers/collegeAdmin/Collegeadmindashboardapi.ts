@@ -45,6 +45,7 @@ export type DashboardStats = {
   totalAdmins: number;
   totalBranches: number;
   totalUsers: number;
+  totalClasses?: number;
   eduTypeStats: EduTypeStat[];
   adminDetails: AdminDetail[];
 };
@@ -52,7 +53,7 @@ export type DashboardStats = {
 export async function fetchCollegeAdminDashboardStats(
   collegeId: number,
 ): Promise<DashboardStats> {
-  const [eduRes, adminsRes, branchRes, usersRes] = await Promise.all([
+  const [eduRes, adminsRes, branchRes, usersRes, classesRes] = await Promise.all([
     supabase
       .from("college_education")
       .select("collegeEducationId, collegeEducationType")
@@ -87,18 +88,26 @@ export async function fetchCollegeAdminDashboardStats(
       .select("userId, email, dateOfJoining", { count: "exact" })
       .eq("collegeId", collegeId)
       .eq("is_deleted", false),
+
+    supabase
+      .from("college_academic_year")
+      .select("collegeAcademicYearId", { count: "exact", head: true })
+      .eq("collegeId", collegeId)
+      .is("deletedAt", null),
   ]);
 
   if (eduRes.error) throw eduRes.error;
   if (adminsRes.error) throw adminsRes.error;
   if (branchRes.error) throw branchRes.error;
   if (usersRes.error) throw usersRes.error;
+  if (classesRes.error) throw classesRes.error;
 
   const eduList = eduRes.data ?? [];
   const adminList = adminsRes.data ?? [];
   const branchList = branchRes.data ?? [];
   const userList = usersRes.data ?? [];
   const totalUsers = usersRes.count ?? 0;
+  const totalClasses = classesRes.count ?? 0;
 
   const userDateOfJoiningMap = new Map<string, string | null>(
     userList.map((u: any) => [u.email, u.dateOfJoining]),
@@ -140,6 +149,7 @@ export async function fetchCollegeAdminDashboardStats(
     totalAdmins: adminList.length,
     totalBranches: branchList.length,
     totalUsers,
+    totalClasses,
     eduTypeStats,
     adminDetails,
   };

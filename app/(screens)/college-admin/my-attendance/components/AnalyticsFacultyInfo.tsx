@@ -6,10 +6,15 @@ interface Props {
 }
 
 const AnalyticsFacultyInfo: FC<Props> = ({ profile }) => {
+  const isSchoolStr = typeof document !== 'undefined'
+    ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
+    : null;
+  const isSchool = isSchoolStr === "true";
+
   return (
     <div className="w-full mb-5 text-[14px]">
       <h2 className="text-[#282828] font-bold text-[17px] mb-4">
-        CollegeAdmin Information
+        {isSchool ? "SchoolAdmin Information" : "CollegeAdmin Information"}
       </h2>
 
       <div className="grid grid-cols-3 gap-y-3.5 w-full">

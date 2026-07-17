@@ -58,6 +58,7 @@ const AttendancePage = () => {
   const [infoLoading, setInfoLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -117,6 +118,7 @@ const AttendancePage = () => {
         setTotalItems(0);
       } finally {
         setTableLoading(false);
+        setInitialLoad(false);
       }
     };
 
@@ -160,10 +162,11 @@ const AttendancePage = () => {
         {(statsLoading || !stats) ? <AttendanceStatusCardShimmer /> : <AttendanceStatusCard stats={stats} />}
       </div>
 
-      {tableLoading
+      {initialLoad
         ? <AttendanceTableShimmer />
         :
         <AttendanceTable
+          loading={tableLoading}
           records={records}
           month={
             [

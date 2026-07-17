@@ -15,6 +15,7 @@ import {
   fetchUserAttendanceStats,
   fetchUserMonthlyChartData,
 } from "@/lib/helpers/Hr/attendance/AttendanceAnalyticsAPI";
+import AttendanceTableShimmer from "@/app/(screens)/college-admin/my-attendance/shimmers/AttendanceTableShimmer";
 
 interface Props {
   userId: number;
@@ -56,41 +57,6 @@ const ChartSkeleton = () => {
   );
 };
 
-// 🟢 Custom Table Skeleton
-const TableSkeletonOverlay = () => (
-  <div className="absolute inset-0 z-10 bg-white rounded-lg flex flex-col border border-gray-100 shadow-sm">
-    <div className="flex justify-between items-end mb-2.5 p-4 pb-0">
-      <div className="h-5 w-40 bg-gray-200 rounded animate-pulse" />
-      <div className="flex gap-2">
-        <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" />
-        <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" />
-      </div>
-    </div>
-    <div className="mt-1 mx-4 border border-gray-100 rounded-lg overflow-hidden">
-      <div className="bg-[#F2F2F2] flex gap-4 p-3 border-b border-gray-100">
-        {[...Array(7)].map((_, i) => (
-          <div
-            key={i}
-            className="h-3 flex-1 bg-gray-300 rounded animate-pulse"
-          />
-        ))}
-      </div>
-      <div className="p-3 space-y-5 mt-2">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="flex gap-4">
-            {[...Array(7)].map((_, j) => (
-              <div
-                key={j}
-                className="h-3 flex-1 bg-gray-100 rounded animate-pulse"
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
 const AttendanceAnalyticsPage = ({ userId, profile }: Props) => {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -98,6 +64,7 @@ const AttendanceAnalyticsPage = ({ userId, profile }: Props) => {
     useState<AnalyticsFacultyProfile | null>(null);
   const [loadingChart, setLoadingChart] = useState(true);
   const [loadingTable, setLoadingTable] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   const currentDate = new Date();
   const defaultMonth = currentDate
@@ -129,6 +96,9 @@ const AttendanceAnalyticsPage = ({ userId, profile }: Props) => {
       setChartData(data);
       setLoadingChart(false);
     });
+
+    // 3. Initial records fetch
+    loadRecords(defaultMonth, defaultYear);
   }, [userId, profile]);
 
   const loadRecords = async (month: string, year: string) => {
@@ -136,6 +106,7 @@ const AttendanceAnalyticsPage = ({ userId, profile }: Props) => {
     const data = await fetchUserAttendanceRecords(userId, month, year);
     setRecords(data as AttendanceRecord[]);
     setLoadingTable(false);
+    setInitialLoad(false);
   };
 
   return (
@@ -151,15 +122,19 @@ const AttendanceAnalyticsPage = ({ userId, profile }: Props) => {
         <AttendancePerformanceChart data={chartData} />
       </div>
 
-      <div className="relative min-h-[350px]">
-        {loadingTable && <TableSkeletonOverlay />}
-        <AttendanceTable
-          title="Daily Attendance Record"
-          records={records}
-          month={defaultMonth}
-          year={defaultYear}
-          onDateChange={loadRecords}
-        />
+      <div className="flex-1 min-h-[350px]">
+        {initialLoad ? (
+          <AttendanceTableShimmer />
+        ) : (
+          <AttendanceTable
+            title="Daily Attendance Record"
+            records={records}
+            month={defaultMonth}
+            year={defaultYear}
+            onDateChange={loadRecords}
+            loading={loadingTable}
+          />
+        )}
       </div>
     </div>
   );

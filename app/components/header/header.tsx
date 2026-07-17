@@ -28,6 +28,8 @@ import { getSearchRoutesByRole } from "@/lib/config/searchRoutes";
 import { Avatar } from "@/app/utils/Avatar";
 import { countActiveFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
 
 type Props = {
   onMenuClick?: () => void;
@@ -79,12 +81,12 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
     loading,
   } = useUser();
   const { facultyId: activeFacultyId } = useFaculty();
+  const { collegeEducationType: adminCollegeEduType } = useCollegeAdmin();
 
 
   const searchParams = useSearchParams();
   const router = useRouter();
   const highlightedPostId = searchParams.get("post");
-  const [openAddTask, setOpenAddTask] = useState(false);
   const [activeTaskCount, setActiveTaskCount] = useState<number>(0);
   const availableRoutes = useMemo(() => getSearchRoutesByRole(role), [role]);
   const roleIdMap = useMemo<Record<string, number | null>>(
@@ -117,10 +119,14 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
       userId,
     ],
   );
+  const isSchoolStr = typeof document !== 'undefined'
+    ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
+    : null;
+  const isSchool = isSchoolStr === "true" || isSchoolEducation(collegeEducationType || adminCollegeEduType);
   const displayRoleMap: Record<string, string> = {
     FinanceManager: "Finance Manager",
     Accountant: "Accountant",
-    CollegeAdmin: "College Admin",
+    CollegeAdmin: isSchool ? "School Admin" : "College Admin",
     CollegeHr: "College HR",
     PlacementOfficer: "Placement Officer",
     WellbeingExecutive: "Wellbeing Executive",
@@ -128,7 +134,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
     SuperAdmin: "Super Admin",
   };
   const displayRole = role ? displayRoleMap[role] ?? role : "";
-  const displayId = identifierId || (role ? roleIdMap[role] : null) || userId;
+  const displayId = identifierId || "Not Provided";
   const wellbeingCategoryDisplay = Array.from(
     new Map(
       [wellBeingCategoryName, ...wellBeingCategoryNames]

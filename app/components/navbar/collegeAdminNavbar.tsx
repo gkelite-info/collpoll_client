@@ -47,6 +47,7 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
   const { collegeCode } = useUser();
   const { collegeEducationType, loading: contextLoading } = useCollegeAdmin();
   const isSchool = isSchoolEducation(collegeEducationType);
+  const basePath = isSchool ? "/school-admin" : "/college-admin";
 
   const items: NavItem[] = useMemo(() => {
     const isAdmissionsAllowed = ["bcca", "bcpgc", "bjcg"].includes(collegeCode?.toLowerCase() || "");
@@ -57,14 +58,14 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
           <House size={18} weight={isActive ? "fill" : "regular"} />
         ),
         label: t("Home"),
-        path: "/college-admin",
+        path: basePath,
       },
       {
         icon: (isActive: boolean) => (
           <GraduationCap size={18} weight={isActive ? "fill" : "regular"} />
         ),
         label: t("Admissions"),
-        path: "/college-admin/admissions",
+        path: `${basePath}/admissions`,
       },
       {
         icon: (isActive: boolean) => (
@@ -74,78 +75,78 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
           />
         ),
         label: isSchool ? "School Management" : t("Institution Management"),
-        path: "/college-admin/institution-management",
+        path: isSchool ? `${basePath}/school-management` : `${basePath}/institution-management`,
       },
       {
         icon: (isActive: boolean) => (
           <PlusCircle size={18} weight={isActive ? "fill" : "regular"} />
         ),
         label: t("Add Admin"),
-        path: "/college-admin/add-admin",
+        path: `${basePath}/add-admin`,
       },
       {
         icon: (isActive: boolean) => (
           <Calendar size={18} weight={isActive ? "fill" : "regular"} />
         ),
         label: t("Calendar"),
-        path: "/college-admin/calendar",
+        path: `${basePath}/calendar`,
       },
       {
         icon: (isActive: boolean) => (
           <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
         ),
         label: t("Club"),
-        path: "/college-admin/clubs",
+        path: `${basePath}/clubs`,
       },
       {
         icon: (isActive: boolean) => (
           <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />
         ),
         label: "Leave Requests",
-        path: "/college-admin/leave-request",
+        path: `${basePath}/leave-request`,
       },
       {
         icon: (isActive: boolean) => (
           <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
         ),
         label: t("Drive"),
-        path: "/college-admin/drive",
+        path: `${basePath}/drive`,
       },
       {
         icon: (isActive: boolean) => (
           <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
         ),
         label: t("My Attendance"),
-        path: "/college-admin/my-attendance",
+        path: `${basePath}/my-attendance`,
       },
       {
         icon: (isActive: boolean) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
         label: t("Wellbeing"),
-        path: "/college-admin/wellbeing",
+        path: `${basePath}/wellbeing`,
       },
       {
         icon: (isActive: boolean) => (
           <Gear size={18} weight={isActive ? "fill" : "regular"} />
         ),
         label: t("Settings"),
-        path: "/college-admin/settings",
+        path: `${basePath}/settings`,
       },
     ];
 
     return allItems.filter(item => {
       if (item.label === t("Admissions") && !isAdmissionsAllowed) return false;
-      if (item.path === "/college-admin/clubs" && (isSchool || contextLoading)) return false;
+      if (item.path === `${basePath}/clubs` && (isSchool || contextLoading)) return false;
       return true;
     });
-  }, [t, collegeCode, isSchool, contextLoading]);
+  }, [t, collegeCode, isSchool, contextLoading, basePath]);
 
   useEffect(() => {
     let current = items.find((item) => item.path === pathname);
     if (!current) {
       const sortedItems = [...items].sort((a, b) => b.path.length - a.path.length);
       current = sortedItems.find((item) => {
-        if (item.path === "/college-admin") {
-          return pathname === "/college-admin";
+        if (item.path === basePath) {
+          return pathname === basePath;
         }
         return pathname.startsWith(item.path);
       });

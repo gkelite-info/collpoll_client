@@ -12,6 +12,7 @@ interface PaginationProps {
   itemsPerPageOptions?: number[];
   onItemsPerPageChange?: (items: number) => void;
   disabled?: boolean;
+  alwaysShow?: boolean;
 }
 
 export function Pagination({
@@ -22,9 +23,10 @@ export function Pagination({
   roundedBottom,
   itemsPerPageOptions,
   onItemsPerPageChange,
-  disabled
+  disabled,
+  alwaysShow
 }: PaginationProps) {
-  if (totalItems <= itemsPerPage) return null;
+  if (totalItems <= itemsPerPage && !alwaysShow) return null;
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;

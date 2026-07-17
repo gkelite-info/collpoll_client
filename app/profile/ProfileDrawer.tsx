@@ -18,6 +18,8 @@ import { logoutUser } from "@/lib/helpers/logoutUser";
 import toast from "react-hot-toast";
 import { extractAcademicYearNumber } from "../utils/academicYear";
 import { useFaculty } from "../utils/context/faculty/useFaculty";
+import { useCollegeAdmin } from "../utils/context/college-admin/useCollegeAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type Props = {
   open: boolean;
@@ -64,6 +66,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     wellBeingCategoryNames,
   } = useUser();
   const { college_branch, faculty_edu_type } = useFaculty();
+  const { collegeEducationType: adminCollegeEduType } = useCollegeAdmin();
   const [loading, setLoading] = useState(false);
   const academicYear = extractAcademicYearNumber(collegeAcademicYear);
   const roleIdMap: Record<string, number | null> = {
@@ -81,10 +84,14 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     WellbeingManager: wellBeingId,
     SuperAdmin: userId,
   };
+  const isSchoolStr = typeof document !== 'undefined'
+    ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
+    : null;
+  const isSchool = isSchoolStr === "true" || isSchoolEducation(collegeEducationType || adminCollegeEduType);
   const displayRoleMap: Record<string, string> = {
     FinanceManager: "Finance Manager",
     Accountant: "Accountant",
-    CollegeAdmin: "College Admin",
+    CollegeAdmin: isSchool ? "School Admin" : "College Admin",
     CollegeHr: "College HR",
     PlacementOfficer: "Placement Officer",
     WellbeingExecutive: "Wellbeing Executive",
@@ -108,7 +115,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
   };
 
   const displayRole = role ? (displayRoleMap[role] ?? role) : "";
-  const displayId = identifierId || (role ? roleIdMap[role] : null) || userId;
+  const displayId = identifierId || "Not Provided";
   const wellbeingCategoryOptions = Array.from(
     new Map(
       (wellBeingCategoryIds.length || !wellBeingCategoryId
@@ -329,7 +336,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
             )}
             {role === "CollegeAdmin" && (
               <p className="text-xs text-[#282828] font-medium">
-                College Admin
+                {displayRole}
               </p>
             )}
             {role === "CollegeHr" && (
