@@ -251,12 +251,45 @@ export async function fetchEmployeeExpenseReports(
   }));
 }
 
-export async function getExpenseAttachmentSignedUrl(filePath: string) {
+export async function getExpenseAttachmentSignedUrl(filePath: string, downloadFileName?: string) {
+  const normalizedPath = normalizeExpenseAttachmentPath(filePath);
   const { data, error } = await supabase.storage
     .from(EMPLOYEE_EXPENSE_ATTACHMENTS_BUCKET)
-    .createSignedUrl(filePath, 60 * 10);
+    .createSignedUrl(normalizedPath, 60 * 10, downloadFileName ? { download: downloadFileName } : undefined);
   if (error) throw error;
   return data.signedUrl;
+}
+
+function normalizeExpenseAttachmentPath(filePath: string) {
+  const trimmedPath = filePath.trim();
+  const bucketSegment = `/${EMPLOYEE_EXPENSE_ATTACHMENTS_BUCKET}/`;
+
+  try {
+    const url = new URL(trimmedPath);
+    const bucketIndex = url.pathname.indexOf(bucketSegment);
+    if (bucketIndex >= 0) {
+      return decodeURIComponent(url.pathname.slice(bucketIndex + bucketSegment.length));
+    }
+  } catch {
+    // Stored attachment paths are usually plain storage keys, not absolute URLs.
+  }
+
+  const pathWithoutQuery = trimmedPath.split("?")[0].replace(/^\/+/, "");
+  const prefixedBucket = `${EMPLOYEE_EXPENSE_ATTACHMENTS_BUCKET}/`;
+  const storageObjectPrefix = `storage/v1/object/public/${prefixedBucket}`;
+  const signedObjectPrefix = `storage/v1/object/sign/${prefixedBucket}`;
+
+  if (pathWithoutQuery.startsWith(prefixedBucket)) {
+    return decodeURIComponent(pathWithoutQuery.slice(prefixedBucket.length));
+  }
+  if (pathWithoutQuery.startsWith(storageObjectPrefix)) {
+    return decodeURIComponent(pathWithoutQuery.slice(storageObjectPrefix.length));
+  }
+  if (pathWithoutQuery.startsWith(signedObjectPrefix)) {
+    return decodeURIComponent(pathWithoutQuery.slice(signedObjectPrefix.length));
+  }
+
+  return decodeURIComponent(pathWithoutQuery);
 }
 
 export async function updateEmployeeExpenseReport(

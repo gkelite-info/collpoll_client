@@ -25,7 +25,6 @@ const expenseCategories = [
   "Accommodation",
   "Employee Meals",
   "Client Lunch / Dinner",
-  "Client Entertainment",
   "Team Party / Celebration",
   "Conference & Seminar",
   "Training & Certification",
@@ -58,6 +57,8 @@ export default function SubmitReimbursement({ onBack, onSubmitted, initialReport
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [isAddingCustomCategory, setIsAddingCustomCategory] = useState(false);
+  const [customCategory, setCustomCategory] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [form, setForm] = useState({
     expenseTitle: initialReport?.expenseTitle ?? "",
@@ -201,7 +202,53 @@ export default function SubmitReimbursement({ onBack, onSubmitted, initialReport
           <FormCard icon={ReceiptText} title="Expense Information">
             <label className="mb-4 block"><span className={labelClass}>Expense Title <b className="text-red-500">*</b></span><input required minLength={3} maxLength={150} value={form.expenseTitle} onChange={(e) => update("expenseTitle", e.target.value)} className={inputClass} placeholder="e.g., Client lunch at Bistro" /></label>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="relative"><span className={labelClass}>Expense Category <b className="text-red-500">*</b></span><button type="button" aria-haspopup="listbox" aria-expanded={categoryOpen} onClick={() => setCategoryOpen((open) => !open)} className={`${inputClass} flex items-center justify-between text-left`}><span className="truncate">{form.expenseCategory}</span><ChevronDown size={17} className={`shrink-0 transition-transform ${categoryOpen ? "rotate-180" : ""}`}/></button>{categoryOpen && <div role="listbox" className="absolute z-30 mt-1 max-h-48 w-full overflow-y-auto rounded-[7px] border border-[#BFD0C2] bg-white py-1 shadow-lg">{expenseCategories.map((category) => <button key={category} type="button" role="option" aria-selected={form.expenseCategory === category} onClick={() => { update("expenseCategory", category); setCategoryOpen(false); }} className={`block w-full px-3 py-2 text-left text-[14px] hover:bg-[#EAF8F0] ${form.expenseCategory === category ? "bg-[#43C17A] font-medium text-white hover:bg-[#43C17A]" : "text-[#14213A]"}`}>{category}</button>)}</div>}</div>
+              <div className="relative">
+                <span className={labelClass}>Expense Category <b className="text-red-500">*</b></span>
+                <button type="button" aria-haspopup="listbox" aria-expanded={categoryOpen} onClick={() => { setCategoryOpen((open) => !open); setIsAddingCustomCategory(false); }} className={`${inputClass} flex items-center justify-between text-left`}><span className="truncate">{form.expenseCategory}</span><ChevronDown size={17} className={`shrink-0 transition-transform ${categoryOpen ? "rotate-180" : ""}`}/></button>
+                {categoryOpen && (
+                  <div role="listbox" className="absolute z-30 mt-1 max-h-48 w-full overflow-y-auto rounded-[7px] border border-[#BFD0C2] bg-white py-1 shadow-lg">
+                    {isAddingCustomCategory ? (
+                      <div className="p-2 space-y-2">
+                        <input
+                          type="text"
+                          value={customCategory}
+                          onChange={(e) => setCustomCategory(e.target.value)}
+                          className={inputClass}
+                          placeholder="Enter custom category"
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (customCategory.trim()) {
+                                update("expenseCategory", customCategory.trim());
+                                setIsAddingCustomCategory(false);
+                                setCustomCategory("");
+                                setCategoryOpen(false);
+                              }
+                            }}
+                            className="h-9 flex-1 rounded-[5px] bg-[#43C17A] text-[13px] font-bold text-white hover:bg-[#349c61]"
+                          >
+                            Add
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingCustomCategory(false)}
+                            className="h-9 flex-1 rounded-[5px] border border-[#BFD0C2] bg-white text-[13px] font-bold text-[#4C5565] hover:bg-slate-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      expenseCategories.map((category) => (
+                        <button key={category} type="button" role="option" aria-selected={form.expenseCategory === category} onClick={() => { if (category === "Other") { setIsAddingCustomCategory(true); setCustomCategory(""); } else { update("expenseCategory", category); setCategoryOpen(false); } }} className={`block w-full px-3 py-2 text-left text-[14px] hover:bg-[#EAF8F0] ${form.expenseCategory === category ? "bg-[#43C17A] font-medium text-white hover:bg-[#43C17A]" : "text-[#14213A]"}`}>{category}</button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
               <label><span className={labelClass}>Expense Date <b className="text-red-500">*</b></span><input required type="date" max={new Date().toISOString().split("T")[0]} value={form.expenseDate} onChange={(e) => update("expenseDate", e.target.value)} className={inputClass} /></label>
               <label><span className={labelClass}>Amount <b className="text-red-500">*</b></span><input required type="number" min="0.01" max="99999999.99" step="0.01" value={form.amountSpent} onChange={(e) => update("amountSpent", e.target.value)} onWheel={(e) => e.currentTarget.blur()} className={inputClass} placeholder="₹ 0.00" /></label>
             </div>
