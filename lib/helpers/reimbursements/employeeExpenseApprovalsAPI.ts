@@ -23,6 +23,7 @@ export type HRReimbursementRequest = Omit<EmployeeExpenseReport, "attachments"> 
 
 type ReimbursementReportRow = Omit<EmployeeExpenseReport, "attachments"> & {
   employeeId: number;
+  collegeId: number;
   attachments: EmployeeExpenseAttachment[];
 };
 
