@@ -1,6 +1,17 @@
 import React, { useState, useRef, useEffect } from "react";
 import { CaretDown, CheckSquare, Question, XSquare } from "@phosphor-icons/react";
 import { AttendanceRecord } from "../types";
+import { useUser } from "@/app/utils/context/UserContext";
+
+const parseRowDate = (dateStr: string): Date | null => {
+  if (!dateStr) return null;
+  const parts = dateStr.split("/");
+  if (parts.length !== 3) return null;
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // 0-indexed month
+  const year = parseInt(parts[2], 10);
+  return new Date(year, month, day);
+};
 
 interface Props {
   title?: string;
@@ -37,6 +48,7 @@ const AttendanceTable: React.FC<Props> = ({
   onMonthYearChange,
   onPageChange,
 }) => {
+  const { dateOfJoining } = useUser();
   const [selectedMonth, setSelectedMonth] = useState(month);
   const [selectedYear, setSelectedYear] = useState(year);
 
@@ -188,28 +200,40 @@ const AttendanceTable: React.FC<Props> = ({
               </tr>
             </thead>
             <tbody>
-              {records.map((row, idx) => (
-                <tr
-                  key={idx}
-                  className="border-b border-gray-100 last:border-none text-gray-500 text-[12.5px] hover:bg-gray-50 transition-colors"
-                >
-                  <td className="py-1.5 px-3">{row.date}</td>
-                  <td className="py-1.5 px-3">{row.checkIn}</td>
-                  <td className="py-1.5 px-3">{row.checkOut}</td>
-                  <td className="py-1.5 px-3">{row.totalHours}</td>
+              {records.map((row, idx) => {
+                const rowDateObj = parseRowDate(row.date);
+                const joiningDateObj = dateOfJoining ? new Date(dateOfJoining) : null;
+                if (rowDateObj && joiningDateObj) {
+                  rowDateObj.setHours(0, 0, 0, 0);
+                  joiningDateObj.setHours(0, 0, 0, 0);
+                }
+                const isBeforeJoining = rowDateObj && joiningDateObj && rowDateObj < joiningDateObj;
 
-                  <td className="py-1.5 px-3">
-                    <div className={`flex items-center gap-1.5 ${getStatusDisplay(row.status).color} font-semibold`}>
-                      {getStatusDisplay(row.status).icon}
-                      <span>{row.status || '—'}</span>
-                    </div>
-                  </td>
-                  <td className="py-1.5 px-3">{row.lateBy}</td>
-                  <td className="py-1.5 px-3">{row.earlyOut}</td>
-                  {/* Updated Column Value */}
-                  <td className="py-1.5 px-3">04</td>
-                </tr>
-              ))
+                return (
+                  <tr
+                    key={idx}
+                    className="border-b border-gray-100 last:border-none text-gray-500 text-[12.5px] hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="py-1.5 px-3">{row.date}</td>
+                    <td className="py-1.5 px-3">{isBeforeJoining ? "—" : row.checkIn}</td>
+                    <td className="py-1.5 px-3">{isBeforeJoining ? "—" : row.checkOut}</td>
+                    <td className="py-1.5 px-3">{isBeforeJoining ? "—" : row.totalHours}</td>
+                    <td className="py-1.5 px-3">
+                      {isBeforeJoining ? (
+                        <span>—</span>
+                      ) : (
+                        <div className={`flex items-center gap-1.5 ${getStatusDisplay(row.status).color} font-semibold`}>
+                          {getStatusDisplay(row.status).icon}
+                          <span>{row.status || '—'}</span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-1.5 px-3">{isBeforeJoining ? "—" : row.lateBy}</td>
+                    <td className="py-1.5 px-3">{isBeforeJoining ? "—" : row.earlyOut}</td>
+                    <td className="py-1.5 px-3">{isBeforeJoining ? "—" : "04"}</td>
+                  </tr>
+                );
+              })
               }
             </tbody>
           </table>

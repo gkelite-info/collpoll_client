@@ -142,7 +142,7 @@ export default function LinkedAccounts() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const pathname = usePathname();
 
-  const isNOtVisible = !['WellbeingExecutive', 'WellbeingManager'].includes(role!)
+  const isNOtVisible = !['WellbeingExecutive', 'WellbeingManager', 'CollegeAdmin'].includes(role!)
 
   const loadFromSession = async (user: any) => {
     if (!user) return;

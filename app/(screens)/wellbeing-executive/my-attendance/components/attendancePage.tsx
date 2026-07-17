@@ -50,6 +50,16 @@ export const formatDate = (isoDate?: string | null) => {
   }).format(date);
 };
 
+const parseRowDate = (dateStr: string): Date | null => {
+  if (!dateStr) return null;
+  const parts = dateStr.split("/");
+  if (parts.length !== 3) return null;
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // 0-indexed month
+  const year = parseInt(parts[2], 10);
+  return new Date(year, month, day);
+};
+
 const AttendancePage = () => {
 
   const { wellBeingId, identifierId, email, profilePhoto, mobile, fullName, dateOfJoining,
@@ -63,9 +73,10 @@ const AttendancePage = () => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [rawStats, setRawStats] = useState<AttendanceStats | null>(null);
+  const [allMonthRecords, setAllMonthRecords] = useState<AttendanceRecord[]>([]);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
 
   const itemsPerPage = 15
@@ -78,28 +89,99 @@ const AttendancePage = () => {
     const fetchStats = async () => {
       setStatsLoading(true);
       try {
-        const res =
-          await getAttendanceMonthlyStats({
+        const [statsRes, recordsRes] = await Promise.all([
+          getAttendanceMonthlyStats({
             userId,
             month: selectedMonth,
             year: selectedYear
-          });
-        setStats({
-          todayStatus: res.todayStatus,
-          totalWorkingDays: res.totalWorkingDays,
-          leavesTaken: res.leavesTaken,
-          remainingLeaves: res.remainingLeaves,
-          lopDays: res.lopDays,
-          expectedWorkingDays: res.expectedWorkingDays,
-          presentDays: res.presentDays
+          }),
+          getAttendanceData({
+            userId,
+            month: selectedMonth,
+            year: selectedYear,
+            page: 1,
+            limit: 31
+          })
+        ]);
+        setAllMonthRecords(recordsRes.records);
+        setRawStats({
+          todayStatus: statsRes.todayStatus,
+          totalWorkingDays: statsRes.totalWorkingDays,
+          leavesTaken: statsRes.leavesTaken,
+          remainingLeaves: statsRes.remainingLeaves,
+          lopDays: statsRes.lopDays,
+          expectedWorkingDays: statsRes.expectedWorkingDays,
+          presentDays: statsRes.presentDays
         });
-      }
-      finally {
+      } catch (err) {
+        console.error(err);
+      } finally {
         setStatsLoading(false);
       }
     };
     fetchStats();
   }, [userId, selectedMonth, selectedYear]);
+
+  useEffect(() => {
+    if (!rawStats) {
+      setStats(null);
+      return;
+    }
+
+    if (!dateOfJoining) {
+      setStats(rawStats);
+      return;
+    }
+
+    const joiningDateObj = new Date(dateOfJoining);
+    joiningDateObj.setHours(0, 0, 0, 0);
+
+    const selectedMonthStart = new Date(selectedYear, selectedMonth - 1, 1);
+    const selectedMonthEnd = new Date(selectedYear, selectedMonth, 0);
+
+    // Case A: Selected month is entirely before joining date
+    if (selectedMonthEnd < joiningDateObj) {
+      setStats({
+        todayStatus: "—",
+        totalWorkingDays: 0,
+        leavesTaken: 0,
+        remainingLeaves: rawStats.remainingLeaves,
+        lopDays: 0,
+        expectedWorkingDays: 0,
+        presentDays: 0
+      });
+      return;
+    }
+
+    // Case B: Selected month is the same month as joining date
+    if (
+      selectedYear === joiningDateObj.getFullYear() &&
+      selectedMonth - 1 === joiningDateObj.getMonth()
+    ) {
+      let preJoiningAbsentCount = 0;
+      allMonthRecords.forEach((row) => {
+        const rowDateObj = parseRowDate(row.date);
+        if (rowDateObj) {
+          rowDateObj.setHours(0, 0, 0, 0);
+          if (rowDateObj < joiningDateObj) {
+            const status = row.status?.toUpperCase();
+            if (status === "ABSENT" || !status || status === "—") {
+              preJoiningAbsentCount++;
+            }
+          }
+        }
+      });
+
+      setStats({
+        ...rawStats,
+        lopDays: Math.max(0, (rawStats.lopDays ?? 0) - preJoiningAbsentCount)
+      });
+      return;
+    }
+
+    // Case C: Selected month is after joining date
+    setStats(rawStats);
+  }, [rawStats, allMonthRecords, dateOfJoining, selectedMonth, selectedYear]);
 
   useEffect(() => {
     if (!userId) {

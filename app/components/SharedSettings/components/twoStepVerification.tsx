@@ -145,7 +145,7 @@ const TwoStepVerification: React.FC<TwoStepVerificationProps> = ({
     router.back();
   };
   
-  const isNOtVisible = !['WellbeingExecutive', 'WellbeingManager'].includes(role!)
+  const isNOtVisible = !['WellbeingExecutive', 'WellbeingManager', 'CollegeAdmin'].includes(role!)
 
   return (
     <div className="p-2 space-y-6 sm:p-2 max-md:p-0 max-md:bg-[#F4F5F6] min-h-screen">
