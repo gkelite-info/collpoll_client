@@ -1,25 +1,232 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element -- local role avatars are intentionally rendered at their native size */
+/* eslint-disable @next/next/no-img-element -- profile URLs can come from Supabase storage */
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock3, Filter, IndianRupee } from "lucide-react";
-import { reimbursements } from "./data";
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  IndianRupee,
+} from "lucide-react";
+import { ReimbursementDashboardShimmer } from "./components/ReimbursementShimmers";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { useUser } from "@/app/utils/context/UserContext";
+import {
+  fetchReimbursementsForApproval,
+  type HRReimbursementRequest,
+} from "@/lib/helpers/reimbursements/employeeExpenseApprovalsAPI";
 
-const stats = [
-  { label: "Pending Payments", count: "18", amount: "₹1,25,430.00", note: "Awaiting payment processing", Icon: Clock3, color: "#6751e7", bg: "#eeeaff" },
-  { label: "Paid This Month", count: "32", amount: "₹4,85,760.00", note: "Successfully paid", Icon: CheckCircle2, color: "#16a34a", bg: "#e8f8ee" },
-  { label: "Total Amount", count: "₹6,80,940.00", amount: "", note: "Total reimbursed this month", Icon: IndianRupee, color: "#f45112", bg: "#fff0e8" },
-];
+const formatMoney = (value: number) =>
+  `\u20B9${value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+
+const formatDate = (value: string) =>
+  new Date(value).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 
 export default function ReimbursementDashboard() {
-  return <main className="min-h-full w-full bg-[#f4f4f4] p-3 text-[#142038] sm:p-5">
-    <header className="mb-5"><h1 className="text-2xl font-bold">Finance Dashboard</h1><p className="mt-1 text-sm text-[#7c8798]">Overview of reimbursement payments and status</p></header>
-    <section className="grid gap-4 md:grid-cols-3">{stats.map(({ label, count, amount, note, Icon, color, bg }) => <article key={label} className="relative overflow-hidden rounded-xl border border-[#e4e7eb] bg-white p-5 shadow-sm"><div className="absolute inset-x-0 top-0 h-1" style={{backgroundColor: color}}/><div className="flex gap-4"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg" style={{color, backgroundColor:bg}}><Icon size={22}/></span><div><p className="text-xs text-[#657184]">{label}</p><p className="mt-1 text-xl font-bold">{count}</p>{amount && <p className="mt-2 text-sm font-bold">{amount}</p>}<p className="mt-1 text-[10px] text-[#a0a8b5]">{note}</p></div></div></article>)}</section>
-    <section className="mt-5 overflow-hidden rounded-xl border border-[#e2e5e9] bg-white shadow-sm">
-      <div className="flex items-center justify-between gap-4 p-5"><div><h2 className="font-semibold">Approval Queue</h2><p className="mt-1 text-xs text-[#667386]">List of reimbursement requests pending your approval</p></div><button type="button" className="flex items-center gap-2 rounded-lg border border-[#cbd4df] bg-[#eef4fd] px-3 py-2 text-xs"><Filter size={13}/>Filter</button></div>
-      <div className="overflow-x-auto"><table className="w-full min-w-[860px] text-left"><thead className="bg-[#edf3ff] text-[10px] uppercase tracking-wider text-[#526071]"><tr><th className="px-5 py-3">Request ID</th><th className="px-5 py-3">Employee</th><th className="px-5 py-3">Mail ID</th><th className="px-5 py-3">Amount</th><th className="px-5 py-3">Submitted Date</th><th className="px-5 py-3 text-right">Action</th></tr></thead><tbody className="divide-y divide-[#edf0f3]">{reimbursements.map(r => <tr key={r.id} className="hover:bg-[#f8fbf9]"><td className="px-5 py-4 text-xs font-semibold text-[#12924f]">{r.id}</td><td className="px-5 py-3"><div className="flex items-center gap-2"><img src={r.avatar} alt="" className="h-8 w-8 rounded-full object-cover"/><span className="text-sm font-medium">{r.name}</span></div></td><td className="px-5 py-3 text-xs text-[#596578]">{r.email}</td><td className="px-5 py-3 text-sm font-medium">₹{r.amount}</td><td className="px-5 py-3 text-xs text-[#596578]">{r.submitted}</td><td className="px-5 py-3 text-right"><Link href={`/accountant/reimbursement/${r.id}`} className="inline-flex items-center text-xs font-semibold text-[#0565ce]">View Details <ChevronRight size={14}/></Link></td></tr>)}</tbody></table></div>
-      <footer className="flex flex-col items-center justify-between gap-3 border-t p-4 text-xs text-[#596578] sm:flex-row"><span>Showing 1 to 7 of 18 requests</span><div className="flex items-center gap-2"><button className="rounded border p-1.5"><ChevronLeft size={13}/></button><button className="rounded bg-[#43c17a] px-3 py-1.5 text-white">1</button><button className="rounded border px-3 py-1.5">2</button><button className="rounded border px-3 py-1.5">3</button><button className="rounded border p-1.5"><ChevronRight size={13}/></button></div></footer>
-    </section>
-  </main>;
+  const { collegeId } = useUser();
+  const [reports, setReports] = useState<HRReimbursementRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!collegeId) return;
+
+    Promise.resolve().then(() => {
+      setLoading(true);
+      setError(null);
+    });
+    fetchReimbursementsForApproval(collegeId)
+      .then((data) =>
+        setReports(data.filter((report) => report.status?.toLowerCase() === "approved")),
+      )
+      .catch((err) => setError(err instanceof Error ? err.message : "Unable to load requests."))
+      .finally(() => setLoading(false));
+  }, [collegeId]);
+
+  const totalAmount = useMemo(
+    () => reports.reduce((sum, report) => sum + Number(report.amountSpent || 0), 0),
+    [reports],
+  );
+  const todayValue = new Date().toLocaleDateString("en-CA");
+  const filteredReports = useMemo(
+    () => selectedDate
+      ? reports.filter((report) => new Date(report.createdAt).toLocaleDateString("en-CA") === selectedDate)
+      : reports,
+    [reports, selectedDate],
+  );
+  const calendarDate = selectedDate ?? todayValue;
+  const calendarLabel = new Date(`${calendarDate}T00:00:00`).toLocaleDateString("en-GB");
+  const totalPages = Math.max(1, Math.ceil(filteredReports.length / itemsPerPage));
+  const activePage = Math.min(currentPage, totalPages);
+  const startIndex = (activePage - 1) * itemsPerPage;
+  const pageReports = useMemo(
+    () => filteredReports.slice(startIndex, startIndex + itemsPerPage),
+    [filteredReports, startIndex, itemsPerPage],
+  );
+
+  const stats = [
+    {
+      label: "Pending Payments",
+      count: reports.length.toString(),
+      amount: formatMoney(totalAmount),
+      note: "Forwarded by HR for accountant processing",
+      Icon: Clock3,
+      color: "#6751e7",
+      bg: "#eeeaff",
+    },
+    {
+      label: "Paid This Month",
+      count: "0",
+      amount: formatMoney(0),
+      note: "Payment tracking is not recorded yet",
+      Icon: CheckCircle2,
+      color: "#16a34a",
+      bg: "#e8f8ee",
+    },
+    {
+      label: "Total Amount",
+      count: formatMoney(totalAmount),
+      amount: "",
+      note: "Total approved amount awaiting payment",
+      Icon: IndianRupee,
+      color: "#f45112",
+      bg: "#fff0e8",
+    },
+  ];
+
+  if (loading) return <ReimbursementDashboardShimmer />;
+
+  return (
+    <main className="min-h-full w-full bg-[#f4f4f4] p-3 text-[#142038] sm:p-5">
+      <header className="mb-5">
+        <h1 className="text-2xl font-bold">Finance Dashboard</h1>
+        <p className="mt-1 text-sm text-[#7c8798]">
+          Overview of reimbursement payments and status
+        </p>
+      </header>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        {stats.map(({ label, count, amount, note, Icon, color, bg }) => (
+          <article
+            key={label}
+            className="relative overflow-hidden rounded-xl border border-[#e4e7eb] bg-white p-5 shadow-sm"
+          >
+            <div className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: color }} />
+            <div className="flex gap-4">
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg"
+                style={{ color, backgroundColor: bg }}
+              >
+                <Icon size={22} />
+              </span>
+              <div>
+                <p className="text-xs text-[#657184]">{label}</p>
+                <p className="mt-1 text-xl font-bold">{count}</p>
+                {amount && <p className="mt-2 text-sm font-bold">{amount}</p>}
+                <p className="mt-1 text-[10px] text-[#a0a8b5]">{note}</p>
+              </div>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="mt-5 overflow-hidden rounded-xl border border-[#e2e5e9] bg-white shadow-sm">
+        <div className="flex items-center justify-between gap-4 p-5">
+          <div>
+            <h2 className="font-semibold">Payment Queue</h2>
+            <p className="mt-1 text-xs text-[#667386]">
+              Approved reimbursement requests forwarded by HR
+            </p>
+          </div>
+          <div className="relative">
+            <button type="button" onClick={() => { const input = dateInputRef.current; if (!input) return; if (typeof input.showPicker === "function") input.showPicker(); else input.click(); }} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-[#e1f1e9] px-4 font-bold text-[#43c17a] transition-colors hover:bg-[#d5eadf] focus:outline-none focus:ring-2 focus:ring-[#43c17a]/30" aria-label="Open payment queue date filter">
+              <CalendarDays size={18} />
+              <span>{calendarLabel}</span>
+            </button>
+            <input ref={dateInputRef} type="date" value={calendarDate} aria-label="Filter payments by submitted date" onChange={(event) => { setSelectedDate(event.target.value || null); setCurrentPage(1); }} className="pointer-events-none absolute bottom-0 right-0 h-px w-px opacity-0" tabIndex={-1} />
+          </div>
+        </div>
+
+        {error ? (
+          <div className="flex h-32 items-center justify-center text-sm text-red-500">
+            {error}
+          </div>
+        ) : filteredReports.length === 0 ? (
+          <div className="flex h-32 items-center justify-center text-sm text-[#667386]">
+            No approved reimbursements found for {calendarLabel}.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1240px] text-left">
+              <thead className="bg-[#edf3ff] text-[10px] uppercase tracking-wider text-[#526071]">
+                <tr>
+                  <th className="px-7 py-4">Employee</th>
+                  <th className="px-7 py-4">Expense Title</th>
+                  <th className="px-7 py-4">Expense Category</th>
+                  <th className="px-7 py-4">Mail ID</th>
+                  <th className="px-7 py-4">Amount</th>
+                  <th className="px-7 py-4">Submitted Date</th>
+                  <th className="px-7 py-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#edf0f3]">
+                {pageReports.map((report) => (
+                  <tr key={report.employeeExpenseReportId} className="hover:bg-[#f8fbf9]">
+                    <td className="px-7 py-5">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={report.employeeAvatar}
+                          alt=""
+                          className="h-9 w-9 rounded-full object-cover"
+                        />
+                        <span className="text-sm font-medium">{report.employeeName}</span>
+                      </div>
+                    </td>
+                    <td className="px-7 py-5 text-xs font-medium text-[#596578]">
+                      {report.expenseTitle}
+                    </td>
+                    <td className="px-7 py-5 text-xs text-[#596578]">
+                      {report.expenseCategory}
+                    </td>
+                    <td className="px-7 py-5 text-xs text-[#596578]">
+                      {report.employeeEmail}
+                    </td>
+                    <td className="px-7 py-5 text-sm font-medium">
+                      {formatMoney(report.amountSpent)}
+                    </td>
+                    <td className="px-7 py-5 text-xs text-[#596578]">
+                      {formatDate(report.createdAt)}
+                    </td>
+                    <td className="px-7 py-5 text-right">
+                      <Link
+                        href={`/accountant/reimbursement/${report.employeeExpenseReportId}`}
+                        className="inline-flex items-center text-xs font-semibold text-[#0565ce]"
+                      >
+                        View Details <ChevronRight size={14} />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {filteredReports.length > 0 && (
+          <Pagination currentPage={activePage} totalItems={filteredReports.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} itemsPerPageOptions={[5, 10, 20]} onItemsPerPageChange={(items) => { setItemsPerPage(items); setCurrentPage(1); }} roundedBottom="rounded-b-xl" />
+        )}
+      </section>
+    </main>
+  );
 }
