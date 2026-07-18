@@ -79,7 +79,7 @@ export type AccountantExpenseSummary = {
   transactionCount: number;
   topCategory: string;
   monthlyExpenses: number[];
-  categoryBreakdown: Array<{ category: string; amount: number }>;
+  categoryBreakdown: Array<{ category: string; amount: number; count: number }>;
 };
 
 type AccountantExpenseRow = Omit<
@@ -397,9 +397,31 @@ export async function fetchAccountantExpenses({
   };
 }
 
+export async function fetchAccountantExpenseCountByUser(
+  collegeId: number | null | undefined,
+  collegeEducationIds: number[],
+  createdBy: number | null | undefined,
+) {
+  if (!collegeId || !createdBy || collegeEducationIds.length === 0) return 0;
+
+  const { count, error } = await supabase
+    .from("accountant_expenses")
+    .select("accountantExpenseId", { count: "exact", head: true })
+    .eq("collegeId", collegeId)
+    .in("collegeEducationId", collegeEducationIds)
+    .eq("createdBy", createdBy)
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null);
+
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function fetchAccountantExpenseSummary(
   collegeId: number | null | undefined,
   collegeEducationIds: number[],
+  year = new Date().getFullYear(),
 ): Promise<AccountantExpenseSummary> {
   if (!collegeId || collegeEducationIds.length === 0) {
     return {
@@ -415,11 +437,8 @@ export async function fetchAccountantExpenseSummary(
   let from = 0;
   let totalExpenses = 0;
   let transactionCount = 0;
-  const currentYear = new Date().getFullYear();
   const monthlyExpenses = Array<number>(12).fill(0);
-  const categories = new Map<string, { label: string; amount: number }>();
-  const seenExpenseRecords = new Set<string>();
-
+  const categories = new Map<string, { label: string; amount: number; count: number }>();
   while (true) {
     const { data, error } = await supabase
       .from("accountant_expenses")
@@ -437,19 +456,6 @@ export async function fetchAccountantExpenseSummary(
     const rows = data ?? [];
 
     rows.forEach((row) => {
-      if (collegeEducationIds.length > 1) {
-        const recordKey = [
-          row.expenseName?.trim().toLocaleLowerCase("en-IN") ?? "",
-          row.category?.trim().toLocaleLowerCase("en-IN") ?? "",
-          Number(row.amount) || 0,
-          row.expenseDate,
-          row.paymentMethod?.trim().toLocaleLowerCase("en-IN") ?? "",
-          row.createdBy,
-        ].join("|");
-        if (seenExpenseRecords.has(recordKey)) return;
-        seenExpenseRecords.add(recordKey);
-      }
-
       transactionCount += 1;
       const amount = Number(row.amount) || 0;
       const label = row.category?.trim() || "Uncategorized";
@@ -461,7 +467,7 @@ export async function fetchAccountantExpenseSummary(
 
       totalExpenses += amount;
       if (
-        expenseYear === currentYear &&
+        expenseYear === year &&
         expenseMonth >= 1 &&
         expenseMonth <= 12
       ) {
@@ -470,6 +476,7 @@ export async function fetchAccountantExpenseSummary(
       categories.set(key, {
         label: current?.label ?? label,
         amount: (current?.amount ?? 0) + amount,
+        count: (current?.count ?? 0) + 1,
       });
     });
 
@@ -494,6 +501,7 @@ export async function fetchAccountantExpenseSummary(
       .map((category) => ({
         category: category.label,
         amount: category.amount,
+        count: category.count,
       }))
       .sort((a, b) => b.amount - a.amount),
   };
