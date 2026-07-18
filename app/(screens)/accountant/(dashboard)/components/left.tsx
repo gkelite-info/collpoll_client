@@ -15,8 +15,11 @@ import { AdminInfoCard } from "@/app/(screens)/admin/utils/adminInfoCard";
 import {
   expenseCategories,
   expenseSummaryCards,
-  monthlyExpenseData,
 } from "./data";
+import {
+  type AccountantExpenseSummary,
+} from "@/lib/helpers/accountant/accountantExpensesAPI";
+import { formatAccountantRevenue } from "@/lib/helpers/accountant/accountantRevenueAPI";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -28,9 +31,10 @@ const analyticsRanges: ExpenseAnalyticsRange[] = [
   "Half-Yearly",
   "Yearly",
 ];
-const analyticsYears = ["2025", "2024", "2023", "2022"];
+const currentYear = new Date().getFullYear();
+const analyticsYears = Array.from({ length: 4 }, (_, index) => String(currentYear - index));
 
-const expenseAnalyticsByRange: Record<
+const fallbackExpenseAnalyticsByRange: Record<
   ExpenseAnalyticsRange,
   {
     data: Array<{ label: string; value: number; displayAmount: string }>;
@@ -42,51 +46,34 @@ const expenseAnalyticsByRange: Record<
   }
 > = {
   Monthly: {
-    data: monthlyExpenseData.map((item) => ({
-      label: item.month,
-      value: item.value,
-      displayAmount: item.month === "May" ? "18.45 L" : `${item.value} L`,
-    })),
-    totalSpending: "Rs 1.84 Cr",
-    highestLabel: "Highest Spending (May)",
-    highestSpending: "Rs 18.45 L",
+    data: [],
+    totalSpending: "Rs 0",
+    highestLabel: "Highest Spending (-)",
+    highestSpending: "Rs 0",
     axisMax: 32,
     axisStep: 10,
   },
   Quarterly: {
-    data: [
-      { label: "Q1", value: 52, displayAmount: "52 L" },
-      { label: "Q2", value: 80, displayAmount: "80 L" },
-      { label: "Q3", value: 56, displayAmount: "56 L" },
-      { label: "Q4", value: 50, displayAmount: "50 L" },
-    ],
-    totalSpending: "Rs 2.38 Cr",
-    highestLabel: "Highest Spending (Q2)",
-    highestSpending: "Rs 80 L",
+    data: [],
+    totalSpending: "Rs 0",
+    highestLabel: "Highest Spending (-)",
+    highestSpending: "Rs 0",
     axisMax: 90,
     axisStep: 30,
   },
   "Half-Yearly": {
-    data: [
-      { label: "H1", value: 132, displayAmount: "1.32 Cr" },
-      { label: "H2", value: 106, displayAmount: "1.06 Cr" },
-    ],
-    totalSpending: "Rs 2.38 Cr",
-    highestLabel: "Highest Spending (H1)",
-    highestSpending: "Rs 1.32 Cr",
+    data: [],
+    totalSpending: "Rs 0",
+    highestLabel: "Highest Spending (-)",
+    highestSpending: "Rs 0",
     axisMax: 150,
     axisStep: 50,
   },
   Yearly: {
-    data: [
-      { label: "2022", value: 168, displayAmount: "1.68 Cr" },
-      { label: "2023", value: 204, displayAmount: "2.04 Cr" },
-      { label: "2024", value: 226, displayAmount: "2.26 Cr" },
-      { label: "2025", value: 238, displayAmount: "2.38 Cr" },
-    ],
-    totalSpending: "Rs 2.38 Cr",
-    highestLabel: "Highest Spending (2025)",
-    highestSpending: "Rs 2.38 Cr",
+    data: [],
+    totalSpending: "Rs 0",
+    highestLabel: "Highest Spending (-)",
+    highestSpending: "Rs 0",
     axisMax: 260,
     axisStep: 65,
   },
@@ -136,12 +123,56 @@ function SummaryCard({
   );
 }
 
-function ExpenseAnalyticsCard() {
+function ExpenseAnalyticsCard({
+  summaries,
+}: {
+  summaries: Record<string, AccountantExpenseSummary>;
+}) {
   const [activeRange, setActiveRange] = useState<ExpenseAnalyticsRange>("Monthly");
-  const [selectedYear, setSelectedYear] = useState("2025");
+  const [selectedYear, setSelectedYear] = useState(String(currentYear));
   const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
   const yearDropdownRef = useRef<HTMLDivElement>(null);
-  const activeAnalytics = expenseAnalyticsByRange[activeRange];
+  const activeAnalytics = useMemo(() => {
+    const selected = summaries[selectedYear];
+    if (!selected) return fallbackExpenseAnalyticsByRange[activeRange];
+
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthly = selected.monthlyExpenses.map((amount, index) => ({
+      label: months[index],
+      value: amount / 100_000,
+      displayAmount: formatAccountantRevenue(amount).replace(/^Rs\s*/, ""),
+    }));
+    const group = (labels: string[], size: number) => labels.map((label, index) => {
+      const amount = selected.monthlyExpenses
+        .slice(index * size, index * size + size)
+        .reduce((sum, value) => sum + value, 0);
+      return { label, value: amount / 100_000, displayAmount: formatAccountantRevenue(amount).replace(/^Rs\s*/, "") };
+    });
+    const yearly = analyticsYears.map((year) => {
+      const amount = (summaries[year]?.monthlyExpenses ?? []).reduce((sum, value) => sum + value, 0);
+      return { label: year, value: amount / 100_000, displayAmount: formatAccountantRevenue(amount).replace(/^Rs\s*/, "") };
+    });
+    const data = activeRange === "Monthly"
+      ? monthly
+      : activeRange === "Quarterly"
+        ? group(["Q1", "Q2", "Q3", "Q4"], 3)
+        : activeRange === "Half-Yearly"
+          ? group(["H1", "H2"], 6)
+          : yearly;
+    const highest = data.reduce((best, item) => item.value > best.value ? item : best, data[0]);
+    const total = data.reduce((sum, item) => sum + item.value, 0) * 100_000;
+    const max = Math.max(...data.map((item) => item.value), 1);
+    const step = Math.max(1, Math.ceil(max / 3));
+
+    return {
+      data,
+      totalSpending: formatAccountantRevenue(total),
+      highestLabel: `Highest Spending (${highest?.label ?? "-"})`,
+      highestSpending: formatAccountantRevenue((highest?.value ?? 0) * 100_000),
+      axisMax: step * 4,
+      axisStep: step,
+    };
+  }, [activeRange, selectedYear, summaries]);
   const chartData = useMemo(
     () =>
       activeAnalytics.data.map((item) => ({
@@ -323,57 +354,91 @@ function ExpenseAnalyticsCard() {
   );
 }
 
-function ExpenseCategoriesOverview() {
+function ExpenseCategoriesOverview({ summary }: { summary?: AccountantExpenseSummary }) {
+  const categories = (summary?.categoryBreakdown ?? []).map((category, index) => {
+    const visual = expenseCategories.find(
+      (item) => item.title.toLocaleLowerCase("en-IN") === category.category.toLocaleLowerCase("en-IN"),
+    ) ?? expenseCategories[index % expenseCategories.length];
+    return {
+      ...visual,
+      title: category.category,
+      countLabel: "Expenses Recorded",
+      count: category.count.toLocaleString("en-IN"),
+      amount: formatAccountantRevenue(category.amount),
+    };
+  });
+
   return (
     <section className="mt-5">
       <h2 className="mb-5 text-base font-bold text-[#17213D]">
         Expense Categories Overview
       </h2>
-      <div className="grid gap-x-5 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
-        {expenseCategories.map((item) => {
-          const Icon = item.icon;
+      <div className="overflow-x-auto pb-2">
+        <div className="grid grid-flow-col grid-rows-2 gap-x-5 gap-y-5 [grid-auto-columns:minmax(280px,1fr)]">
+          {categories.map((item) => {
+            const Icon = item.icon;
 
-          return (
-            <article
-              key={item.title}
-              className={`flex h-[108px] min-w-0 flex-col justify-between rounded-2xl px-5 py-4 shadow-[0_8px_22px_rgba(15,23,42,0.12)] ${item.bg}`}
-            >
-              <div className="flex min-w-0 items-center gap-2.5">
-                <Icon size={22} weight="regular" color={item.color} />
-                <h3
-                  className="min-w-0 overflow-x-auto whitespace-nowrap text-[12px] font-bold leading-tight"
-                  style={{ color: item.color }}
-                >
-                  {item.title}
-                </h3>
-              </div>
-              <div className="grid grid-cols-2 gap-x-5 gap-y-1 text-[11px] leading-tight">
-                <p className="overflow-x-auto whitespace-nowrap text-[#6B7280]">
-                  {item.countLabel}
-                </p>
-                <p className="overflow-x-auto whitespace-nowrap text-[#6B7280]">
-                  Total Spending
-                </p>
-                <p className="overflow-x-auto whitespace-nowrap text-[12px] font-bold text-[#17213D]">
-                  {item.count}
-                </p>
-                <p className="overflow-x-auto whitespace-nowrap text-[12px] font-bold text-[#17213D]">
-                  {item.amount}
-                </p>
-              </div>
-            </article>
-          );
-        })}
+            return (
+              <article
+                key={item.title}
+                className={`flex h-[108px] min-w-0 flex-col justify-between rounded-2xl px-5 py-4 ${item.bg}`}
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <Icon size={22} weight="regular" color={item.color} />
+                  <h3
+                    className="min-w-0 overflow-x-auto whitespace-nowrap text-[12px] font-bold leading-tight"
+                    style={{ color: item.color }}
+                  >
+                    {item.title}
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-x-5 gap-y-1 text-[11px] leading-tight">
+                  <p className="overflow-x-auto whitespace-nowrap text-[#6B7280]">
+                    {item.countLabel}
+                  </p>
+                  <p className="overflow-x-auto whitespace-nowrap text-[#6B7280]">
+                    Total Spending
+                  </p>
+                  <p className="overflow-x-auto whitespace-nowrap text-[12px] font-bold text-[#17213D]">
+                    {item.count}
+                  </p>
+                  <p className="overflow-x-auto whitespace-nowrap text-[12px] font-bold text-[#17213D]">
+                    {item.amount}
+                  </p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
 }
 
-export default function AccountantDashboardLeft() {
+export default function AccountantDashboardLeft({
+  summaries,
+  myTransactionCount,
+}: {
+  summaries: Record<string, AccountantExpenseSummary>;
+  myTransactionCount: number;
+}) {
   const { fullName } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const displayName = fullName || "Accountant";
+  const summary = summaries[String(currentYear)];
+  const thisMonth = summary?.monthlyExpenses[new Date().getMonth()] ?? 0;
+  const dynamicSummaryCards = expenseSummaryCards.map((item) => {
+    if (item.label === "Total Expenses") return { ...item, value: formatAccountantRevenue(summary?.totalExpenses ?? 0) };
+    if (item.label === "This Month Spending") return {
+      ...item,
+      value: formatAccountantRevenue(thisMonth),
+      detail: new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric" }).format(new Date()),
+    };
+    if (item.label === "Expense Categories") return { ...item, value: String(summary?.categoryBreakdown.length ?? 0) };
+    if (item.label === "Transactions Recorded") return { ...item, value: myTransactionCount.toLocaleString("en-IN") };
+    return item;
+  });
   const welcomeCard = [
     {
       show: false,
@@ -390,7 +455,7 @@ export default function AccountantDashboardLeft() {
       <AdminInfoCard cardProps={welcomeCard} />
 
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {expenseSummaryCards.map((item) => {
+        {dynamicSummaryCards.map((item) => {
           const viewByCardLabel: Record<string, string> = {
             "Total Expenses": "totalExpenses",
             "This Month Spending": "thisMonthSpending",
@@ -413,10 +478,10 @@ export default function AccountantDashboardLeft() {
       </div>
 
       <div className="mt-4">
-        <ExpenseAnalyticsCard />
+        <ExpenseAnalyticsCard summaries={summaries} />
       </div>
 
-      <ExpenseCategoriesOverview />
+      <ExpenseCategoriesOverview summary={summary} />
     </div>
   );
 }
