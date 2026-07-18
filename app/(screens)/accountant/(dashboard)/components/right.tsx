@@ -5,6 +5,10 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { recentExpenseRecords } from "./data";
 import type { AccountantExpense } from "@/lib/helpers/accountant/accountantExpensesAPI";
 import { formatAccountantRevenue } from "@/lib/helpers/accountant/accountantRevenueAPI";
+import { fetchAccountantEducationOptions } from "@/lib/helpers/accountant/accountantRevenueAPI";
+import { fetchAccountantExpenses } from "@/lib/helpers/accountant/accountantExpensesAPI";
+import { useUser } from "@/app/utils/context/UserContext";
+import { useEffect, useState } from "react";
 
 function RecentExpenseRecords({ expenses }: { expenses: AccountantExpense[] }) {
   return (
@@ -49,12 +53,50 @@ function RecentExpenseRecords({ expenses }: { expenses: AccountantExpense[] }) {
   );
 }
 
-export default function AccountantDashboardRight({ recentExpenses }: { recentExpenses: AccountantExpense[] }) {
+export default function AccountantDashboardRight({
+  recentExpenses,
+}: {
+  recentExpenses?: AccountantExpense[];
+}) {
+  const { accountantId, collegeId } = useUser();
+  const [loadedExpenses, setLoadedExpenses] = useState<AccountantExpense[]>([]);
+
+  useEffect(() => {
+    if (recentExpenses !== undefined) return;
+    let active = true;
+
+    async function loadRecentExpenses() {
+      try {
+        const options = await fetchAccountantEducationOptions(accountantId, collegeId);
+        const educationIds = options.map((option) => option.collegeEducationId);
+        if (!collegeId || educationIds.length === 0) {
+          if (active) setLoadedExpenses([]);
+          return;
+        }
+        const result = await fetchAccountantExpenses({
+          collegeId,
+          collegeEducationIds: educationIds,
+          page: 1,
+          itemsPerPage: 20,
+        });
+        if (active) setLoadedExpenses(result.data);
+      } catch (error) {
+        console.error("Unable to load recent accountant expenses:", error);
+        if (active) setLoadedExpenses([]);
+      }
+    }
+
+    void loadRecentExpenses();
+    return () => {
+      active = false;
+    };
+  }, [accountantId, collegeId, recentExpenses]);
+
   return (
     <aside className="hidden flex-col gap-4 border-l border-gray-100 p-2 md:flex md:w-[32%]">
       <CourseScheduleCard isVisibile={false} />
       <WorkWeekCalendar />
-      <RecentExpenseRecords expenses={recentExpenses} />
+      <RecentExpenseRecords expenses={recentExpenses ?? loadedExpenses} />
     </aside>
   );
 }
