@@ -40,7 +40,6 @@ export default function ReimbursementDashboard() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
-
   const canEditRequest = (request: HRReimbursementRequest) =>
     ["approved", "rejected"].includes(request.status?.toLowerCase() ?? "pending");
 
@@ -87,13 +86,13 @@ export default function ReimbursementDashboard() {
         current.map((report) =>
           report.employeeExpenseReportId === statusChange.request.employeeExpenseReportId
             ? {
-                ...report,
-                status: statusChange.status,
-                approvedAt:
-                  statusChange.status === "approved" ? new Date().toISOString() : null,
-                rejectedAt:
-                  statusChange.status === "rejected" ? new Date().toISOString() : null,
-              }
+              ...report,
+              status: statusChange.status,
+              approvedAt:
+                statusChange.status === "approved" ? new Date().toISOString() : null,
+              rejectedAt:
+                statusChange.status === "rejected" ? new Date().toISOString() : null,
+            }
             : report,
         ),
       );

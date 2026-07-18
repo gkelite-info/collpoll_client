@@ -40,6 +40,7 @@ const issueRaisedRoles: WellbeingIssueRaisedRole[] = [
 ];
 
 function getIssueRaisedRole(role: string | null): WellbeingIssueRaisedRole {
+  if (role?.toLowerCase() === "accountant") return "Finance";
   return issueRaisedRoles.includes(role as WellbeingIssueRaisedRole)
     ? (role as WellbeingIssueRaisedRole)
     : "Admin";

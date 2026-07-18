@@ -205,7 +205,15 @@ export async function createWellbeingSupportIssue(
         hint: issueError.hint,
       });
     }
-    throw issueError ?? new Error("Failed to create wellbeing issue");
+    if (issueError) {
+      const errorDetails = [issueError.message, issueError.details, issueError.hint]
+        .filter(Boolean)
+        .join(" ");
+      throw new Error(
+        `${issueError.code ? `[${issueError.code}] ` : ""}${errorDetails || "Failed to create wellbeing issue"}`,
+      );
+    }
+    throw new Error("Failed to create wellbeing issue");
   }
 
   const issueId = issueData.wellbeingSupportIssueId;
