@@ -4,9 +4,9 @@ type AcademicDropdownParams = {
     collegeId: number;
  
     educationId?: number;
-    branchId?: number;
+    branchId?: number | null;
     academicYearId?: number;
-    semester?: number;
+    semester?: number | null;
  
     type:
     | "education"
