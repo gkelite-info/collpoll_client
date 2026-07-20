@@ -91,7 +91,7 @@ export function fetchAcademicDropdowns(params: {
  
 export async function fetchAcademicDropdowns(
     params: AcademicDropdownParams
-) {
+): Promise<any> {
     const {
         type,
         collegeId,
