@@ -27,7 +27,9 @@ export default function DashboardLayout({
 
       {/* Main content */}
       <div className="flex-1 flex flex-col">
-        <Header onMenuClick={() => setIsSidebarOpen((prev) => !prev)} />
+        <div className="relative z-[100]">
+          <Header onMenuClick={() => setIsSidebarOpen((prev) => !prev)} />
+        </div>
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
