@@ -14,9 +14,10 @@ interface Faculty {
 interface Props {
   faculty: Faculty;
   onSelect: (faculty: Faculty) => void;
+  isSchool?: boolean;
 }
 
-export default function FacultyCard({ faculty, onSelect }: Props) {
+export default function FacultyCard({ faculty, onSelect, isSchool }: Props) {
   const [imgError, setImgError] = useState<boolean>(false);
   return (
     <div className="bg-white rounded-2xl p-5 shadow-sm flex flex-col">
@@ -64,9 +65,9 @@ export default function FacultyCard({ faculty, onSelect }: Props) {
 
       <div className="mt-3 flex flex-col gap-2">
         <p className="text-sm text-[#282828] mb-1">
-          Branch –{" "}
+          {isSchool ? "Year" : "Branch"} –{" "}
           <span className="inline-block bg-[#43C17A42] text-[#00C757] px-4 py-0.5 rounded-full text-xs">
-            {faculty.branch}
+            {isSchool ? (faculty.year || "—") : faculty.branch}
           </span>
         </p>
 
