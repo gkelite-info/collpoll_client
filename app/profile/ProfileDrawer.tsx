@@ -202,9 +202,9 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/20 z-120" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/20 z-[120]" onClick={onClose} />
 
-      <div className="fixed top-0 right-0 h-full w-[85%] md:w-[50%] lg:w-[33%] bg-white z-150 shadow-xl flex flex-col overflow-y-auto">
+      <div className="fixed top-0 right-0 h-full w-[85%] md:w-[50%] lg:w-[33%] bg-white z-[150] shadow-xl flex flex-col overflow-y-auto">
         <div className="flex justify-between items-center gap-3 px-4 py-4">
           <button onClick={onClose} className="cursor-pointer text-[#282828]">
             <ArrowLeft size={22} />
@@ -458,7 +458,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                 size={30}
                 className="rounded-full bg-[#EB00001A] text-[#EB0000] p-1.5"
               />
-              Log Out
+              Logout
             </button>
           </div>
         </div>
