@@ -22,6 +22,7 @@ import {
 import { AdminProfileCardShimmer } from "../shimmers/AdminProfileCardShimmer";
 import { StatCardShimmer } from "../shimmers/StatCardShimmer";
 import { FeeCollectionTrendCardShimmer } from "../shimmers/FeeCollectionTrendCardShimmer";
+import { QuickLinkCardShimmer } from "../shimmers/QuickLinkCardShimmer";
 import AdminListView from "./AdminListView";
 import FacultyListView from "./FacultyListView";
 import StudentListView from "./StudentListView";
@@ -490,15 +491,23 @@ export default function CollegeAdminDashboard() {
 
       <div className="bg-white p-4 rounded-xl shadow-sm mb-3 md:mb-3 lg:mb-6">
         <div className="grid grid-cols-2 landscape:grid-cols-3 md:grid-cols-3 landscape:md:grid-cols-3 lg:grid-cols-6 landscape:lg:grid-cols-6 gap-4">
-          {quickLinks
-            .filter(link => !(isSchool && link === "Placement"))
-            .map((link) => (
-            <QuickLinkCard
-              key={link}
-              title={link}
-              onClick={() => handleSetView(link)}
-            />
-          ))}
+          {isLoading || !stats ? (
+            quickLinks
+              .filter(link => !(isSchool && link === "Placement"))
+              .map((link, i) => (
+                <QuickLinkCardShimmer key={i} />
+              ))
+          ) : (
+            quickLinks
+              .filter(link => !(isSchool && link === "Placement"))
+              .map((link) => (
+              <QuickLinkCard
+                key={link}
+                title={link}
+                onClick={() => handleSetView(link)}
+              />
+            ))
+          )}
         </div>
       </div>
 

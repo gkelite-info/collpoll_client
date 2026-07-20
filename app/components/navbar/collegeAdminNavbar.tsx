@@ -88,7 +88,7 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
         icon: (isActive: boolean) => (
           <Calendar size={18} weight={isActive ? "fill" : "regular"} />
         ),
-        label: t("Calendar"),
+        label: t("Calendar") + " / Meetings",
         path: `${basePath}/calendar`,
       },
       {
@@ -135,7 +135,7 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
 
     return allItems.filter(item => {
       if (item.label === t("Admissions") && !isAdmissionsAllowed) return false;
-      if (item.path === `${basePath}/clubs` && (isSchool || contextLoading)) return false;
+      if ((item.path === `${basePath}/clubs` || item.path === `${basePath}/wellbeing`) && (isSchool || contextLoading)) return false;
       return true;
     });
   }, [t, collegeCode, isSchool, contextLoading, basePath]);

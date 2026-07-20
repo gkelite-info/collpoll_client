@@ -1,0 +1,420 @@
+# Local Gateway Agent — Cloud-to-Edge Biometric Bridge
+
+## Problem Statement
+
+The CollPoll SaaS platform is hosted in the cloud (Vercel/AWS). Biometric devices (Hikvision) sit on private campus LANs (e.g., `192.168.x.x`). The cloud **cannot** reach private IPs — all `callDeviceProxy` → `digestFetch` calls fail with "Device is unreachable" in production.
+
+**Two distinct networking problems must be solved:**
+
+| # | Direction | Description | Currently Handled By |
+|---|-----------|-------------|---------------------|
+| 1 | **Cloud → Device** (Outbound Commands) | Register users, sync faces, capture fingerprints, configure webhooks | [device-proxy/route.ts](file:///d:/collpoll_client/app/api/biometric/device-proxy/route.ts) — makes direct HTTP Digest calls to device IP |
+| 2 | **Device → Cloud** (Inbound Scan Events) | Device pushes scan logs to our webhook | [scan/route.ts](file:///d:/collpoll_client/app/api/biometric/scan/route.ts) — the device `POST`s to `/api/biometric/scan` |
+
+> [!IMPORTANT]
+> **Problem #2 (Inbound Scans) already works in production** IF the campus router does port-forwarding or the device can resolve the public hostname. The Hikvision device pushes outbound HTTP to `tektoncampus.com/api/biometric/scan`, which is publicly reachable. **No changes needed for scan ingestion.**
+>
+> **Problem #1 (Outbound Commands) is the one that breaks.** This is what the Local Gateway Agent solves.
+
+---
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────┐
+│  Cloud (Vercel / AWS)               │
+│                                     │
+│  Next.js App                        │
+│  ┌───────────────────────────────┐  │
+│  │ /api/biometric/device-proxy   │  │
+│  │  → Checks: is agent online?   │  │
+│  │  → YES: Queue command in DB   │  │
+│  │  → NO:  Direct fetch (local)  │  │
+│  └───────────────────────────────┘  │
+│  ┌───────────────────────────────┐  │
+│  │ Supabase DB                   │  │
+│  │  agent_command_queue table    │  │
+│  │  campus_agents table          │  │
+│  └───────────────────────────────┘  │
+└──────────────┬──────────────────────┘
+               │ Supabase Realtime
+               │ (Outbound WebSocket)
+               ▼
+┌──────────────────────────────────────┐
+│  Campus LAN                          │
+│                                      │
+│  ┌────────────────────────────┐      │
+│  │  Local Gateway Agent       │      │
+│  │  (Node.js .exe on a PC)    │      │
+│  │                            │      │
+│  │  1. Listens to Supabase    │      │
+│  │     Realtime for commands  │      │
+│  │  2. Executes Digest HTTP   │      │
+│  │     against local devices  │      │
+│  │  3. Writes results back    │      │
+│  │     to Supabase DB         │      │
+│  └────────────┬───────────────┘      │
+│               │ HTTP Digest (LAN)    │
+│               ▼                      │
+│  ┌──────────┐  ┌──────────┐         │
+│  │ Device 1 │  │ Device 2 │  ...    │
+│  │ 192.168. │  │ 192.168. │         │
+│  └──────────┘  └──────────┘         │
+└──────────────────────────────────────┘
+```
+
+---
+
+## Scope of Changes — Critical Interlink Analysis
+
+> [!CAUTION]
+> The #1 risk is breaking the existing localhost development workflow. Every change below is designed with a **dual-mode** fallback: if no agent is registered for a college, the system falls back to the current direct-fetch behavior. Zero breaking changes.
+
+### Files That Will Be Modified
+
+| File | What Changes | Risk Level |
+|------|-------------|------------|
+| [device-proxy/route.ts](file:///d:/collpoll_client/app/api/biometric/device-proxy/route.ts) | Add agent-mode routing before `digestFetch`. If agent exists → queue command, poll for result. If not → existing `digestFetch` path (zero change). | 🟡 Medium — This is the single chokepoint. Must be bulletproof. |
+| [hikvisionAPI.ts](file:///d:/collpoll_client/lib/helpers/devices/hikvisionAPI.ts) | **No changes.** All 20+ functions call `callDeviceProxy()` which hits `/api/biometric/device-proxy`. The proxy handles routing transparently. | 🟢 None |
+| [biometricDeviceAPI.ts](file:///d:/collpoll_client/lib/helpers/devices/biometricDeviceAPI.ts) | **No changes.** Device CRUD and heartbeat are pure DB operations. | 🟢 None |
+| [scanIngestionHelper.ts](file:///d:/collpoll_client/lib/helpers/devices/scanIngestionHelper.ts) | **No changes.** Inbound scans already work. | 🟢 None |
+| [scan/route.ts](file:///d:/collpoll_client/app/api/biometric/scan/route.ts) | **No changes.** Device pushes to public URL. | 🟢 None |
+| [device/sync/route.ts](file:///d:/collpoll_client/app/api/biometric/device/sync/route.ts) | Minor update: after device sync, also configure the **agent's webhook relay** if agent is present. | 🟡 Medium |
+| [registerUser.ts](file:///d:/collpoll_client/lib/helpers/biometric/registerUser.ts) | **No changes.** Calls `registerUserOnDevice` from hikvisionAPI. Transparent. | 🟢 None |
+| [userDeviceSyncAPI.ts](file:///d:/collpoll_client/lib/helpers/devices/userDeviceSyncAPI.ts) | **No changes.** Pure DB operations. | 🟢 None |
+| [encryptionUtils.ts](file:///d:/collpoll_client/lib/helpers/devices/encryptionUtils.ts) | **No changes.** Agent gets credentials from DB directly using service key. | 🟢 None |
+| [DevicesTab.tsx](file:///d:/collpoll_client/app/%28screens%29/admin/academic-setup/components/biometric/DevicesTab.tsx) | **No changes.** Calls `/api/biometric/device/sync` — transparent. | 🟢 None |
+| [CredentialsTab.tsx](file:///d:/collpoll_client/app/%28screens%29/admin/academic-setup/components/biometric/CredentialsTab.tsx) | **No changes.** All delete/face/card/fingerprint calls go through `hikvisionAPI.ts` → `callDeviceProxy()`. Transparent. | 🟢 None |
+| Enrollment Tabs (Face, Fingerprint, Card) | **No changes.** Same transparent routing. | 🟢 None |
+
+### Files That Will Be Created (NEW)
+
+| File | Purpose |
+|------|---------|
+| `[NEW] app/api/biometric/agent/register/route.ts` | Agent registration endpoint — agent calls this on boot to register itself |
+| `[NEW] app/api/biometric/agent/heartbeat/route.ts` | Agent heartbeat endpoint — periodic keep-alive |
+| `[NEW] app/api/biometric/agent/command/route.ts` | Agent polls/fetches pending commands and posts results |
+| `[NEW] agent/collpoll-agent.ts` | The Local Gateway Agent script (standalone Node.js) |
+| `[NEW] agent/package.json` | Agent dependencies (supabase-js, node-fetch, crypto) |
+| `[NEW] agent/.env.example` | Template env for campus IT |
+
+### Database Tables (NEW — Supabase)
+
+| Table | Purpose |
+|-------|---------|
+| `campus_agents` | Registry of active agents per college |
+| `agent_command_queue` | Command queue — cloud writes commands, agent reads and executes |
+
+---
+
+## Proposed Changes — Detailed
+
+### Phase 1: Database Schema
+
+#### [NEW] `campus_agents` table
+
+```sql
+CREATE TABLE campus_agents (
+  agentId          SERIAL PRIMARY KEY,
+  collegeId        INTEGER NOT NULL REFERENCES colleges(collegeId),
+  agentName        TEXT NOT NULL DEFAULT 'Campus Agent',
+  agentSecret      TEXT NOT NULL,  -- Shared secret for auth
+  isOnline         BOOLEAN NOT NULL DEFAULT false,
+  lastHeartbeat    TIMESTAMPTZ,
+  agentVersion     TEXT,
+  localIpAddress   TEXT,           -- Agent's LAN IP (for debug)
+  createdAt        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updatedAt        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  
+  UNIQUE(collegeId)  -- One agent per campus
+);
+```
+
+#### [NEW] `agent_command_queue` table
+
+```sql
+CREATE TABLE agent_command_queue (
+  commandId        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  collegeId        INTEGER NOT NULL REFERENCES colleges(collegeId),
+  deviceId         INTEGER NOT NULL REFERENCES biometric_devices(deviceId),
+  
+  -- The exact proxy request payload
+  endpoint         TEXT NOT NULL,        -- e.g. "AccessControl/UserInfo/Record"
+  method           TEXT NOT NULL DEFAULT 'POST',
+  payload          JSONB,               -- The body to send
+  contentType      TEXT,                -- e.g. "application/xml"
+  isMultipart      BOOLEAN DEFAULT false,
+  multipartData    JSONB,               -- Base64-encoded parts for multipart
+  
+  -- Command lifecycle
+  status           TEXT NOT NULL DEFAULT 'pending'
+                   CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'expired')),
+  result           JSONB,               -- Response from device
+  resultHttpStatus INTEGER,             -- HTTP status from device
+  errorMessage     TEXT,
+  
+  -- Timeouts & retries
+  createdAt        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  pickedUpAt       TIMESTAMPTZ,
+  completedAt      TIMESTAMPTZ,
+  expiresAt        TIMESTAMPTZ NOT NULL DEFAULT (now() + INTERVAL '60 seconds'),
+  retryCount       INTEGER DEFAULT 0,
+  maxRetries       INTEGER DEFAULT 2,
+  
+  updatedAt        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Index for agent polling (hot path)
+CREATE INDEX idx_agent_queue_pending 
+  ON agent_command_queue (collegeId, status, createdAt) 
+  WHERE status = 'pending';
+
+-- Auto-expire stale commands (Supabase cron or app-level)
+CREATE INDEX idx_agent_queue_expiry
+  ON agent_command_queue (expiresAt) 
+  WHERE status IN ('pending', 'processing');
+```
+
+> [!NOTE]
+> **Why a command queue instead of Supabase Realtime broadcast?**
+> - Realtime broadcast is fire-and-forget — if the agent misses a message, it's lost forever.
+> - A DB queue guarantees delivery, supports retries, and provides a full audit trail.
+> - The agent uses Supabase Realtime only as a **notification trigger** ("hey, there's a new command") to avoid polling, but reads the actual command from the DB.
+
+---
+
+### Phase 2: Modify the Cloud Proxy (The Critical Change)
+
+#### [MODIFY] [device-proxy/route.ts](file:///d:/collpoll_client/app/api/biometric/device-proxy/route.ts)
+
+The core change: Before attempting `digestFetch`, check if there is an active agent for this device's college. If yes, queue the command and wait for the agent to execute it. If no, fall through to the existing direct-fetch behavior.
+
+```
+BEFORE (Current Flow):
+  1. Parse request → get deviceId, endpoint, method, payload
+  2. Look up device in DB → get IP, port, credentials
+  3. digestFetch(device IP) → talk directly to device
+  4. Return result
+
+AFTER (New Flow):
+  1. Parse request → get deviceId, endpoint, method, payload  (UNCHANGED)
+  2. Look up device in DB → get IP, port, credentials, collegeId  (UNCHANGED)
+  3. NEW: Check campus_agents for this collegeId
+     a. If agent exists AND is online (heartbeat < 90s ago):
+        - Insert command into agent_command_queue
+        - Notify agent via Supabase Realtime broadcast
+        - Poll agent_command_queue for result (timeout: 30s)
+        - Return result from agent
+     b. If NO agent OR agent is offline:
+        - Fall through to existing digestFetch (UNCHANGED)
+  4. Return result  (UNCHANGED)
+```
+
+**Key Design Decisions:**
+- **30-second timeout** for agent response — long enough for complex Hikvision operations (face registration can take 5-10s), short enough that the admin UI doesn't hang forever.
+- **Polling vs WebSocket for result:** We poll the DB every 500ms. This is more reliable than waiting for a broadcast in a serverless function.
+- **Graceful fallback:** If the agent is registered but offline (heartbeat stale), we still attempt direct fetch. This means localhost dev always works without an agent.
+
+> [!WARNING]
+> **Edge Case: Multipart Requests (Face Registration)**
+> 
+> The current proxy supports `multipart/form-data` for face image uploads. The agent queue cannot store raw binary blobs in JSONB. Solution: For multipart requests, the proxy converts the `FormData` parts to base64-encoded JSON before queuing. The agent reconstructs the multipart body from base64 before sending to the device. This is safe because face images are typically 50-200KB.
+
+---
+
+### Phase 3: Agent API Endpoints
+
+#### [NEW] `app/api/biometric/agent/register/route.ts`
+
+Called by the agent on startup. Registers/updates the agent in `campus_agents`.
+
+- Accepts: `{ collegeId, agentSecret, agentVersion, localIpAddress }`
+- Validates the shared secret against what's stored in the college config
+- Returns: `{ success: true, agentId }`
+
+#### [NEW] `app/api/biometric/agent/heartbeat/route.ts`
+
+Called every 30 seconds by the agent.
+
+- Updates `lastHeartbeat` and `isOnline` in `campus_agents`
+- Returns any pending commands count (optimization: agent can skip polling if count is 0)
+
+#### [NEW] `app/api/biometric/agent/command/route.ts`
+
+The agent's main work loop endpoint.
+
+- `GET`: Fetch next pending command for this college
+- `POST`: Submit command result (success or failure)
+- Updates `agent_command_queue` status → `completed` or `failed`
+
+---
+
+### Phase 4: The Local Gateway Agent
+
+#### [NEW] `agent/collpoll-agent.ts`
+
+A self-contained Node.js script that the campus IT installs on a local server.
+
+**Agent Lifecycle:**
+
+```
+1. BOOT
+   → Read config from .env (SUPABASE_URL, SERVICE_KEY, COLLEGE_ID, AGENT_SECRET)
+   → Register with cloud (/api/biometric/agent/register)
+   → Start heartbeat loop (every 30s)
+
+2. LISTEN
+   → Subscribe to Supabase Realtime channel: `agent_commands_college_{id}`
+   → On broadcast "new_command":
+     → Fetch pending commands from agent_command_queue
+     → For each command:
+       a. Mark as 'processing'
+       b. Look up device credentials from biometric_devices
+       c. Execute HTTP Digest auth request against local device IP
+       d. Write result back to agent_command_queue (status: completed/failed)
+
+3. POLL FALLBACK
+   → Every 5 seconds, poll for any missed commands (in case realtime drops)
+   → This guarantees zero message loss
+
+4. SHUTDOWN (SIGINT/SIGTERM)
+   → Mark agent as offline in campus_agents
+   → Clean exit
+```
+
+**Agent Features:**
+- **Auto-reconnect:** If the Supabase WebSocket drops, the agent reconnects with exponential backoff (1s, 2s, 4s, 8s, max 30s)
+- **Concurrent command execution:** Uses a configurable concurrency limit (default: 3) to handle multiple device operations simultaneously without overwhelming the LAN
+- **Structured logging:** Console + optional file-based log rotation for campus IT debugging
+- **Graceful degradation:** If a device is unreachable from the agent, it reports the failure back — the admin UI shows the same "Device unreachable" error they would see today
+
+---
+
+### Phase 5: Device Webhook Configuration Update
+
+#### [MODIFY] [device/sync/route.ts](file:///d:/collpoll_client/app/api/biometric/device/sync/route.ts)
+
+When syncing a device in production (agent mode), the webhook URL must be the **public SaaS URL** (e.g., `https://tektoncampus.com/api/biometric/scan`), NOT a local IP.
+
+Current behavior: The sync route tries to derive the URL from `req.headers.host`. In production, this is already correct (`tektoncampus.com`). 
+
+**Change:** When an agent is present and online, the sync command (both `getDeviceInfo` and `configureDeviceWebhook`) should be routed through the agent (which happens automatically since they call `callDeviceProxy` → `/api/biometric/device-proxy`).
+
+The only adjustment needed: Remove the `os.networkInterfaces()` localhost-replacement hack (lines 33-47), since in agent mode, the agent handles local networking. Replace with a cleaner check:
+- If `NEXT_PUBLIC_APP_URL` is set → use it
+- Else if request host is not localhost → use it  
+- Else → use the existing LAN IP detection (for pure local dev)
+
+---
+
+## Edge Cases & Risk Mitigation
+
+### Edge Case 1: Agent Goes Offline Mid-Command
+- **Risk:** Command is queued, agent picks it up, agent crashes before reporting result.
+- **Mitigation:** Commands have `expiresAt` (60 seconds). The proxy polls for 30 seconds. If no result arrives, the proxy returns a timeout error. The command status auto-transitions to `expired` via a Supabase cron or the next poll.
+
+### Edge Case 2: Two Admins Send Commands Simultaneously
+- **Risk:** Race condition on `agent_command_queue`.
+- **Mitigation:** Each command has a unique UUID. The agent picks commands with `status = 'pending'` and atomically updates to `processing` using `UPDATE ... WHERE status = 'pending'` (Postgres row-level locking).
+
+### Edge Case 3: Large Face Image in Queue (>256KB)
+- **Risk:** JSONB column has practical limits; base64 inflates size by ~33%.
+- **Mitigation:** Hikvision face images are typically 30-100KB. Base64 → 40-133KB. JSONB supports up to 1GB. No issue. For safety, we add a 2MB hard limit check.
+
+### Edge Case 4: Agent Registered but Campus Network Changes
+- **Risk:** Agent's LAN changes, devices get new IPs.
+- **Mitigation:** Device IPs are stored in `biometric_devices` table. Campus admin updates IPs in the UI. Agent always reads fresh device info from DB for each command.
+
+### Edge Case 5: Fingerprint Capture (Interactive/Long-Running)
+- **Risk:** `captureFingerprint` in [hikvisionAPI.ts](file:///d:/collpoll_client/lib/helpers/devices/hikvisionAPI.ts) has a 10-iteration polling loop with `setTimeout(1500)` — total ~15s. This exceeds typical serverless timeouts.
+- **Mitigation:** Agent executes the full loop locally (no serverless timeout). The 30s proxy timeout comfortably covers this. The agent reports the final result.
+
+### Edge Case 6: Card Capture (Also Interactive)
+- **Risk:** Same as fingerprint — `captureCard` polls for up to 15 seconds.
+- **Mitigation:** Same as above — agent handles it locally.
+
+### Edge Case 7: Development Environment (localhost)
+- **Risk:** Developer doesn't have/need an agent.
+- **Mitigation:** If no agent row exists for the college, or the agent's `lastHeartbeat` is stale (>90s), the proxy falls through to direct `digestFetch`. **Zero change to localhost development workflow.**
+
+### Edge Case 8: Multiple Colleges on Same SaaS
+- **Risk:** Agent for College A picks up commands for College B.
+- **Mitigation:** Agent is scoped by `collegeId`. The command queue is filtered by `collegeId`. The Realtime channel is `agent_commands_college_{id}`. Complete isolation.
+
+### Edge Case 9: Agent Secret Rotation / Security
+- **Risk:** Leaked agent secret allows unauthorized device access.
+- **Mitigation:** 
+  - Agent secret is a random 64-char hex string generated during setup
+  - Stored hashed in `campus_agents` (bcrypt)
+  - Agent sends the raw secret; server validates against hash
+  - Can be rotated from the admin UI without reinstalling the agent (agent re-reads on next heartbeat)
+
+### Edge Case 10: Supabase Realtime Quota / Rate Limits
+- **Risk:** Free-tier Supabase has realtime connection limits.
+- **Mitigation:** One agent = one persistent connection. This is negligible. Even 100 campuses = 100 connections — well within any Supabase plan.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- No automated tests possible for Hikvision device interaction (requires physical hardware)
+- After implementation, verify TypeScript compilation: `npx tsc --noEmit`
+
+### Manual Verification — Phase-by-Phase
+
+1. **Database:** Run SQL migrations in Supabase dashboard. Verify tables, indexes, and RLS policies.
+2. **Proxy (Agent Mode):** 
+   - Register a test agent row manually in `campus_agents` 
+   - Call `/api/biometric/device-proxy` → verify it queues to `agent_command_queue` instead of direct fetch
+   - Let the command expire → verify the proxy returns a timeout error gracefully
+3. **Proxy (Fallback Mode):**
+   - Delete the agent row
+   - Call `/api/biometric/device-proxy` → verify it falls through to direct `digestFetch` (existing behavior)
+   - **CRITICAL:** This confirms zero regression for localhost development
+4. **Agent:**
+   - Run the agent locally on the same LAN as a test device
+   - Queue a `getDeviceInfo` command from the cloud
+   - Verify the agent picks it up, talks to the device, and writes the result back
+   - Admin UI shows "Device connected!" — same as before
+5. **Full E2E:**
+   - Deploy to staging (cloud)
+   - Run agent on campus network
+   - Admin adds a device → sync succeeds via agent
+   - Admin enrolls a face → face registered via agent
+   - Device scans a face → scan webhook hits cloud directly (existing path)
+   - Verify all attendance processing works as before
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Q1: Supabase Plan Tier**
+> Does the production Supabase instance support the `service_role` key for the local agent? The agent needs to read `biometric_devices` (including encrypted passwords) and write to `agent_command_queue`. If RLS is strict, we may need specific policies.
+
+> [!IMPORTANT]  
+> **Q2: Agent Distribution Method**
+> Should we package the agent as:
+> - A) A standalone `.exe` using `pkg` (zero Node.js dependency for campus IT)
+> - B) A Docker container (for campuses with Docker infrastructure)
+> - C) A plain Node.js script with install instructions (simplest for us to maintain)
+>
+> Recommendation: Start with **A** (.exe) for maximum ease of deployment.
+
+> [!IMPORTANT]
+> **Q3: Admin UI for Agent Management**
+> Should we add a section in the Admin → Academic Setup → Biometric Structure tab to:
+> - Show agent status (online/offline, last heartbeat)
+> - Generate the agent secret
+> - Download the agent installer
+>
+> Or should this be Phase 2 (after the core agent works)?
+
+> [!IMPORTANT]
+> **Q4: Webhook Configuration in Production**
+> Currently, `configureDeviceWebhook` tells the device to push scans to the cloud URL (`tektoncampus.com/api/biometric/scan`). This requires the campus network to allow the device to reach the internet on port 443.
+> 
+> Alternative: The agent could also act as a **local webhook receiver** — the device pushes scans to the agent (on the LAN), and the agent forwards them to the cloud. This adds complexity but removes the requirement for devices to have internet access.
+>
+> Recommendation: Start with the current approach (device pushes directly to cloud). Only build the agent-as-webhook-relay if campus firewalls block outbound device traffic.
