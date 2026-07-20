@@ -1,5 +1,5 @@
 "use client";
-import { useState, ReactNode, useEffect } from "react";
+import { useState, ReactNode, useEffect, useMemo } from "react";
 import {
   BookOpenText,
   BuildingOffice,
@@ -26,6 +26,8 @@ import { useTranslations } from "next-intl";
 import ConfirmLogoutModal from "../modals/logoutModal";
 import { logoutUser } from "@/lib/helpers/logoutUser";
 import toast from "react-hot-toast";
+import { useUser } from "@/app/utils/context/UserContext";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type NavItem = {
   icon: (isActive: boolean) => ReactNode;
@@ -45,98 +47,108 @@ export default function AdminNavbar({ onClose }: AdminNavbarProps) {
   const t = useTranslations("Navbars");
   const [loading, setLoading] = useState(false);
 
-  const items: NavItem[] = [
-    {
-      icon: (isActive) => <House size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Home"),
-      path: "/admin",
-    },
-    {
-      icon: (isActive) => <Calendar size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Calendar"),
-      path: "/admin/calendar",
-    },
-    {
-      icon: (isActive) => <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Attendance"),
-      path: "/admin/attendance",
-    },
-    {
-      icon: (isActive) => <Note size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Assignments"),
-      path: "/admin/assignments",
-    },
-    {
-      icon: (isActive) => <GraduationCap size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Academics"),
-      path: "/admin/academics",
-    },
-    {
-      icon: (isActive) => <Student size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Student Progress"),
-      path: "/admin/student-progress",
-    },
-    {
-      icon: (isActive) => <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Projects"),
-      path: "/admin/projects",
-    },
-    {
-      icon: (isActive) => <BookOpenText size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Academic Setup"),
-      path: "/admin/academic-setup",
-    },
-    {
-      icon: (isActive) => <CalendarCheck size={18} weight={isActive ? "fill" : "regular"} />,
-      label: "Leave Request",
-      path: "/admin/leave-request",
-    },
-    {
-      icon: (isActive) => <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Placements"),
-      path: "/admin/placements",
-    },
-    {
-      icon: (isActive) => <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Club"),
-      path: "/admin/clubs",
-    },
-    {
-      icon: (isActive) => <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Drive"),
-      path: "/admin/drive",
-    },
-    {
-      icon: (isActive) => <Laptop size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Meetings"),
-      path: "/admin/meetings",
-    },
-    {
-      icon: (isActive) => <FileText size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Exams"),
-      path: "/admin/exams",
-    },
-    {
-      icon: (isActive) => <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("My Attendance"),
-      path: "/admin/my-attendance",
-    },
-    {
-      icon: (isActive) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Wellbeing"),
-      path: "/admin/wellbeing",
-    },
-    {
-      icon: (isActive) => <Gear size={18} weight={isActive ? "fill" : "regular"} />,
-      label: t("Settings"),
-      path: "/admin/settings",
-    },
-  ];
+  const { collegeEducationType, loading: contextLoading } = useUser();
+  const isSchool = isSchoolEducation(collegeEducationType);
+
+  const items: NavItem[] = useMemo(() => {
+    const allItems = [
+      {
+        icon: (isActive: boolean) => <House size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Home"),
+        path: "/admin",
+      },
+      {
+        icon: (isActive: boolean) => <Calendar size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Calendar"),
+        path: "/admin/calendar",
+      },
+      {
+        icon: (isActive: boolean) => <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Attendance"),
+        path: "/admin/attendance",
+      },
+      {
+        icon: (isActive: boolean) => <Note size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Assignments"),
+        path: "/admin/assignments",
+      },
+      {
+        icon: (isActive: boolean) => <GraduationCap size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Academics"),
+        path: "/admin/academics",
+      },
+      {
+        icon: (isActive: boolean) => <Student size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Student Progress"),
+        path: "/admin/student-progress",
+      },
+      {
+        icon: (isActive: boolean) => <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Projects"),
+        path: "/admin/projects",
+      },
+      {
+        icon: (isActive: boolean) => <BookOpenText size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Academic Setup"),
+        path: "/admin/academic-setup",
+      },
+      {
+        icon: (isActive: boolean) => <CalendarCheck size={18} weight={isActive ? "fill" : "regular"} />,
+        label: "Leave Request",
+        path: "/admin/leave-request",
+      },
+      {
+        icon: (isActive: boolean) => <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Placements"),
+        path: "/admin/placements",
+      },
+      {
+        icon: (isActive: boolean) => <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Club"),
+        path: "/admin/clubs",
+      },
+      {
+        icon: (isActive: boolean) => <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Drive"),
+        path: "/admin/drive",
+      },
+      {
+        icon: (isActive: boolean) => <Laptop size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Meetings"),
+        path: "/admin/meetings",
+      },
+      {
+        icon: (isActive: boolean) => <FileText size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Exams"),
+        path: "/admin/exams",
+      },
+      {
+        icon: (isActive: boolean) => <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("My Attendance"),
+        path: "/admin/my-attendance",
+      },
+      {
+        icon: (isActive: boolean) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Wellbeing"),
+        path: "/admin/wellbeing",
+      },
+      {
+        icon: (isActive: boolean) => <Gear size={18} weight={isActive ? "fill" : "regular"} />,
+        label: t("Settings"),
+        path: "/admin/settings",
+      },
+    ];
+    
+    return allItems.filter(item => {
+      if ((item.path === "/admin/clubs" || item.path === "/admin/placements") && (isSchool || contextLoading)) return false;
+      return true;
+    });
+  }, [t, isSchool, contextLoading]);
 
   useEffect(() => {
     const current = items.find((item) => item.path === pathname);
-    if (current) setActive(current.label);
-  }, [pathname, items]);
+    if (current && !contextLoading) setActive(current.label);
+  }, [pathname, items, contextLoading]);
 
   const handleLogout = async () => {
     try {
@@ -171,33 +183,44 @@ export default function AdminNavbar({ onClose }: AdminNavbarProps) {
         </div>
 
         <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4 lg:pl-4 lg:pb-5 overflow-y-auto focus:outline-none">
-          {items.map((item) => {
-            const isActive = active === item.label;
-
-            return (
-              <Link
-                key={item.path}
-                href={item.path}
-                onClick={() => onClose?.()}
-                className={`flex relative items-center gap-3 w-full pl-4 py-2 rounded-l-full cursor-pointer transition-all duration-300
-                  before:transition-all before:duration-300
-                  after:transition-all after:duration-300
-                  ${isActive
-                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
-                    : "text-white hover:bg-[#50D689]/30 focus:outline-none"
-                  }
-                `}
-              >
-                <div className={`${isActive ? "text-[#43C17A]" : "text-white"}`}>
-                  {item.icon(isActive)}
+          {contextLoading ? (
+            <div className="flex flex-col gap-[11px] w-full pr-4">
+              {Array.from({ length: 15 }).map((_, i) => (
+                <div key={i} className="flex relative items-center gap-3 w-full pl-4 py-2">
+                  <div className="h-[18px] w-[18px] bg-white/20 rounded-full animate-pulse"></div>
+                  <div className="h-4 w-3/4 bg-white/20 rounded animate-pulse"></div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            items.map((item) => {
+              const isActive = active === item.label;
 
-                <p className={`text-sm sm:text-sm md:text-base lg:text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"}`}>
-                  {item.label}
-                </p>
-              </Link>
-            );
-          })}
+              return (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  onClick={() => onClose?.()}
+                  className={`flex relative items-center gap-3 w-full pl-4 py-2 rounded-l-full cursor-pointer transition-all duration-300
+                    before:transition-all before:duration-300
+                    after:transition-all after:duration-300
+                    ${isActive
+                      ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
+                      : "text-white hover:bg-[#50D689]/30 focus:outline-none"
+                    }
+                  `}
+                >
+                  <div className={`${isActive ? "text-[#43C17A]" : "text-white"}`}>
+                    {item.icon(isActive)}
+                  </div>
+
+                  <p className={`text-sm sm:text-sm md:text-base lg:text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"}`}>
+                    {item.label}
+                  </p>
+                </Link>
+              );
+            })
+          )}
 
           <button
             onClick={() => setShowLogoutModal(true)}

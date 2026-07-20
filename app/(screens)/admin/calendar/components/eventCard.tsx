@@ -33,7 +33,7 @@ const EVENT_STYLES: Record<
   },
 };
 
-const EventCard = ({ event, onDelete, onEdit, onClick, }: { event: CalendarEvent; onDelete: () => void; onEdit: () => void; onClick: () => void; }) => {
+const EventCard = ({ event, onDelete, onEdit, onClick, isSchool }: { event: CalendarEvent; onDelete: () => void; onEdit: () => void; onClick: () => void; isSchool?: boolean }) => {
   const style =
     EVENT_STYLES[event.type.toLowerCase() as EventType] || EVENT_STYLES.meeting;
   const Icon = style.Icon;
@@ -102,7 +102,7 @@ const EventCard = ({ event, onDelete, onEdit, onClick, }: { event: CalendarEvent
           className="text-[11px] space-y-0.5"
           style={{ color: style.text }}
         >
-          {event.branch && (
+          {!isSchool && event.branch && (
             <div className="flex gap-1">
               <span className="font-medium">Branch:</span>
               <span>{event.branch}</span>

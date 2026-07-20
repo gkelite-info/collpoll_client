@@ -11,6 +11,7 @@ import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import RoomSelectDropdown from "@/app/components/calendar/RoomSelectDropdown";
 import { useRouter } from "next/navigation";
 import { Plus } from "@phosphor-icons/react";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type DegreeOption = {
   collegeDegreeId: number;
@@ -27,6 +28,7 @@ interface AddEventModalProps {
   degreeOptions?: DegreeOption[];
   isSaving?: boolean;
   mode: "create" | "edit";
+  disableOutsideClick?: boolean;
 }
 
 type FacultySection = {
@@ -49,6 +51,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   degreeOptions,
   isSaving = false,
   mode,
+  disableOutsideClick = false,
 }) => {
   const [selectedType, setSelectedType] = useState("class");
   const [calendarMode, setCalendarMode] = useState<"single" | "bulk">("single");
@@ -93,6 +96,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [sections, setSections] = useState<FacultySection[]>([]);
   const [semesterLabel, setSemesterLabel] = useState<number | null>(null);
   const [isInter, setIsInter] = useState(false);
+  const [isSchool, setIsSchool] = useState(false);
+  const [isFetchingSubjects, setIsFetchingSubjects] = useState(false);
 
   const [meetingTitle, setMeetingTitle] = useState("");
   const [meetingLink, setMeetingLink] = useState("");
@@ -129,7 +134,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             .select("collegeEducationType")
             .eq("collegeEducationId", ctx.collegeEducationId)
             .single();
-          if (data) setIsInter(data.collegeEducationType === "Inter");
+          if (data) {
+            setIsInter(data.collegeEducationType === "Inter");
+            setIsSchool(isSchoolEducation(data.collegeEducationType));
+          }
         }
       })
       .catch((err) => {
@@ -181,6 +189,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
           setSections(filteredSections);
         }
 
+        setIsFetchingSubjects(true);
         const { data: subjectRows } = await supabase
           .from("college_subjects")
           .select("collegeSubjectId, subjectName")
@@ -195,6 +204,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         if (subjectsArr.length === 1) {
           setSubjectId(subjectsArr[0].collegeSubjectId);
         }
+        setIsFetchingSubjects(false);
       } catch (err) {
         console.error("❌ Admin faculty academic load failed", err);
       }
@@ -467,7 +477,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     }
 
     if (!subjectId) {
-      toast.error("Please select a Subject.");
+      toast.error("Please select a Subject.", { id: "modal-err-subject" });
       return;
     }
 
@@ -492,7 +502,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     }
 
     if (selectedType === "class" && !roomNo.trim()) {
-      toast.error("Please select a Room No.");
+      toast.error("Please select a Room No.", { id: "modal-err-room" });
       return;
     }
 
@@ -507,11 +517,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       }
     } else {
       if (!date) {
-        toast.error("Please select a Date.");
+        toast.error("Please select a Date.", { id: "modal-err-date" });
         return;
       }
       if (date < TODAY) {
-        toast.error("Past dates are not allowed.");
+        toast.error("Past dates are not allowed.", { id: "modal-err-past-date" });
         return;
       }
     }
@@ -520,25 +530,25 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     const endTime = to24Hour(endHour, endMinute, endPeriod);
 
     if (startTime >= endTime) {
-      toast.error("End time must be strictly after start time.");
+      toast.error("End time must be strictly after start time.", { id: "modal-err-time-order" });
       return;
     }
     if (startTime < "08:00" || endTime > "22:00") {
-      toast.error("Events must be scheduled between 08:00 AM and 10:00 PM.");
+      toast.error("Events must be scheduled between 08:00 AM and 10:00 PM.", { id: "modal-err-time-window" });
       return;
     }
 
     if (
       !educationId ||
-      !branchId ||
+      (!isSchool && !branchId) ||
       !facultyCtx?.academicYearIds?.length ||
-      (!isInter && (typeof semester !== "number" || !semesterLabel))
+      (!isSchool && !isInter && (typeof semester !== "number" || !semesterLabel))
     ) {
       toast.error("Academic context is incomplete. Please reload the page.");
       return;
     }
     if (selectedSections.length === 0) {
-      toast.error("Please select at least one Section.");
+      toast.error("Please select at least one Section.", { id: "modal-err-sections" });
       return;
     }
 
@@ -546,9 +556,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       calendarEventId: isEditMode ? value?.calendarEventId : undefined,
       facultyId: Number(value.facultyId),
       educationId,
-      branchId,
+      branchId: isSchool ? null : branchId,
       academicYearId: facultyCtx?.academicYearIds?.[0],
-      semester: isInter ? null : semester,
+      semester: (isInter || isSchool) ? null : semester,
       sections: selectedSections.map((sec) => ({
         collegeSectionId: sec.collegeSectionsId,
       })),
@@ -580,6 +590,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
+      if (disableOutsideClick) return;
+
       const target = event.target as Node;
       if (
         modalContentRef.current &&
@@ -609,7 +621,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleKeyPress);
     };
-  }, [isOpen, onClose, handleSave]);
+  }, [isOpen, onClose, handleSave, disableOutsideClick]);
 
   if (!isOpen) return null;
   const eventTypes = ["class", "meeting", "exam"];
@@ -713,8 +725,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               type="text"
               disabled
               value={
-                subjects.find((s) => s.collegeSubjectId === subjectId)
-                  ?.subjectName || ""
+                isFetchingSubjects ? "Loading Subject..." : (
+                  subjects.find((s) => s.collegeSubjectId === subjectId)
+                    ?.subjectName || ""
+                )
               }
               placeholder="e.g., Project Kickoff or Physics Exam"
               className="w-full cursor-not-allowed border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-gray-50"
@@ -1069,16 +1083,18 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 className="w-full h-11 border focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 text-gray-900 cursor-not-allowed"
               />
             </div>
-            <div className="flex-1 w-full min-w-0">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Branch <span className="text-red-600">*</span>
-              </label>
-              <input
-                readOnly
-                value={branchName}
-                className="w-full h-11 text-[#282828] border focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
-              />
-            </div>
+            {!isSchool && (
+              <div className="flex-1 w-full min-w-0">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Branch <span className="text-red-600">*</span>
+                </label>
+                <input
+                  readOnly
+                  value={branchName}
+                  className="w-full h-11 text-[#282828] border focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
+                />
+              </div>
+            )}
           </div>
           <div className="flex flex-col md:flex-row gap-4 items-start">
             <div className="flex-1 w-full min-w-0">
@@ -1091,7 +1107,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 className="w-full h-11 border text-[#282828] focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
               />
             </div>
-            {!isInter && (
+            {!isInter && !isSchool && (
               <div className="flex-1 w-full min-w-0">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Semester <span className="text-red-600">*</span>
@@ -1157,20 +1173,31 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 className={`${CHIP_CONTAINER_HEIGHT} mt-2 flex gap-2 overflow-x-auto 
       whitespace-nowrap scrollbar-hide`}
               >
-                {selectedSections.map((sec) => (
-                  <span
-                    key={`section-option-${sec.collegeSectionsId}`}
-                    className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs"
-                  >
-                    {sec.collegeSections}
-                    <button
-                      onClick={() => toggleSection(sec)}
-                      className="cursor-pointer hover:text-green-900"
+                {selectedSections.map((sec: any) => {
+                  const secId = sec.collegeSectionsId || sec.collegeSectionId;
+                  const name =
+                    sec.collegeSections ||
+                    sec.section?.collegeSections ||
+                    sections.find(
+                      (s: any) => s.collegeSectionsId === secId,
+                    )?.collegeSections ||
+                    (secId ? `Section ${secId}` : "Section");
+                  return (
+                    <span
+                      key={`section-option-${secId}`}
+                      className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium"
                     >
-                      ✕
-                    </button>
-                  </span>
-                ))}
+                      {name}
+                      <button
+                        type="button"
+                        onClick={() => toggleSection(sec)}
+                        className="cursor-pointer hover:text-green-900 ml-0.5"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  );
+                })}
               </div>
             )}
           </div>

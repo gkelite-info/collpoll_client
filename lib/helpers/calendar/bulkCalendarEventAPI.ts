@@ -296,7 +296,8 @@ export async function fetchBulkCalendarEventSections(bulkCalendarEventId: number
       collegeBranchId,
       collegeAcademicYearId,
       collegeSemesterId,
-      collegeSectionId
+      collegeSectionId,
+      section:college_sections(collegeSections)
     `
     )
     .eq("bulkCalendarEventId", bulkCalendarEventId)
@@ -304,6 +305,35 @@ export async function fetchBulkCalendarEventSections(bulkCalendarEventId: number
 
   if (error) {
     console.error("fetchBulkCalendarEventSections error:", error);
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+export async function fetchAllBulkCalendarEventSections(bulkCalendarEventIds: number[]) {
+  if (!bulkCalendarEventIds || bulkCalendarEventIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("bulk_calendar_event_sections")
+    .select(
+      `
+      bulkCalendarEventId,
+      bulkCalendarEventSectionId,
+      collegeEducationId,
+      collegeBranchId,
+      collegeAcademicYearId,
+      collegeSemesterId,
+      collegeSectionId,
+      section:college_sections(collegeSections),
+      branch:college_branch(collegeBranchCode, collegeBranchType),
+      academic_year:college_academic_year(collegeAcademicYear)
+    `
+    )
+    .in("bulkCalendarEventId", bulkCalendarEventIds)
+    .is("deletedAt", null);
+
+  if (error) {
+    console.error("fetchAllBulkCalendarEventSections error:", error);
     throw error;
   }
 
@@ -324,6 +354,28 @@ export async function fetchBulkCalendarEventUnits(bulkCalendarEventId: number) {
 
   if (error) {
     console.error("fetchBulkCalendarEventUnits error:", error);
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+export async function fetchAllBulkCalendarEventUnits(bulkCalendarEventIds: number[]) {
+  if (!bulkCalendarEventIds || bulkCalendarEventIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("bulk_calendar_event_units")
+    .select(
+      `
+      bulkCalendarEventId,
+      bulkCalendarEventUnitId,
+      collegeSubjectUnitId
+    `
+    )
+    .in("bulkCalendarEventId", bulkCalendarEventIds)
+    .is("deletedAt", null);
+
+  if (error) {
+    console.error("fetchAllBulkCalendarEventUnits error:", error);
     throw error;
   }
 

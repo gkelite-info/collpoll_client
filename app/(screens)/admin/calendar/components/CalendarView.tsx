@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps, @typescript-eslint/no-unused-vars */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import CalendarGrid from "./calenderGrid";
 import CalendarHeader from "./calendarHeader";
@@ -14,10 +15,11 @@ import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import toast from "react-hot-toast";
 import { fetchCollegeDegrees } from "@/lib/helpers/admin/academicSetupAPI";
 import { fetchCalendarEvents, deleteCalendarEvent, saveCalendarEvent } from "@/lib/helpers/calendar/calendarEventAPI";
-import { fetchCalendarEventSections, softDeleteCalendarEventSection, saveCalendarEventSections } from "@/lib/helpers/calendar/calendarEventSectionsAPI";
+import { fetchCalendarEventSections, fetchAllCalendarEventSections, softDeleteCalendarEventSection, saveCalendarEventSections } from "@/lib/helpers/calendar/calendarEventSectionsAPI";
 import {
   fetchBulkCalendarEvents,
   fetchBulkCalendarEventSections,
+  fetchAllBulkCalendarEventSections,
   saveBulkCalendarEvent,
   saveBulkCalendarEventSections,
   saveBulkCalendarEventUnits,
@@ -35,6 +37,8 @@ import {
   checkSectionConflict,
   ConflictingSection,
 } from "@/lib/helpers/calendar/checkSectionConflict";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { supabase } from "@/lib/supabaseClient";
 
 interface Props {
   faculty: {
@@ -74,26 +78,23 @@ export default function CalendarView({ faculty, onBack }: Props) {
   );
   const [showDetails, setShowDetails] = useState(false);
   const { collegeId } = useUser();
-  const [lastFetchedMonth, setLastFetchedMonth] = useState<string>("");
+  const [isSchool, setIsSchool] = useState<boolean>(
+    faculty.branch === "-" || !faculty.branch || faculty.year !== undefined
+  );
+  const lastFetchedMonthRef = useRef<string>("");
 
   const weekDays = getWeekDays(currentDate);
 
   useEffect(() => {
-    loadEvents();
-    // loadDegrees();
-  }, [faculty.id]);
-
-  useEffect(() => {
     const month = currentDate.getMonth();
     const year = currentDate.getFullYear();
-    const monthKey = `${year}-${month}`;
+    const monthKey = `${faculty.id}-${year}-${month}`;
 
-    // Only hit the database if we moved to a new month/year
-    if (lastFetchedMonth !== monthKey) {
+    if (lastFetchedMonthRef.current !== monthKey) {
+      lastFetchedMonthRef.current = monthKey;
       loadEvents(month, year);
-      setLastFetchedMonth(monthKey);
     }
-  }, [faculty.id, currentDate.getMonth(), currentDate.getFullYear()]);
+  }, [faculty.id, currentDate]);
 
   const loadDegrees = async () => {
     try {
@@ -117,114 +118,84 @@ export default function CalendarView({ faculty, onBack }: Props) {
       firstDay.setDate(firstDay.getDate() - 7);
       lastDay.setDate(lastDay.getDate() + 7);
 
-      const startDate = firstDay.toISOString().split("T")[0];
-      const endDate = lastDay.toISOString().split("T")[0];
+      const formatDateString = (d: Date) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+      };
 
-      const rows = await fetchCalendarEvents({
-        facultyId: Number(faculty.id),
-        startDate,
-        endDate,
-      });
+      const startDate = formatDateString(firstDay);
+      const endDate = formatDateString(lastDay);
 
-      const bulkRows = await fetchBulkCalendarEvents({
-        facultyId: Number(faculty.id),
-        startDate,
-        endDate,
-      });
+      // === PHASE 1: Fetch events + bulk events in parallel (2 API calls) ===
+      const [rows, bulkRows] = await Promise.all([
+        fetchCalendarEvents({
+          facultyId: Number(faculty.id),
+          startDate,
+          endDate,
+        }),
+        fetchBulkCalendarEvents({
+          facultyId: Number(faculty.id),
+          startDate,
+          endDate,
+        }),
+      ]);
 
       if ((!rows || rows.length === 0) && (!bulkRows || bulkRows.length === 0)) {
         setEvents([]);
         return;
       }
 
-      let educationId = null;
-      let branchId = null;
-      let academicYearId = null;
+      // === PHASE 2: Batch-fetch all sections in parallel (2 API calls) ===
+      const [allSecRows, allBulkSecRows] = await Promise.all([
+        rows && rows.length > 0
+          ? fetchAllCalendarEventSections(rows.map((r: any) => r.calendarEventId))
+          : Promise.resolve([]),
+        bulkRows && bulkRows.length > 0
+          ? fetchAllBulkCalendarEventSections(bulkRows.map((r: any) => r.bulkCalendarEventId))
+          : Promise.resolve([]),
+      ]);
 
-      try {
-        const facultyCtx = await fetchFacultyContextAdmin({ facultyId: Number(faculty.id) });
-        educationId = facultyCtx?.collegeEducationId;
-        branchId = facultyCtx?.collegeBranchId;
-        academicYearId = facultyCtx?.academicYearIds?.[0];
-      } catch (err) {
-        console.warn("Failed to fetch faculty context admin:", err);
+      // === PHASE 3: Extract educationId from section rows (0 API calls) ===
+      const firstSec = (allSecRows && allSecRows.length > 0)
+        ? allSecRows[0]
+        : (allBulkSecRows && allBulkSecRows.length > 0 ? allBulkSecRows[0] : null);
+
+      if (firstSec?.collegeEducationId) {
+        try {
+          const { data: eduData } = await supabase
+            .from("college_education")
+            .select("collegeEducationType")
+            .eq("collegeEducationId", firstSec.collegeEducationId)
+            .maybeSingle();
+          if (eduData) {
+            setIsSchool(isSchoolEducation(eduData.collegeEducationType));
+          }
+        } catch (e) {
+          console.warn("Education type lookup failed:", e);
+        }
       }
 
-      if (!educationId || !branchId || !academicYearId) {
-        let firstEventSections = null;
-        if (rows && rows.length > 0) {
-          firstEventSections = await fetchCalendarEventSections(rows[0].calendarEventId);
-        } else if (bulkRows && bulkRows.length > 0) {
-          firstEventSections = await fetchBulkCalendarEventSections(bulkRows[0].bulkCalendarEventId);
-        }
-
-        if (!firstEventSections || firstEventSections.length === 0) {
-          setEvents([]);
-          return;
-        }
-
-        educationId = firstEventSections[0].collegeEducationId;
-        branchId = firstEventSections[0].collegeBranchId;
-        academicYearId = firstEventSections[0].collegeAcademicYearId;
-      }
-
-      const branches = await fetchAcademicDropdowns({
-        type: "branch",
-        collegeId: collegeId!,
-        educationId,
+      const sectionMap = new Map<number, { id: number; name: string }[]>();
+      (allSecRows ?? []).forEach((s: any) => {
+        const arr = sectionMap.get(s.calendarEventId) || [];
+        arr.push({
+          id: s.collegeSectionId,
+          name: s.section?.collegeSections || `Section ${s.collegeSectionId}`,
+        });
+        sectionMap.set(s.calendarEventId, arr);
       });
 
-      const academicYears = await fetchAcademicDropdowns({
-        type: "academicYear",
-        collegeId: collegeId!,
-        educationId,
-        branchId,
+      const bulkSectionMap = new Map<number, { id: number; name: string }[]>();
+      (allBulkSecRows ?? []).forEach((s: any) => {
+        const arr = bulkSectionMap.get(s.bulkCalendarEventId) || [];
+        arr.push({
+          id: s.collegeSectionId,
+          name: s.section?.collegeSections || `Section ${s.collegeSectionId}`,
+        });
+        bulkSectionMap.set(s.bulkCalendarEventId, arr);
       });
-
-      const sections = await fetchAcademicDropdowns({
-        type: "section",
-        collegeId: collegeId!,
-        educationId,
-        branchId,
-        academicYearId,
-      });
-
-      const branchMap = new Map<number, string>(
-        branches.map((b: any) => [b.collegeBranchId, b.collegeBranchCode]),
-      );
-
-      const yearMap = new Map<number, string>(
-        academicYears.map((y: any) => [
-          y.collegeAcademicYearId,
-          y.collegeAcademicYear,
-        ]),
-      );
-
-      const sectionMapName = new Map<number, string>(
-        sections.map((s: any) => [s.collegeSectionsId, s.collegeSections]),
-      );
-
-      const sectionMap = new Map<number, number[]>();
-      await Promise.all(
-        rows.map(async (row: any) => {
-          const secRows = await fetchCalendarEventSections(row.calendarEventId);
-          sectionMap.set(
-            row.calendarEventId,
-            (secRows ?? []).map((s: any) => s.collegeSectionId),
-          );
-        }),
-      );
-
-      const bulkSectionMap = new Map<number, number[]>();
-      await Promise.all(
-        bulkRows.map(async (row: any) => {
-          const secRows = await fetchBulkCalendarEventSections(row.bulkCalendarEventId);
-          bulkSectionMap.set(
-            row.bulkCalendarEventId,
-            (secRows ?? []).map((s: any) => s.collegeSectionId),
-          );
-        }),
-      );
 
       const expanded: CalendarEvent[] = [];
 
@@ -232,7 +203,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
         const startTime = `${row.date}T${row.fromTime}`;
         const endTime = `${row.date}T${row.toTime}`;
 
-        const sectionIds = sectionMap.get(row.calendarEventId) ?? [];
+        const sectionInfos = sectionMap.get(row.calendarEventId) ?? [];
 
         const safelyExtractedTopic =
           row.college_subject_unit_topics?.topicTitle ||
@@ -240,11 +211,11 @@ export default function CalendarView({ faculty, onBack }: Props) {
             ? row.college_subject_unit_topics[0]?.topicTitle
             : null);
 
-        sectionIds.forEach((sectionId) => {
+        sectionInfos.forEach((secInfo) => {
           expanded.push({
-            id: `${row.calendarEventId}-${sectionId}`,
+            id: `${row.calendarEventId}-${secInfo.id}`,
             calendarEventId: row.calendarEventId,
-            sectionId: sectionId,
+            sectionId: secInfo.id,
 
             subjectName: row.college_subjects?.subjectName ?? "-",
             subjectKey: row.college_subjects?.subjectKey ?? "",
@@ -263,9 +234,9 @@ export default function CalendarView({ faculty, onBack }: Props) {
             startTime,
             endTime,
 
-            branch: branchMap.get(branchId) ?? "",
-            year: yearMap.get(academicYearId) ?? "",
-            section: sectionMapName.get(sectionId) ?? "",
+            branch: faculty.branch || "",
+            year: faculty.year || "",
+            section: secInfo.name,
 
             rawFormData: {
               subjectId: row.college_subjects?.collegeSubjectId ?? null,
@@ -292,16 +263,16 @@ export default function CalendarView({ faculty, onBack }: Props) {
           const startTime = `${currentDateStr}T${row.fromTime}`;
           const endTime = `${currentDateStr}T${row.toTime}`;
 
-          const sectionIds = bulkSectionMap.get(row.bulkCalendarEventId) ?? [];
+          const sectionInfos = bulkSectionMap.get(row.bulkCalendarEventId) ?? [];
 
           const unitTitles = (row.bulk_calendar_event_units || []).map((u: any) => u.college_subject_units?.unitTitle).filter(Boolean);
           const safelyExtractedTopic = unitTitles.length > 0 ? unitTitles.join(", ") : "";
 
-          sectionIds.forEach((sectionId) => {
+          sectionInfos.forEach((secInfo) => {
             expanded.push({
-              id: `bulk-${row.bulkCalendarEventId}-${sectionId}-${currentDateStr}`,
+              id: `bulk-${row.bulkCalendarEventId}-${secInfo.id}-${currentDateStr}`,
               calendarEventId: row.bulkCalendarEventId,
-              sectionId: sectionId,
+              sectionId: secInfo.id,
   
               subjectName: row.college_subjects?.subjectName ?? "-",
               subjectKey: row.college_subjects?.subjectKey ?? "",
@@ -320,9 +291,9 @@ export default function CalendarView({ faculty, onBack }: Props) {
               startTime,
               endTime,
   
-              branch: branchMap.get(branchId) ?? "",
-              year: yearMap.get(academicYearId) ?? "",
-              section: sectionMapName.get(sectionId) ?? "",
+              branch: faculty.branch || "",
+              year: faculty.year || "",
+              section: secInfo.name,
   
               rawFormData: {
                 subjectId: row.college_subjects?.collegeSubjectId ?? null,
@@ -333,6 +304,8 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 meetingLink: row.meetingLink,
                 meetingId: row.meetingId,
                 meetingPassword: row.meetingPassword,
+                fromDate: row.fromDate,
+                toDate: row.toDate,
               },
             });
           });
@@ -342,7 +315,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
       setEvents(expanded);
     } catch (err) {
       console.error("ADMIN LOAD EVENTS FAILED", err);
-      toast.error("Failed to load calendar events");
+      toast.error("Failed to load calendar events", { id: "admin-load-events-error" });
     } finally {
       setIsLoadingEvents(false);
     }
@@ -443,7 +416,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
 
       const eventRes = await saveCalendarEvent({
         calendarEventId: editingEventId ? Number(editingEventId) : undefined,
-
+        collegeId: collegeId!,
         facultyId: Number(data.facultyId),
 
         subjectId: data.subjectId ?? null,
@@ -654,7 +627,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
 
       const eventRes = await saveCalendarEvent({
         calendarEventId: editingEventId ? Number(editingEventId) : undefined,
-
+        collegeId: collegeId!,
         facultyId: Number(faculty.id),
 
         subjectId: pendingEvent.subjectId ?? null,
@@ -672,7 +645,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
       });
 
       if (!eventRes.success) {
-        toast.error("Failed to save event");
+        toast.error("Failed to save event", { id: "admin-save-event-error" });
         return;
       }
 
@@ -698,7 +671,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
         sectionIds: pendingEvent.sections.map((s: any) => s.collegeSectionId),
       });
 
-      toast.success("Event saved despite conflict ⚠️");
+      toast.success("Event saved despite conflict ⚠️", { id: "admin-event-saved-conflict" });
 
       await loadEvents();
       setEditingEventId(null);
@@ -707,7 +680,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
       setIsModalOpen(false);
       setPendingEvent(null);
     } catch (err) {
-      toast.error("Failed to save event");
+      toast.error("Failed to save event", { id: "admin-save-event-exception" });
     } finally {
       setIsSaving(false);
     }
@@ -745,11 +718,11 @@ export default function CalendarView({ faculty, onBack }: Props) {
       }
 
       await loadEvents();
-      toast.success("Event deleted successfully.");
+      toast.success("Event deleted successfully.", { id: "admin-delete-event-success" });
       return true;
     } catch (err) {
       console.error("ADMIN DELETE FAILED", err);
-      toast.error("Failed to delete event.");
+      toast.error("Failed to delete event.", { id: "admin-delete-event-error" });
       return false;
     } finally {
       setIsDeleting(false);
@@ -782,7 +755,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
           <p className="text-sm text-[#282828] mt-1">
             Viewing Calendar for faculty:{" "}
             <span className="font-semibold">{faculty.name}</span> (
-            {faculty.branch}){" "}
+            {isSchool ? (faculty.year || "—") : faculty.branch}){" "}
             <span className="font-semibold"> facultyId - {faculty.employeeId}</span>
           </p>
         </div>
@@ -827,6 +800,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
             setSelectedEvent(event);
             setShowDetails(true);
           }}
+          isSchool={isSchool}
         />
       )}
 
@@ -838,6 +812,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
         degreeOptions={degreeOptions}
         isSaving={isSaving}
         mode={formMode}
+        disableOutsideClick={showConflictModal}
       />
 
       <ConfirmConflictModal
@@ -870,6 +845,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
           setShowDetails(false);
           setSelectedEvent(null);
         }}
+        isSchool={isSchool}
       />
     </main>
   );

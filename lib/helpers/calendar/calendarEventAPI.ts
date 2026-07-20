@@ -109,6 +109,7 @@ export async function fetchCalendarEvents(
 
 export async function saveCalendarEvent(payload: {
   calendarEventId?: number;
+  collegeId: number;
   facultyId: number;
   subjectId: number | null;
   eventTopic: number | null;
@@ -196,7 +197,8 @@ export async function saveCalendarEvent(payload: {
     await supabase.from("faculty_class_sessions").insert({
       calendarEventId: data.calendarEventId,
       facultyId: payload.facultyId,
-      status: "Scheduled",
+      collegeId: payload.collegeId,
+      status: "scheduled",
       acceptedAt: "00:00:00",
       createdAt: now,
       updatedAt: now,

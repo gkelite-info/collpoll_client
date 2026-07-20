@@ -574,6 +574,7 @@ function PageContent() {
 
       const eventRes = await saveCalendarEvent({
         calendarEventId: editingEventId ? Number(editingEventId) : undefined,
+        collegeId: collegeId!,
         facultyId,
         subjectId: payload.subjectId ?? null,
         eventTopic: payload.eventTopic,
@@ -696,6 +697,7 @@ function PageContent() {
 
       const eventRes = await saveCalendarEvent({
         calendarEventId: editingEventId ? Number(editingEventId) : undefined,
+        collegeId: collegeId!,
         facultyId,
         subjectId: pendingEvent.subjectId ?? null,
         eventTopic: pendingEvent.eventTopic,

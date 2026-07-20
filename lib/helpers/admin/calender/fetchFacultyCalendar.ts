@@ -96,7 +96,7 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
       .select(`
         facultyId,
         subject:collegeSubjectId (subjectName),
-        section:collegeSectionsId (collegeBranchId)
+        section:collegeSectionsId (collegeBranchId, collegeAcademicYearId)
       `)
       .eq("isActive", true)
       .in("facultyId", facultyIds),
@@ -120,14 +120,36 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
   if (profilesRes.error) console.error("Profiles fetch error:", profilesRes.error);
 
   const subjectsByFaculty = new Map<number, Set<string>>();
+  const academicYearIdsByFaculty = new Map<number, Set<number>>();
+  
   (sectionsRes.data ?? []).forEach((row: any) => {
-    if (!row.subject?.subjectName) return;
     if (filters.collegeBranchId && row.section?.collegeBranchId !== filters.collegeBranchId) return;
 
-    if (!subjectsByFaculty.has(row.facultyId)) {
-      subjectsByFaculty.set(row.facultyId, new Set());
+    if (row.subject?.subjectName) {
+      if (!subjectsByFaculty.has(row.facultyId)) {
+        subjectsByFaculty.set(row.facultyId, new Set());
+      }
+      subjectsByFaculty.get(row.facultyId)!.add(row.subject.subjectName);
     }
-    subjectsByFaculty.get(row.facultyId)!.add(row.subject.subjectName);
+    
+    if (row.section?.collegeAcademicYearId) {
+      if (!academicYearIdsByFaculty.has(row.facultyId)) {
+        academicYearIdsByFaculty.set(row.facultyId, new Set());
+      }
+      academicYearIdsByFaculty.get(row.facultyId)!.add(row.section.collegeAcademicYearId);
+    }
+  });
+
+  const allAcademicYearIds = Array.from(new Set(Array.from(academicYearIdsByFaculty.values()).flatMap(set => Array.from(set))));
+  
+  const { data: yearsData } = await supabase
+    .from("college_academic_year")
+    .select("collegeAcademicYearId, collegeAcademicYear")
+    .in("collegeAcademicYearId", allAcademicYearIds);
+
+  const yearMap = new Map<number, string>();
+  (yearsData ?? []).forEach((y: any) => {
+    yearMap.set(y.collegeAcademicYearId, y.collegeAcademicYear);
   });
 
   const empMap = new Map<number, string>();
@@ -141,12 +163,18 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
   });
 
   const result = facultyData.map((f: any) => {
+    const facultyYears = Array.from(academicYearIdsByFaculty.get(f.facultyId) ?? [])
+      .map(id => yearMap.get(id))
+      .filter(Boolean)
+      .join(", ");
+
     return {
       id: String(f.facultyId),
       employeeId: empMap.get(f.userId) || "N/A", // Correctly retrieves the mapped ID
       name: f.fullName,
       gender: f.gender,
       branch: f.branch?.collegeBranchCode ?? "—",
+      year: facultyYears || "—",
       subjects: Array.from(subjectsByFaculty.get(f.facultyId) ?? []).join(", ") || "—",
       lastUpdate: new Date(f.updatedAt).toLocaleDateString("en-IN", {
         day: "2-digit",

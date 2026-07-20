@@ -126,7 +126,9 @@ export async function checkSectionConflict(params: {
     if (ignoreEventId && event.calendarEventId === ignoreEventId) continue;
 
     // Check time overlap
-    const overlaps = fromTime < event.toTime && toTime > event.fromTime;
+    const normFrom = fromTime.length === 5 ? fromTime + ":00" : fromTime;
+    const normTo = toTime.length === 5 ? toTime + ":00" : toTime;
+    const overlaps = normFrom < event.toTime && normTo > event.fromTime;
     if (!overlaps) continue;
 
     const activeSections = (event.calendar_event_section || []).filter(
@@ -166,7 +168,9 @@ export async function checkSectionConflict(params: {
     if (ignoreBulkEventId && bulkEvent.bulkCalendarEventId === ignoreBulkEventId) continue;
 
     // Check time overlap
-    const overlaps = fromTime < bulkEvent.toTime && toTime > bulkEvent.fromTime;
+    const normFrom = fromTime.length === 5 ? fromTime + ":00" : fromTime;
+    const normTo = toTime.length === 5 ? toTime + ":00" : toTime;
+    const overlaps = normFrom < bulkEvent.toTime && normTo > bulkEvent.fromTime;
     if (!overlaps) continue;
 
     const activeSections = (bulkEvent.bulk_calendar_event_sections || []).filter(

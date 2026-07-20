@@ -31,8 +31,8 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   const currentYear = currentDate.getFullYear();
 
   const currentRealYear = new Date().getFullYear();
-  const baseYear = 2026;
-  const maxYear = Math.max(currentRealYear + 3, baseYear + 3);
+  const baseYear = Math.min(2024, currentRealYear - 2);
+  const maxYear = Math.max(currentRealYear + 3, baseYear + 5);
   const yearsCount = maxYear - baseYear + 1;
   const years = Array.from({ length: yearsCount }, (_, i) => baseYear + i);
 

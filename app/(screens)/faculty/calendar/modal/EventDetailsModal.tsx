@@ -8,9 +8,10 @@ type Props = {
   open: boolean;
   event: CalendarEvent | null;
   onClose: () => void;
+  isSchool?: boolean;
 };
 
-export default function EventDetailsModal({ open, event, onClose }: Props) {
+export default function EventDetailsModal({ open, event, onClose, isSchool }: Props) {
   if (!open || !event) return null;
   const { collegeEducationType } = useUser();
 
@@ -28,11 +29,11 @@ export default function EventDetailsModal({ open, event, onClose }: Props) {
   const dateStr = start.toLocaleDateString("en-GB");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="w-[420px] rounded-xl bg-white shadow-xl relative p-6 animate-in fade-in zoom-in duration-200">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-purple-100 flex items-center justify-center">
+        <div className="flex items-start justify-between mb-4 pb-3 border-b border-gray-100">
+          <div className="flex items-start gap-3 min-w-0 pr-2">
+            <div className="h-10 w-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center shrink-0 mt-0.5">
               <CalendarBlank
                 size={22}
                 weight="fill"
@@ -40,45 +41,43 @@ export default function EventDetailsModal({ open, event, onClose }: Props) {
               />
             </div>
 
-            <h2 className="text-lg font-semibold text-gray-900 leading-none">
-              Event Details
-            </h2>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-bold text-gray-900 leading-snug break-words">
+                {!isSchool && `${event.type.charAt(0).toUpperCase() + event.type.slice(1)} - `}
+                {event.subjectName && event.subjectName !== "-"
+                  ? event.subjectName
+                  : event.title || "Event Details"}{" "}
+                {event.subjectKey && (
+                  <span className="text-gray-500 font-normal text-sm">
+                    [{event.subjectKey}]
+                  </span>
+                )}
+              </h2>
+
+              {event.rawFormData?.topicTitle && (
+                <p className="text-xs text-gray-500 mt-1 font-medium truncate">
+                  <span className="text-gray-400">Topic:</span>{" "}
+                  {event.rawFormData.topicTitle}
+                </p>
+              )}
+
+              {event.type === "meeting" && event.title && (
+                <p className="text-xs text-gray-500 mt-1 font-medium truncate">
+                  <span className="text-gray-400">Meeting Title:</span> {event.title}
+                </p>
+              )}
+            </div>
           </div>
 
           <button
             onClick={onClose}
-            className="flex items-center cursor-pointer justify-center h-9 w-9 
-               rounded-full text-gray-500 hover:text-gray-900 
-               hover:bg-gray-100 transition-colors"
+            className="flex items-center cursor-pointer justify-center h-8 w-8 
+               rounded-full text-gray-400 hover:text-gray-700 
+               hover:bg-gray-100 transition-colors shrink-0 -mr-1"
           >
             <X size={18} weight="bold" />
           </button>
         </div>
-
-        <h3 className="font-semibold text-base mb-1 text-gray-900">
-          {event.type.charAt(0).toUpperCase() + event.type.slice(1)} -{" "}
-          {event.subjectName && event.subjectName !== "-"
-            ? event.subjectName
-            : "General"}{" "}
-          {event.subjectKey && (
-            <span className="text-gray-500 font-medium">
-              [{event.subjectKey}]
-            </span>
-          )}
-        </h3>
-
-        {event.rawFormData?.topicTitle && (
-          <p className="text-sm text-gray-600 mb-3">
-            <span className="font-medium">Event Topic :</span>{" "}
-            {event.rawFormData.topicTitle}
-          </p>
-        )}
-
-        {event.type === "meeting" && event.title && (
-          <p className="text-sm text-gray-600 mb-3">
-            <span className="font-medium">Meeting Title :</span> {event.title}
-          </p>
-        )}
 
         <div className="space-y-2 text-sm text-[#282828] bg-gray-50 p-4 rounded-lg border border-gray-100 mt-2">
           <Detail
@@ -111,7 +110,9 @@ export default function EventDetailsModal({ open, event, onClose }: Props) {
           )}
 
           <div className="my-2 space-y-2">
-            <Detail label={collegeEducationType === "Inter" ? "Group" : "Branch"} value={event.branch} />
+            {!isSchool && (
+              <Detail label={collegeEducationType === "Inter" ? "Group" : "Branch"} value={event.branch} />
+            )}
             <Detail label="Year" value={event.year} />
             <Detail label="Section" value={event.section} />
           </div>

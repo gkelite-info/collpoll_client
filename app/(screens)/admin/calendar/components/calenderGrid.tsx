@@ -14,6 +14,7 @@ interface CalendarGridProps {
   onDeleteRequest: (event: CalendarEvent) => void;
   onEditRequest?: (event: CalendarEvent) => void;
   onEventClick: (event: CalendarEvent) => void;
+  isSchool?: boolean;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -24,7 +25,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   activeTab,
   onDeleteRequest,
   onEditRequest,
-  onEventClick
+  onEventClick,
+  isSchool
 }) => {
   const matchesFilter = (event: CalendarEvent): boolean => {
     if (activeTab === "All") {
@@ -53,7 +55,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
 
   return (
     <div className="bg-white rounded-bl-[20px] shadow-sm overflow-y-auto custom-scrollbar flex flex-col relative -mt-2 h-[80vh]">
-      <div className="flex border-b border-gray-400 sticky top-0 z-50 bg-white">
+      <div className="flex border-b border-gray-400 sticky top-0 z-30 bg-white">
         <div className="w-20 min-w-[80px] border-r border-gray-400 p-2 flex items-center justify-center gap-1 bg-white z-10">
           <button
             onClick={onPrevWeek}
@@ -179,6 +181,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         onDelete={() => onDeleteRequest(event)}
                         onEdit={() => onEditRequest?.(event)}
                         onClick={() => onEventClick(event)}
+                        isSchool={isSchool}
                       />
                     </div>
                   );

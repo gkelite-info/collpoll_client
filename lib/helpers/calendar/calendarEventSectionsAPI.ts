@@ -23,13 +23,45 @@ export async function fetchCalendarEventSections(
       collegeAcademicYearId,
       collegeSemesterId,
       collegeSectionId,
-      createdAt
+      createdAt,
+      section:college_sections(collegeSections)
     `)
         .eq("calendarEventId", calendarEventId)
         .eq("isActive", true);
 
     if (error) {
         console.error("fetchCalendarEventSections error:", error);
+        throw error;
+    }
+
+    return data ?? [];
+}
+
+
+export async function fetchAllCalendarEventSections(
+    calendarEventIds: number[]
+) {
+    if (!calendarEventIds || calendarEventIds.length === 0) return [];
+    const { data, error } = await supabase
+        .from("calendar_event_section")
+        .select(`
+      calendarEventSectionId,
+      calendarEventId,
+      collegeEducationId,
+      collegeBranchId,
+      collegeAcademicYearId,
+      collegeSemesterId,
+      collegeSectionId,
+      createdAt,
+      section:college_sections(collegeSections),
+      branch:college_branch(collegeBranchCode, collegeBranchType),
+      academic_year:college_academic_year(collegeAcademicYear)
+    `)
+        .in("calendarEventId", calendarEventIds)
+        .eq("isActive", true);
+
+    if (error) {
+        console.error("fetchAllCalendarEventSections error:", error);
         throw error;
     }
 
