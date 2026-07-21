@@ -3,6 +3,16 @@ import type { EmployeeExpenseReport, EmployeeExpenseAttachment } from "./employe
 
 export type ReimbursementApprovalStatus = "approved" | "rejected" | "pending";
 
+export type EmployeeExpenseApproval = {
+  employeeExpenseApprovalId: number;
+  employeeExpenseReportId: number;
+  status: ReimbursementApprovalStatus;
+  approvedBy: number;
+  approvedUserRole: string;
+  approvedOn: string;
+  collegeId: number;
+};
+
 export type HRReimbursementRequest = Omit<EmployeeExpenseReport, "attachments"> & {
   attachments: EmployeeExpenseAttachment[];
   collegeId: number;
@@ -12,6 +22,7 @@ export type HRReimbursementRequest = Omit<EmployeeExpenseReport, "attachments"> 
   employeeMobile?: string;
   employeeRole?: string;
   employeeGender?: string;
+  paymentApproval?: EmployeeExpenseApproval | null;
   employeeHistory?: {
     employeeExpenseReportId: number;
     expenseTitle: string;
@@ -117,17 +128,40 @@ export async function fetchReimbursementsForApproval(collegeId: number): Promise
     });
   }
 
+  const reportIds = reportRows.map((row) => row.employeeExpenseReportId);
+  const { data: approvalData, error: approvalError } = await supabase
+    .from("employee_expense_approvals")
+    .select("employeeExpenseApprovalId, employeeExpenseReportId, status, approvedBy, approvedUserRole, approvedOn, collegeId")
+    .in("employeeExpenseReportId", reportIds)
+    .eq("collegeId", collegeId)
+    .is("deletedAt", null);
+
+  if (approvalError) console.error("Error fetching payment approvals:", approvalError);
+  const approvalMap = new Map(
+    ((approvalData ?? []) as EmployeeExpenseApproval[]).map((approval) => [
+      approval.employeeExpenseReportId,
+      approval,
+    ]),
+  );
+
   return reportRows.map((row) => {
     const user = userMap.get(row.employeeId);
+    const paymentApproval = approvalMap.get(row.employeeExpenseReportId) ?? null;
     return {
       ...row,
-      status: row.status || "pending",
+      status:
+        paymentApproval?.status === "approved"
+          ? "paid"
+          : paymentApproval?.status === "rejected"
+            ? "payment_rejected"
+            : row.status || "pending",
       employeeName: user?.fullName || "Unknown Employee",
       employeeEmail: user?.email || "No Email",
       employeeAvatar: getEmployeeAvatar(user),
       employeeMobile: user?.mobile,
       employeeRole: user?.role,
       employeeGender: user?.gender,
+      paymentApproval,
     } as HRReimbursementRequest;
   });
 }
@@ -184,9 +218,24 @@ export async function fetchReimbursementById(reportId: number): Promise<HRReimbu
     .is("deletedAt", null)
     .order("createdAt", { ascending: false });
 
+  const { data: paymentApproval, error: approvalError } = await supabase
+    .from("employee_expense_approvals")
+    .select("employeeExpenseApprovalId, employeeExpenseReportId, status, approvedBy, approvedUserRole, approvedOn, collegeId")
+    .eq("employeeExpenseReportId", reportId)
+    .eq("collegeId", data.collegeId)
+    .is("deletedAt", null)
+    .maybeSingle();
+
+  if (approvalError) console.error("Error fetching payment approval:", approvalError);
+
   return {
     ...data,
-    status: data.status || "pending",
+    status:
+      paymentApproval?.status === "approved"
+        ? "paid"
+        : paymentApproval?.status === "rejected"
+          ? "payment_rejected"
+          : data.status || "pending",
     employeeName: user?.fullName || "Unknown Employee",
     employeeEmail: user?.email || "No Email",
     employeeAvatar: getEmployeeAvatar(user),
@@ -194,7 +243,118 @@ export async function fetchReimbursementById(reportId: number): Promise<HRReimbu
     employeeRole: user?.role,
     employeeGender: user?.gender,
     employeeHistory: history || [],
+    paymentApproval: (paymentApproval as EmployeeExpenseApproval | null) ?? null,
   } as HRReimbursementRequest;
+}
+
+export async function markReimbursementAsPaid({
+  reportId,
+  userId,
+  collegeId,
+  approvedUserRole,
+  approvedOn,
+}: {
+  reportId: number;
+  userId: number;
+  collegeId: number;
+  approvedUserRole: string;
+  approvedOn: string;
+}) {
+  const now = new Date().toISOString();
+  const { data: approval, error: approvalError } = await supabase
+    .from("employee_expense_approvals")
+    .upsert(
+      {
+        employeeExpenseReportId: reportId,
+        status: "approved",
+        approvedBy: userId,
+        approvedUserRole,
+        approvedOn,
+        collegeId,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      },
+      { onConflict: "employeeExpenseReportId" },
+    )
+    .select("employeeExpenseApprovalId, employeeExpenseReportId, status, approvedBy, approvedUserRole, approvedOn, collegeId")
+    .single();
+
+  if (approvalError) throw approvalError;
+
+  return approval as EmployeeExpenseApproval;
+}
+
+export async function rejectReimbursementPayment({
+  reportId,
+  userId,
+  collegeId,
+  approvedUserRole,
+}: {
+  reportId: number;
+  userId: number;
+  collegeId: number;
+  approvedUserRole: string;
+}) {
+  const now = new Date().toISOString();
+  const { data: approval, error } = await supabase
+    .from("employee_expense_approvals")
+    .upsert(
+      {
+        employeeExpenseReportId: reportId,
+        status: "rejected",
+        approvedBy: userId,
+        approvedUserRole,
+        approvedOn: now.split("T")[0],
+        collegeId,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      },
+      { onConflict: "employeeExpenseReportId" },
+    )
+    .select("employeeExpenseApprovalId, employeeExpenseReportId, status, approvedBy, approvedUserRole, approvedOn, collegeId")
+    .single();
+
+  if (error) throw error;
+  return approval as EmployeeExpenseApproval;
+}
+
+export async function updateReimbursementPaymentStatus({
+  reportId,
+  userId,
+  collegeId,
+  approvedUserRole,
+  status,
+}: {
+  reportId: number;
+  userId: number;
+  collegeId: number;
+  approvedUserRole: string;
+  status: ReimbursementApprovalStatus;
+}) {
+  const now = new Date().toISOString();
+  const { data: approval, error } = await supabase
+    .from("employee_expense_approvals")
+    .upsert(
+      {
+        employeeExpenseReportId: reportId,
+        status,
+        approvedBy: userId,
+        approvedUserRole,
+        approvedOn: now.split("T")[0],
+        collegeId,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      },
+      { onConflict: "employeeExpenseReportId" },
+    )
+    .select("employeeExpenseApprovalId, employeeExpenseReportId, status, approvedBy, approvedUserRole, approvedOn, collegeId")
+    .single();
+
+  if (error) throw error;
+  return approval as EmployeeExpenseApproval;
 }
 
 export async function approveReimbursement({

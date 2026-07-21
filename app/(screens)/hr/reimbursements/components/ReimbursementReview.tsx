@@ -45,6 +45,8 @@ export default function ReimbursementReview({ request }: { request: HRReimbursem
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const currentStatus = request.status?.toLowerCase() ?? "pending";
+  const paymentCompleted = Boolean(request.paymentApproval) || currentStatus === "paid";
+  const paymentRejected = request.paymentApproval?.status === "rejected" || currentStatus === "payment_rejected";
 
   const handleApprove = async () => {
     if (!userId || !collegeId) return toast.error("User context missing");
@@ -52,7 +54,7 @@ export default function ReimbursementReview({ request }: { request: HRReimbursem
       setSubmitting(true);
       await approveReimbursement({ reportId: request.employeeExpenseReportId, userId, collegeId });
       toast.success("Request approved and forwarded to accountant");
-      router.push("/accountant/reimbursement");
+      router.push("/hr/reimbursements");
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to approve request"));
       setSubmitting(false);
@@ -225,18 +227,21 @@ export default function ReimbursementReview({ request }: { request: HRReimbursem
             />
             <Timeline
               active={currentStatus === "pending"}
-              done={currentStatus === "approved"}
+              done={currentStatus === "approved" || currentStatus === "paid" || currentStatus === "payment_rejected" || paymentCompleted}
               rejected={currentStatus === "rejected"}
               title="HR Review"
               person="HR Manager"
               role=""
-              meta={currentStatus === "pending" ? "Current Stage" : currentStatus === "approved" ? "Completed" : ""}
+              meta={currentStatus === "pending" ? "Current Stage" : currentStatus === "approved" || currentStatus === "paid" || currentStatus === "payment_rejected" || paymentCompleted ? "Completed" : ""}
             />
             <Timeline 
-              active={currentStatus === "approved"} 
+              active={currentStatus === "approved" && !paymentCompleted}
+              done={paymentCompleted && !paymentRejected}
+              rejected={paymentRejected}
               title="Payment Processing" 
-              person="Accountant Manager" 
+              person={request.paymentApproval?.approvedUserRole || "Accountant Manager"}
               role="" 
+              meta={paymentCompleted ? "Completed" : "Current Stage"}
             />
           </Card>
 
@@ -396,6 +401,24 @@ function Attachment({
 }
 
 function StatusBadge({ status }: { status: string }) {
+  if (status === "payment_rejected") {
+    return (
+      <span className="inline-flex items-center gap-2 rounded-full border border-[#d32f35] bg-[#fdebec] px-4 py-2 text-xs font-medium text-[#d32f35]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#d32f35]" />
+        Payment Rejected
+      </span>
+    );
+  }
+
+  if (status === "paid") {
+    return (
+      <span className="inline-flex items-center gap-2 rounded-full border border-[#1769e0] bg-[#edf5ff] px-4 py-2 text-xs font-medium text-[#1769e0]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#1769e0]" />
+        Payment Completed
+      </span>
+    );
+  }
+
   if (status === "approved") {
     return (
       <span className="inline-flex items-center gap-2 rounded-full border border-[#43C17A] bg-[#e4f6ec] px-4 py-2 text-xs font-medium text-[#0c8a4b]">

@@ -37,7 +37,18 @@ export default function ReimbursementDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const dateInputRef = useRef<HTMLInputElement>(null);
+
+  const canEditPayment = (request: HRReimbursementRequest) =>
+    ["paid", "payment_rejected"].includes(request.status?.toLowerCase() ?? "");
+
+  const toggleRow = (id: number) => setSelectedRows((current) => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
 
   useEffect(() => {
     if (!collegeId) return;
@@ -48,15 +59,35 @@ export default function ReimbursementDashboard() {
     });
     fetchReimbursementsForApproval(collegeId)
       .then((data) =>
-        setReports(data.filter((report) => report.status?.toLowerCase() === "approved")),
+        setReports(
+          data.filter((report) =>
+            ["approved", "paid", "payment_rejected"].includes(report.status?.toLowerCase() ?? ""),
+          ),
+        ),
       )
       .catch((err) => setError(err instanceof Error ? err.message : "Unable to load requests."))
       .finally(() => setLoading(false));
   }, [collegeId]);
 
-  const totalAmount = useMemo(
-    () => reports.reduce((sum, report) => sum + Number(report.amountSpent || 0), 0),
+  const pendingReports = useMemo(
+    () => reports.filter((report) => report.status?.toLowerCase() === "approved"),
     [reports],
+  );
+  const paidThisMonth = useMemo(() => {
+    const now = new Date();
+    return reports.filter((report) => {
+      if (report.status?.toLowerCase() !== "paid" || !report.paymentApproval?.approvedOn) return false;
+      const paidOn = new Date(`${report.paymentApproval.approvedOn}T00:00:00`);
+      return paidOn.getMonth() === now.getMonth() && paidOn.getFullYear() === now.getFullYear();
+    });
+  }, [reports]);
+  const pendingAmount = useMemo(
+    () => pendingReports.reduce((sum, report) => sum + Number(report.amountSpent || 0), 0),
+    [pendingReports],
+  );
+  const paidThisMonthAmount = useMemo(
+    () => paidThisMonth.reduce((sum, report) => sum + Number(report.amountSpent || 0), 0),
+    [paidThisMonth],
   );
   const todayValue = new Date().toLocaleDateString("en-CA");
   const filteredReports = useMemo(
@@ -75,11 +106,20 @@ export default function ReimbursementDashboard() {
     [filteredReports, startIndex, itemsPerPage],
   );
 
+  const toggleAll = () => {
+    const editableRows = pageReports.filter(canEditPayment);
+    if (editableRows.length && editableRows.every((report) => selectedRows.has(report.employeeExpenseReportId))) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(editableRows.map((report) => report.employeeExpenseReportId)));
+    }
+  };
+
   const stats = [
     {
       label: "Pending Payments",
-      count: reports.length.toString(),
-      amount: formatMoney(totalAmount),
+      count: pendingReports.length.toString(),
+      amount: formatMoney(pendingAmount),
       note: "Forwarded by HR for accountant processing",
       Icon: Clock3,
       color: "#6751e7",
@@ -87,16 +127,16 @@ export default function ReimbursementDashboard() {
     },
     {
       label: "Paid This Month",
-      count: "0",
-      amount: formatMoney(0),
-      note: "Payment tracking is not recorded yet",
+      count: paidThisMonth.length.toString(),
+      amount: formatMoney(paidThisMonthAmount),
+      note: "Payments completed this month",
       Icon: CheckCircle2,
       color: "#16a34a",
       bg: "#e8f8ee",
     },
     {
       label: "Total Amount",
-      count: formatMoney(totalAmount),
+      count: formatMoney(pendingAmount),
       amount: "",
       note: "Total approved amount awaiting payment",
       Icon: IndianRupee,
@@ -146,7 +186,7 @@ export default function ReimbursementDashboard() {
           <div>
             <h2 className="font-semibold">Payment Queue</h2>
             <p className="mt-1 text-xs text-[#667386]">
-              Approved reimbursement requests forwarded by HR
+              Pending and completed reimbursement payments
             </p>
           </div>
           <div className="relative">
@@ -164,25 +204,32 @@ export default function ReimbursementDashboard() {
           </div>
         ) : filteredReports.length === 0 ? (
           <div className="flex h-32 items-center justify-center text-sm text-[#667386]">
-            No approved reimbursements found for {calendarLabel}.
+            No reimbursement payments found for {calendarLabel}.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1240px] text-left">
+            <table className="w-full min-w-[1360px] text-left">
               <thead className="bg-[#edf3ff] text-[10px] uppercase tracking-wider text-[#526071]">
                 <tr>
+                  <th className="w-12 px-7 py-4 text-center">
+                    <input type="checkbox" onChange={toggleAll} checked={pageReports.some(canEditPayment) && pageReports.filter(canEditPayment).every((report) => selectedRows.has(report.employeeExpenseReportId))} className="h-4 w-4 cursor-pointer rounded border-gray-300 text-[#1769e0] focus:ring-[#1769e0]" />
+                  </th>
                   <th className="px-7 py-4">Employee</th>
                   <th className="px-7 py-4">Expense Title</th>
                   <th className="px-7 py-4">Expense Category</th>
                   <th className="px-7 py-4">Mail ID</th>
                   <th className="px-7 py-4">Amount</th>
                   <th className="px-7 py-4">Submitted Date</th>
+                  <th className="px-7 py-4">Status</th>
                   <th className="px-7 py-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#edf0f3]">
                 {pageReports.map((report) => (
                   <tr key={report.employeeExpenseReportId} className="hover:bg-[#f8fbf9]">
+                    <td className="px-7 py-5 text-center">
+                      <input type="checkbox" disabled={!canEditPayment(report)} title={!canEditPayment(report) ? "Process this payment from View Details before editing" : undefined} checked={selectedRows.has(report.employeeExpenseReportId)} onChange={() => toggleRow(report.employeeExpenseReportId)} className="h-4 w-4 cursor-pointer rounded border-gray-300 text-[#1769e0] focus:ring-[#1769e0] disabled:cursor-not-allowed disabled:opacity-40" />
+                    </td>
                     <td className="px-7 py-5">
                       <div className="flex items-center gap-3">
                         <img
@@ -208,10 +255,13 @@ export default function ReimbursementDashboard() {
                     <td className="px-7 py-5 text-xs text-[#596578]">
                       {formatDate(report.createdAt)}
                     </td>
+                    <td className="px-7 py-5">
+                      <PaymentStatus status={report.status} />
+                    </td>
                     <td className="px-7 py-5 text-right">
                       <Link
-                        href={`/accountant/reimbursement/${report.employeeExpenseReportId}`}
-                        className="inline-flex items-center text-xs font-semibold text-[#0565ce]"
+                        href={`/accountant/reimbursement/${report.employeeExpenseReportId}${selectedRows.has(report.employeeExpenseReportId) ? "?edit=true" : ""}`}
+                        className="inline-flex items-center whitespace-nowrap text-xs font-semibold text-[#0565ce]"
                       >
                         View Details <ChevronRight size={14} />
                       </Link>
@@ -224,9 +274,28 @@ export default function ReimbursementDashboard() {
         )}
 
         {filteredReports.length > 0 && (
-          <Pagination currentPage={activePage} totalItems={filteredReports.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} itemsPerPageOptions={[5, 10, 20]} onItemsPerPageChange={(items) => { setItemsPerPage(items); setCurrentPage(1); }} roundedBottom="rounded-b-xl" />
+          <Pagination currentPage={activePage} totalItems={filteredReports.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} itemsPerPageOptions={[10, 20, 50, 100]} onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1); }} roundedBottom="rounded-b-xl" alwaysShow />
         )}
       </section>
     </main>
+  );
+}
+
+function PaymentStatus({ status }: { status: string | null }) {
+  const paid = status?.toLowerCase() === "paid";
+  const rejected = status?.toLowerCase() === "payment_rejected";
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${
+        paid
+          ? "bg-[#e8f8ee] text-[#168a49]"
+          : rejected
+            ? "bg-[#fdebec] text-[#d32f35]"
+            : "bg-[#fff5d8] text-[#d88b00]"
+      }`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${paid ? "bg-[#20b15a]" : rejected ? "bg-[#d32f35]" : "bg-[#f2a500]"}`} />
+      {paid ? "Paid" : rejected ? "Payment Rejected" : "Pending"}
+    </span>
   );
 }
