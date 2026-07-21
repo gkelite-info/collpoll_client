@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 
 function RecentExpenseRecords({ expenses }: { expenses: AccountantExpense[] }) {
   return (
-    <section className="h-[380px] flex-none overflow-hidden rounded-2xl bg-white p-5 shadow-[0_3px_12px_rgba(15,23,42,0.10)]">
+    <section className="flex-1 overflow-hidden rounded-2xl bg-white p-5 shadow-[0_3px_12px_rgba(15,23,42,0.10)]">
       <div className="flex items-center">
         <h2 className="text-base font-bold text-[#17213D]">
           Recent Expense Records

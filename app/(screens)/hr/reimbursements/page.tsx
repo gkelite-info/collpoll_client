@@ -40,8 +40,10 @@ export default function ReimbursementDashboard() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
-  const canEditRequest = (request: HRReimbursementRequest) =>
-    ["approved", "rejected"].includes(request.status?.toLowerCase() ?? "pending");
+  const canEditRequest = (request: HRReimbursementRequest) => {
+    const status = request.status?.trim().toLowerCase().replace("_", " ") ?? "";
+    return status !== "pending" && status !== "not marked";
+  };
 
   const toggleRow = (id: number) => {
     const newSet = new Set(selectedRows);
@@ -290,7 +292,7 @@ export default function ReimbursementDashboard() {
                     className="transition hover:bg-gray-50/70"
                   >
                     <td className="px-8 py-5 text-center">
-                      <input type="checkbox" disabled={!canEditRequest(request)} title={!canEditRequest(request) ? "Approve or reject this request from View Details before editing" : undefined} checked={selectedRows.has(request.employeeExpenseReportId)} onChange={() => toggleRow(request.employeeExpenseReportId)} className="h-4 w-4 cursor-pointer rounded border-gray-300 text-[#5546f5] focus:ring-[#5546f5] disabled:cursor-not-allowed disabled:opacity-40" />
+                      <input type="checkbox" disabled={!canEditRequest(request)} title={!canEditRequest(request) ? "Pending or Not Marked requests cannot be edited" : undefined} checked={selectedRows.has(request.employeeExpenseReportId)} onChange={() => toggleRow(request.employeeExpenseReportId)} className="h-4 w-4 cursor-pointer rounded border-gray-300 text-[#5546f5] focus:ring-[#5546f5] disabled:cursor-not-allowed disabled:opacity-40" />
                     </td>
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-3">
@@ -319,8 +321,8 @@ export default function ReimbursementDashboard() {
                     </td>
                     <td className="px-8 py-5 text-xs">
                       {isEditing && selectedRows.has(request.employeeExpenseReportId) ? (
-                        <select value={request.status?.toLowerCase() ?? "pending"} onChange={(event) => setStatusChange({ request, status: event.target.value as ReimbursementApprovalStatus })} className="cursor-pointer rounded border border-gray-300 bg-white p-1.5 text-xs font-medium text-[#132238] focus:border-[#5546f5] focus:outline-none focus:ring-1 focus:ring-[#5546f5]">
-                          <option value="pending">Pending</option>
+                        <select value="" onChange={(event) => setStatusChange({ request, status: event.target.value as ReimbursementApprovalStatus })} className="cursor-pointer rounded border border-gray-300 bg-white p-1.5 text-xs font-medium text-[#132238] focus:border-[#5546f5] focus:outline-none focus:ring-1 focus:ring-[#5546f5]">
+                          <option value="" disabled>Select action</option>
                           <option value="approved">Approved</option>
                           <option value="rejected">Rejected</option>
                         </select>
@@ -371,7 +373,7 @@ export default function ReimbursementDashboard() {
         actionType={statusChange?.status === "approved" ? "accept" : statusChange?.status === "rejected" ? "reject" : null}
         customDescription={statusChange ? (
           <>
-            Change <span className="font-bold text-slate-800">{statusChange.request.employeeName}&apos;s</span> reimbursement status to <span className="font-bold text-slate-800">{statusChange.status[0].toUpperCase() + statusChange.status.slice(1)}</span>?
+            Change <span className="font-bold text-slate-800">{statusChange.request.employeeName}&apos;s</span> reimbursement status to <span className="font-bold text-slate-800">{statusChange.status[0].toUpperCase() + statusChange.status.slice(1)}</span>? Once approved or rejected, this request cannot be changed back to pending.
           </>
         ) : null}
         onCancel={() => !updatingStatus && setStatusChange(null)}
@@ -382,6 +384,24 @@ export default function ReimbursementDashboard() {
 }
 
 function StatusPill({ status }: { status: string | null }) {
+  if (status?.toLowerCase() === "payment_rejected") {
+    return (
+      <span className="inline-flex whitespace-nowrap items-center gap-1.5 rounded-full bg-[#fdebec] px-2 py-1 font-medium text-[#d32f35]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#d32f35]" />
+        Payment Rejected
+      </span>
+    );
+  }
+
+  if (status?.toLowerCase() === "paid") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#edf5ff] px-2 py-1 font-medium text-[#1769e0]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#1769e0]" />
+        Paid
+      </span>
+    );
+  }
+
   if (status?.toLowerCase() === "approved") {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e4f6ec] px-2 py-1 font-medium text-[#0c8a4b]">

@@ -22,7 +22,7 @@ export default function ReimbursementPaymentPage({ params }: { params: Promise<{
 
     fetchReimbursementById(reportId)
       .then((data) => {
-        if (!data || data.status?.toLowerCase() !== "approved") setError(true);
+        if (!data || !["approved", "paid", "payment_rejected"].includes(data.status?.toLowerCase() ?? "")) setError(true);
         else setRequest(data);
       })
       .catch(() => setError(true))

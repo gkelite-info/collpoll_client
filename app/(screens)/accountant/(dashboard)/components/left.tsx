@@ -381,7 +381,7 @@ function ExpenseCategoriesOverview({ summary }: { summary?: AccountantExpenseSum
             return (
               <article
                 key={item.title}
-                className={`flex h-[108px] min-w-0 flex-col justify-between rounded-2xl px-5 py-4 ${item.bg}`}
+                className={`flex h-[128px] min-w-0 flex-col justify-between rounded-2xl px-5 py-4 ${item.bg}`}
               >
                 <div className="flex min-w-0 items-center gap-2.5">
                   <Icon size={22} weight="regular" color={item.color} />

@@ -72,9 +72,10 @@ export function ReimbursementDashboardShimmer() {
         </div>
         <div className="h-12 bg-[#edf3ff] px-7 py-4"><Block className="h-3 w-full bg-slate-300" /></div>
         {Array.from({ length: 5 }).map((_, row) => (
-          <div key={row} className="grid min-w-[900px] grid-cols-[1.25fr_1.1fr_1fr_1.25fr_.8fr_.9fr_.65fr] items-center gap-7 border-b border-[#edf0f3] px-7 py-5">
+          <div key={row} className="grid min-w-[1050px] grid-cols-[.25fr_1.25fr_1.1fr_1fr_1.25fr_.8fr_.9fr_.65fr_.65fr] items-center gap-7 border-b border-[#edf0f3] px-7 py-5">
+            <Block className="h-4 w-4" />
             <div className="flex items-center gap-3"><Block className="h-9 w-9 shrink-0 rounded-full" /><Block className="h-3 w-24" /></div>
-            {Array.from({ length: 5 }).map((__, cell) => <Block key={cell} className="h-3 w-full" />)}
+            {Array.from({ length: 6 }).map((__, cell) => <Block key={cell} className="h-3 w-full" />)}
             <Block className="ml-auto h-3 w-20" />
           </div>
         ))}
