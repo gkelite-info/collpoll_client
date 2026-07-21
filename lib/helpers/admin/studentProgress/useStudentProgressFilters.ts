@@ -276,13 +276,29 @@ export function useStudentProgressFilters({
     setSelectedSubject(subject);
   };
 
+  const rawFiltersLoading =
+    branchesLoading ||
+    yearsLoading ||
+    semestersLoading ||
+    sectionsLoading ||
+    subjectsLoading;
+
+  const [filtersLoading, setFiltersLoading] = useState(true);
+
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (rawFiltersLoading) {
+      setFiltersLoading(true);
+    } else {
+      timeout = setTimeout(() => {
+        setFiltersLoading(false);
+      }, 100);
+    }
+    return () => clearTimeout(timeout);
+  }, [rawFiltersLoading]);
+
   return {
-    filtersLoading:
-      branchesLoading ||
-      yearsLoading ||
-      semestersLoading ||
-      sectionsLoading ||
-      subjectsLoading,
+    filtersLoading,
     branches,
     years,
     semesters,

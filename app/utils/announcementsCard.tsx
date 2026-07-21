@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@/app/utils/context/UserContext";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type AnnounceCard = {
   collegeAnnouncementId?: number;
@@ -97,23 +98,31 @@ const AnnouncementDetailsShimmer = () => (
   </div>
 );
 
-const formatRole = (role: string) =>
-  role
+const formatRole = (role: string, isSchool?: boolean) => {
+  let formatted = role
     ?.replace(/([A-Z])/g, " $1")
     .replace(/_/g, " ")
     .trim()
     .replace(/\b\w/g, (c) => c.toUpperCase());
+    
+  if (isSchool) {
+    formatted = formatted?.replace(/College/g, "School");
+  }
+  return formatted;
+};
 
 function ViewAnnouncementModal({
   basicData,
   fullData,
   isLoading,
   onClose,
+  isSchool
 }: {
   basicData: AnnounceCard;
   fullData: AnnouncementDetails | null;
   isLoading: boolean;
   onClose: () => void;
+  isSchool?: boolean;
 }) {
   const t = useTranslations("Dashboard");
 
@@ -174,7 +183,7 @@ function ViewAnnouncementModal({
                     {fullData.creatorName}
                   </span>
                   <span className="font-semibold text-gray-500 text-xs">
-                    {t(formatRole(fullData.creatorRole))}
+                    {t(formatRole(fullData.creatorRole, isSchool))}
                   </span>
                 </div>
               </div>
@@ -199,7 +208,7 @@ function ViewAnnouncementModal({
                         key={r}
                         className="bg-white border border-gray-200 text-[#43C17A] px-2.5 py-1 rounded-md text-xs font-bold shadow-sm"
                       >
-                        {t(formatRole(r))}
+                        {t(formatRole(r, isSchool))}
                       </span>
                     ))}
                   </div>
@@ -266,7 +275,8 @@ export default function AnnouncementsCard({
     useState<AnnouncementDetails | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
-  const { userId, collegeId, role: userRole } = useUser();
+  const { userId, collegeId, role: userRole, collegeEducationType } = useUser();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [calendarAnnouncements, setCalendarAnnouncements] = useState<AnnounceCard[]>([]);
   const [isCalendarLoading, setIsCalendarLoading] = useState(false);
@@ -370,11 +380,7 @@ export default function AnnouncementsCard({
         };
 
         const formatted = ((data || []) as CalendarAnnouncementRow[]).map((item) => {
-          const creatorRoleFormatted = item.createdByRole
-            ?.replace(/([A-Z])/g, " $1")
-            .replace(/_/g, " ")
-            .trim()
-            .replace(/\b\w/g, (c: string) => c.toUpperCase());
+          const creatorRoleFormatted = formatRole(item.createdByRole, isSchool);
 
           return {
             collegeAnnouncementId: item.collegeAnnouncementId,
@@ -531,6 +537,7 @@ export default function AnnouncementsCard({
           basicData={viewingAnnouncement}
           fullData={fullDetailsData}
           isLoading={isLoadingDetails}
+          isSchool={isSchool}
           onClose={() => {
             setViewingAnnouncement(null);
             setFullDetailsData(null);

@@ -11,6 +11,7 @@ import {
   fetchPaginatedTaggedEmployeeLeaveRequests,
   type EmployeeLeaveRequestRecord,
 } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { CalendarBlank, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -72,19 +73,26 @@ const calculateDays = (fromDate: string, toDate: string) => {
 const mapDbRequestToAdminRow = (
   request: EmployeeLeaveRequestRecord,
   serialNumber: number,
+  isSchool: boolean,
 ): FinanceLeaveRequest => {
   const employeeCode = request.employee?.employeeId ?? String(request.employeeId);
   const requesterName = request.user?.fullName ?? "Admin";
   const fromDate = formatDbDate(request.leaveFromDate);
   const toDate = formatDbDate(request.leaveToDate);
   const leaveType = titleCase(request.leaveType);
+  let formattedRole = titleCase(request.role);
+  if (isSchool && formattedRole.replace(/\s/g, '').toLowerCase() === "collegeadmin") {
+    formattedRole = "School Admin";
+  } else if (formattedRole.replace(/\s/g, '').toLowerCase() === "collegeadmin") {
+    formattedRole = "College Admin";
+  }
 
   return {
     employeeLeaveRequestId: request.employeeLeaveRequestId,
     serialNo: String(serialNumber).padStart(2, "0"),
     employeeId: employeeCode,
     name: requesterName,
-    role: titleCase(request.role),
+    role: formattedRole,
     photo: request.user?.profileUrl ?? "",
     requestedDate: formatDbDate(request.createdAt.slice(0, 10)),
     dateRange: `${fromDate} - ${toDate}`,
@@ -96,7 +104,7 @@ const mapDbRequestToAdminRow = (
       {
         id: `${request.employeeLeaveRequestId}-request`,
         senderName: requesterName,
-        senderRole: titleCase(request.role),
+        senderRole: formattedRole,
         message: `I submitted a ${leaveType.toLowerCase()} leave request from ${fromDate} to ${toDate}.`,
         time: new Date(request.createdAt).toLocaleTimeString("en-US", {
           hour: "2-digit",
@@ -153,7 +161,8 @@ export default function AdminLeaveRequestsTable({
   contextLoadingOverride,
   showRequesterColumns = false,
 }: AdminLeaveRequestsTableProps) {
-  const { userId, fullName, loading: userLoading } = useUser();
+  const { userId, fullName, loading: userLoading, collegeEducationType } = useUser();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const { collegeId, loading: adminLoading } = useAdmin();
   const effectiveCollegeId = collegeIdOverride ?? collegeId;
   const effectiveContextLoading = contextLoadingOverride ?? adminLoading;
@@ -227,6 +236,7 @@ export default function AdminLeaveRequestsTable({
           ...mapDbRequestToAdminRow(
             request,
             (page - 1) * ITEMS_PER_PAGE + index + 1,
+            isSchool,
           ),
           name:
             view === "tagged"
@@ -254,6 +264,7 @@ export default function AdminLeaveRequestsTable({
     userId,
     userLoading,
     view,
+    isSchool,
   ]);
 
   useEffect(() => {

@@ -819,8 +819,10 @@ export async function fetchAdminFinanceMeetings(params: {
   type?: "upcoming" | "previous";
   page?: number;
   limit?: number;
+  collegeId?: number;
+  collegeEducationId?: number | null;
 }) {
-  const { role = "Admin", type = "upcoming", page = 1, limit = 10 } = params;
+  const { role = "Admin", type = "upcoming", page = 1, limit = 10, collegeId, collegeEducationId } = params;
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -847,13 +849,21 @@ export async function fetchAdminFinanceMeetings(params: {
                 college_education ( collegeEducationType ),
                 college_branch ( collegeBranchCode ),
                 college_sections ( collegeSections )
-            )
+            ),
+            finance_manager!inner ( collegeId, collegeEducationId )
         `,
       { count: "exact" },
     )
     .eq("isActive", true)
     .is("deletedAt", null)
     .eq("role", role);
+
+  if (collegeId) {
+    query = query.eq("finance_manager.collegeId", collegeId);
+  }
+  if (collegeEducationId !== undefined && collegeEducationId !== null) {
+    query = query.eq("finance_manager.collegeEducationId", collegeEducationId);
+  }
 
   if (type === "upcoming") {
     query = query.or(

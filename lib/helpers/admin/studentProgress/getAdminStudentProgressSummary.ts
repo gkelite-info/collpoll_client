@@ -454,15 +454,12 @@ export async function getAdminStudentProgressSummary(
 
   if (
     !scope.academicYearIds.length ||
-    !scope.semesterIds.length ||
-    !scope.sectionIds.length ||
-    !scope.subjectIds.length ||
-    !scope.collegeBranchIds.length
+    !scope.sectionIds.length
   ) {
     return buildEmptySummary(scope);
   }
 
-  const { data: historyRows, error: historyError } = await supabase
+  let historyQuery = supabase
     .from("student_academic_history")
     .select(
       `
@@ -484,8 +481,13 @@ export async function getAdminStudentProgressSummary(
     .eq("isCurrent", true)
     .is("deletedAt", null)
     .in("collegeAcademicYearId", scope.academicYearIds)
-    .in("collegeSemesterId", scope.semesterIds)
     .in("collegeSectionsId", scope.sectionIds);
+
+  if (scope.semesterIds.length) {
+    historyQuery = historyQuery.in("collegeSemesterId", scope.semesterIds);
+  }
+
+  const { data: historyRows, error: historyError } = await historyQuery;
 
   if (historyError) throw historyError;
 
@@ -526,15 +528,20 @@ export async function getAdminStudentProgressSummary(
     });
   }
 
-  const { data: studentRows, error: studentError } = await supabase
+  let studentQuery = supabase
     .from("students")
     .select("studentId, userId")
     .in("studentId", candidateStudentIds)
     .eq("collegeId", scope.collegeId)
     .eq("collegeEducationId", scope.collegeEducationId)
-    .in("collegeBranchId", scope.collegeBranchIds)
     .eq("isActive", true)
     .is("deletedAt", null);
+
+  if (scope.collegeBranchIds.length) {
+    studentQuery = studentQuery.in("collegeBranchId", scope.collegeBranchIds);
+  }
+
+  const { data: studentRows, error: studentError } = await studentQuery;
 
   if (studentError) throw studentError;
 
@@ -552,15 +559,20 @@ export async function getAdminStudentProgressSummary(
   const userIds = Array.from(new Set(validStudents.map((row) => row.userId)));
   const today = formatDate(new Date());
 
-  const { data: facultySectionRows, error: facultySectionError } = await supabase
+  let facultySectionQuery = supabase
     .from("faculty_sections")
     .select("facultyId")
     .in("collegeAcademicYearId", scope.academicYearIds)
     .in("collegeSectionsId", scope.sectionIds)
-    .in("collegeSubjectId", scope.subjectIds)
     .eq("isActive", true)
-    .is("deletedAt", null)
-    .returns<FacultySectionRow[]>();
+    .is("deletedAt", null);
+
+  if (scope.subjectIds.length) {
+    facultySectionQuery = facultySectionQuery.in("collegeSubjectId", scope.subjectIds);
+  }
+
+  const { data: facultySectionRows, error: facultySectionError } =
+    await facultySectionQuery.returns<FacultySectionRow[]>();
 
   if (facultySectionError) throw facultySectionError;
 
@@ -611,6 +623,66 @@ export async function getAdminStudentProgressSummary(
 
   if (allAttendanceError) throw allAttendanceError;
 
+  let assignmentsQuery = supabase
+    .from("assignments")
+    .select(
+      "assignmentId, collegeSectionsId, collegeAcademicYearId, dateAssignedInt, submissionDeadlineInt, createdAt",
+    )
+    .in("collegeAcademicYearId", scope.academicYearIds)
+    .in("collegeSectionsId", scope.sectionIds)
+    .eq("is_deleted", false)
+    .neq("status", "Cancelled");
+
+  if (scope.subjectIds.length) {
+    assignmentsQuery = assignmentsQuery.in("subjectId", scope.subjectIds);
+  }
+
+  if (scope.collegeBranchIds.length) {
+    assignmentsQuery = assignmentsQuery.in("collegeBranchId", scope.collegeBranchIds);
+  }
+
+  let weightageQuery = supabase
+    .from("faculty_weightage_configs")
+    .select(
+      `
+      facultyWeightageConfigId,
+      collegeSubjectId,
+      collegeSectionsId,
+      collegeSemesterId,
+      totalPercentage,
+      faculty_weightage_items (
+        label,
+        percentage
+      )
+    `,
+    )
+    .eq("collegeId", scope.collegeId)
+    .eq("collegeEducationId", scope.collegeEducationId)
+    .in("collegeSectionsId", scope.sectionIds)
+    .is("deletedAt", null);
+
+  if (scope.subjectIds.length) {
+    weightageQuery = weightageQuery.in("collegeSubjectId", scope.subjectIds);
+  }
+
+  if (scope.collegeBranchIds.length) {
+    weightageQuery = weightageQuery.in("collegeBranchId", scope.collegeBranchIds);
+  }
+
+  let quizzesQuery = supabase
+    .from("quizzes")
+    .select(
+      "quizId, collegeSectionsId, collegeAcademicYearId, totalMarks, createdAt, endDate",
+    )
+    .in("collegeAcademicYearId", scope.academicYearIds)
+    .in("collegeSectionsId", scope.sectionIds)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (scope.subjectIds.length) {
+    quizzesQuery = quizzesQuery.in("collegeSubjectId", scope.subjectIds);
+  }
+
   const [
     usersResult,
     profilesResult,
@@ -639,17 +711,7 @@ export async function getAdminStudentProgressSummary(
           .eq("isActive", true)
           .is("deletedAt", null)
       : Promise.resolve({ data: [], error: null }),
-    supabase
-      .from("assignments")
-      .select(
-        "assignmentId, collegeSectionsId, collegeAcademicYearId, dateAssignedInt, submissionDeadlineInt, createdAt",
-      )
-      .in("collegeBranchId", scope.collegeBranchIds)
-      .in("subjectId", scope.subjectIds)
-      .in("collegeAcademicYearId", scope.academicYearIds)
-      .in("collegeSectionsId", scope.sectionIds)
-      .eq("is_deleted", false)
-      .neq("status", "Cancelled"),
+    assignmentsQuery,
     facultyIds.length
       ? supabase
           .from("discussion_forum")
@@ -658,37 +720,8 @@ export async function getAdminStudentProgressSummary(
           .eq("is_deleted", false)
           .is("deletedAt", null)
       : Promise.resolve({ data: [], error: null }),
-    supabase
-      .from("quizzes")
-      .select(
-        "quizId, collegeSectionsId, collegeAcademicYearId, totalMarks, createdAt, endDate",
-      )
-      .in("collegeSubjectId", scope.subjectIds)
-      .in("collegeAcademicYearId", scope.academicYearIds)
-      .in("collegeSectionsId", scope.sectionIds)
-      .eq("isActive", true)
-      .is("deletedAt", null),
-    supabase
-      .from("faculty_weightage_configs")
-      .select(
-        `
-        facultyWeightageConfigId,
-        collegeSubjectId,
-        collegeSectionsId,
-        collegeSemesterId,
-        totalPercentage,
-        faculty_weightage_items (
-          label,
-          percentage
-        )
-      `,
-      )
-      .eq("collegeId", scope.collegeId)
-      .eq("collegeEducationId", scope.collegeEducationId)
-      .in("collegeBranchId", scope.collegeBranchIds)
-      .in("collegeSubjectId", scope.subjectIds)
-      .in("collegeSectionsId", scope.sectionIds)
-      .is("deletedAt", null),
+    quizzesQuery,
+    weightageQuery,
   ]);
 
   if (usersResult.error) throw usersResult.error;

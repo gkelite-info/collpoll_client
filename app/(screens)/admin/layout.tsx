@@ -16,17 +16,27 @@ export default function AdminLayout({
   const { collegeEducationType, loading } = useUser();
   const isSchool = isSchoolEducation(collegeEducationType);
 
+  const isBlockedPath = 
+    pathname === "/admin/clubs" || 
+    pathname.startsWith("/admin/clubs/") || 
+    pathname === "/admin/placements" || 
+    pathname.startsWith("/admin/placements/") ||
+    pathname === "/admin/wellbeing" ||
+    pathname.startsWith("/admin/wellbeing/");
+
   useEffect(() => {
     if (loading) return;
-    if (isSchool) {
-      if (pathname === "/admin/clubs" || pathname === "/admin/placements" || pathname.startsWith("/admin/clubs/") || pathname.startsWith("/admin/placements/")) {
-        toast.error("This feature is not available for schools", {
-          id: "school-feature-restricted",
-        });
-        router.replace("/admin");
-      }
+    if (isSchool && isBlockedPath) {
+      toast.error("Schools do not have access to this module.", {
+        id: "school-feature-restricted",
+      });
+      router.replace("/admin");
     }
-  }, [pathname, isSchool, loading, router]);
+  }, [isSchool, isBlockedPath, loading, router]);
+
+  if (isBlockedPath && (loading || isSchool)) {
+    return null;
+  }
 
   return (
     <div className="flex">

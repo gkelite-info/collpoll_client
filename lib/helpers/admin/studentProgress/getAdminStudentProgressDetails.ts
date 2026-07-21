@@ -422,7 +422,7 @@ export async function getAdminStudentProgressDetails(
   if (pinError) throw pinError;
   if (!pinRow?.studentId) return null;
 
-  const { data: studentRow, error: studentError } = await supabase
+  let studentQuery = supabase
     .from("students")
     .select(
       `
@@ -440,10 +440,14 @@ export async function getAdminStudentProgressDetails(
     .eq("studentId", pinRow.studentId)
     .eq("collegeId", scope.collegeId)
     .eq("collegeEducationId", scope.collegeEducationId)
-    .in("collegeBranchId", scope.collegeBranchIds)
     .eq("isActive", true)
-    .is("deletedAt", null)
-    .maybeSingle<StudentProfileLookupRow>();
+    .is("deletedAt", null);
+
+  if (scope.collegeBranchIds.length) {
+    studentQuery = studentQuery.in("collegeBranchId", scope.collegeBranchIds);
+  }
+
+  const { data: studentRow, error: studentError } = await studentQuery.maybeSingle<StudentProfileLookupRow>();
 
   if (studentError) throw studentError;
   if (!studentRow) return null;
@@ -477,7 +481,8 @@ export async function getAdminStudentProgressDetails(
 
   if (
     !scope.academicYearIds.includes(historyRow.collegeAcademicYearId) ||
-    (historyRow.collegeSemesterId !== null &&
+    (scope.semesterIds.length > 0 &&
+      historyRow.collegeSemesterId !== null &&
       !scope.semesterIds.includes(historyRow.collegeSemesterId)) ||
     !scope.sectionIds.includes(historyRow.collegeSectionsId)
   ) {
@@ -486,26 +491,35 @@ export async function getAdminStudentProgressDetails(
 
   const user = getFirst(studentRow.user);
 
-  const { data: branchRow, error: branchError } = await supabase
-    .from("college_branch")
-    .select("collegeBranchId, collegeBranchCode")
-    .eq("collegeBranchId", studentRow.collegeBranchId)
-    .eq("collegeId", scope.collegeId)
-    .eq("collegeEducationId", scope.collegeEducationId)
-    .eq("isActive", true)
-    .is("deletedAt", null)
-    .maybeSingle<CollegeBranchRow>();
+  let branchRow: CollegeBranchRow | null = null;
+  if (studentRow.collegeBranchId) {
+    const { data: bData, error: branchError } = await supabase
+      .from("college_branch")
+      .select("collegeBranchId, collegeBranchCode")
+      .eq("collegeBranchId", studentRow.collegeBranchId)
+      .eq("collegeId", scope.collegeId)
+      .eq("collegeEducationId", scope.collegeEducationId)
+      .eq("isActive", true)
+      .is("deletedAt", null)
+      .maybeSingle<CollegeBranchRow>();
 
-  if (branchError) throw branchError;
+    if (!branchError) {
+      branchRow = bData;
+    }
+  }
+
   const resolvedDepartmentLabel =
     branchRow?.collegeBranchCode ?? scope.departmentLabel ?? "N/A";
 
   let facultySectionsQuery = supabase
     .from("faculty_sections")
     .select("facultyId, collegeSubjectId")
-    .in("collegeSubjectId", scope.subjectIds)
     .eq("isActive", true)
     .is("deletedAt", null);
+
+  if (scope.subjectIds.length) {
+    facultySectionsQuery = facultySectionsQuery.in("collegeSubjectId", scope.subjectIds);
+  }
 
   if (historyRow.collegeAcademicYearId === null) {
     facultySectionsQuery = facultySectionsQuery.is("collegeAcademicYearId", null);
@@ -542,9 +556,15 @@ export async function getAdminStudentProgressDetails(
       )
     .eq("collegeId", scope.collegeId)
     .eq("collegeEducationId", scope.collegeEducationId)
-    .in("collegeBranchId", scope.collegeBranchIds)
-    .in("collegeSubjectId", scope.subjectIds)
     .is("deletedAt", null);
+
+  if (scope.collegeBranchIds.length) {
+    weightageQuery = weightageQuery.in("collegeBranchId", scope.collegeBranchIds);
+  }
+
+  if (scope.subjectIds.length) {
+    weightageQuery = weightageQuery.in("collegeSubjectId", scope.subjectIds);
+  }
 
   if (historyRow.collegeSectionsId === null) {
     weightageQuery = weightageQuery.is("collegeSectionsId", null);
@@ -564,11 +584,17 @@ export async function getAdminStudentProgressDetails(
   let subjectsQuery = supabase
     .from("college_subjects")
     .select("collegeSubjectId, subjectName, subjectKey")
-    .in("collegeSubjectId", scope.subjectIds)
-    .eq("collegeBranchId", studentRow.collegeBranchId)
     .eq("collegeEducationId", scope.collegeEducationId)
     .eq("isActive", true)
     .is("deletedAt", null);
+
+  if (scope.subjectIds.length) {
+    subjectsQuery = subjectsQuery.in("collegeSubjectId", scope.subjectIds);
+  }
+
+  if (studentRow.collegeBranchId) {
+    subjectsQuery = subjectsQuery.eq("collegeBranchId", studentRow.collegeBranchId);
+  }
 
   if (historyRow.collegeAcademicYearId === null) {
     subjectsQuery = subjectsQuery.is("collegeAcademicYearId", null);
@@ -585,10 +611,16 @@ export async function getAdminStudentProgressDetails(
   let assignmentsQuery = supabase
     .from("assignments")
     .select("assignmentId, subjectId, topicName, submissionDeadlineInt, marks, status")
-    .in("collegeBranchId", scope.collegeBranchIds)
-    .in("subjectId", scope.subjectIds)
     .eq("is_deleted", false)
     .neq("status", "Cancelled");
+
+  if (scope.collegeBranchIds.length) {
+    assignmentsQuery = assignmentsQuery.in("collegeBranchId", scope.collegeBranchIds);
+  }
+
+  if (scope.subjectIds.length) {
+    assignmentsQuery = assignmentsQuery.in("subjectId", scope.subjectIds);
+  }
 
   if (historyRow.collegeAcademicYearId === null) {
     assignmentsQuery = assignmentsQuery.is("collegeAcademicYearId", null);
@@ -605,9 +637,12 @@ export async function getAdminStudentProgressDetails(
   let quizzesQuery = supabase
     .from("quizzes")
     .select("quizId, collegeSubjectId, totalMarks, quizTitle, endDate, status")
-    .in("collegeSubjectId", scope.subjectIds)
     .eq("isActive", true)
     .is("deletedAt", null);
+
+  if (scope.subjectIds.length) {
+    quizzesQuery = quizzesQuery.in("collegeSubjectId", scope.subjectIds);
+  }
 
   if (historyRow.collegeAcademicYearId === null) {
     quizzesQuery = quizzesQuery.is("collegeAcademicYearId", null);

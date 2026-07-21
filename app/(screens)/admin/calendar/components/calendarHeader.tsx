@@ -31,15 +31,15 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   const currentYear = currentDate.getFullYear();
 
   const currentRealYear = new Date().getFullYear();
-  const baseYear = Math.min(2024, currentRealYear - 2);
-  const maxYear = Math.max(currentRealYear + 3, baseYear + 5);
-  const yearsCount = maxYear - baseYear + 1;
+  const baseYear = 2026;
+  const maxYear = currentRealYear + 2;
+  const yearsCount = Math.max(1, maxYear - baseYear + 1);
   const years = Array.from({ length: yearsCount }, (_, i) => baseYear + i);
 
   return (
-    <div className="flex items-center gap-4 mb-1">
+    <div className="flex flex-col min-[360px]:flex-row items-stretch min-[360px]:items-center justify-between w-full md:w-auto gap-3 min-[360px]:gap-4 mb-1">
       {/* 🟢 Smart Month & Year Filter */}
-      <div className="flex items-center bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
+      <div className="flex justify-center min-[360px]:justify-start items-center bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
         <div className="relative flex items-center">
           <select
             value={currentMonth}
@@ -88,7 +88,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       {/* 🟢 Existing Add New Button */}
       <button
         onClick={onAddClick}
-        className="flex items-center cursor-pointer gap-1.5 px-4 py-2 bg-[#43C17A] hover:bg-emerald-600 rounded-lg text-white transition-colors shadow-sm text-sm font-bold"
+        className="flex items-center justify-center shrink-0 whitespace-nowrap cursor-pointer gap-1.5 px-3 md:px-4 py-2.5 min-[360px]:py-2 bg-[#43C17A] hover:bg-emerald-600 rounded-lg text-white transition-colors shadow-sm text-sm font-bold w-full min-[360px]:w-auto"
       >
         <Plus size={16} weight="bold" />
         Add New

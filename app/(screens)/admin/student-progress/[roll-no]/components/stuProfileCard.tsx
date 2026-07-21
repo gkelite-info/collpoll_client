@@ -14,6 +14,7 @@ interface Props {
   attendancePercentage: number;
   absentPercentage: number;
   leavePercentage: number;
+  isSchool?: boolean;
 }
 
 export default function StudentProfileCard({
@@ -27,6 +28,7 @@ export default function StudentProfileCard({
   attendancePercentage,
   absentPercentage,
   leavePercentage,
+  isSchool,
 }: Props) {
   return (
     <div className="rounded-[20px] bg-white p-6 shadow-sm h-full font-sans">
@@ -36,9 +38,11 @@ export default function StudentProfileCard({
 
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-bold text-[#333333]">{name}</h2>
-            <span className="rounded-full bg-[#E8F5E9] px-3 py-1 text-xs font-semibold text-[#4CAF50]">
-              {department}
-            </span>
+            {!isSchool && department && department !== "N/A" && (
+              <span className="rounded-full bg-[#E8F5E9] px-3 py-1 text-xs font-semibold text-[#4CAF50]">
+                {department}
+              </span>
+            )}
           </div>
         </div>
         <span className="rounded-full bg-[#E8F5E9] px-4 py-1 text-xs font-semibold text-[#4CAF50]">

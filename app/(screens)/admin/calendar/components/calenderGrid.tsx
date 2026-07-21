@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { CalendarEvent, WeekDay } from "../types";
 import { getEventStyle, getOverlappingEvents } from "../utils";
@@ -37,6 +37,40 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   };
 
   const [hoveredEvent, setHoveredEvent] = useState<CalendarEvent | null>(null);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+
+  useEffect(() => {
+    setSelectedDayIndex(0);
+  }, [weekDays]);
+
+  const currentRealYear = new Date().getFullYear();
+  const baseYear = 2026;
+  const maxYear = currentRealYear + 2;
+
+  const currentSelectedDate = weekDays[selectedDayIndex]?.fullDate ? new Date(weekDays[selectedDayIndex].fullDate) : new Date();
+  
+  const isPrevDisabled = currentSelectedDate.getFullYear() <= baseYear && currentSelectedDate.getMonth() === 0 && currentSelectedDate.getDate() <= 7;
+  const isNextDisabled = currentSelectedDate.getFullYear() >= maxYear && currentSelectedDate.getMonth() === 11 && currentSelectedDate.getDate() >= 25;
+
+  const handlePrevDay = () => {
+    if (isPrevDisabled) return;
+    if (selectedDayIndex > 0) {
+      setSelectedDayIndex(prev => prev - 1);
+    } else {
+      onPrevWeek();
+      setSelectedDayIndex(weekDays.length - 1);
+    }
+  };
+
+  const handleNextDay = () => {
+    if (isNextDisabled) return;
+    if (selectedDayIndex < weekDays.length - 1) {
+      setSelectedDayIndex(prev => prev + 1);
+    } else {
+      onNextWeek();
+      setSelectedDayIndex(0);
+    }
+  };
 
 
   const isTimeOverlapping = (
@@ -56,22 +90,32 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   return (
     <div className="bg-white rounded-bl-[20px] shadow-sm overflow-y-auto custom-scrollbar flex flex-col relative -mt-2 h-[80vh]">
       <div className="flex border-b border-gray-400 sticky top-0 z-30 bg-white">
-        <div className="w-20 min-w-[80px] border-r border-gray-400 p-2 flex items-center justify-center gap-1 bg-white z-10">
+        <div className="hidden md:flex lg:flex w-20 min-w-[80px] border-r border-gray-400 p-2 items-center justify-center gap-1 bg-white z-10">
           <button
             onClick={onPrevWeek}
-            className="p-1 hover:bg-gray-100 cursor-pointer rounded text-gray-500 transition-colors"
+            disabled={isPrevDisabled}
+            className={`p-1 rounded transition-colors ${isPrevDisabled ? "text-gray-300 cursor-not-allowed" : "text-gray-600 hover:bg-gray-100 hover:text-emerald-600 cursor-pointer"}`}
           >
             <CaretLeft size={16} weight="bold" />
           </button>
           <button
             onClick={onNextWeek}
-            className="p-1 hover:bg-gray-100 cursor-pointer rounded text-gray-500 transition-colors"
+            disabled={isNextDisabled}
+            className={`p-1 rounded transition-colors ${isNextDisabled ? "text-gray-300 cursor-not-allowed" : "text-gray-600 hover:bg-gray-100 hover:text-emerald-600 cursor-pointer"}`}
           >
             <CaretRight size={16} weight="bold" />
           </button>
         </div>
 
-        <div className="flex-1 grid grid-cols-6">
+        <div className="bg-white flex md:hidden lg:hidden w-full items-center justify-center py-4 gap-4">
+          <button onClick={handlePrevDay} disabled={isPrevDisabled} className={`p-2 transition-colors ${isPrevDisabled ? "text-gray-300 cursor-not-allowed" : "text-slate-800 hover:text-emerald-600 cursor-pointer"}`}><CaretLeft size={20} weight="bold" /></button>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+            {weekDays[selectedDayIndex]?.day} {weekDays[selectedDayIndex]?.date}
+          </h2>
+          <button onClick={handleNextDay} disabled={isNextDisabled} className={`p-2 transition-colors ${isNextDisabled ? "text-gray-300 cursor-not-allowed" : "text-slate-800 hover:text-emerald-600 cursor-pointer"}`}><CaretLeft className="rotate-180" size={20} weight="bold" /></button>
+        </div>
+
+        <div className="flex-1 hidden md:grid md:grid-cols-6 lg:grid grid-cols-6 scrollbar-hide">
           {weekDays.map((day) => (
             <div
               key={day.fullDate}
@@ -90,22 +134,22 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 relative">
+      <div className="flex-1 relative bg-white">
         <div className="flex min-h-[720px]">
-          <div className="w-20 min-w-20 bg-white border-r border-gray-300 shrink-0 select-none">
+          <div className="w-16 md:w-20 lg:w-20 bg-white border-r border-gray-300 shrink-0 select-none">
             {TIME_SLOTS &&
               TIME_SLOTS.map((time) => (
                 <div
                   key={time}
-                  className="h-[120px] text-[11px] font-medium text-gray-400 text-center pt-3 border-b border-dashed border-gray-100"
+                  className="h-[120px] text-[10px] md:text-[11px] lg:text-[11px] font-medium text-gray-400 text-center pt-3 border-b border-dashed border-gray-100"
                 >
                   {time}
                 </div>
               ))}
           </div>
 
-          <div className="flex-1 grid grid-cols-6 relative">
-            <div className="absolute inset-0 z-0 pointer-events-none flex flex-col">
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-6 lg:grid-cols-6 relative">
+            <div className="absolute inset-0 z-0 pointer-events-none hidden md:flex lg:flex flex-col">
               {TIME_SLOTS &&
                 TIME_SLOTS.map((_, i) => (
                   <div
@@ -115,10 +159,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 ))}
             </div>
 
-            {weekDays.map((dayObj) => (
+            {weekDays.map((dayObj, index) => (
               <div
                 key={dayObj.fullDate}
-                className="relative h-full border-r border-[#C6C6C69E] last:border-r-0 z-10"
+                className={`relative h-full border-r border-[#C6C6C69E] last:border-r-0 z-10
+                  ${selectedDayIndex === index ? "block" : "hidden md:block lg:block"}`}
               >
                 {getOverlappingEvents(
                   events

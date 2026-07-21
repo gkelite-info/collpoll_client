@@ -145,7 +145,7 @@ const TrustedDevicesList: React.FC<TrustedDevicesListProps> = ({
             </p>
           </div>
           <div className="w-[32%] max-md:hidden">
-            <CourseScheduleCard isVisibile={isNOtVisible}/>
+            <CourseScheduleCard isVisibile={false}/>
           </div>
         </div>
 
