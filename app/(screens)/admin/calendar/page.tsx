@@ -6,6 +6,7 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard"
 import FacultyOverview from "./components/FacultyOverview"
 import CalendarView from "./components/CalendarView"
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable"
+import CalendarViewShimmer from "@/app/utils/shimmers/CalendarViewShimmer"
 import { fetchFilteredFaculties } from "@/lib/helpers/admin/calender/fetchFacultyCalendar"
 import { useUser } from "@/app/utils/context/UserContext"
 import { useAdmin } from "@/app/utils/context/admin/useAdmin"
@@ -90,8 +91,8 @@ function PageContent() {
 
   if (facultyId && !selectedFaculty) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#f3f4f6]">
-        <Loader />
+      <div className="p-4 bg-[#f3f4f6] min-h-screen">
+        <CalendarViewShimmer />
       </div>
     )
   }

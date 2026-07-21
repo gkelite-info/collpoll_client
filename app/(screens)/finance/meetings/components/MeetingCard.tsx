@@ -7,6 +7,8 @@ import PillTag from "./PillTag";
 import { Meeting } from "../page";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/app/utils/Avatar";
+import { useUser } from "@/app/utils/context/UserContext";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 const formatToAMPM = (timeStr: string) => {
   if (!timeStr) return "";
@@ -32,6 +34,8 @@ export default function MeetingCard({
   onEdit?: (meeting: number, sectionId: number | null) => void;
 }) {
   const t = useTranslations("Meetings.parent");
+  const { collegeEducationType } = useUser();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const [fromTime, toTime] = data.timeRange.split(" - ");
   const formattedTimeRange = `${formatToAMPM(fromTime)} - ${formatToAMPM(toTime)}`;
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -100,7 +104,7 @@ export default function MeetingCard({
             {((category && category !== "Admin") ||
               (role && !["Admin", "Finance"].includes(role))) && (
                 <span className="bg-[#22c55e] text-[#ffffff] px-2 py-0.5 rounded-full text-[10px] whitespace-nowrap max-md:hidden">
-                  {data.branch} - {data.section}
+                  {isSchool ? data.year : data.branch} - {data.section}
                 </span>
               )}
           </div>
@@ -108,7 +112,7 @@ export default function MeetingCard({
           {/* Desktop Content Only */}
           <div className="space-y-2 text-sm text-gray-600 max-md:hidden">
             <div className="flex items-center gap-1">
-              <span className="text-[#303030] font-normal text-xs">
+              <span className="text-[#303030] font-normal text-xs whitespace-nowrap">
                 {t("Description :")}
               </span>
               <p className="truncate text-xs text-[#16284F]">
@@ -118,7 +122,7 @@ export default function MeetingCard({
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1">
-                <span className="text-[#303030] font-normal text-xs">
+                <span className="text-[#303030] font-normal text-xs whitespace-nowrap">
                   {t("Date :")}
                 </span>
                 <div className="scale-90 origin-left">
@@ -264,12 +268,14 @@ export default function MeetingCard({
                 {((category && category !== "Admin") ||
                   (role && !["Admin", "Finance"].includes(role))) && (
                     <div className="flex gap-y-3 flex-col">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#303030] font-medium text-sm">
-                          {t("Branch :")}
-                        </span>
-                        <PillTag label={data.branch || t("NA")} />
-                      </div>
+                      {!isSchool && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#303030] font-medium text-sm">
+                            {t("Branch :")}
+                          </span>
+                          <PillTag label={data.branch || t("NA")} />
+                        </div>
+                      )}
                       <div className="flex items-center justify-between">
                         <span className="text-[#303030] font-medium text-sm">
                           {t("Year :")}

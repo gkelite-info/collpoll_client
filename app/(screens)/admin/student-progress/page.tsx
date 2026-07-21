@@ -15,6 +15,7 @@ import { fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns
 import { getAdminStudentProgressSummary } from "@/lib/helpers/admin/studentProgress/getAdminStudentProgressSummary";
 import { useStudentProgressFilters } from "@/lib/helpers/admin/studentProgress/useStudentProgressFilters";
 import { FilterDropdown } from "../academics/components/filterDropdown";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import ResultDetailsView from "./results/ResultDetailsView";
 import ResultPreviewView from "./results/ResultPreviewView";
 import ResultsMonitoringView from "./results/ResultsMonitoringView";
@@ -171,6 +172,7 @@ export default function Page() {
 
   const currentEducationId = education?.collegeEducationId ?? defaultEducationId;
   const currentEducationType = education?.collegeEducationType ?? defaultEducationType;
+  const isSchool = isSchoolEducation(currentEducationType);
 
   const selectEducation = (edu: any) => {
     setEducation(edu);
@@ -217,9 +219,11 @@ export default function Page() {
     collegeEducationId: currentEducationId,
   });
 
-  const isYearEnabled = !!selectedBranch;
-  const isSemesterEnabled = !!selectedYear && currentEducationType !== "Inter";
-  const isSectionEnabled = currentEducationType === "Inter" ? !!selectedYear : !!selectedSemester;
+  const isYearEnabled = isSchool ? !!currentEducationId : !!selectedBranch;
+  const isSemesterEnabled = isSchool ? false : (!!selectedYear && currentEducationType !== "Inter");
+  const isSectionEnabled = isSchool
+    ? !!selectedYear
+    : (currentEducationType === "Inter" ? !!selectedYear : !!selectedSemester);
   const isSubjectEnabled = !!selectedSection;
 
   useEffect(() => {
@@ -247,11 +251,8 @@ export default function Page() {
     if (
       !collegeId ||
       !currentEducationId ||
-      !activeBranchIds.length ||
       !activeYearIds.length ||
-      !activeSemesterIds.length ||
-      !activeSectionIds.length ||
-      !activeSubjectIds.length
+      !activeSectionIds.length
     ) {
       setSummary(defaultSummary);
       setSummaryLoading(false);
@@ -343,14 +344,11 @@ export default function Page() {
     },
   ];
 
-  const headerBranchLabel = selectedBranch?.collegeBranchCode ?? "All Branches";
+  const headerBranchLabel = selectedBranch?.collegeBranchCode ?? (isSchool ? "" : "All Branches");
   const headerYearLabel = selectedYear?.collegeAcademicYear ?? "";
-  const headerTitle = `Student Progress - ${[
-    headerBranchLabel,
-    headerYearLabel,
-  ]
-    .filter(Boolean)
-    .join(" ")}`;
+  const headerTitle = isSchool
+    ? `Student Progress ${headerYearLabel ? `- ${headerYearLabel}` : ""}`.trim()
+    : `Student Progress - ${[headerBranchLabel, headerYearLabel].filter(Boolean).join(" ")}`;
 
   const topPerformers = useMemo(
     () =>
@@ -380,6 +378,7 @@ export default function Page() {
 
   const detailQuery = new URLSearchParams(
     Object.entries({
+      educationType: currentEducationType ?? "",
       branchId: selectedBranch?.collegeBranchId?.toString() ?? "",
       branch: selectedBranch?.collegeBranchCode ?? "ALL",
       yearId: selectedYear?.collegeAcademicYearId?.toString() ?? "",
@@ -442,13 +441,7 @@ export default function Page() {
 
   const shouldShowSkeleton =
     adminLoading ||
-    (!hasLoadedOnce && filtersLoading) ||
-    (summaryLoading &&
-      !hasLoadedOnce &&
-      summary.totalStudents === 0 &&
-      summary.tableTotalCount === 0 &&
-      summary.studentRows.length === 0 &&
-      summary.topPerformerRows.length === 0);
+    (!hasLoadedOnce && (filtersLoading || summaryLoading));
 
   if (shouldShowSkeleton) {
     return <StudentPerformancePageSkeleton />;
@@ -511,7 +504,9 @@ export default function Page() {
             </h1>
           </div>
           <p className="text-sm text-black">
-            Monitor and compare overall student performance across all Branches.
+            {isSchool
+              ? "Monitor and compare overall student performance."
+              : "Monitor and compare overall student performance across all Branches."}
           </p>
         </div>
 
@@ -539,30 +534,32 @@ export default function Page() {
             }}
           />
 
-          <FilterDropdown
-            label={currentEducationType === "Inter" ? "Group" : "Department"}
-            value={selectedBranch?.collegeBranchId?.toString() ?? "All"}
-            placeholder="All"
-            options={["All", ...branches.map((branch) => String(branch.collegeBranchId))]}
-            onChange={(value) => {
-              if (value === "All") {
-                selectBranch(null);
-                return;
-              }
+          {!isSchool && (
+            <FilterDropdown
+              label={currentEducationType === "Inter" ? "Group" : "Branch"}
+              value={selectedBranch?.collegeBranchId?.toString() ?? "All"}
+              placeholder="All"
+              options={["All", ...branches.map((branch) => String(branch.collegeBranchId))]}
+              onChange={(value) => {
+                if (value === "All") {
+                  selectBranch(null);
+                  return;
+                }
 
-              const branch = branches.find(
-                (item) => item.collegeBranchId === Number(value),
-              );
-              selectBranch(branch ?? null);
-            }}
-            widthClassName="w-full"
-            displayModifier={(value) =>
-              value === "All"
-                ? "All"
-                : branches.find((branch) => String(branch.collegeBranchId) === value)
-                  ?.collegeBranchCode ?? value
-            }
-          />
+                const branch = branches.find(
+                  (item) => item.collegeBranchId === Number(value),
+                );
+                selectBranch(branch ?? null);
+              }}
+              widthClassName="w-full"
+              displayModifier={(value) =>
+                value === "All"
+                  ? "All"
+                  : branches.find((branch) => String(branch.collegeBranchId) === value)
+                    ?.collegeBranchCode ?? value
+              }
+            />
+          )}
 
           <FilterDropdown
             label="Year"
@@ -590,7 +587,7 @@ export default function Page() {
             }
           />
 
-          {currentEducationType !== "Inter" && (
+          {!isSchool && currentEducationType !== "Inter" && (
             <FilterDropdown
               label="Semester"
               value={selectedSemester?.collegeSemesterId?.toString() ?? "All"}

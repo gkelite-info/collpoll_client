@@ -6,7 +6,7 @@ interface GradeEntry {
   improvement: "Improved" | "Declining";
 }
 
-const mockGrades: GradeEntry[] = [
+const mockGradesCollege: GradeEntry[] = [
   { subject: "Java Programmi...", grade: "A", improvement: "Improved" },
   { subject: "Data Structures", grade: "B", improvement: "Declining" },
   { subject: "Database Manage..", grade: "A", improvement: "Improved" },
@@ -14,7 +14,17 @@ const mockGrades: GradeEntry[] = [
   { subject: "Web Development", grade: "B", improvement: "Declining" },
 ];
 
-export default function GradesTable() {
+const mockGradesSchool: GradeEntry[] = [
+  { subject: "Mathematics", grade: "A", improvement: "Improved" },
+  { subject: "Science", grade: "B", improvement: "Declining" },
+  { subject: "Social Studies", grade: "A", improvement: "Improved" },
+  { subject: "English", grade: "A", improvement: "Improved" },
+  { subject: "Physical Education", grade: "A", improvement: "Improved" },
+];
+
+export default function GradesTable({ isSchool }: { isSchool?: boolean }) {
+  const data = isSchool ? mockGradesSchool : mockGradesCollege;
+
   return (
     <div className="bg-white p-6 rounded-[20px] shadow-sm w-full h-full font-sans">
       <h2 className="text-[#333333] text-xl font-bold mb-6">Grades</h2>
@@ -27,7 +37,7 @@ export default function GradesTable() {
           </tr>
         </thead>
         <tbody className="text-sm">
-          {mockGrades.map((item, idx) => (
+          {data.map((item, idx) => (
             <tr
               key={idx}
               className="text-[#333333] border-b border-gray-50 last:border-0"

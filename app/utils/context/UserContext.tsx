@@ -46,6 +46,7 @@ type UserContextType = {
   wellBeingCategoryIds: number[];
   wellBeingCategoryName: string | null;
   wellBeingCategoryNames: string[];
+  collegeEducationId: number | null;
   collegeEducationType: string | null;
   collegeBranchCode: string | null;
   collegeAcademicYear: string | null;
@@ -133,6 +134,7 @@ const UserContext = createContext<UserContextType>({
   wellBeingCategoryIds: [],
   wellBeingCategoryName: null,
   wellBeingCategoryNames: [],
+  collegeEducationId: null,
   collegeEducationType: null,
   collegeBranchCode: null,
   collegeAcademicYear: null,
@@ -172,6 +174,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [wellBeingCategoryIds, setWellBeingCategoryIds] = useState<number[]>([]);
   const [wellBeingCategoryName, setWellBeingCategoryName] = useState<string | null>(null);
   const [wellBeingCategoryNames, setWellBeingCategoryNames] = useState<string[]>([]);
+  const [collegeEducationId, setCollegeEducationId] = useState<number | null>(null);
   const [collegeEducationType, setCollegeEducationType] = useState<string | null>(null);
   const [collegeBranchCode, setCollegeBranchCode] = useState<string | null>(null);
   const [collegeAcademicYear, setCollegeAcademicYear] = useState<string | null>(null);
@@ -212,6 +215,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     setWellBeingCategoryIds,
     setWellBeingCategoryName,
     setWellBeingCategoryNames,
+    setCollegeEducationId,
     setCollegeEducationType,
     setCollegeBranchCode,
     setCollegeAcademicYear,
@@ -250,6 +254,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     s.setWellBeingCategoryIds([]);
     s.setWellBeingCategoryName(null);
     s.setWellBeingCategoryNames([]);
+    s.setCollegeEducationId(null);
     s.setCollegeEducationType(null);
     s.setCollegeBranchCode(null);
     s.setCollegeAcademicYear(null);
@@ -421,6 +426,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         getEmployeeEmpId(uid, cid),
       ]);
       s.setAdminId(adminData.data?.adminId ?? null);
+      s.setCollegeEducationId(adminCtx?.collegeEducationId ?? null);
       s.setCollegeEducationType(adminCtx?.collegeEducationType ?? null);
       s.setIdentifierId(empId ?? null);
     },
@@ -882,6 +888,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       wellBeingCategoryIds,
       wellBeingCategoryName,
       wellBeingCategoryNames,
+      collegeEducationId,
       collegeEducationType,
       collegeBranchCode,
       collegeAcademicYear,
@@ -920,6 +927,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       wellBeingCategoryIds,
       wellBeingCategoryName,
       wellBeingCategoryNames,
+      collegeEducationId,
       collegeEducationType,
       collegeBranchCode,
       collegeAcademicYear,

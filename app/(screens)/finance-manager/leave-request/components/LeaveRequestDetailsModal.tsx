@@ -13,6 +13,7 @@ import {
   updateEmployeeLeaveChatMessage,
   type EmployeeLeaveChatMessage,
 } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveChatAPI";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { supabase } from "@/lib/supabaseClient";
 import {
   Checks,
@@ -45,7 +46,8 @@ export default function LeaveRequestDetailsModal({
   request,
   onClose,
 }: LeaveRequestDetailsModalProps) {
-  const { userId } = useUser();
+  const { userId, collegeEducationType } = useUser();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const [messages, setMessages] = useState<EmployeeLeaveChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -442,12 +444,17 @@ export default function LeaveRequestDetailsModal({
       })
       .replace(",", "");
 
-  const formatRoleLabel = (role: string) =>
-    role
+  const formatRoleLabel = (role: string) => {
+    const formatted = role
       .replace(/([a-z])([A-Z])/g, "$1 $2")
       .replace(/\bHr\b/g, "HR")
       .replace(/\bH R\b/g, "HR")
       .trim();
+    if (isSchool && formatted.replace(/\s/g, '').toLowerCase() === "collegeadmin") {
+      return "School Admin";
+    }
+    return formatted;
+  };
 
   if (!request) return null;
 

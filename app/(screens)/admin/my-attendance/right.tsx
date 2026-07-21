@@ -5,6 +5,7 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { useEffect, useState } from "react";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
 import { useUser } from "@/app/utils/context/UserContext";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -21,12 +22,15 @@ const typeIcons: Record<string, string> = {
   other: "/others.png",
 };
 
-const formatRole = (role: string) =>
-  role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+const formatRole = (role: string, isSchool: boolean) => {
+  const formatted = role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return isSchool ? formatted?.replace(/College/g, "School") : formatted;
+};
 
 
 export default function MyAttendanceRight() {
-  const { role, collegeId, userId } = useUser()
+  const { role, collegeId, userId, collegeEducationType } = useUser();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("others");
 
@@ -58,8 +62,8 @@ export default function MyAttendanceRight() {
 
         professor:
           view === "my"
-            ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
-            : `By ${formatRole(item.createdByRole)}`,
+            ? `For ${item.targetRoles?.map((r: string) => formatRole(r, isSchool)).join(", ")}`
+            : `By ${formatRole(item.createdByRole, isSchool)}`,
       }));
 
       setAnnouncements(formatted);

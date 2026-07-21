@@ -11,6 +11,7 @@ import {
   EmployeeLeaveTagSelection,
   fetchEmployeeLeaveTagOptions,
 } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestTagsAPI";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 const requesterTagRole: Record<string, EmployeeLeaveTagFetchRole> = {
   Admin: "AllStaff",
@@ -68,30 +69,34 @@ export const hasRequiredEmployeeLeaveTags = (
       : tags.some((tag) => tag.taggedRole === taggedRole && tag.taggedUserId),
   );
 
-const tagRoleLabels: Record<EmployeeLeaveTagFetchRole, string> = {
+const getTagRoleLabels = (isSchool: boolean): Record<EmployeeLeaveTagFetchRole, string> => ({
   Admin: "Admin",
   Faculty: "Faculty",
   Finance: "Finance Executive",
   FinanceManager: "Finance Manager",
   Accountant: "Accountant",
   CollegeHr: "HR",
-  CollegeAdmin: "College Admin",
+  CollegeAdmin: isSchool ? "School Admin" : "College Admin",
   PlacementOfficer: "Placement Officer",
   WellbeingExecutive: "Wellbeing Executive",
   WellbeingManager: "Wellbeing Manager",
   AllStaff: "Select Staff",
-};
+});
 
-const staffRoleOrder: EmployeeLeaveTaggedRole[] = [
-  "Faculty",
-  "Admin",
-  "FinanceManager",
-  "Finance",
-  "Accountant",
-  "PlacementOfficer",
-  "WellbeingManager",
-  "WellbeingExecutive",
-];
+const getStaffRoleOrder = (isSchool: boolean): EmployeeLeaveTaggedRole[] => {
+  const order: EmployeeLeaveTaggedRole[] = [
+    "Faculty",
+    "Admin",
+    "FinanceManager",
+    "Finance",
+    "Accountant",
+  ];
+  if (!isSchool) {
+    order.push("PlacementOfficer");
+  }
+  order.push("WellbeingManager", "WellbeingExecutive");
+  return order;
+};
 
 type EmployeeLeaveRoutingFieldsProps = {
   value: EmployeeLeaveTagSelection[];
@@ -103,6 +108,7 @@ export default function EmployeeLeaveRoutingFields({
   onChange,
 }: EmployeeLeaveRoutingFieldsProps) {
   const { collegeId, collegeEducationType, role, userId } = useUser();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const tagRoles = getRequiredEmployeeLeaveTagRoles(role);
 
   if (!collegeId || !tagRoles.length) return null;
@@ -129,6 +135,7 @@ export default function EmployeeLeaveRoutingFields({
         <EmployeeLeaveTagSelect
           key={taggedRole}
           collegeId={collegeId}
+          isSchool={isSchool}
           excludeUserId={
             taggedRole === "AllStaff" ||
             (role === "CollegeHr" && taggedRole === "CollegeHr")
@@ -158,6 +165,7 @@ export default function EmployeeLeaveRoutingFields({
 
 function EmployeeLeaveTagSelect({
   collegeId,
+  isSchool,
   excludeUserId,
   collegeEducationType,
   taggedRole,
@@ -165,6 +173,7 @@ function EmployeeLeaveTagSelect({
   onChange,
 }: {
   collegeId: number;
+  isSchool: boolean;
   excludeUserId: number | null;
   collegeEducationType: string | null;
   taggedRole: EmployeeLeaveTagFetchRole;
@@ -176,6 +185,9 @@ function EmployeeLeaveTagSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLLabelElement | null>(null);
+
+  const tagRoleLabels = useMemo(() => getTagRoleLabels(isSchool), [isSchool]);
+  const staffRoleOrder = useMemo(() => getStaffRoleOrder(isSchool), [isSchool]);
 
   useEffect(() => {
     let isActive = true;

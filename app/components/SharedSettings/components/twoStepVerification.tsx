@@ -165,7 +165,7 @@ const TwoStepVerification: React.FC<TwoStepVerificationProps> = ({
           </p>
         </div>
         <div className="w-[32%] max-md:hidden">
-          <CourseScheduleCard isVisibile={isNOtVisible}/>
+          <CourseScheduleCard isVisibile={false}/>
         </div>
       </div>
 

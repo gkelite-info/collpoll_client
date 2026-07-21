@@ -78,7 +78,7 @@ export default function CurrentPassword() {
           </p>
         </div>
         <div className="w-[32%] max-md:hidden">
-          <CourseScheduleCard isVisibile={isNotVisible}/>
+          <CourseScheduleCard isVisibile={false} />
         </div>
       </div>
       <div className="mx-auto max-w-3xl w-full max-md:px-4">

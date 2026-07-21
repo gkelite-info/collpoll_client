@@ -45,7 +45,7 @@ export default function AdminMeetingsPage() {
     const currentCategory = 'Admin';
     const [meetings, setMeetings] = useState<Meeting[]>([]);
 
-    const { adminId, role } = useUser();
+    const { adminId, role, collegeId, collegeEducationId } = useUser();
 
     const updateFilter = (key: string, value: string) => {
         setIsLoading(true);
@@ -68,16 +68,21 @@ export default function AdminMeetingsPage() {
     ];
 
     useEffect(() => {
-        if (!adminId) {
+        if (!adminId || !collegeId) {
             setMeetings([]);
+            setIsLoading(false);
             return;
         }
         loadMeetings();
 
-    }, [currentType, page, adminId]);
+    }, [currentType, page, adminId, collegeId, collegeEducationId]);
 
     const loadMeetings = async () => {
-
+        if (!adminId || !collegeId) {
+            setMeetings([]);
+            setIsLoading(false);
+            return;
+        }
         try {
 
             setIsLoading(true);
@@ -88,6 +93,8 @@ export default function AdminMeetingsPage() {
                 type: currentType,
                 page,
                 limit: 10,
+                collegeId,
+                collegeEducationId,
             });
 
             const finalMeetings: Meeting[] = res.data.map((meeting: any) => ({

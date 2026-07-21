@@ -140,7 +140,7 @@ export default function AdminNavbar({ onClose }: AdminNavbarProps) {
     ];
     
     return allItems.filter(item => {
-      if ((item.path === "/admin/clubs" || item.path === "/admin/placements") && (isSchool || contextLoading)) return false;
+      if ((item.path === "/admin/clubs" || item.path === "/admin/placements" || item.path === "/admin/wellbeing") && (isSchool || contextLoading)) return false;
       return true;
     });
   }, [t, isSchool, contextLoading]);

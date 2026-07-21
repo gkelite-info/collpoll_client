@@ -31,6 +31,7 @@ import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.h
 import { useUser } from "@/app/utils/context/UserContext";
 import EventDetailsModal from "@/app/(screens)/faculty/calendar/modal/EventDetailsModal";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
+import CalendarGridShimmer from "@/app/utils/shimmers/CalendarGridShimmer";
 import { fetchFacultyContextAdmin } from "@/app/utils/context/faculty/facultyContextAPI";
 
 import {
@@ -742,17 +743,17 @@ export default function CalendarView({ faculty, onBack }: Props) {
 
   return (
     <main>
-      <section className="flex justify-between items-center mb-4">
-        <div>
+      <section className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+        <div className="flex-1">
           <h1 className="text-xl font-semibold text-black flex items-center">
             <CaretLeft
               size={23}
               onClick={onBack}
-              className="cursor-pointer -ml-1.5"
+              className="cursor-pointer -ml-1.5 shrink-0"
             />{" "}
             Calendar & Events
           </h1>
-          <p className="text-sm text-[#282828] mt-1">
+          <p className="text-sm text-[#282828] mt-1 break-words">
             Viewing Calendar for faculty:{" "}
             <span className="font-semibold">{faculty.name}</span> (
             {isSchool ? (faculty.year || "—") : faculty.branch}){" "}
@@ -760,7 +761,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
           </p>
         </div>
         <CourseScheduleCard
-          style="w-[320px]"
+          style="hidden md:flex lg:flex w-[320px]"
           department={faculty.branch}
           year={faculty.year}
           isVisibile={false}
@@ -784,9 +785,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
       </div>
 
       {isLoadingEvents ? (
-        <div className="flex justify-center items-center h-[300px]">
-          <Loader />
-        </div>
+        <CalendarGridShimmer />
       ) : (
         <CalendarGrid
           events={events}

@@ -13,6 +13,7 @@ import AcademicPerformance from "./components/academicPerformanceChart";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import ChatWindow from "./components/chatWindow";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { getAdminStudentProgressDetails } from "@/lib/helpers/admin/studentProgress/getAdminStudentProgressDetails";
 import { useStudentProgressFilters } from "@/lib/helpers/admin/studentProgress/useStudentProgressFilters";
 
@@ -194,7 +195,7 @@ const GradesTableSkeleton = () => (
 );
 
 const StudentProgressDetailsSkeleton = () => (
-  <div className="relative min-h-screen bg-[#F5F7FA] p-6 font-sans">
+  <div className="relative min-h-screen p-2 font-sans">
     <DetailHeaderSkeleton />
 
     <div className="mx-auto max-w-[1400px]">
@@ -234,7 +235,9 @@ export default function DashboardLayout() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const { loading: adminLoading, collegeId, collegeEducationId } = useAdmin();
+  const { loading: adminLoading, collegeId, collegeEducationId, collegeEducationType: defaultEducationType } = useAdmin();
+  const currentEducationType = searchParams.get("educationType") || defaultEducationType;
+  const isSchool = isSchoolEducation(currentEducationType);
   const [activeChatParent, setActiveChatParent] = useState<Parent | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(true);
   const [details, setDetails] = useState<StudentProgressDetails>(null);
@@ -322,9 +325,7 @@ export default function DashboardLayout() {
       !rollNo ||
       !collegeId ||
       !collegeEducationId ||
-      !activeBranchIds.length ||
       !activeYearIds.length ||
-      !activeSemesterIds.length ||
       !activeSectionIds.length ||
       !activeSubjectIds.length
     ) {
@@ -401,7 +402,7 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#F5F7FA] p-6 font-sans">
+    <div className="relative min-h-screen p-2 font-sans">
       <section className="mb-6 flex items-center justify-between">
         <div className="flex gap-3">
           <div className="flex items-center gap-2">
@@ -413,12 +414,16 @@ export default function DashboardLayout() {
             >
               <CaretLeft size={18} weight="bold" />
             </button>
-            <span className="text-sm font-medium text-gray-600">
-              Department:{" "}
-            </span>
-            <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
-              {details.departmentLabel}
-            </span>
+            {!isSchool && (
+              <>
+                <span className="text-sm font-medium text-gray-600">
+                  Branch:{" "}
+                </span>
+                <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
+                  {details.departmentLabel}
+                </span>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <span className="text-sm font-medium text-gray-600">Year:</span>
@@ -432,12 +437,14 @@ export default function DashboardLayout() {
               {details.sectionLabel}
             </span>
           </div>
-          <div className="flex items-center gap-1">
-            <span className="text-sm font-medium text-gray-600">Semester:</span>
-            <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
-              {details.semesterLabel}
-            </span>
-          </div>
+          {!isSchool && (
+            <div className="flex items-center gap-1">
+              <span className="text-sm font-medium text-gray-600">Semester:</span>
+              <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
+                {details.semesterLabel}
+              </span>
+            </div>
+          )}
         </div>
 
         <article className="flex justify-end">
@@ -448,7 +455,7 @@ export default function DashboardLayout() {
         {activeChatParent ? (
           <div className="flex h-[calc(100vh-3rem)] flex-col items-start gap-6 lg:flex-row">
             <div className="scrollbar-hide flex h-full w-full flex-col gap-6 overflow-y-auto pb-2 pr-2 lg:w-[60%]">
-              <StudentProfileCard {...details.studentProfile} />
+              <StudentProfileCard {...details.studentProfile} isSchool={isSchool} />
               <AcademicPerformance data={details.academicPerformance} />
               <AssignmentsTable
                 assignments={details.assignments}
@@ -470,7 +477,7 @@ export default function DashboardLayout() {
           <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-5">
               <div className="h-full lg:col-span-3">
-                <StudentProfileCard {...details.studentProfile} />
+                <StudentProfileCard {...details.studentProfile} isSchool={isSchool} />
               </div>
               <div className="h-full lg:col-span-2">
                 <ParentsList
@@ -500,7 +507,7 @@ export default function DashboardLayout() {
                 />
               </div>
               <div className="h-full lg:col-span-2">
-                <GradesTable />
+                <GradesTable isSchool={isSchool} />
               </div>
             </div>
           </div>

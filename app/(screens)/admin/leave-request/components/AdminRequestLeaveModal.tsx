@@ -1,7 +1,7 @@
 "use client";
 
 import { CaretDown, X } from "@phosphor-icons/react";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -61,8 +61,15 @@ export default function AdminRequestLeaveModal({
   const [formData, setFormData] = useState<LeaveFormData>(initialFormData);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
-  if (!open) return null;
+  useEffect(() => {
+    if (open) {
+      setIsClosing(false);
+    }
+  }, [open]);
+
+  if (!open || isClosing) return null;
 
   const resetForm = () => {
     setFormData(initialFormData);
@@ -70,6 +77,7 @@ export default function AdminRequestLeaveModal({
   };
 
   const handleClose = () => {
+    setIsClosing(true);
     resetForm();
     onClose();
   };

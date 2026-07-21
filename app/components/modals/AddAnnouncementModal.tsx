@@ -11,6 +11,7 @@ import {
   updateCollegeAnnouncement,
 } from "@/lib/helpers/announcements/announcementAPI";
 import { supabase } from "@/lib/supabaseClient";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type AnnouncementEditData = {
   collegeAnnouncementId?: number;
@@ -160,13 +161,19 @@ const roleLabels: Record<string, string> = {
   WellbeingManager: "Wellbeing Manager",
 };
 
-const formatRole = (role: string) =>
-  roleLabels[role] ||
-  role
-    ?.replace(/([A-Z])/g, " $1")
-    .replace(/_/g, " ")
-    .trim()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+const formatRole = (role: string, isSchool?: boolean) => {
+  let formatted = roleLabels[role] ||
+    role
+      ?.replace(/([A-Z])/g, " $1")
+      .replace(/_/g, " ")
+      .trim()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+    
+  if (isSchool) {
+    formatted = formatted?.replace(/College/g, "School");
+  }
+  return formatted;
+};
 
 export default function AddAnnouncementModal({
   open,
@@ -174,6 +181,8 @@ export default function AddAnnouncementModal({
   refreshAnnouncements,
   editData,
 }: Props) {
+  const { userId, collegeId, role, collegeEducationType } = useUser();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [saving, setSaving] = useState(false);
@@ -181,7 +190,6 @@ export default function AddAnnouncementModal({
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [type, setType] = useState<string>("notice");
   const roleDropdownRef = useRef<HTMLDivElement>(null);
-  const { userId, collegeId, role } = useUser();
   const availableRoles = role ? roleOptionsMap[role] || [] : [];
 
   const t = useTranslations("Dashboard.student");
@@ -467,7 +475,7 @@ export default function AddAnnouncementModal({
                 >
                   <span className="truncate">
                     {targetRoles.length > 0
-                      ? targetRoles.map(formatRole).join(", ")
+                      ? targetRoles.map(r => formatRole(r, isSchool)).join(", ")
                       : t("Select Roles")}
                   </span>
 
@@ -524,7 +532,7 @@ export default function AddAnnouncementModal({
                           onChange={() => handleRoleToggle(r)}
                           className="accent-[#43C17A] cursor-pointer"
                         />
-                        {formatRole(r)}
+                        {formatRole(r, isSchool)}
                       </label>
                     ))}
                   </div>
