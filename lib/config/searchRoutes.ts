@@ -198,6 +198,7 @@ export const ROLE_BASED_ROUTES: Record<string, SearchRoute[]> = {
     { label: "Meetings", subLabel: "Previous Meetings", path: "/accountant/meetings?type=previous", category: "Collaboration", keywords: ["previous meetings", "old meetings"] },
     { label: "My Attendance", path: "/accountant/my-attendance?main=attendance", category: "Academics", keywords: ["personal attendance"] },
     { label: "My Attendance", subLabel: "Payroll", path: "/accountant/my-attendance?main=payroll&sub=summary", category: "Finance", keywords: ["payroll"] },
+    { label: "Payroll", path: "/accountant/payroll", category: "Finance", keywords: ["employee salary", "attendance salary", "payroll"] },
     { label: "Well being / Support", path: "/accountant/wellbeing-support", category: "Student Support", keywords: ["wellbeing", "support", "student care"] },
     { label: "Settings", path: "/accountant/settings", category: "Preferences", keywords: [] },
     { label: "Settings", subLabel: "Privacy Policy", path: "/accountant/settings?privacy-policy", category: "Legal", keywords: ["privacy policy", "policy"] },

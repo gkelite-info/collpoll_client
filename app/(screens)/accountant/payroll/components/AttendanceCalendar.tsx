@@ -1,0 +1,10 @@
+import { getStaticAttendance, type StaticPayrollEmployee } from "../data";
+
+const styles: Record<string, string> = { present: "bg-[#e8f8ee] text-[#168a49] border-[#bde8cc]", absent: "bg-[#fdebec] text-[#d32f35] border-[#f3c4c7]", halfday: "bg-[#fff0e8] text-[#d45d22] border-[#f5cfbc]", leave: "bg-[#eeeaff] text-[#6751e7] border-[#d8cffb]", weekoff: "bg-gray-100 text-gray-500 border-gray-200" };
+const legend = { present: "Present", absent: "Absent", halfday: "Half Day", leave: "Leave", weekoff: "Week Off" };
+
+export default function AttendanceCalendar({ employee }: { employee: StaticPayrollEmployee }) {
+  const attendance = getStaticAttendance(employee);
+  const firstDay = new Date(2026, 6, 1).getDay();
+  return <section className="mb-5 rounded-xl border border-[#e2e5e9] bg-white p-4 shadow-sm"><div className="mb-3 flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><h2 className="font-semibold">Monthly Attendance</h2><p className="mt-1 text-sm text-[#667386]">Day-wise attendance used for salary calculation</p></div><div className="flex flex-wrap gap-2">{Object.entries(legend).map(([key, label]) => <span key={key} className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${styles[key]}`}>{label}</span>)}</div></div><div className="overflow-x-auto"><div className="min-w-[650px]"><div className="grid grid-cols-7 bg-[#edf3ff] text-center text-xs font-bold uppercase text-[#526071]">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <div key={day} className="p-2">{day}</div>)}</div><div className="grid grid-cols-7 gap-1.5 p-2">{Array.from({ length: firstDay }).map((_, index) => <div key={`blank-${index}`} />)}{attendance.map((item) => <div key={item.day} className={`min-h-12 rounded-md border px-2 py-1.5 ${styles[item.status]}`}><div className="flex items-center justify-between"><p className="text-base font-bold">{item.day}</p><p className="text-xs font-semibold capitalize">{item.status === "halfday" ? "Half Day" : item.status === "weekoff" ? "Week Off" : item.status}</p></div></div>)}</div></div></div></section>;
+}
