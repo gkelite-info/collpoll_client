@@ -25,20 +25,18 @@ export async function fetchAttendanceStats(
 
   const [
     totalDepartments,
-    currentStudents,
-    studentsBelow75,
+    studentStatsOverview,
     pendingCorrections,
   ] = await Promise.all([
     getTotalDepartments(collegeId, collegeEducationId),
-    getCurrentStudents(collegeId, collegeEducationId),
-    getStudentsBelow75(collegeId, collegeEducationId),
+    getStudentStatsOverview(collegeId, collegeEducationId),
     getPendingAttendanceCorrections(collegeId, collegeEducationId),
   ]);
 
   return {
     totalDepartments,
-    totalStudents: currentStudents,
-    studentsBelow75,
+    totalStudents: studentStatsOverview.totalStudents,
+    studentsBelow75: studentStatsOverview.studentsBelow75,
     pendingCorrections,
   };
 }
@@ -47,73 +45,79 @@ export async function fetchAttendanceStats(
    HELPERS (MARKED)
 ================================ */
 
-/* 🔹 TOTAL DEPARTMENTS */
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+
+/* 🔹 TOTAL DEPARTMENTS / CLASSES */
 async function getTotalDepartments(
   collegeId: number,
   collegeEducationId: number,
 ): Promise<number> {
-  const { count, error } = await supabase
-    .from("college_branch")
-    .select("*", { count: "exact", head: true })
-    .eq("collegeId", collegeId)
+  const { data: edu } = await supabase
+    .from("college_education")
+    .select("collegeEducationType")
     .eq("collegeEducationId", collegeEducationId)
-    .eq("isActive", true);
+    .single();
 
-  if (error) throw error;
-  return count ?? 0;
+  const isSchool = isSchoolEducation(edu?.collegeEducationType);
+
+  if (isSchool) {
+    const { count, error } = await supabase
+      .from("college_academic_year")
+      .select("*", { count: "exact", head: true })
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    if (error) return 0;
+    return count ?? 0;
+  } else {
+    const { count, error } = await supabase
+      .from("college_branch")
+      .select("*", { count: "exact", head: true })
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    if (error) return 0;
+    return count ?? 0;
+  }
 }
 
-/* 🔹 TOTAL CURRENT STUDENTS */
-async function getCurrentStudents(
+/* 🔹 STUDENT STATS OVERVIEW (TOTAL & BELOW 75%) */
+async function getStudentStatsOverview(
   collegeId: number,
   collegeEducationId: number,
-): Promise<number> {
-  const { count, error } = await supabase
-    .from("student_academic_history")
-    .select(
-      `
-      studentId,
-      students!inner(collegeId, collegeEducationId)
-    `,
-      { count: "exact", head: true },
-    )
-    .eq("isCurrent", true)
-    .eq("students.collegeId", collegeId)
-    .eq("students.collegeEducationId", collegeEducationId);
-
-  if (error) throw error;
-  return count ?? 0;
-}
-
-async function getStudentsBelow75(
-  collegeId: number,
-  collegeEducationId: number,
-): Promise<number> {
+): Promise<{ totalStudents: number; studentsBelow75: number }> {
   const { data: currentStudents, error } = await supabase
     .from("student_academic_history")
     .select(
       `
       studentId,
       students!inner(collegeId, collegeEducationId)
-    `,
+    `
     )
     .eq("isCurrent", true)
     .eq("students.collegeId", collegeId)
     .eq("students.collegeEducationId", collegeEducationId);
 
-  if (error || !currentStudents?.length) return 0;
+  if (error || !currentStudents?.length) {
+    return { totalStudents: 0, studentsBelow75: 0 };
+  }
 
   const studentIds = currentStudents.map((s) => s.studentId);
+  const totalStudents = studentIds.length;
 
-  // 2. Fetch attendance records
   const { data: attendance, error: attErr } = await supabase
     .from("attendance_record")
     .select("studentId, status")
     .in("studentId", studentIds);
 
-  if (attErr || !attendance?.length) return 0;
+  if (attErr || !attendance?.length) {
+    return { totalStudents, studentsBelow75: 0 };
+  }
 
-  // 3. Calculate attendance %
   const stats: Record<number, { total: number; present: number }> = {};
 
   attendance.forEach((rec) => {
@@ -121,20 +125,22 @@ async function getStudentsBelow75(
       stats[rec.studentId] = { total: 0, present: 0 };
     }
 
-    // ignore cancelled classes if any
-    if (["CLASS_CANCEL", "CANCELLED"].includes(rec.status)) return;
+    const status = rec.status?.toUpperCase();
+
+    if (["CLASS_CANCEL", "CANCELLED", "CANCEL_CLASS"].includes(status)) return;
 
     stats[rec.studentId].total += 1;
 
-    if (["PRESENT", "LATE"].includes(rec.status)) {
+    if (["PRESENT", "LATE"].includes(status)) {
       stats[rec.studentId].present += 1;
     }
   });
 
-  // 4. Count students below 75%
-  return Object.values(stats).filter(
+  const studentsBelow75 = Object.values(stats).filter(
     (s) => s.total > 0 && (s.present / s.total) * 100 < 75,
   ).length;
+
+  return { totalStudents, studentsBelow75 };
 }
 
 /* 🔹 PENDING ATTENDANCE CORRECTIONS */

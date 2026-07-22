@@ -8,7 +8,10 @@ export function recalculateAttendancePercentage(
   newRecordStatus: string,
   oldStats: { present: number; total: number }
 ) {
-  const isPresentStatus = (status: string) => status === "PRESENT" || status === "LATE";
+  const isPresentStatus = (status: string) => {
+    const s = status?.toUpperCase();
+    return s === "PRESENT" || s === "LATE";
+  };
   const wasPresent = oldAttendance === "Present" || oldAttendance === "Late";
   const isNowPresent = isPresentStatus(newRecordStatus);
   const wasNotMarked = oldAttendance === "Not Marked";

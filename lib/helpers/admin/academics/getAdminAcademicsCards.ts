@@ -386,53 +386,95 @@ export async function getBranchesByEducation(
 export async function getAcademicYears(
   collegeId: number,
   educationId: number,
-  branchId: number,
+  branchId: number | null,
 ) {
-  const { data, error } = await supabase
+  let query = supabase
     .from("college_academic_year")
     .select("collegeAcademicYearId, collegeAcademicYear")
     .eq("collegeId", collegeId)
     .eq("collegeEducationId", educationId)
-    .eq("collegeBranchId", branchId)
     .eq("isActive", true)
     .is("deletedAt", null);
 
+  if (branchId != null) {
+    query = query.eq("collegeBranchId", branchId);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }
 
 export async function getSections(
   collegeId: number,
-  branchId: number,
+  branchId: number | null,
   academicYearId: number,
 ) {
-  const { data, error } = await supabase
+  let query = supabase
     .from("college_sections")
     .select("collegeSectionsId, collegeSections")
     .eq("collegeId", collegeId)
-    .eq("collegeBranchId", branchId)
     .eq("collegeAcademicYearId", academicYearId)
     .eq("isActive", true)
     .is("deletedAt", null);
 
+  if (branchId != null) {
+    query = query.eq("collegeBranchId", branchId);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }
 
 export async function getSubjects(
   collegeId: number,
-  branchId: number,
+  branchId: number | null,
   academicYearId: number,
+  sectionId?: number | null,
 ) {
-  const { data, error } = await supabase
-    .from("college_subjects")
-    .select("collegeSubjectId, subjectName")
-    .eq("collegeId", collegeId)
-    .eq("collegeBranchId", branchId)
+  let facultySectionsQuery = supabase
+    .from("faculty_sections")
+    .select("collegeSubjectId")
     .eq("collegeAcademicYearId", academicYearId)
     .eq("isActive", true)
     .is("deletedAt", null);
 
+  if (sectionId) {
+    facultySectionsQuery = facultySectionsQuery.eq("collegeSectionsId", sectionId);
+  }
+
+  const { data: facultySectionRows, error: facultySectionError } = await facultySectionsQuery;
+  
+  if (facultySectionError) throw facultySectionError;
+
+  const subjectIds = Array.from(
+    new Set(
+      (facultySectionRows ?? [])
+        .map((row) => row.collegeSubjectId)
+        .filter((value): value is number => typeof value === "number"),
+    ),
+  );
+
+  if (!subjectIds.length) {
+    return [];
+  }
+
+  let query = supabase
+    .from("college_subjects")
+    .select("collegeSubjectId, subjectName")
+    .eq("collegeId", collegeId)
+    .eq("collegeAcademicYearId", academicYearId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .in("collegeSubjectId", subjectIds)
+    .order("subjectName", { ascending: true });
+
+  if (branchId != null) {
+    query = query.eq("collegeBranchId", branchId);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }

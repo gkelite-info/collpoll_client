@@ -207,10 +207,12 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     }
 
     stats.total++;
-    if (r.status === "PRESENT" || r.status === "LATE") {
+    const statusUpper = r.status?.toUpperCase();
+
+    if (statusUpper === "PRESENT" || statusUpper === "LATE") {
       stats.present++;
       totalPresent++;
-    } else if (r.status === "LEAVE") {
+    } else if (statusUpper === "LEAVE") {
       stats.leave++;
       totalLeave++;
     } else {
@@ -219,7 +221,8 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     }
   });
 
-  const subjectAttendance = Array.from(subjectMap.values()).map((s) => ({
+  const subjectAttendance = Array.from(subjectMap.entries()).map(([id, s]) => ({
+    subjectId: id,
     subjectName: s.name,
     subjectCode: s.code,
     total: s.total,

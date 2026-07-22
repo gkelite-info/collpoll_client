@@ -9,9 +9,15 @@ import {
 } from "@/lib/helpers/admin/academics/academicDropdowns";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { getSubjects } from "./getAdminAcademicsCards";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
-export function useAcademicFilters(userId?: number) {
-  const [collegeId, setCollegeId] = useState<number | null>(null);
+export function useAcademicFilters(
+  input?: number | { userId?: number; collegeId?: number | null }
+) {
+  const parsedUserId = typeof input === "number" ? input : input?.userId;
+  const parsedCollegeId = typeof input === "object" ? input?.collegeId : null;
+
+  const [collegeId, setCollegeId] = useState<number | null>(parsedCollegeId ?? null);
 
   const [educations, setEducations] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
@@ -27,31 +33,38 @@ export function useAcademicFilters(userId?: number) {
   const [subject, setSubject] = useState<any | null>(null);
 
   useEffect(() => {
-    if (!userId) return;
-    fetchAdminContext(userId).then((ctx) => {
-      setCollegeId(ctx.collegeId);
-    });
-  }, [userId]);
+    if (parsedCollegeId) {
+      setCollegeId(parsedCollegeId);
+      return;
+    }
+    if (!parsedUserId) return;
+
+    let isMounted = true;
+    fetchAdminContext(parsedUserId).then((ctx) => {
+      if (isMounted && ctx?.collegeId) {
+        setCollegeId(ctx.collegeId);
+      }
+    }).catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [parsedUserId, parsedCollegeId]);
 
   useEffect(() => {
     if (!collegeId) return;
-    fetchEducations(collegeId).then(setEducations);
+    fetchEducations(collegeId).then(setEducations).catch(() => setEducations([]));
   }, [collegeId]);
 
-  // useEffect(() => {
-  //   if (!collegeId || !branch || !year || !section) {
-  //     setSubjects([]);
-  //     setSubject(null);
-  //     return;
-  //   }
-
-  //   getSubjects(collegeId, branch.collegeBranchId, year.collegeAcademicYearId)
-  //     .then(setSubjects)
-  //     .catch(() => setSubjects([]));
-  // }, [collegeId, branch, year, section]);
-
   useEffect(() => {
-    if (!collegeId || !branch || !year || !section) {
+    if (!collegeId || !education || !year) {
+      setSubjects([]);
+      setSubject(null);
+      return;
+    }
+
+    const isSchool = isSchoolEducation(education?.collegeEducationType);
+    if (!isSchool && !branch) {
       setSubjects([]);
       setSubject(null);
       return;
@@ -59,41 +72,39 @@ export function useAcademicFilters(userId?: number) {
 
     getSubjects(
       collegeId,
-      branch.collegeBranchId,
-      year.collegeAcademicYearId
+      branch?.collegeBranchId ?? null,
+      year.collegeAcademicYearId,
+      section?.collegeSectionsId ?? null
     )
       .then(setSubjects)
       .catch(() => setSubjects([]));
-  }, [collegeId, branch, year, section]);
+  }, [collegeId, education, branch, year, section]);
 
   const selectEducation = async (edu: any) => {
-    if (!collegeId) return;
+    if (!collegeId || !edu) return;
     setEducation(edu);
     setBranch(null);
     setYear(null);
     setSection(null);
+    setSubject(null);
 
-    // setBranches(await fetchBranches(collegeId!, edu.collegeEducationId));
-    const branchData = await fetchBranches(collegeId, edu.collegeEducationId);
-    setBranches(branchData);
-    setYears([]);
-    setSections([]);
+    const isSchool = isSchoolEducation(edu?.collegeEducationType);
+    if (isSchool) {
+      setBranches([]);
+      const yearsData = await fetchAcademicYears(
+        collegeId,
+        edu.collegeEducationId,
+        null
+      );
+      setYears(yearsData);
+      setSections([]);
+    } else {
+      const branchData = await fetchBranches(collegeId, edu.collegeEducationId);
+      setBranches(branchData);
+      setYears([]);
+      setSections([]);
+    }
   };
-
-  // const selectBranch = async (br: any) => {
-  //   setBranch(br);
-  //   setYear(null);
-  //   setSection(null);
-
-  //   setYears(
-  //     await fetchAcademicYears(
-  //       collegeId!,
-  //       education.collegeEducationId,
-  //       br.collegeBranchId,
-  //     ),
-  //   );
-  //   setSections([]);
-  // };
 
   const selectBranch = async (br: any) => {
     setBranch(br);
@@ -101,14 +112,14 @@ export function useAcademicFilters(userId?: number) {
     setSection(null);
     setSubject(null);
 
-    if (!br) {
+    if (!br || !education || !collegeId) {
       setYears([]);
       setSections([]);
       return;
     }
 
     const yearsData = await fetchAcademicYears(
-      collegeId!,
+      collegeId,
       education.collegeEducationId,
       br.collegeBranchId,
     );
@@ -117,35 +128,20 @@ export function useAcademicFilters(userId?: number) {
     setSections([]);
   };
 
-  // const selectYear = async (yr: any) => {
-  //   setYear(yr);
-  //   setSection(null);
-
-  //   setSections(
-  //     await fetchSections(
-  //       collegeId!,
-  //       education.collegeEducationId,
-  //       branch.collegeBranchId,
-  //       yr.collegeAcademicYearId,
-  //     ),
-  //   );
-  // };
-
   const selectYear = async (yr: any) => {
     setYear(yr);
     setSection(null);
     setSubject(null);
 
-    // 🛑 HANDLE "All"
-    if (!yr) {
+    if (!yr || !education || !collegeId) {
       setSections([]);
       return;
     }
 
     const sectionsData = await fetchSections(
-      collegeId!,
+      collegeId,
       education.collegeEducationId,
-      branch.collegeBranchId,
+      branch?.collegeBranchId ?? null,
       yr.collegeAcademicYearId,
     );
 

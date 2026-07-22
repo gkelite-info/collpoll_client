@@ -14,7 +14,6 @@ import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { fetchAttendanceStats } from "@/lib/helpers/admin/attendance/attendanceStats";
 import { useUser } from "@/app/utils/context/UserContext";
-import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import toast from "react-hot-toast";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { useAcademicFilters } from "@/lib/helpers/admin/academics/useAcademicFilters";
@@ -25,17 +24,31 @@ import {
 import { FilterDropdown } from "../academics/components/filterDropdown";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import SubjectWiseAttendance from "./components/subjectWiseAttendance";
-import { getBatchSectionStats } from "@/lib/helpers/admin/attendance/getBatchSectionStats";
-import { supabase } from "@/lib/supabaseClient";
 import { AcademicSectionsSkeleton } from "../academics/shimmer/academicSectionsSkeleton";
 import { StatsCardsSkeleton } from "./shimmers/statsCardsSkeleton";
 import { useAdminAttendanceRealtime } from "@/lib/helpers/faculty/attendance/liveAttendanceAPI";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
-interface ExtendedDepartment extends Department {
+interface AcademicCard {
   id: string;
+  collegeBranchId: number;
+  collegeAcademicYearId: number;
+  collegeSectionsId: number;
+  branchName: string;
+  branchCode: string;
   section: string;
-  subject: string;
-  deptCode: string;
+  year: string;
+  totalStudents: number;
+  totalSubjects: number;
+  totalFaculties: number;
+  avgAttendance?: number;
+  belowThresholdCount?: number;
+  faculties: {
+    facultyId: number;
+    fullName: string;
+    email: string;
+  }[];
 }
 
 const COLOR_PALETTE = [
@@ -72,27 +85,6 @@ const getDynamicBranchStyle = (branchCode: string) => {
   return COLOR_PALETTE[index];
 };
 
-interface AcademicCard {
-  id: string;
-  collegeBranchId: number;
-  collegeAcademicYearId: number;
-  collegeSectionsId: number;
-  branchName: string;
-  branchCode: string;
-  section: string;
-  year: string;
-  totalStudents: number;
-  totalSubjects: number;
-  totalFaculties: number;
-  avgAttendance?: number;
-  belowThresholdCount?: number;
-  faculties: {
-    facultyId: number;
-    fullName: string;
-    email: string;
-  }[];
-}
-
 const AttendancePage = () => {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -100,21 +92,16 @@ const AttendancePage = () => {
   const [loading, setLoading] = useState(true);
   const [totalRecords, setTotalRecords] = useState(0);
   const [realtimeTrigger, setRealtimeTrigger] = useState(0);
-
-  const [adminContext, setAdminContext] = useState<{
-    adminId: number;
-    collegeId: number;
-    collegePublicId: string;
-    collegeCode: string;
-    collegeEducationId: number;
-  } | null>(null);
-
-  const [adminLoading, setAdminLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const showStatsLoader = adminLoading || statsLoading;
+
   const { userId } = useUser();
-  const { collegeEducationId } = useAdmin();
+  const {
+    collegeId,
+    collegeEducationId: defaultEduId,
+    collegeEducationType: defaultEduType,
+    loading: adminLoading,
+  } = useAdmin();
 
   const [stats, setStats] = useState({
     totalDepartments: 0,
@@ -140,10 +127,20 @@ const AttendancePage = () => {
     setSection,
     setSubject,
     resetEducation,
-  } = useAcademicFilters(userId ?? undefined);
+  } = useAcademicFilters({ userId: userId ?? undefined, collegeId });
+
+  const isSchool = isSchoolEducation(
+    education?.collegeEducationType || defaultEduType
+  );
+  const isInter =
+    education?.collegeEducationType === "Inter" ||
+    defaultEduType === "Inter";
+
+  const currentEducationId =
+    education?.collegeEducationId ?? defaultEduId ?? null;
 
   const apiFilters = {
-    educationId: education?.collegeEducationId ?? adminContext?.collegeEducationId ?? null,
+    educationId: currentEducationId,
     branchId: branch?.collegeBranchId ?? null,
     academicYearId: year?.collegeAcademicYearId ?? null,
     sectionId: section?.collegeSectionsId ?? null,
@@ -161,88 +158,28 @@ const AttendancePage = () => {
   }, [search]);
 
   useEffect(() => {
-    if (!userId) return;
-    let isMounted = true;
-
-    const loadAdminContext = async () => {
-      try {
-        setAdminLoading(true);
-        const ctx = await fetchAdminContext(userId);
-
-        let validEduId = parseInt(ctx?.collegeEducationId as any);
-
-        if (isNaN(validEduId)) {
-          const { data } = await supabase
-            .from("admins")
-            .select("collegeEducationId")
-            .eq("userId", userId)
-            .single();
-
-          if (data?.collegeEducationId) {
-            validEduId = data.collegeEducationId;
-          }
-        }
-
-        if (isMounted) {
-          setAdminContext({
-            ...ctx,
-            collegeEducationId: validEduId,
-          });
-        }
-      } catch (err: any) {
-        console.error("Failed to load admin context", err);
-        toast.error("Failed to load admin information.");
-      } finally {
-        if (isMounted) setAdminLoading(false);
-      }
-    };
-
-    loadAdminContext();
-    return () => {
-      isMounted = false;
-    };
-  }, [userId]);
-
-  useEffect(() => {
-    if (
-      adminContext?.collegeEducationId &&
-      educations.length > 0 &&
-      !education
-    ) {
+    if (defaultEduId && educations.length > 0 && !education) {
       const assignedEdu = educations.find(
-        (e) =>
-          Number(e.collegeEducationId) ===
-          Number(adminContext.collegeEducationId),
+        (e) => Number(e.collegeEducationId) === Number(defaultEduId)
       );
       if (assignedEdu) {
         selectEducation(assignedEdu);
       }
     }
-  }, [
-    adminContext?.collegeEducationId,
-    educations,
-    education,
-    selectEducation,
-  ]);
+  }, [defaultEduId, educations, education, selectEducation]);
 
   useEffect(() => {
-    if (
-      !adminContext?.collegeId ||
-      !adminContext?.collegeEducationId ||
-      isNaN(adminContext.collegeEducationId)
-    )
-      return;
+    if (!collegeId || !currentEducationId) return;
 
     let isMounted = true;
 
     const loadStats = async () => {
       try {
-        // Only show loader on initial load
         if (realtimeTrigger === 0) setStatsLoading(true);
 
         const data = await fetchAttendanceStats({
-          collegeId: adminContext.collegeId,
-          collegeEducationId: adminContext.collegeEducationId,
+          collegeId,
+          collegeEducationId: currentEducationId,
         });
 
         if (isMounted) {
@@ -250,7 +187,6 @@ const AttendancePage = () => {
         }
       } catch (err) {
         console.error("Failed to load attendance stats", err);
-        toast.error("Unable to load attendance statistics.");
       } finally {
         if (isMounted) setStatsLoading(false);
       }
@@ -260,60 +196,44 @@ const AttendancePage = () => {
     return () => {
       isMounted = false;
     };
-  }, [adminContext, realtimeTrigger]);
+  }, [collegeId, currentEducationId, realtimeTrigger]);
 
-  useAdminAttendanceRealtime((payload) => {
-    // When a scan happens, increment trigger to debounce a refresh
+  useAdminAttendanceRealtime(() => {
     setRealtimeTrigger((prev) => prev + 1);
   });
 
   useEffect(() => {
-    if (!userId || adminLoading || !adminContext) return;
-    loadCardsOnly();
-  }, [userId, adminLoading, adminContext, currentPage, debouncedSearch, apiFiltersStr]);
+    if (!collegeId || adminLoading) return;
+    const timer = setTimeout(() => {
+      loadCardsOnly();
+    }, 150);
 
-  // Debounced refresh for real-time dashboard updates (waits 2.5s after last scan)
+    return () => clearTimeout(timer);
+  }, [collegeId, adminLoading, currentPage, debouncedSearch, apiFiltersStr]);
+
   useEffect(() => {
-    if (realtimeTrigger > 0 && adminContext?.collegeId) {
+    if (realtimeTrigger > 0 && collegeId) {
       const timer = setTimeout(() => {
-        loadCardsOnly(false); // background refresh
+        loadCardsOnly(false);
       }, 2500);
       return () => clearTimeout(timer);
     }
-  }, [realtimeTrigger, adminContext]);
+  }, [realtimeTrigger, collegeId]);
 
   const loadCardsOnly = async (showLoader = true) => {
-    if (!adminContext?.collegeId) return;
+    if (!collegeId) return;
     try {
       if (showLoader) setLoading(true);
-      // const { collegeId } = await fetchAdminContext(userId!);
 
       const { data, totalCount } = await getAdminAcademicsCards(
-        adminContext.collegeId,
+        collegeId,
         currentPage,
         cardsPerPage,
         debouncedSearch,
-        // apiFilters,
-        JSON.parse(apiFiltersStr),
+        JSON.parse(apiFiltersStr)
       );
 
-      let mappedCards = mapAcademicCards(data);
-      const sectionIds = mappedCards.map((c) => c.collegeSectionsId);
-
-      if (sectionIds.length > 0) {
-        const stats = await getBatchSectionStats(sectionIds);
-
-        mappedCards = mappedCards.map((card) => {
-          const stat = stats.find(
-            (s) => s.sectionId === card.collegeSectionsId,
-          );
-          return {
-            ...card,
-            avgAttendance: stat?.avgAttendance || 0,
-            belowThresholdCount: stat?.belowThresholdCount || 0,
-          };
-        });
-      }
+      const mappedCards = mapAcademicCards(data);
 
       setCards(mappedCards);
       setTotalRecords(totalCount);
@@ -326,8 +246,6 @@ const AttendancePage = () => {
     }
   };
 
-  const isInter = education?.collegeEducationType === "Inter"
-
   const cardData = [
     {
       id: "1",
@@ -335,7 +253,7 @@ const AttendancePage = () => {
       icon: <BuildingApartmentIcon size={23} weight="fill" color="#EFEFEF" />,
       iconBgColor: "#60AEFF",
       value: stats.totalDepartments,
-      label: isInter ? "Total Groups" : "Total Branches",
+      label: isSchool ? "Total Classes" : isInter ? "Total Groups" : "Total Branches",
     },
     {
       id: "2",
@@ -389,6 +307,8 @@ const AttendancePage = () => {
     return <SubjectWiseAttendance onBack={handleBack} />;
   }
 
+  const showStatsLoader = adminLoading || statsLoading;
+
   return (
     <div className="flex flex-col m-4">
       <div className="mb-6 flex justify-between items-center">
@@ -399,8 +319,9 @@ const AttendancePage = () => {
             </h1>
           </div>
           <p className="text-[#282828] mt-1 text-sm">
-            Track, verify, and manage attendance records across branches and
-            faculty.
+            {isSchool
+              ? "Track, verify, and manage attendance records across classes and faculty."
+              : "Track, verify, and manage attendance records across branches and faculty."}
           </p>
         </div>
         <div className="w-38">
@@ -469,35 +390,37 @@ const AttendancePage = () => {
             }
           />
 
-          <FilterDropdown
-            label={education?.collegeEducationType === "Inter" ? "Group" : "Branch"}
-            value={branch?.collegeBranchId?.toString() ?? "All"}
-            disabled={!education}
-            placeholder={education?.collegeEducationType === "Inter" ? "Select Group" : "Select Branch"}
-            options={[
-              "All",
-              ...branches.map((b) => b.collegeBranchId.toString()),
-            ]}
-            onChange={(val) => {
-              if (val === "All") {
-                selectEducation(education);
-                return;
+          {!isSchool && (
+            <FilterDropdown
+              label={education?.collegeEducationType === "Inter" ? "Group" : "Branch"}
+              value={branch?.collegeBranchId?.toString() ?? "All"}
+              disabled={!education}
+              placeholder={education?.collegeEducationType === "Inter" ? "Select Group" : "Select Branch"}
+              options={[
+                "All",
+                ...branches.map((b) => b.collegeBranchId.toString()),
+              ]}
+              onChange={(val) => {
+                if (val === "All") {
+                  selectEducation(education);
+                  return;
+                }
+                const br = branches.find((b) => b.collegeBranchId === +val);
+                br && selectBranch(br);
+              }}
+              displayModifier={(val) =>
+                val === "All"
+                  ? "All"
+                  : (branches.find((b) => b.collegeBranchId.toString() === val)
+                    ?.collegeBranchCode ?? val)
               }
-              const br = branches.find((b) => b.collegeBranchId === +val);
-              br && selectBranch(br);
-            }}
-            displayModifier={(val) =>
-              val === "All"
-                ? "All"
-                : (branches.find((b) => b.collegeBranchId.toString() === val)
-                  ?.collegeBranchCode ?? val)
-            }
-          />
+            />
+          )}
 
           <FilterDropdown
             label="Year"
             value={year?.collegeAcademicYearId?.toString() ?? "All"}
-            disabled={!branch}
+            disabled={isSchool ? !education : !branch}
             placeholder="Select Year"
             options={[
               "All",
@@ -575,28 +498,30 @@ const AttendancePage = () => {
 
       <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col justify-between">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-[1200px] mx-auto">
-          {loading || adminLoading || collegeEducationId === null ? (
+          {loading || adminLoading || !collegeId ? (
             [...Array(9)].map((_, i) => <AcademicSectionsSkeleton key={i} />)
           ) : !loading && cards.length === 0 ? (
             <div className="col-span-full flex justify-center py-20 text-gray-400">
-              {cards.length > 0
-                ? "No matches found on this page."
-                : "No academic records found."}
+              No academic records found.
             </div>
           ) : (
             cards.map((dept) => {
               const style = getDynamicBranchStyle(dept.branchCode);
+              const cardTitle = isSchool
+                ? `Section - ${dept.section}`
+                : `${dept.branchCode} - ${dept.section}`;
+
               return (
                 <FacultyAttendanceCard
                   key={dept.id}
                   avgAttendance={dept.avgAttendance || 0}
                   belowThresholdCount={dept.belowThresholdCount || 0}
-                  name={`${dept.branchCode} - ${dept.section}`}
+                  name={cardTitle}
                   text={style.text}
                   color={style.color}
                   bgColor={style.bgColor}
-                  collegeId={adminContext!.collegeId}
-                  collegeEducationId={collegeEducationId}
+                  collegeId={collegeId!}
+                  collegeEducationId={currentEducationId!}
                   collegeBranchId={dept.collegeBranchId}
                   collegeAcademicYearId={dept.collegeAcademicYearId}
                   collegeSectionsId={dept.collegeSectionsId}
@@ -612,40 +537,16 @@ const AttendancePage = () => {
             })
           )}
         </div>
-        {cards.length > 0 && totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-8 mb-4">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1 || loading}
-              className="p-2 rounded-lg border cursor-pointer bg-white disabled:opacity-30 hover:bg-gray-50 transition-all"
-            >
-              <CaretLeft size={18} weight="bold" color="black" />
-            </button>
-
-            <div className="flex gap-1">
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${currentPage === i + 1
-                    ? "bg-[#16284F] text-white"
-                    : "bg-white text-gray-600 border hover:border-gray-300"
-                    }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages || loading}
-              className="p-2 rounded-lg border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all"
-            >
-              <CaretRight size={18} weight="bold" color="black" />
-            </button>
-          </div>
-        )}
+        <div className="flex justify-center items-center mt-2 mb-2 w-full max-w-[1200px] mx-auto rounded-lg shadow-sm">
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalRecords}
+            itemsPerPage={cardsPerPage}
+            onPageChange={setCurrentPage}
+            alwaysShow={true}
+            roundedBottom="rounded-lg"
+          />
+        </div>
       </div>
     </div>
   );

@@ -422,7 +422,7 @@ export default function StuAttendanceTable({
         )}
 
         <div className="overflow-x-auto w-full">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm whitespace-nowrap min-w-max">
             <thead className="bg-[#FAFAFA] text-[#282828] border-b border-gray-100">
               <tr>
                 <th className="px-3 py-2 text-left w-[40px] whitespace-nowrap">

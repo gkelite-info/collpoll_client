@@ -27,7 +27,10 @@ import StuAttendanceTable from "../tables/stuAttendanceTable";
 import StudentAttendanceDetailsPage from "../components/stuSubjectWise";
 import CardComponent from "../components/cards";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import StuTableShimmer from "./stuTableShimmer";
 
 interface SubjectWiseAttendanceProps {
   onBack: () => void;
@@ -68,7 +71,12 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
   const [isCancellingMode, setIsCancellingMode] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
 
-  const { adminId } = useAdmin();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+
+  const { adminId, collegeEducationType } = useAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
 
   const isBulk = selectedClassId.startsWith("bulk-");
   const eventIdPart = isBulk ? selectedClassId.split("-")[1] : selectedClassId.split("-")[0];
@@ -86,9 +94,10 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
         setStudentsList((prev) => {
           return prev.map((s) => {
             if (s.id === String(newRecord.studentId)) {
-              if (newRecord.status === "PRESENT") status = "Present";
-              else if (newRecord.status === "LATE") status = "Late";
-              else if (newRecord.status === "ABSENT") status = "Absent";
+              const upperStatus = newRecord.status?.toUpperCase();
+              if (upperStatus === "PRESENT") status = "Present";
+              else if (upperStatus === "LATE") status = "Late";
+              else if (upperStatus === "ABSENT") status = "Absent";
               
               if (s.attendance !== status) {
                 matchedStudentName = s.name;
@@ -146,12 +155,6 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
         if (filtered.length > 0) {
           const firstClass = filtered[0];
           setSelectedClassId(firstClass.id);
-
-          const students = await getStudentsForClass(
-            firstClass.id,
-            String(collegeSectionsId),
-          );
-          setStudentsList(students);
         } else {
           setStudentsList([]);
           setSelectedClassId("");
@@ -172,31 +175,52 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
     init();
   }, [collegeSectionsId, selectedDate]);
 
-  const handleClassChange = async (newClassId: string) => {
+  const handleClassChange = (newClassId: string) => {
     setSelectedClassId(newClassId);
-    setLoading(true);
     setIsEditing(false);
-    
-    if (!newClassId) {
+    setCurrentPage(1);
+  };
+
+  useEffect(() => {
+    if (!selectedClassId) {
       setStudentsList([]);
+      setTotalCount(0);
       setLoading(false);
       return;
     }
 
-    try {
-      const students = await getStudentsForClass(
-        newClassId,
-        String(collegeSectionsId),
-      );
-      setStudentsList(students);
-    } catch (err) {
-      toast.error("Failed to load students", {
-        id: TOAST_IDS.STUDENT_LOAD_ERROR,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    let isMounted = true;
+    setLoading(true);
+
+    const loadStudents = async () => {
+      try {
+        const { data, totalCount: count } = await getStudentsForClass(
+          selectedClassId,
+          String(collegeSectionsId),
+          currentPage,
+          itemsPerPage
+        );
+        if (isMounted) {
+          setStudentsList(data);
+          setTotalCount(count);
+        }
+      } catch (err) {
+        if (isMounted) {
+          toast.error("Failed to load students", {
+            id: TOAST_IDS.STUDENT_LOAD_ERROR,
+          });
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadStudents();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedClassId, collegeSectionsId, currentPage, itemsPerPage]);
 
   const handleSaveAttendance = async () => {
     if (!selectedClassId) return;
@@ -300,7 +324,7 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
                 className="text-[#2D3748] cursor-pointer hover:-translate-x-1 transition-transform"
               />
               <h1 className="text-xl font-bold text-[#282828]">
-                {branch} Branch — Subject-wise Attendance
+                {isSchool ? `${year || 'Class'} — Subject-wise Attendance` : `${branch} Branch — Subject-wise Attendance`}
               </h1>
             </div>
           </div>
@@ -326,7 +350,7 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
         </svg>
 
         <span className="text-slate-800 text-sm font-medium">
-          {branch} Branch
+          {isSchool ? `${year || 'Class'}` : `${branch} Branch`}
         </span>
       </div>
 
@@ -443,19 +467,36 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
         </div>
 
         {loading ? (
-          <div className="text-center py-20 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-            <Loader />
+          <div className="w-full mt-4">
+            <StuTableShimmer />
           </div>
         ) : studentsList.length > 0 ? (
-          <StuAttendanceTable
-            students={studentsList}
-            setStudents={setStudentsList}
-            handleSaveAttendance={handleSaveAttendance}
-            saving={saving}
-            isTopicMode={true}
-            isEditing={isEditing}
-            onEditClick={() => setIsEditing(true)}
-          />
+          <>
+            <StuAttendanceTable
+              students={studentsList}
+              setStudents={setStudentsList}
+              handleSaveAttendance={handleSaveAttendance}
+              saving={saving}
+              isTopicMode={true}
+              isEditing={isEditing}
+              onEditClick={() => setIsEditing(true)}
+            />
+            <div className="flex justify-center items-center mt-2 w-full rounded-lg shadow-sm">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalCount}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                itemsPerPageOptions={[10, 20, 50, 100]}
+                onItemsPerPageChange={(newLimit) => {
+                  setItemsPerPage(newLimit);
+                  setCurrentPage(1);
+                }}
+                alwaysShow={true}
+                roundedBottom="rounded-lg"
+              />
+            </div>
+          </>
         ) : (
           <div className="text-center py-20 bg-gray-50 rounded-lg border border-dashed border-gray-200">
             <p className="text-gray-400 font-medium">
