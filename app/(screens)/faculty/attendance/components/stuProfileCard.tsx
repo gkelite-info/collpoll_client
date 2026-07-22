@@ -20,6 +20,7 @@ interface Props {
   attendancePercentage?: number;
 
   isSubjectMode?: boolean;
+  isSchool?: boolean;
   subjectSummary?: {
     total: number;
     present: number;
@@ -43,6 +44,7 @@ export default function StudentProfileCard({
   leaveDays = 0,
   attendancePercentage,
   isSubjectMode = false,
+  isSchool = false,
   subjectSummary,
   activeFilter,
   onFilterChange,
@@ -63,9 +65,11 @@ export default function StudentProfileCard({
               {name}
             </h2>
             <div className="flex flex-wrap gap-2">
-              <span className="rounded-full bg-[#E8F5E9] px-3 py-1 text-[10px] sm:text-xs font-semibold text-[#4CAF50]">
-                {department}
-              </span>
+              {!isSchool && (
+                <span className="rounded-full bg-[#E8F5E9] px-3 py-1 text-[10px] sm:text-xs font-semibold text-[#4CAF50]">
+                  {department}
+                </span>
+              )}
               <span className="rounded-full bg-[#E8F5E9] px-3 py-1 text-[10px] sm:text-xs font-semibold text-[#4CAF50]">
                 ID {studentId}
               </span>
@@ -74,23 +78,22 @@ export default function StudentProfileCard({
         </div>
       </div>
 
-      {/* Info row */}
       <div className="mt-6 flex flex-row overflow-x-auto sm:grid sm:grid-cols-3 gap-4 sm:gap-6 justify-between hide-scrollbar">
         <div className="flex-1 min-w-[120px]">
           <p className="text-[10px] sm:text-sm text-[#666666]">Number</p>
-          <p className="mt-0.5 text-xs sm:text-base font-semibold text-[#333333] truncate">
+          <p className="mt-0.5 text-xs sm:text-base font-semibold text-[#333333] truncate" title={phone}>
             {phone}
           </p>
         </div>
         <div className="flex-1 min-w-[140px]">
           <p className="text-[10px] sm:text-sm text-[#666666]">Email</p>
-          <p className="mt-0.5 text-xs sm:text-base font-semibold text-[#333333] truncate">
+          <p className="mt-0.5 text-xs sm:text-base font-semibold text-[#333333] truncate" title={email}>
             {email}
           </p>
         </div>
         <div className="flex-1 min-w-[120px]">
           <p className="text-[10px] sm:text-sm text-[#666666]">Address</p>
-          <p className="mt-0.5 text-xs sm:text-base font-semibold text-[#333333] truncate">
+          <p className="mt-0.5 text-xs sm:text-base font-semibold text-[#333333] truncate" title={address}>
             {address}
           </p>
         </div>

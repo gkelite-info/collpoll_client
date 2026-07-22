@@ -80,8 +80,6 @@ export async function fetchAcademicYears(
 
   if (collegeBranchId != null) {
     query = query.eq("collegeBranchId", collegeBranchId);
-  } else {
-    query = query.is("collegeBranchId", null);
   }
 
   const { data, error } = await query;
@@ -136,16 +134,12 @@ export async function fetchSubjects(
     .eq("isActive", true)
     .is("deletedAt", null);
 
-  if (collegeBranchId !== null && collegeBranchId !== undefined) {
+  if (collegeBranchId != null) {
     query = query.eq("collegeBranchId", collegeBranchId);
-  } else {
-    query = query.is("collegeBranchId", null);
   }
 
   if (collegeSemesterId) {
     query = query.eq("collegeSemesterId", collegeSemesterId);
-  } else {
-    query = query.is("collegeSemesterId", null);
   }
 
   const { data, error } = await query;
@@ -172,10 +166,8 @@ export async function fetchSections(
     .eq("isActive", true)
     .is("deletedAt", null);
 
-  if (collegeBranchId !== null && collegeBranchId !== undefined) {
+  if (collegeBranchId != null) {
     query = query.eq("collegeBranchId", collegeBranchId);
-  } else {
-    query = query.is("collegeBranchId", null);
   }
 
   const { data, error } = await query;

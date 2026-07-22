@@ -150,6 +150,7 @@
 
 import { useRouter } from "next/navigation";
 export interface SubjectStat {
+  subjectId: number;
   subjectName: string;
   subjectCode: string;
   total: number;
@@ -250,9 +251,7 @@ export default function SubjectWiseAttendance({
                     <button
                       onClick={() =>
                         router.push(
-                          `/admin/attendance/${studentId}/subject/${encodeURIComponent(
-                            row.subjectCode,
-                          )}`,
+                          `/admin/attendance/${studentId}/subject/${row.subjectId}`
                         )
                       }
                       className="text-[#333333] cursor-pointer hover:text-emerald-500 font-semibold underline underline-offset-4 decoration-1 text-xs whitespace-nowrap"

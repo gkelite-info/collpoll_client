@@ -10,10 +10,13 @@ import StudentProfileCard from "@/app/(screens)/faculty/attendance/components/st
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { CaretLeftIcon } from "@phosphor-icons/react";
 import { useUser } from "@/app/utils/context/UserContext";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type StudentAttendanceDetails = Awaited<
   ReturnType<typeof getStudentAttendanceDetails>
 >;
+
+import StudentDetailsShimmer from "./shimmer";
 
 export default function StudentAttendanceDetailsPage() {
   const params = useParams();
@@ -42,11 +45,7 @@ export default function StudentAttendanceDetailsPage() {
   }, [studentId]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        <Loader />
-      </div>
-    );
+    return <StudentDetailsShimmer />;
   }
 
   if (!student) {
@@ -57,15 +56,17 @@ export default function StudentAttendanceDetailsPage() {
     );
   }
 
+  const isSchool = isSchoolEducation(collegeEducationType);
+
   return (
     <main className="p-4 space-y-6 min-h-screen">
       <section className="flex items-center justify-between">
         <div className="flex items-center gap-6">
           <CaretLeftIcon onClick={() => router.back()} className="cursor-pointer h-4 w-4 -mr-4 font-bold" color="#282828" />
-          <Info label={collegeEducationType === "Inter" ? "Group" : "Branch"} value={student.department} />
+          {!isSchool && <Info label={collegeEducationType === "Inter" ? "Group" : "Branch"} value={student.department} />}
           <Info label="Year" value={student.year?.toString()} />
           <Info label="Section" value={student.section} />
-          <Info label="Degree" value={student.degree} />
+          <Info label={isSchool ? "Education" : "Degree"} value={student.degree} />
         </div>
 
         <CourseScheduleCard
@@ -80,6 +81,7 @@ export default function StudentAttendanceDetailsPage() {
       <section className="grid grid-cols-2 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <StudentProfileCard
+            isSchool={isSchool}
             name={student.fullName}
             department={student.department}
             studentId={student.studentsId.toString()}

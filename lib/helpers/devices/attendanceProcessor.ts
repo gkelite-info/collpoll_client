@@ -207,9 +207,8 @@ export async function processClassroomAttendance(params: {
 
     let query = adminSupabase
       .from("attendance_record")
-      .select("attendanceRecordId, studentLoginTime")
-      .eq("studentId", studentId)
-      .is("deletedAt", null);
+      .select("attendanceRecordId, studentLoginTime, deletedAt")
+      .eq("studentId", studentId);
 
     if (calendarEventId) {
       query = query.eq("calendarEventId", calendarEventId);
@@ -232,11 +231,17 @@ export async function processClassroomAttendance(params: {
         ? timeToMin(existing.studentLoginTime)
         : Infinity;
       const scanMin = timeToMin(scanTime);
+      const isSoftDeleted = existing.deletedAt !== null;
 
-      if (scanMin < existingMin) {
+      if (scanMin < existingMin || isSoftDeleted) {
         await adminSupabase
           .from("attendance_record")
-          .update({ studentLoginTime: scanTime, updatedAt: now })
+          .update({ 
+            studentLoginTime: scanMin < existingMin ? scanTime : existing.studentLoginTime, 
+            updatedAt: now, 
+            deletedAt: null,
+            status: "PRESENT" 
+          })
           .eq("attendanceRecordId", existing.attendanceRecordId);
       }
 

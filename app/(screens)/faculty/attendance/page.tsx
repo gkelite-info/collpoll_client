@@ -76,9 +76,10 @@ function AttendanceContent() {
         setStudentsList((prev) => {
           return prev.map((s) => {
             if (s.id === String(newRecord.studentId)) {
-              if (newRecord.status === "PRESENT") status = "Present";
-              else if (newRecord.status === "LATE") status = "Late";
-              else if (newRecord.status === "ABSENT") status = "Absent";
+              const upperStatus = newRecord.status?.toUpperCase();
+              if (upperStatus === "PRESENT") status = "Present";
+              else if (upperStatus === "LATE") status = "Late";
+              else if (upperStatus === "ABSENT") status = "Absent";
 
               if (s.attendance !== status) {
                 matchedStudentName = s.name;

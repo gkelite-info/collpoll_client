@@ -9,6 +9,10 @@ import StudentProfileCard from "@/app/(screens)/faculty/attendance/components/st
 import AiBotCard from "@/app/(screens)/faculty/attendance/components/aiBotCard";
 import SubjectAttendanceTable from "@/app/(screens)/faculty/attendance/components/subjectAttendanceTable";
 import { CaretLeftIcon } from "@phosphor-icons/react";
+import { useUser } from "@/app/utils/context/UserContext";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import SubjectDetailShimmer from "./shimmer";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 type StudentAttendanceDetails = Awaited<
   ReturnType<typeof getStudentAttendanceDetails>
@@ -20,6 +24,9 @@ type SubjectAttendanceDetails = Awaited<
 export default function SubjectDetailPage() {
   const params = useParams();
   const router = useRouter()
+  
+  const { collegeEducationType } = useUser();
+  const isSchool = isSchoolEducation(collegeEducationType);
 
   const studentId = Array.isArray(params?.studentId)
     ? params.studentId[0]
@@ -28,12 +35,13 @@ export default function SubjectDetailPage() {
     ? params.subjectId[0]
     : params?.subjectId;
 
-  const [filter, setFilter] = useState<"ALL" | "Present" | "Absent" | "Leave">(
-    "ALL",
-  );
+  const [filter, setFilter] = useState<"ALL" | "Present" | "Absent" | "Leave">("ALL");
   const [data, setData] = useState<SubjectAttendanceDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [student, setStudent] = useState<StudentAttendanceDetails | null>(null);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
 
   useEffect(() => {
     if (!studentId || !subjectId) return;
@@ -44,7 +52,7 @@ export default function SubjectDetailPage() {
       setLoading(true);
 
       const [attendanceRes, studentRes] = await Promise.allSettled([
-        getSubjectAttendanceDetails(studentId, subjectId),
+        getSubjectAttendanceDetails(studentId, subjectId, filter, currentPage, itemsPerPage),
         getStudentAttendanceDetails(studentId),
       ]);
 
@@ -66,14 +74,10 @@ export default function SubjectDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [studentId, subjectId]);
+  }, [studentId, subjectId, filter, currentPage, itemsPerPage]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Loading Records...
-      </div>
-    );
+    return <SubjectDetailShimmer />;
   }
 
   if (!data || !student) {
@@ -93,10 +97,7 @@ export default function SubjectDetailPage() {
     leave: leaveCount,
   };
 
-  const filteredRecords =
-    filter === "ALL"
-      ? data.records
-      : data.records.filter((r) => r.status === filter);
+  const filteredRecords = data.records;
 
   return (
     <main className="px-4 py-4 min-h-screen space-y-6">
@@ -123,6 +124,7 @@ export default function SubjectDetailPage() {
             email={student.email}
             address={student.address}
             photo={student.photo || ""}
+            isSchool={isSchool}
             isSubjectMode={true}
             subjectSummary={subjectSummary}
             activeFilter={filter}
@@ -191,6 +193,20 @@ export default function SubjectDetailPage() {
 
       <section>
         <SubjectAttendanceTable records={filteredRecords} />
+        <div className="flex justify-center items-center mt-2 w-full rounded-lg shadow-sm">
+          <Pagination
+            currentPage={currentPage}
+            totalItems={data.totalCount ?? 0}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            itemsPerPageOptions={[10, 20, 50, 100]}
+            onItemsPerPageChange={(newLimit) => {
+              setItemsPerPage(newLimit);
+              setCurrentPage(1);
+            }}
+            roundedBottom="rounded-lg"
+          />
+        </div>
       </section>
     </main>
   );

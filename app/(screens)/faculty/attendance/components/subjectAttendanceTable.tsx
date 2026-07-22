@@ -15,8 +15,8 @@ export default function SubjectAttendanceTable({
   };
 
   return (
-    <div className="rounded-xl bg-white shadow-sm border border-gray-100">
-      <table className="w-full text-sm table-fixed">
+    <div className="rounded-xl bg-white shadow-sm border border-gray-100 overflow-x-auto w-full">
+      <table className="w-full text-sm whitespace-nowrap min-w-max">
         <thead className="bg-[#F1F1F1] text-gray-600">
           <tr className="text-center">
             <th className="px-4 py-3 text-center">Date</th>

@@ -224,8 +224,13 @@ export async function getClassSections(
 export async function getStudentsForClass(
   classId: string,
   sectionFilterId?: string,
-): Promise<UIStudent[]> {
+  page: number = 1,
+  limit: number = 20,
+): Promise<{ data: UIStudent[]; totalCount: number }> {
   const supabase = await createClient();
+
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
 
   const isBulk = classId.startsWith("bulk-");
   let eventId: number;
@@ -280,7 +285,7 @@ export async function getStudentsForClass(
     }
   }
 
-  if (targetSectionIds.length === 0) return [];
+  if (targetSectionIds.length === 0) return { data: [], totalCount: 0 };
 
   const { data: history } = await supabase
     .from("student_academic_history")
@@ -289,7 +294,7 @@ export async function getStudentsForClass(
     .eq("isCurrent", true);
 
   const ids = history?.map((h) => h.studentId) || [];
-  if (ids.length === 0) return [];
+  if (ids.length === 0) return { data: [], totalCount: 0 };
 
   const { data: eventData } = await supabase
     .from(isBulk ? "bulk_calendar_events" : "calendar_event")
@@ -321,19 +326,21 @@ export async function getStudentsForClass(
     });
   }
 
-  const { data: students, error } = await supabase
+  const { data: students, count, error } = await supabase
     .from("students")
     .select(
       `studentId, user:users (fullName, gender, user_profile (profileUrl)), student_pins (pinNumber), attendance_record (status, reason, calendarEventId, bulkCalendarEventId)`,
+      { count: "exact" },
     )
     .in("studentId", ids)
     .eq(isBulk ? "attendance_record.bulkCalendarEventId" : "attendance_record.calendarEventId", eventId)
     .eq("attendance_record.markedAt", eventDate)
-    .order("studentId");
+    .order("studentId")
+    .range(from, to);
 
-  if (error) return [];
+  if (error) return { data: [], totalCount: 0 };
 
-  return students!.map((s: any) => {
+  const mappedStudents = students!.map((s: any) => {
     const record = s.attendance_record?.[0];
     let status = "Not Marked";
     let reason = "";
@@ -385,6 +392,8 @@ export async function getStudentsForClass(
       stats: { present: stats.present, total: stats.total },
     };
   });
+
+  return { data: mappedStudents, totalCount: count || 0 };
 }
 
 export async function saveAttendance(
@@ -433,26 +442,29 @@ export async function saveAttendance(
         adminMark: p.adminId ?? null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        deletedAt: null,
         attendanceRecordId: undefined as number | undefined,
       };
     });
 
-  if (dbRecords.length === 0) {
+  const uniqueMap = new Map<number, any>();
+  dbRecords.forEach((r) => uniqueMap.set(r.studentId, r));
+  const uniqueDbRecords = Array.from(uniqueMap.values());
+
+  if (uniqueDbRecords.length === 0) {
     return { success: true };
   }
 
-  const studentIds = dbRecords.map((r) => r.studentId);
+  const studentIds = uniqueDbRecords.map((r) => r.studentId);
   const { data: existingRecords, error: fetchError } = await supabase
     .from("attendance_record")
     .select("attendanceRecordId, studentId")
     .in("studentId", studentIds)
-    .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId)
-    .eq("markedAt", eventDate)
-    .is("deletedAt", null);
+    .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId);
 
   if (fetchError) {
     console.error("fetch existing records error:", fetchError);
-    return { success: false, error: fetchError.message };
+    return { success: false, error: "Failed to fetch existing attendance records." };
   }
 
   const recordMap = new Map(existingRecords?.map((r) => [r.studentId, r.attendanceRecordId]));
@@ -460,7 +472,7 @@ export async function saveAttendance(
   const updates: any[] = [];
   const inserts: any[] = [];
 
-  dbRecords.forEach((record) => {
+  uniqueDbRecords.forEach((record) => {
     const existingId = recordMap.get(record.studentId);
     if (existingId) {
       record.attendanceRecordId = existingId;
@@ -475,14 +487,24 @@ export async function saveAttendance(
     const { error: updateError } = await supabase
       .from("attendance_record")
       .upsert(updates);
-    if (updateError) return { success: false, error: updateError.message };
+    if (updateError) {
+      console.error("Attendance update error:", updateError);
+      return { success: false, error: "Failed to update attendance records. Please try again." };
+    }
   }
 
   if (inserts.length > 0) {
     const { error: insertError } = await supabase
       .from("attendance_record")
       .insert(inserts);
-    if (insertError) return { success: false, error: insertError.message };
+    if (insertError) {
+      console.error("Attendance insert error:", insertError);
+      let msg = "Failed to save attendance records. Please try again.";
+      if (insertError.message.includes("uidx_student_bulk_event") || insertError.message.includes("duplicate key")) {
+        msg = "Attendance already marked for some students in this session.";
+      }
+      return { success: false, error: msg };
+    }
   }
 
   return { success: true };

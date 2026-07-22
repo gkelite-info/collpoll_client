@@ -27,6 +27,8 @@ type AttendanceRecordRow = {
   status: string;
   markedAt?: string | null;
   reason?: string | null;
+  calendarEventId?: number | null;
+  bulkCalendarEventId?: number | null;
   event?: EventRow | EventRow[] | null;
   bulk_event?: EventRow | EventRow[] | null;
 };
@@ -43,24 +45,24 @@ const safeGet = <T,>(
 
 export async function getSubjectAttendanceDetails(
   studentIdStr: string,
-  subjectCodeStr: string,
+  subjectIdStr: string,
+  filter: "ALL" | "Present" | "Absent" | "Leave" = "ALL",
+  page: number = 1,
+  limit: number = 20
 ) {
   const supabase = await createClient();
   const studentId = parseInt(studentIdStr);
+  const subjectId = parseInt(subjectIdStr);
 
-  const subjectCode = decodeURIComponent(subjectCodeStr);
-
-  if (isNaN(studentId)) return null;
+  if (isNaN(studentId) || isNaN(subjectId)) return null;
 
   const { data: subjectData, error: subjError } = await supabase
     .from("college_subjects")
     .select("collegeSubjectId, subjectName")
-    .eq("subjectCode", subjectCode)
-    .single();
+    .eq("collegeSubjectId", subjectId)
+    .maybeSingle();
 
-  if (subjError || !subjectData) return null;
-
-  const subjectId = subjectData.collegeSubjectId;
+  const subjectName = subjectData?.subjectName || "Unknown Subject";
 
   const { data: singleEvents } = await supabase
     .from("calendar_event")
@@ -76,7 +78,7 @@ export async function getSubjectAttendanceDetails(
 
   if (singleIds.length === 0 && bulkIds.length === 0) {
       return {
-        subjectName: subjectData.subjectName,
+        subjectName: subjectName,
         facultyName: "Unknown Faculty",
         summary: {
           totalClasses: 0,
@@ -85,7 +87,8 @@ export async function getSubjectAttendanceDetails(
           leave: 0,
           percentage: "0%",
         },
-        records: []
+        records: [],
+        totalCount: 0
       };
   }
 
@@ -103,17 +106,15 @@ export async function getSubjectAttendanceDetails(
         date,
         fromTime,
         toTime,
-        eventTopic,
         subject,
-        faculty:faculty (fullName) 
+        faculty:faculty ( user:users (fullName) ) 
       ),
       bulk_event:bulk_calendar_events (
         fromDate,
         fromTime,
         toTime,
-        eventTopic,
         subject,
-        faculty:faculty (fullName)
+        faculty:faculty ( user:users (fullName) )
       )
     `,
     )
@@ -130,7 +131,16 @@ export async function getSubjectAttendanceDetails(
 
   const { data: records, error: attendanceError } = await query;
 
-  if (attendanceError) return null;
+  if (attendanceError) {
+    console.error("Subject Attendance Error:", attendanceError);
+    return {
+      subjectName: subjectName,
+      facultyName: "Unknown Faculty",
+      summary: { totalClasses: 0, attended: 0, absent: 0, leave: 0, percentage: "0%" },
+      records: [],
+      totalCount: 0
+    };
+  }
 
   let totalClasses = 0;
   let attended = 0;
@@ -147,30 +157,10 @@ export async function getSubjectAttendanceDetails(
       if (r.status === "LEAVE") leave++;
     }
 
-    const singleEvent = safeGet(r.event);
-    const bulkEvent = safeGet(r.bulk_event);
-    const event = singleEvent || bulkEvent;
-    const faculty = safeGet(event?.faculty);
-    const fName = faculty?.fullName || "Unknown Faculty";
-    facultyNames.set(fName, (facultyNames.get(fName) || 0) + 1);
-
-    const eventDate = r.markedAt || singleEvent?.date || bulkEvent?.fromDate || new Date().toISOString();
-    const dateObj = new Date(eventDate);
-    const formattedDate = dateObj.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-
-    const timeStr = event?.fromTime
-      ? `${event.fromTime.slice(0, 5)} - ${event.toTime?.slice(0, 5) ?? ""}`
-      : "N/A";
+    const eventObj = r.calendarEventId ? r.event : r.bulk_event;
 
     let uiStatus: UiAttendanceStatus = "Present";
     switch (r.status) {
-      case "PRESENT":
-        uiStatus = "Present";
-        break;
       case "ABSENT":
         uiStatus = "Absent";
         break;
@@ -180,44 +170,70 @@ export async function getSubjectAttendanceDetails(
       case "LATE":
         uiStatus = "Late";
         break;
+      case "CLASS_CANCEL":
+      case "CANCELLED":
       case "CANCEL_CLASS":
         uiStatus = "Class Cancel";
         break;
+      case "PRESENT":
       default:
         uiStatus = "Present";
     }
 
+    const e = safeGet(eventObj);
+    const dateStr =
+      r.markedAt || (e && "date" in e ? e.date : e?.fromDate) || "";
+    const fromTime = e?.fromTime || "";
+    const toTime = e?.toTime || "";
+
+    const fac = safeGet(e?.faculty);
+    const user = safeGet((fac as any)?.user);
+    const fname = user?.fullName || "Unknown Faculty";
+    facultyNames.set(fname, (facultyNames.get(fname) || 0) + 1);
+
     return {
-      id: r.attendanceRecordId,
-      date: formattedDate,
-      time: timeStr,
-      topic: "General Session",
+      id: String(r.attendanceRecordId),
+      date: dateStr,
+      time: `${fromTime} - ${toTime}`,
+      faculty: fname,
       status: uiStatus,
       reason: r.reason || "-",
     };
   });
 
-  let mainFaculty = "Unknown Faculty";
-  let maxCount = 0;
+  let topFaculty = "Unknown Faculty";
+  let maxCount = -1;
   facultyNames.forEach((count, name) => {
     if (count > maxCount) {
       maxCount = count;
-      mainFaculty = name;
+      topFaculty = name;
     }
   });
 
-  const percentage = calculateAttendancePercentage(attended, totalClasses);
+  const pctString = calculateAttendancePercentage(attended, totalClasses);
+
+  // Apply Filter
+  const filteredRecords = filter === "ALL" 
+    ? formattedRecords 
+    : formattedRecords.filter(r => r.status === filter);
+
+  // Apply Pagination
+  const totalCount = filteredRecords.length;
+  const from = (page - 1) * limit;
+  const to = from + limit;
+  const paginatedRecords = filteredRecords.slice(from, to);
 
   return {
-    subjectName: subjectData.subjectName,
-    facultyName: mainFaculty,
+    subjectName,
+    facultyName: topFaculty,
     summary: {
       totalClasses,
       attended,
       absent,
       leave,
-      percentage,
+      percentage: pctString,
     },
-    records: formattedRecords,
+    records: paginatedRecords,
+    totalCount
   };
 }

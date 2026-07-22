@@ -422,21 +422,25 @@ export async function saveAttendance(classId: string, payload: any[]) {
         facultyMark: p.facultyId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        deletedAt: null,
         attendanceRecordId: undefined as number | undefined,
       };
     });
 
-  if (dbRecords.length === 0) {
+  const uniqueMap = new Map<number, any>();
+  dbRecords.forEach((r) => uniqueMap.set(r.studentId, r));
+  const uniqueDbRecords = Array.from(uniqueMap.values());
+
+  if (uniqueDbRecords.length === 0) {
     return { success: true };
   }
 
-  const studentIds = dbRecords.map((r) => r.studentId);
+  const studentIds = uniqueDbRecords.map((r) => r.studentId);
   const { data: existingRecords, error: fetchError } = await supabase
     .from("attendance_record")
     .select("attendanceRecordId, studentId")
     .in("studentId", studentIds)
-    .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId)
-    .is("deletedAt", null);
+    .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId);
 
   if (fetchError) {
     console.error("fetch existing records error:", fetchError);
@@ -447,7 +451,7 @@ export async function saveAttendance(classId: string, payload: any[]) {
   const updates: any[] = [];
   const inserts: any[] = [];
 
-  dbRecords.forEach((record) => {
+  uniqueDbRecords.forEach((record) => {
     const existingId = recordMap.get(record.studentId);
     if (existingId) {
       record.attendanceRecordId = existingId;
@@ -462,14 +466,24 @@ export async function saveAttendance(classId: string, payload: any[]) {
     const { error: updateError } = await supabase
       .from("attendance_record")
       .upsert(updates);
-    if (updateError) return { success: false, error: updateError.message };
+    if (updateError) {
+      console.error("Attendance update error:", updateError);
+      return { success: false, error: "Failed to update attendance records. Please try again." };
+    }
   }
 
   if (inserts.length > 0) {
     const { error: insertError } = await supabase
       .from("attendance_record")
       .insert(inserts);
-    if (insertError) return { success: false, error: insertError.message };
+    if (insertError) {
+      console.error("Attendance insert error:", insertError);
+      let msg = "Failed to save attendance records. Please try again.";
+      if (insertError.message.includes("uidx_student_bulk_event") || insertError.message.includes("duplicate key")) {
+        msg = "Attendance already marked for some students in this session.";
+      }
+      return { success: false, error: msg };
+    }
   }
 
   return { success: true };
@@ -617,6 +631,7 @@ export async function handleMissionClassStatus(
           facultyMark: facultyId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+          deletedAt: null,
         }));
 
         await supabase.from("attendance_record").upsert(attendanceRecords, {

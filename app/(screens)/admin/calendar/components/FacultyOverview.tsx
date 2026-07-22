@@ -10,6 +10,7 @@ import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable"
 import { useAdmin } from "@/app/utils/context/admin/useAdmin"
 import FacultyCardSkeleton from "./FacultyCardSkeleton"
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 interface Props {
     onSelect: (faculty: any) => void
 }
@@ -333,40 +334,16 @@ export default function FacultyOverview({ onSelect }: Props) {
                 }
             </section>
 
-            {totalPages > 1 && (
-                <div className="w-full flex justify-center mt-8 mb-4">
-                    <div className="flex flex-wrap justify-center items-center gap-2 max-w-full">
-                        <button
-                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                            disabled={currentPage === 1}
-                            className="h-9 px-4 cursor-pointer rounded-lg border bg-white"
-                        >
-                            ‹
-                        </button>
-
-                        {[...Array(totalPages)].slice(0, 10).map((_, i) => (
-                            <button
-                                key={i + 1}
-                                onClick={() => setCurrentPage(i + 1)}
-                                className={`min-w-[36px] cursor-pointer h-9 px-2 rounded-lg text-sm font-bold ${currentPage === i + 1
-                                    ? "bg-[#16284F] text-white"
-                                    : "bg-white border"
-                                    }`}
-                            >
-                                {i + 1}
-                            </button>
-                        ))}
-
-                        <button
-                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages}
-                            className="h-9 px-4 cursor-pointer rounded-lg border bg-white"
-                        >
-                            ›
-                        </button>
-                    </div>
-                </div>
-            )}
+            <div className="flex justify-center items-center mt-4 mb-2 w-full rounded-lg shadow-sm">
+                <Pagination
+                    currentPage={currentPage}
+                    totalItems={totalCount}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setCurrentPage}
+                    alwaysShow={true}
+                    roundedBottom="rounded-lg"
+                />
+            </div>
 
         </main >
     )

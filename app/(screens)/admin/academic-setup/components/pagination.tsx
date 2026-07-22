@@ -53,7 +53,7 @@ export function Pagination({
   const visiblePages = getPageNumbers();
 
   return (
-    <div className={`flex items-center justify-between px-2 py-4 sm:px-4 bg-white border-t border-gray-200 mt-auto ${roundedBottom || ""} ${disabled ? "opacity-50 pointer-events-none" : "transition-opacity duration-200"}`}>
+    <div className={`flex items-center justify-between px-2 py-4 sm:px-4 bg-white border-t border-gray-200 mt-auto w-full ${roundedBottom || ""} ${disabled ? "opacity-50 pointer-events-none" : "transition-opacity duration-200"}`}>
       <div className="flex flex-col gap-4 w-full md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 md:gap-6 w-full md:w-auto shrink-0">
           {itemsPerPageOptions && onItemsPerPageChange && (

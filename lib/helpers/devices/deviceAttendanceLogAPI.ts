@@ -339,29 +339,40 @@ export const processClassroomScan = async (payload: {
 
     const { data: existing } = await supabase
       .from("attendance_record")
-      .select("attendanceRecordId, status")
+      .select("attendanceRecordId, status, deletedAt")
       .eq("studentId", student.studentId)
       .eq("calendarEventId", activeSession.calendarEventId)
-      .is("deletedAt", null)
       .maybeSingle();
 
     let attendanceRecordId: number | null = null;
 
     if (existing) {
       attendanceRecordId = existing.attendanceRecordId;
+      
+      if (existing.deletedAt !== null) {
+        await supabase
+          .from("attendance_record")
+          .update({
+            deletedAt: null,
+            status: "PRESENT",
+            studentLoginTime: scanTime,
+            updatedAt: new Date().toISOString()
+          })
+          .eq("attendanceRecordId", attendanceRecordId);
+      }
     } else {
       const { data: newRecord, error: recErr } = await supabase
         .from("attendance_record")
         .insert({
           studentId: student.studentId,
           calendarEventId: activeSession.calendarEventId,
-          status: "Present",
+          status: "PRESENT",
           studentLoginTime: scanTime,
           markedAt: scanDate,
-          createdAt: now,
-          updatedAt: now,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         })
-        .select()
+        .select("attendanceRecordId")
         .single();
 
       if (recErr) throw recErr;
