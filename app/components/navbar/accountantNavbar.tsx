@@ -12,6 +12,7 @@ import {
   Headset,
   House,
   Receipt,
+  Wallet,
   SignOut,
   X,
 } from "@phosphor-icons/react";
@@ -108,6 +109,13 @@ export default function AccountantNavbar({ onClose }: AccountantNavbarProps) {
         ),
         label: "My Attendance",
         path: `${base}/my-attendance`,
+      },
+      {
+        icon: (isActive) => (
+          <Wallet size={iconSize} weight={isActive ? "fill" : "regular"} />
+        ),
+        label: "Payroll",
+        path: `${base}/payroll`,
       },
       {
         icon: (isActive) => (
