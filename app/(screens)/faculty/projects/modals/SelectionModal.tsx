@@ -101,7 +101,7 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
         }
     }, [page, hasMore, debouncedSearch, fetchItems, isFetchingMore, isLoading]);
 
-    const lastElementRef = useCallback((node: HTMLDivElement) => {
+    const lastElementRef = useCallback((node: HTMLLabelElement | null) => {
         if (isLoading || isFetchingMore) return;
         if (observer.current) observer.current.disconnect();
         
