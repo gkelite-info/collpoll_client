@@ -167,10 +167,11 @@ interface Props {
   activeCount: string | number;
   students: number;
   yearId: number;
-  branchId: number;
+  branchId: number | null;
   facultyCount?: number;
   facultyPhotos?: string[];
   facultyList?: FacultyItem[];
+  isSchool?: boolean;
 }
 
 export default function DiscussionDeptCard({
@@ -187,6 +188,7 @@ export default function DiscussionDeptCard({
   facultyCount,
   facultyPhotos,
   facultyList = [],
+  isSchool = false,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -196,7 +198,7 @@ export default function DiscussionDeptCard({
     params.set("dept", name);
     params.set("year", year);
     params.set("yearId", String(yearId));
-    params.set("branchId", String(branchId));
+    if (branchId !== null) params.set("branchId", String(branchId));
     router.push(`?${params.toString()}`);
   };
 
@@ -216,12 +218,16 @@ export default function DiscussionDeptCard({
       style={{ borderLeftColor: color }}
     >
       <div className="flex justify-between items-start mb-4">
-        <h2
-          className="text-[17px] font-bold tracking-tight truncate block"
-          style={{ color: text }}
-        >
-          {name}
-        </h2>
+        {!isSchool ? (
+          <h2
+            className="text-[17px] font-bold tracking-tight truncate block"
+            style={{ color: text }}
+          >
+            {name}
+          </h2>
+        ) : (
+          <div />
+        )}
         <div
           className="flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-semibold"
           style={{ backgroundColor: bgColor, color: text }}
@@ -287,7 +293,7 @@ export default function DiscussionDeptCard({
         </div>
         <button
           onClick={handleViewDetails}
-          className="bg-[#16284F] cursor-pointer text-white lg:px-3 lg:py-1.5 rounded-md text-xs tracking-wide transition-colors"
+          className="bg-[#16284F] cursor-pointer text-white px-3 py-1.5 rounded-md text-xs tracking-wide transition-colors whitespace-nowrap"
         >
           View Details
         </button>

@@ -61,7 +61,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 export async function fetchActiveFacultyData(
     collegeEducationId: number,
-    collegeBranchId: number,
+    collegeBranchId: number | null,
     collegeAcademicYearId: number
 ) {
     try {
@@ -78,14 +78,21 @@ export async function fetchActiveFacultyData(
         const uniqueFacultyIds = [...new Set(sectionData.map((s: any) => s.facultyId))];
 
         // ✅ Step 2: Filter by branch + education — no joins
-        const { data: facultyData, error: facultyError } = await supabase
+        let query = supabase
             .from("faculty")
             .select("facultyId, userId")
             .in("facultyId", uniqueFacultyIds)
             .eq("collegeEducationId", collegeEducationId)
-            .eq("collegeBranchId", collegeBranchId)
             .eq("isActive", true)
             .is("deletedAt", null);
+
+        if (collegeBranchId === null) {
+            query = query.is("collegeBranchId", null);
+        } else {
+            query = query.eq("collegeBranchId", collegeBranchId);
+        }
+
+        const { data: facultyData, error: facultyError } = await query;
 
         if (facultyError || !facultyData?.length) return { count: 0, photos: [] };
 
@@ -129,9 +136,9 @@ export async function fetchProfilesByUserIds(userIds: number[]) {
     return data;
 }
 
-export async function fetchSubjectFacultyList(collegeAcademicYearId: number, collegeBranchId: number) {
+export async function fetchSubjectFacultyList(collegeAcademicYearId: number, collegeBranchId: number | null) {
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from("faculty_sections")
             .select(`
                 facultySectionId,
@@ -142,9 +149,16 @@ export async function fetchSubjectFacultyList(collegeAcademicYearId: number, col
                 )
             `)
             .eq("collegeAcademicYearId", collegeAcademicYearId)
-            .eq("college_sections.collegeBranchId", collegeBranchId)
             .eq("isActive", true)
             .is("deletedAt", null);
+
+        if (collegeBranchId !== null) {
+            query = query.eq("college_sections.collegeBranchId", collegeBranchId);
+        } else {
+            query = query.is("college_sections.collegeBranchId", null);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             console.error("fetchSubjectFacultyList error:", JSON.stringify(error, null, 2));
@@ -351,18 +365,25 @@ export async function fetchDiscussionById(discussionId: number) {
 
 export async function fetchActiveProjectCountByBranchYear(
     collegeId: number,
-    collegeBranchId: number,
+    collegeBranchId: number | null,
     collegeAcademicYearId: number
 ): Promise<number> {
     const today = new Date().toISOString();
 
-    const { data: facultyData, error: facultyError } = await supabase
+    let query = supabase
         .from("faculty")
         .select("facultyId")
-        .eq("collegeBranchId", collegeBranchId)
         .eq("collegeId", collegeId)
         .eq("isActive", true)
         .is("deletedAt", null);
+
+    if (collegeBranchId === null) {
+        query = query.is("collegeBranchId", null);
+    } else {
+        query = query.eq("collegeBranchId", collegeBranchId);
+    }
+
+    const { data: facultyData, error: facultyError } = await query;
 
     if (facultyError || !facultyData?.length) return 0;
 

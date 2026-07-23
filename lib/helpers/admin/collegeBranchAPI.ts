@@ -92,7 +92,7 @@ export async function fetchBranchOptionsForAdmin(
 ) {
     const { collegeId } = await fetchAdminContext(userId);
 
-    const { data, error } = await supabase
+    let query = supabase
         .from("college_branch")
         .select(`
       collegeBranchId,
@@ -100,10 +100,15 @@ export async function fetchBranchOptionsForAdmin(
       collegeBranchCode
     `)
         .eq("collegeId", collegeId)
-        .eq("collegeEducationId", collegeEducationId)
         .eq("isActive", true)
         .is("deletedAt", null)
         .order("collegeBranchCode", { ascending: true });
+
+    if (collegeEducationId) {
+        query = query.eq("collegeEducationId", collegeEducationId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error("fetchBranchOptionsForAdmin error:", error);

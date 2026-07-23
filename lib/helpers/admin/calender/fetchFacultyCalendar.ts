@@ -9,6 +9,7 @@ type FacultyFilterParams = {
   facultyId?: number;
   page?: number;
   limit?: number;
+  searchQuery?: string;
 };
 
 export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
@@ -76,6 +77,9 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
   }
   if (allowedFacultyIds !== null) {
     facultyQuery = facultyQuery.in("facultyId", allowedFacultyIds);
+  }
+  if (filters.searchQuery) {
+    facultyQuery = facultyQuery.ilike("fullName", `%${filters.searchQuery}%`);
   }
 
   facultyQuery = facultyQuery.range(from, to);
@@ -187,6 +191,7 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
 
   return {
     data: result,
-    total: count ?? 0,
+    total: count || 0,
+    hasMore: facultyData.length === limit,
   };
 }

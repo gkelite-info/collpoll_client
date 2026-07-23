@@ -77,7 +77,7 @@ const AcademicPage = () => {
   const [mounted, setMounted] = useState(false);
   const { collegeId: adminCollegeId, collegeEducationId, collegeEducationType } = useAdmin();
 
-  const cardsPerPage = 12;
+  const cardsPerPage = 9;
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
   const router = useRouter();
@@ -187,8 +187,8 @@ const AcademicPage = () => {
 
   return (
     <div className="flex flex-col m-4">
-      <div className="mb-6 flex justify-between items-center">
-        <div className="w-50% flex-0.5">
+      <div className="mb-6 flex flex-col md:flex-row w-full justify-between items-center md:items-start gap-4">
+        <div className="order-2 md:order-1 w-full">
           <div className="flex items-center gap-2 group w-fit cursor-pointer">
             <h1 className="text-xl font-bold text-[#282828]">Academics</h1>
           </div>
@@ -198,13 +198,13 @@ const AcademicPage = () => {
               : "Track syllabus progress and manage notes by semester"}
           </p>
         </div>
-        <div className="w-[30%]">
+        <div className="order-1 md:order-2 w-full md:w-[350px] flex justify-end">
           <CourseScheduleCard isVisibile={false} fullWidth={false} />
         </div>
       </div>
 
       <div className="mt-0 mb-4 flex flex-col md:flex-row items-center gap-4">
-        <div className="relative w-full md:w-[32%]">
+        <div className="relative w-full md:w-[32%] shrink-0">
           <input
             type="text"
             placeholder="Search here..."
@@ -336,8 +336,8 @@ const AcademicPage = () => {
         </div>
       </div>
 
-      <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col justify-between">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-[1200px] mx-auto">
+      <div className="flex flex-col justify-between min-h-[calc(100vh-320px)] bg-[#F3F6F9] rounded-xl p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-[1200px] mx-auto">
           {loading ? (
             [...Array(6)].map((_, i) => <AcademicSectionsSkeleton key={i} />)
           ) : !loading && cards.length === 0 ? (
@@ -372,7 +372,7 @@ const AcademicPage = () => {
           )}
         </div>
 
-        <div className="flex justify-center items-center mt-2 mb-2 w-full max-w-[1200px] mx-auto rounded-lg shadow-sm">
+        <div className="flex justify-center items-center mt-6 w-full max-w-[1200px] mx-auto rounded-lg shadow-sm">
           <Pagination
             currentPage={currentPage}
             totalItems={totalRecords}

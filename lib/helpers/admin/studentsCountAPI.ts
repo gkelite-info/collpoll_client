@@ -2,24 +2,31 @@ import { supabase } from "@/lib/supabaseClient";
 
 export async function fetchActiveStudentCount(
     collegeEducationId: number,
-    collegeBranchId: number,
+    collegeBranchId: number | null,
     collegeAcademicYearId: number
 ) {
     try {
-        const { count, error } = await supabase
+        let query = supabase
             .from("students")
             .select(`
         studentId,
         student_academic_history!inner(collegeAcademicYearId, isCurrent)
       `, { count: "exact", head: true })
             .eq("collegeEducationId", collegeEducationId)
-            .eq("collegeBranchId", collegeBranchId)
             .eq("isActive", true)
             .eq("status", "Active")
             .is("deletedAt", null)
             .eq("student_academic_history.collegeAcademicYearId", collegeAcademicYearId)
             .eq("student_academic_history.isCurrent", true)
             .is("student_academic_history.deletedAt", null);
+
+        if (collegeBranchId === null) {
+            query = query.is("collegeBranchId", null);
+        } else {
+            query = query.eq("collegeBranchId", collegeBranchId);
+        }
+
+        const { count, error } = await query;
 
         if (error) {
             console.error("fetchActiveStudentCount error:", error);

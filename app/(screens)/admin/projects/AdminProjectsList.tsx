@@ -10,6 +10,7 @@ import { ProjectCardProps } from "@/lib/projectTypes/project";
 import { ProjectCard, ProjectDetailsModal } from "../../faculty/projects/projectCard";
 import ProjectCardShimmer from "../../faculty/projects/shimmers/projectCardshimmer";
 import StudentProjectSubmissions from "./components/studentProjectSubmissions";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 interface Props {
     subjectId: string;
@@ -63,6 +64,8 @@ export default function AdminProjectsList({
     const facultyId = searchParams.get("facultyId");
     const projectView = searchParams.get("projectView") || "active";
     const subjectId = searchParams.get("subjectId") ?? subjectIdProp;
+    const [currentPage, setCurrentPage] = useState(1);
+    const cardsPerPage = 8;
 
 
     useEffect(() => {
@@ -106,6 +109,7 @@ export default function AdminProjectsList({
         if (!params.get("subjectId") && subjectIdProp) {
             params.set("subjectId", subjectIdProp);
         }
+        setCurrentPage(1);
         router.push(`${pathname}?${params.toString()}`);
     };
 
@@ -243,23 +247,44 @@ export default function AdminProjectsList({
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-4 pb-10">
-                        {loading ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {[...Array(4)].map((_, i) => (
-                                    <ProjectCardShimmer key={i} />
-                                ))}
-                            </div>
-                        ) : filteredProjects.length > 0 ? (
-                            <ProjectCard
-                                data={filteredProjects.map(mapToCardProps)}
-                                onViewDetails={(project) => setSelectedProject(project)}
-                            />
-                        ) : (
-                            <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-200">
-                                <p className="text-gray-400 italic">
-                                    No {projectView} projects found.
-                                </p>
+                    <div className="flex flex-col flex-1 min-h-[calc(100vh-320px)] pb-10">
+                        <div className="flex flex-col gap-4 flex-1">
+                            {loading ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {[...Array(4)].map((_, i) => (
+                                        <ProjectCardShimmer key={i} />
+                                    ))}
+                                </div>
+                            ) : filteredProjects.length > 0 ? (
+                                (() => {
+                                    const startIndex = (currentPage - 1) * cardsPerPage;
+                                    const paginatedProjects = filteredProjects.slice(startIndex, startIndex + cardsPerPage);
+                                    return (
+                                        <ProjectCard
+                                            data={paginatedProjects.map(mapToCardProps)}
+                                            onViewDetails={(project) => setSelectedProject(project)}
+                                        />
+                                    );
+                                })()
+                            ) : (
+                                <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-200">
+                                    <p className="text-gray-400 italic">
+                                        No {projectView} projects found.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {!loading && filteredProjects.length > 0 && (
+                            <div className="flex justify-center items-center mt-auto pt-6 w-full max-w-[1200px] mx-auto rounded-lg shadow-sm">
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalItems={filteredProjects.length}
+                                    itemsPerPage={cardsPerPage}
+                                    onPageChange={(p) => setCurrentPage(p)}
+                                    alwaysShow={true}
+                                    roundedBottom="rounded-lg"
+                                />
                             </div>
                         )}
                     </div>

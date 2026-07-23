@@ -83,10 +83,12 @@ export default function ClassResultDetails() {
         // 2. Fetch students for this section to count them
         let students: any[] = [];
         if (sectionId && academicYearId && collegeId) {
-          students = await fetchStudentsWithProfile(collegeId, {
+          const result = await fetchStudentsWithProfile(collegeId, {
             sectionId: Number(sectionId),
             yearId: Number(academicYearId),
+            fetchAll: true,
           });
+          students = result.data;
         }
 
         const studentIds = students.map((s: any) => s.studentId);
