@@ -316,6 +316,31 @@ export function mapAcademicCards(data: any[]) {
     const branch = Array.isArray(row.collegeBranch)
       ? row.collegeBranch[0]
       : row.collegeBranch;
+
+    const uniqueFacultiesMap = new Map<number, any>();
+    row.faculty_sections?.forEach((fs: any) => {
+      const f = Array.isArray(fs.faculty) ? fs.faculty[0] : fs.faculty;
+      if (f && f.facultyId && !uniqueFacultiesMap.has(f.facultyId)) {
+        // Extract profileUrl correctly
+        let profileUrl = null;
+        const profileData = f.users?.user_profile;
+        if (profileData) {
+          const profiles = Array.isArray(profileData) ? profileData : [profileData];
+          const activeProfile = profiles.find((profile: any) => profile && !profile.is_deleted);
+          if (activeProfile) profileUrl = activeProfile.profileUrl;
+        }
+
+        uniqueFacultiesMap.set(f.facultyId, {
+          facultyId: f.facultyId,
+          fullName: f.fullName,
+          email: f.email,
+          profileUrl: profileUrl || "",
+        });
+      }
+    });
+
+    const faculties = Array.from(uniqueFacultiesMap.values());
+
     return {
       id: row.collegeSectionsId.toString(),
       collegeBranchId: branch?.collegeBranchId,
@@ -326,31 +351,9 @@ export function mapAcademicCards(data: any[]) {
       section: row.collegeSections ?? "-",
       year: row.collegeAcademicYear?.collegeAcademicYear?.toString() ?? "-",
       totalStudents: row.studentCount ?? 0,
-      totalFaculties: row.facultyCount ?? 0,
+      totalFaculties: row.facultyCount || faculties.length,
       totalSubjects: row.subjectCount ?? 0,
-      faculties:
-        row.faculty_sections
-          ?.filter(
-            (fs: any) =>
-              fs.collegeAcademicYearId === row.collegeAcademicYearId &&
-              fs.faculty?.collegeBranchId === branch?.collegeBranchId &&
-              fs.faculty?.collegeEducationId === row.collegeEducationId,
-          )
-          .map((fs: any) => ({
-            ...(() => {
-              const profileData = fs.faculty.users?.user_profile;
-              const profiles = Array.isArray(profileData)
-                ? profileData
-                : [profileData];
-              const activeProfile = profiles.find(
-                (profile: any) => profile && !profile.is_deleted,
-              );
-              return { profileUrl: activeProfile?.profileUrl || null };
-            })(),
-            facultyId: fs.faculty.facultyId,
-            fullName: fs.faculty.fullName,
-            email: fs.faculty.email,
-          })) ?? [],
+      faculties,
     };
   });
 }

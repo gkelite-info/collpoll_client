@@ -21,23 +21,23 @@ export type CardProps = {
   credits?: number;
 };
 
-type SubjectCardProps = { subjectProps: CardProps[] };
+type SubjectCardProps = { subjectProps: CardProps[]; isSchool?: boolean };
 
-export default function SubjectCard({ subjectProps }: SubjectCardProps) {
+export default function SubjectCard({ subjectProps, isSchool }: SubjectCardProps) {
   const [cards] = useState<CardProps[]>(subjectProps);
 
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {cards.map((item, index) => (
-          <IndividualCard key={index} item={item} />
+          <IndividualCard key={index} item={item} isSchool={isSchool} />
         ))}
       </div>
     </>
   );
 }
 
-const IndividualCard = ({ item }: { item: CardProps }) => {
+const IndividualCard = ({ item, isSchool }: { item: CardProps; isSchool?: boolean }) => {
   const router = useRouter();
   const percentage = item.percentage ?? 0;
   const ballWidthPx = 16;
@@ -77,9 +77,11 @@ const IndividualCard = ({ item }: { item: CardProps }) => {
             <h5 className="text-[#282828] font-medium text-[17px] truncate">
               {item.subjectTitle}
             </h5>
-            <p className="flex-shrink-0 px-2 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
-              Credits: {item.credits ?? 4}
-            </p>
+            {!isSchool && (
+              <p className="flex-shrink-0 px-2 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
+                Credits: {item.credits ?? 4}
+              </p>
+            )}
           </div>
 
           <p

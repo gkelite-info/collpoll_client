@@ -146,7 +146,10 @@ export default function AdminNavbar({ onClose }: AdminNavbarProps) {
   }, [t, isSchool, contextLoading]);
 
   useEffect(() => {
-    const current = items.find((item) => item.path === pathname);
+    const current = [...items]
+      .sort((a, b) => b.path.length - a.path.length)
+      .find((item) => pathname === item.path || pathname.startsWith(`${item.path}/`));
+      
     if (current && !contextLoading) setActive(current.label);
   }, [pathname, items, contextLoading]);
 

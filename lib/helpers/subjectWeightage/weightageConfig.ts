@@ -7,10 +7,10 @@ export type FacultyWeightageConfigRow = {
 
     collegeId: number;
     collegeEducationId: number;
-    collegeBranchId: number;
+    collegeBranchId: number | null;
     collegeSubjectId: number;
     collegeSectionsId: number;
-    collegeSemesterId: number;
+    collegeSemesterId: number | null;
 
     totalPercentage: number;
 
@@ -97,10 +97,10 @@ export async function saveFacultyWeightageConfig(
         facultyWeightageConfigId?: number;
         collegeId: number;
         collegeEducationId: number;
-        collegeBranchId: number;
+        collegeBranchId: number | null;
         collegeSubjectId: number;
         collegeSectionsId: number;
-        collegeSemesterId: number;
+        collegeSemesterId: number | null;
         totalPercentage: number;
     },
     actor: {

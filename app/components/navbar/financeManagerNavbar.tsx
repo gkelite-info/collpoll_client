@@ -113,7 +113,7 @@ export default function FinanceManagerNavbar({
 
   const isActivePath = (itemPath: string) => {
     if (itemPath === base) return pathname === base || pathname.startsWith("/profile");
-    return pathname.startsWith(itemPath);
+    return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
   };
 
   return (

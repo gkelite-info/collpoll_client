@@ -50,7 +50,7 @@ export async function getAdminSubjectsList(
     const branchId = sectionData.collegeBranchId;
     const academicYearId = sectionData.collegeAcademicYearId;
 
-    const { data: subjectsData, error: subjectsError } = await supabase
+    let subjectsQuery = supabase
       .from("college_subjects")
       .select(
         `
@@ -75,10 +75,16 @@ export async function getAdminSubjectsList(
         )
       `,
       )
-      .eq("collegeBranchId", branchId)
       .eq("collegeAcademicYearId", academicYearId)
       .eq("collegeId", collegeId)
       .eq("isActive", true);
+
+    // Schools don't have branches, so only filter by branchId when it exists
+    if (branchId != null) {
+      subjectsQuery = subjectsQuery.eq("collegeBranchId", branchId);
+    }
+
+    const { data: subjectsData, error: subjectsError } = await subjectsQuery;
 
     if (subjectsError) {
       console.error("Subjects Fetch Error:", subjectsError);
@@ -189,7 +195,7 @@ export async function getAdminSubjectsList(
         facultyName: faculty?.fullName || "Not Assigned",
         facultyProfile: activeProfile?.profileUrl || "",
         subjectTitle: subject.subjectName,
-        year: `${branchName} - ${sectionName}`,
+        year: branchId ? `${branchName} - ${sectionName}` : `Section - ${sectionName}`,
         units: units.length,
         topicsCovered: subjectCompletedTopics,
         topicsTotal: subjectTotalTopics,
@@ -209,7 +215,7 @@ export async function getAdminSubjectsList(
     return {
       subjects: cards,
       meta: {
-        title: `${branchName} - ${sectionName}`,
+        title: branchId ? `${branchName} - ${sectionName}` : `Section - ${sectionName}`,
         year: yearName,
       },
     };

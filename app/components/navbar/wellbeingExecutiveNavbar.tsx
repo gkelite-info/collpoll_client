@@ -368,7 +368,7 @@ export default function WellbeingExecutiveNavbar({
 
   const isActivePath = (itemPath: string) => {
     if (itemPath === base) return pathname === base || pathname.startsWith("/profile");
-    return pathname.startsWith(itemPath);
+    return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
   };
 
   const handleLogout = async () => {

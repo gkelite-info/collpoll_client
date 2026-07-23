@@ -49,8 +49,10 @@ export const findActiveNavItem = (
   const exactMatch = items.find((item) => isRouteActive(pathname, item.path, { exact: true }));
   if (exactMatch) return exactMatch.label;
 
-  // Then try nested route matches
-  const nestedMatch = items.find((item) =>
+  // Then try nested route matches by sorting by path length descending
+  // so more specific paths match before general ones
+  const sortedItems = [...items].sort((a, b) => b.path.length - a.path.length);
+  const nestedMatch = sortedItems.find((item) =>
     isRouteActive(pathname, item.path, { exact: false, checkNestedRoutes: true })
   );
   return nestedMatch?.label;
