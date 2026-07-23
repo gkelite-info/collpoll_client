@@ -8,6 +8,23 @@ export type ProjectFileRow = {
     updatedAt: string;
 };
 
+export function getSecureAttachmentUrl(url: string) {
+    if (!url) return url;
+    
+    try {
+        if (url.includes(".supabase.co/storage/v1/object/public/")) {
+            const urlParts = url.split("/storage/v1/object/public/");
+            if (urlParts.length > 1) {
+                const bucketAndPath = urlParts[1];
+                return `/api/files/${bucketAndPath}`;
+            }
+        }
+    } catch (e) {
+        console.error("Failed to parse attachment url:", e);
+    }
+    
+    return url;
+}
 
 export async function fetchProjectFiles(projectId: number) {
     const { data, error } = await supabase

@@ -10,6 +10,7 @@ import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { FaCloudUploadAlt, FaTimes } from "react-icons/fa";
 import { useTranslations } from "next-intl";
+import { getSecureAttachmentUrl } from "@/lib/helpers/projects/projectFiles";
 
 type ProjectCardListProps = {
   data: ProjectCardProps[];
@@ -180,7 +181,7 @@ export const ProjectCard = ({
                   project.fileUrls.map((url, i) => (
                     <a
                       key={i}
-                      href={url}
+                      href={getSecureAttachmentUrl(url)}
                       target="_blank"
                       rel="noreferrer"
                       className="text-blue-600 truncate md:max-w-sm hover:underline text-sm max-md:text-[15px]"
@@ -441,7 +442,7 @@ export const ProjectDetailsModal = ({
               {project.fileUrls.map((url, i) => (
                 <li key={i}>
                   <a
-                    href={url}
+                    href={getSecureAttachmentUrl(url)}
                     target="_blank"
                     rel="noreferrer"
                     className="text-blue-600 break-all hover:underline"

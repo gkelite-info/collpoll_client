@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { FaTimes, FaSearch } from "react-icons/fa";
-import FacultyShimmer from "../shimmers/facultyShimmer";
+import SelectionModalShimmer from "../shimmers/SelectionModalShimmer";
 import { Avatar } from "@/app/utils/Avatar";
 
-interface SelectionItem {
+export interface SelectionItem {
     id: number;
     name: string;
     image?: string;
@@ -15,60 +15,133 @@ interface SelectionModalProps {
     isOpen: boolean;
     onClose: () => void;
     title: string;
-    items: SelectionItem[];
-    selectedIds: number[];
-    onSelectionChange: (ids: number[]) => void;
-    isLoading: boolean;
+    selectedItems: SelectionItem[];
+    onSelectionChange: (items: SelectionItem[]) => void;
+    fetchItems: (searchQuery: string, page: number) => Promise<{ data: SelectionItem[], hasMore: boolean }>;
 }
 
 const SelectionModal: React.FC<SelectionModalProps> = ({
     isOpen,
     onClose,
     title,
-    items,
-    selectedIds,
+    selectedItems,
     onSelectionChange,
-    isLoading
+    fetchItems
 }) => {
-    const [localSelectedIds, setLocalSelectedIds] = useState<number[]>([]);
+    const [localSelectedItems, setLocalSelectedItems] = useState<SelectionItem[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    
+    const [items, setItems] = useState<SelectionItem[]>([]);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
+    
+    const observer = useRef<IntersectionObserver | null>(null);
 
     useEffect(() => {
         if (isOpen) {
-            setLocalSelectedIds(selectedIds);
+            setLocalSelectedItems(selectedItems);
             setSearchQuery("");
+            setDebouncedSearch("");
+            setItems([]);
+            setPage(1);
         }
-    }, [isOpen, selectedIds]);
+    }, [isOpen, selectedItems]);
 
-    const filteredItems = useMemo(() => {
-        return items.filter((item) =>
-            item.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    }, [items, searchQuery]);
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        
+        let isMounted = true;
+        const loadInitialData = async () => {
+            setIsLoading(true);
+            try {
+                const result = await fetchItems(debouncedSearch, 1);
+                if (isMounted) {
+                    setItems(result.data);
+                    setHasMore(result.hasMore);
+                    setPage(1);
+                }
+            } catch (error) {
+                console.error("Failed to load initial data", error);
+            } finally {
+                if (isMounted) setIsLoading(false);
+            }
+        };
+        
+        loadInitialData();
+        return () => { isMounted = false; };
+    }, [isOpen, debouncedSearch, fetchItems]);
+
+    const loadMore = useCallback(async () => {
+        if (isFetchingMore || !hasMore || isLoading) return;
+        
+        setIsFetchingMore(true);
+        try {
+            const nextPage = page + 1;
+            const result = await fetchItems(debouncedSearch, nextPage);
+            setItems(prev => {
+                const newItems = result.data.filter(newItem => !prev.some(existing => existing.id === newItem.id));
+                return [...prev, ...newItems];
+            });
+            setHasMore(result.hasMore);
+            setPage(nextPage);
+        } catch (error) {
+            console.error("Failed to load more data", error);
+        } finally {
+            setIsFetchingMore(false);
+        }
+    }, [page, hasMore, debouncedSearch, fetchItems, isFetchingMore, isLoading]);
+
+    const lastElementRef = useCallback((node: HTMLDivElement) => {
+        if (isLoading || isFetchingMore) return;
+        if (observer.current) observer.current.disconnect();
+        
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && hasMore) {
+                loadMore();
+            }
+        });
+        
+        if (node) observer.current.observe(node);
+    }, [isLoading, isFetchingMore, hasMore, loadMore]);
 
     if (!isOpen) return null;
 
     const handleSelectAll = () => {
-        const allFilteredSelected = filteredItems.every(item => localSelectedIds.includes(item.id));
-        if (allFilteredSelected) {
-            const filteredIds = filteredItems.map(item => item.id);
-            setLocalSelectedIds(localSelectedIds.filter(id => !filteredIds.includes(id)));
+        const allLoadedSelected = items.length > 0 && items.every(item => localSelectedItems.some(i => i.id === item.id));
+        if (allLoadedSelected) {
+            const loadedIds = items.map(item => item.id);
+            setLocalSelectedItems(localSelectedItems.filter(i => !loadedIds.includes(i.id)));
         } else {
-            const newIds = Array.from(new Set([...localSelectedIds, ...filteredItems.map(item => item.id)]));
-            setLocalSelectedIds(newIds);
+            const newItems = [...localSelectedItems];
+            items.forEach(item => {
+                if (!newItems.some(i => i.id === item.id)) {
+                    newItems.push(item);
+                }
+            });
+            setLocalSelectedItems(newItems);
         }
     };
 
-    const toggleItem = (id: number) => {
-        if (localSelectedIds.includes(id)) {
-            setLocalSelectedIds(localSelectedIds.filter((itemId) => itemId !== id));
+    const toggleItem = (item: SelectionItem) => {
+        if (localSelectedItems.some(i => i.id === item.id)) {
+            setLocalSelectedItems(localSelectedItems.filter(i => i.id !== item.id));
         } else {
-            setLocalSelectedIds([...localSelectedIds, id]);
+            setLocalSelectedItems([...localSelectedItems, item]);
         }
     };
 
     const handleConfirm = () => {
-        onSelectionChange(localSelectedIds);
+        onSelectionChange(localSelectedItems);
         onClose();
     };
 
@@ -99,41 +172,50 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
                 <div className="px-4 py-3 bg-white border-b hover:bg-gray-50 transition-colors">
                     <label className="flex items-center justify-between cursor-pointer">
                         <div className="flex flex-col">
-                            <span className="text-sm font-bold text-gray-700">Select All</span>
+                            <span className="text-sm font-bold text-gray-700">Select All <span className="text-blue-500 font-medium text-xs ml-1">(This page participants only)</span></span>
                             <span className="text-[10px] text-gray-500">
-                                {searchQuery ? `Matching: ${filteredItems.length}` : `Total: ${items.length}`}
+                                {debouncedSearch ? `Matches: ${items.length}` : `Total: ${items.length}`}
                             </span>
                         </div>
                         <input
                             type="checkbox"
                             className="w-5 h-5 accent-[#43C17A] cursor-pointer"
-                            checked={filteredItems.length > 0 && filteredItems.every(item => localSelectedIds.includes(item.id))}
+                            checked={items.length > 0 && items.every(item => localSelectedItems.some(i => i.id === item.id))}
                             onChange={handleSelectAll}
                         />
                     </label>
                 </div>
 
-                <div className="p-2 flex-grow overflow-y-auto custom-scrollbar min-h-[200px]">
+                <div className="p-2 flex-1 overflow-y-auto custom-scrollbar min-h-[250px]">
                     <div className="grid grid-cols-1 gap-1">
                         {isLoading ? (
-                            Array.from({ length: 5 }).map((_, i) => <FacultyShimmer key={i} />)
-                        ) : filteredItems.length > 0 ? (
-                            filteredItems.map((item) => (
-                                <label key={item.id} className="flex items-center justify-between p-3 hover:bg-green-50 rounded-lg cursor-pointer transition-colors group">
-                                    <div className="flex items-center gap-3">
-                                        <Avatar src={item.image} alt={item.name} size={40} />
-                                        <span className="text-sm font-medium text-gray-700 group-hover:text-green-700">
-                                            {item.name}
-                                        </span>
-                                    </div>
-                                    <input
-                                        type="checkbox"
-                                        className="w-4 h-4 accent-[#43C17A] cursor-pointer"
-                                        checked={localSelectedIds.includes(item.id)}
-                                        onChange={() => toggleItem(item.id)}
-                                    />
-                                </label>
-                            ))
+                            Array.from({ length: 10 }).map((_, i) => <SelectionModalShimmer key={i} />)
+                        ) : items.length > 0 ? (
+                            <>
+                                {items.map((item, index) => (
+                                    <label 
+                                        key={item.id} 
+                                        ref={index === items.length - 1 ? lastElementRef : null}
+                                        className="flex items-center justify-between p-3 hover:bg-green-50 rounded-lg cursor-pointer transition-colors group"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Avatar src={item.image} alt={item.name} size={40} />
+                                            <span className="text-sm font-medium text-gray-700 group-hover:text-green-700">
+                                                {item.name}
+                                            </span>
+                                        </div>
+                                        <input
+                                            type="checkbox"
+                                            className="w-4 h-4 accent-[#43C17A] cursor-pointer"
+                                            checked={localSelectedItems.some(i => i.id === item.id)}
+                                            onChange={() => toggleItem(item)}
+                                        />
+                                    </label>
+                                ))}
+                                {isFetchingMore && (
+                                    Array.from({ length: 3 }).map((_, i) => <SelectionModalShimmer key={`more-${i}`} />)
+                                )}
+                            </>
                         ) : (
                             <div className="py-10 text-center text-gray-400 text-sm">No results found.</div>
                         )}
@@ -145,7 +227,7 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
                         onClick={handleConfirm}
                         className="w-full bg-[#43C17A] hover:bg-[#36a365] text-white py-2.5 rounded-lg font-bold shadow-md cursor-pointer transition-all active:scale-[0.98]"
                     >
-                        Confirm ({localSelectedIds.length} Selected)
+                        Confirm ({localSelectedItems.length} Selected)
                     </button>
                 </div>
             </div>

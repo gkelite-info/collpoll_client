@@ -7,6 +7,7 @@ import { fetchProjectSubmissionsWithStudents } from "@/lib/helpers/student/stude
 import TableComponent from "@/app/utils/table/table";
 import { Avatar } from "@/app/utils/Avatar";
 import toast from "react-hot-toast";
+import { getSecureAttachmentUrl } from "@/lib/helpers/projects/projectFiles";
 
 export default function StudentProjectSubmissions() {
     const searchParams = useSearchParams();
@@ -34,9 +35,12 @@ export default function StudentProjectSubmissions() {
                     const activeProfile = profiles.find((profile: any) => profile && !profile.is_deleted);
 
                     const rollData = student?.student_pins;
+                    
                     const pinNumber = Array.isArray(rollData)
                         ? rollData[0]?.pinNumber
-                        : rollData?.pinNumber || "N/A";
+                        : rollData?.pinNumber;
+                        
+                    const studentIdDisplay = pinNumber || "N/A";
 
                     return {
                         sno: index + 1,
@@ -50,11 +54,11 @@ export default function StudentProjectSubmissions() {
                             </div>
                         ),
                         name: user?.fullName || "Unknown Student",
-                        rollNo: pinNumber || "N/A",
+                        rollNo: studentIdDisplay,
                         date: item.updatedAt ? format(new Date(item.updatedAt), "dd MMM yyyy") : "N/A",
                         file: (
                             <a
-                                href={item.fileUrl}
+                                href={getSecureAttachmentUrl(item.fileUrl)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-green-600 hover:text-green-800 font-semibold hover:underline"
@@ -67,7 +71,7 @@ export default function StudentProjectSubmissions() {
 
                 setSubmissions(formattedData);
             } catch (err) {
-                toast.error("Failed to load submissions");
+                toast.error("Failed to load submissions", { id: "submissions-error" });
             } finally {
                 setIsLoading(false);
             }
@@ -80,7 +84,7 @@ export default function StudentProjectSubmissions() {
         { title: "S.No", key: "sno" },
         { title: "Photo", key: "photo" },
         { title: "Name", key: "name" },
-        { title: "Roll No", key: "rollNo" },
+        { title: "Roll/Admission No", key: "rollNo" },
         { title: "Submission Date", key: "date" },
         { title: "File", key: "file" },
     ];

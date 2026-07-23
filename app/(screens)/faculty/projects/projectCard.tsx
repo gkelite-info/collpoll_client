@@ -3,6 +3,7 @@
 import { ProjectCardProps } from "@/lib/projectTypes/project";
 import { CaretLeft } from "@phosphor-icons/react";
 import { Avatar } from "@/app/utils/Avatar";
+import { getSecureAttachmentUrl } from "@/lib/helpers/projects/projectFiles";
 
 type ProjectCardListProps = {
   data: ProjectCardProps[];
@@ -141,7 +142,7 @@ export const ProjectCard = ({
                   project.fileUrls.map((url, i) => (
                     <a
                       key={i}
-                      href={url}
+                      href={getSecureAttachmentUrl(url)}
                       target="_blank"
                       rel="noreferrer"
                       className="text-blue-600 hover:text-blue-800 transition-colors truncate hover:underline text-xs sm:text-sm block md:max-w-sm"
@@ -325,7 +326,7 @@ export const ProjectDetailsModal = ({
                 {project.fileUrls.map((url, i) => (
                   <li key={i}>
                     <a
-                      href={url}
+                      href={getSecureAttachmentUrl(url)}
                       target="_blank"
                       rel="noreferrer"
                       className="text-blue-600 break-all hover:underline"

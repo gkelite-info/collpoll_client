@@ -2,10 +2,10 @@
 
 import { supabase } from "@/lib/supabaseClient";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { FaCloudUploadAlt, FaTimes } from "react-icons/fa";
 import { FaAngleLeft, FaPlus } from "react-icons/fa6";
-import SelectionModal from "./modals/SelectionModal";
+import SelectionModal, { SelectionItem } from "./modals/SelectionModal";
 import { fetchFilteredFaculties } from "@/lib/helpers/admin/calender/fetchFacultyCalendar";
 import { fetchStudentsWithProfile } from "@/lib/helpers/faculty/fetchStudents";
 import {
@@ -25,6 +25,7 @@ import { saveProject } from "@/lib/helpers/projects/project";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { FilterDropdown } from "../../admin/assignments/components/filterDropdown";
 
 export type ProjectPayload = {
   title: string;
@@ -99,16 +100,11 @@ const AddProjectForm = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [domainInput, setDomainInput] = useState("");
-  const [allFaculties, setAllFaculties] = useState<
-    { id: number; name: string; image?: string }[]
-  >([]);
   const [isMentorModalOpen, setIsMentorModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [allStudents, setAllStudents] = useState<
-    { id: number; name: string; image?: string }[]
-  >([]);
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
-  const [isStudentLoading, setIsStudentLoading] = useState(true);
+  
+  const [selectedStudents, setSelectedStudents] = useState<SelectionItem[]>([]);
+  const [selectedMentors, setSelectedMentors] = useState<SelectionItem[]>([]);
 
   const [formData, setFormData] = useState<ProjectPayload>({
     title: "",
@@ -208,66 +204,112 @@ const AddProjectForm = ({
     loadSections();
   }, [formData.year, formData.subject, resolvedFacultyId]);
 
-  useEffect(() => {
-    const getFaculties = async () => {
-      if (!resolvedCollegeId) return;
-      setIsLoading(true);
-      try {
-        let eduId: number | undefined = undefined;
-        if (faculty_edu_type) {
-          const { data: eduData } = await supabase
-            .from("college_education")
-            .select("collegeEducationId")
-            .eq("collegeId", resolvedCollegeId)
-            .eq("collegeEducationType", faculty_edu_type)
-            .is("deletedAt", null)
-            .maybeSingle();
-          if (eduData) eduId = eduData.collegeEducationId;
-        }
+  const fetchMentorItems = useCallback(async (searchQuery: string, page: number) => {
+    if (!resolvedCollegeId) return { data: [], hasMore: false };
+    try {
+      let eduId: number | undefined = undefined;
+      let branchId: number | undefined = undefined;
 
-        const { data } = await fetchFilteredFaculties({
-          collegeId: resolvedCollegeId,
-          ...(eduId ? { collegeEducationId: eduId } : {})
-        });
-        setAllFaculties(
-          (data as FacultyOption[]).map((faculty) => ({
-            ...faculty,
-            id: Number(faculty.id),
-          })),
-        );
-      } catch (error) {
-        console.error("Failed to load mentors", error);
-      } finally {
-        setTimeout(() => setIsLoading(false), 100);
+      if (faculty_edu_type) {
+        const { data: eduData } = await supabase
+          .from("college_education")
+          .select("collegeEducationId")
+          .eq("collegeId", resolvedCollegeId)
+          .eq("collegeEducationType", faculty_edu_type)
+          .is("deletedAt", null)
+          .maybeSingle();
+        if (eduData) eduId = eduData.collegeEducationId;
       }
-    };
-    getFaculties();
+
+      if (college_branch) {
+        const { data: branchData } = await supabase
+          .from("college_branch")
+          .select("collegeBranchId")
+          .eq("collegeId", resolvedCollegeId)
+          .eq("collegeBranchCode", college_branch)
+          .is("deletedAt", null)
+          .maybeSingle();
+        if (branchData) branchId = branchData.collegeBranchId;
+      }
+
+      const response = await fetchFilteredFaculties({
+        collegeId: resolvedCollegeId,
+        ...(eduId ? { collegeEducationId: eduId } : {}),
+        ...(branchId ? { collegeBranchId: branchId } : {}),
+        searchQuery,
+        page,
+        limit: 10
+      });
+
+      return {
+        data: response.data.map((faculty: any) => ({
+          id: Number(faculty.id),
+          name: faculty.name,
+          image: faculty.image,
+        })),
+        hasMore: response.hasMore ?? false
+      };
+    } catch (error) {
+      console.error("Failed to load mentors", error);
+      return { data: [], hasMore: false };
+    }
   }, [resolvedCollegeId, faculty_edu_type]);
 
-  useEffect(() => {
-    const getStudents = async () => {
-      const yearId = parseInt(formData.year);
-      const sectionId = parseInt(formData.section);
+  const fetchStudentItems = useCallback(async (searchQuery: string, page: number) => {
+    const yearId = parseInt(formData.year);
+    const sectionId = parseInt(formData.section);
 
-      if (!resolvedCollegeId || isNaN(yearId) || isNaN(sectionId)) {
-        setAllStudents([]);
-        return;
+    if (!resolvedCollegeId || isNaN(yearId) || isNaN(sectionId)) {
+      return { data: [], hasMore: false };
+    }
+
+    try {
+      let eduId: number | undefined = undefined;
+      let branchId: number | undefined = undefined;
+
+      if (faculty_edu_type) {
+        const { data: eduData } = await supabase
+          .from("college_education")
+          .select("collegeEducationId")
+          .eq("collegeId", resolvedCollegeId)
+          .eq("collegeEducationType", faculty_edu_type)
+          .is("deletedAt", null)
+          .maybeSingle();
+        if (eduData) eduId = eduData.collegeEducationId;
       }
 
-      setIsStudentLoading(true);
-      try {
-        const data = await fetchStudentsWithProfile(Number(resolvedCollegeId), {
-          yearId,
-          sectionId,
-        });
-        setAllStudents(data);
-      } catch (error) {
-        console.error("Failed to load students:", error);
-      } finally {
-        setTimeout(() => setIsStudentLoading(false), 150);
+      if (college_branch) {
+        const { data: branchData } = await supabase
+          .from("college_branch")
+          .select("collegeBranchId")
+          .eq("collegeId", resolvedCollegeId)
+          .eq("collegeBranchCode", college_branch)
+          .is("deletedAt", null)
+          .maybeSingle();
+        if (branchData) branchId = branchData.collegeBranchId;
       }
-    };
-    getStudents();
+
+      const response = await fetchStudentsWithProfile(Number(resolvedCollegeId), {
+        yearId,
+        sectionId,
+        ...(eduId ? { educationId: eduId } : {}),
+        ...(branchId ? { branchId: branchId } : {}),
+        searchQuery,
+        page,
+        limit: 10
+      });
+      return {
+        data: response.data.map((student: any) => ({
+          id: Number(student.studentId),
+          name: student.users?.fullName || `Student ${student.studentId}`,
+          image: student.users?.user_profile?.[0]?.profileUrl,
+        })),
+        hasMore: response.hasMore ?? false
+      };
+    } catch (error) {
+      console.error("Failed to load students:", error);
+      return { data: [], hasMore: false };
+    }
   }, [resolvedCollegeId, formData.year, formData.section]);
 
   const handleDrag = (e: React.DragEvent) => {
@@ -480,85 +522,44 @@ const AddProjectForm = ({
 
         {(role === "Faculty" || isAdmin) && (
           <div className="bg-[#43C17A] text-white px-2 py-1 w-fit rounded text-sm font-medium max-md:hidden">
-            {faculty_edu_type === college_branch
-              ? `${college_branch} - ${collegeAcademicYear}`
-              : `${college_branch} - ${collegeAcademicYear}`}
+            {college_branch ? `${college_branch} - ${collegeAcademicYear}` : collegeAcademicYear}
           </div>
         )}
       </div>
 
-      <div className="max-w-5xl mx-auto mb-4 flex flex-col md:flex-row justify-start items-start md:items-center gap-4 md:gap-6">
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-semibold text-[#282828]">Year:</label>
-          <select
-            value={formData.year}
-            onChange={(e) => handleChange("year", e.target.value)}
-            className="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white focus:outline-green-600 text-[#282828] cursor-pointer"
-          >
-            {availableYears.map((y) => (
-              <option key={y.id} value={y.id}>
-                {y.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="mb-6 flex flex-col md:flex-row w-full gap-4 overflow-x-auto custom-scrollbar pb-2">
+        <FilterDropdown
+          label="Year"
+          value={formData.year}
+          options={availableYears.map(y => ({ label: y.label, value: y.id.toString() }))}
+          onChange={(val) => handleChange("year", val)}
+        />
 
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-semibold text-[#282828]">
-            Subject:
-          </label>
-          <select
-            value={formData.subject}
-            onChange={(e) => handleChange("subject", e.target.value)}
-            className="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white focus:outline-green-600 text-[#282828] cursor-pointer min-w-[150px]"
-            disabled={availableSubjects.length === 0}
-          >
-            {availableSubjects.length === 0 ? (
-              <option value="">No subjects found</option>
-            ) : (
-              <>
-                <option value="">Select a Subject</option>
-                {Array.from(
-                  new Map(
-                    availableSubjects.map((sub) => [sub.id, sub]),
-                  ).values(),
-                ).map((sub) => (
-                  <option key={sub.id} value={sub.id.toString()}>
-                    {sub.label}
-                  </option>
-                ))}
-              </>
-            )}
-          </select>
-        </div>
+        <FilterDropdown
+          label="Subject"
+          value={formData.subject}
+          options={[
+            ...Array.from(new Map(availableSubjects.map((sub) => [sub.id, sub])).values()).map(sub => ({
+              label: sub.label,
+              value: sub.id.toString()
+            }))
+          ]}
+          disabled={availableSubjects.length === 0}
+          onChange={(val) => handleChange("subject", val)}
+        />
 
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-semibold text-[#282828]">
-            Section:
-          </label>
-          <select
-            value={formData.section}
-            onChange={(e) => handleChange("section", e.target.value)}
-            className="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white focus:outline-green-600 text-[#282828] cursor-pointer min-w-[120px]"
-            disabled={availableSections.length === 0}
-          >
-            {availableSections.length === 0 ? (
-              <option value="">No sections</option>
-            ) : (
-              <>
-                <option value="">Select Section</option>
-                {availableSections.map((sec) => (
-                  <option
-                    key={sec.facultySectionId}
-                    value={sec.college_sections?.collegeSectionsId.toString()}
-                  >
-                    {sec.college_sections?.collegeSections}
-                  </option>
-                ))}
-              </>
-            )}
-          </select>
-        </div>
+        <FilterDropdown
+          label="Section"
+          value={formData.section}
+          options={[
+            ...availableSections.map(sec => ({
+              label: sec.college_sections?.collegeSections || "",
+              value: sec.college_sections?.collegeSectionsId.toString() || ""
+            }))
+          ]}
+          disabled={availableSections.length === 0}
+          onChange={(val) => handleChange("section", val)}
+        />
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-8 max-w-5xl mx-auto">
@@ -648,26 +649,23 @@ const AddProjectForm = ({
             </label>
             <div className="border rounded-md p-2 flex items-center justify-between border-[#282828] min-h-[46px]">
               <div className="flex items-center gap-2 overflow-x-auto">
-                {formData.studentIds.length > 0 ? (
-                  formData.studentIds.map((sId) => {
-                    const student = allStudents.find((s) => s.id === sId);
-
+                {selectedStudents.length > 0 ? (
+                  selectedStudents.map((student) => {
                     return (
                       <div
-                        key={sId}
+                        key={student.id}
                         className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full border border-green-200 whitespace-nowrap"
                       >
                         <span className="text-xs font-semibold">
-                          {student?.name || `ID: ${sId}`}
+                          {student.name || `ID: ${student.id}`}
                         </span>
                         <button
                           type="button"
-                          onClick={() =>
-                            handleChange(
-                              "studentIds",
-                              formData.studentIds.filter((id) => id !== sId),
-                            )
-                          }
+                          onClick={() => {
+                            const newStudents = selectedStudents.filter((s) => s.id !== student.id);
+                            setSelectedStudents(newStudents);
+                            handleChange("studentIds", newStudents.map(s => s.id));
+                          }}
                           className="hover:text-red-500 font-bold leading-none cursor-pointer"
                         >
                           ×
@@ -698,27 +696,23 @@ const AddProjectForm = ({
             <div className="flex flex-col gap-2">
               <div className="border rounded-md p-2 flex items-center justify-between border-[#282828] min-h-[46px] bg-white">
                 <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar">
-                  {formData.mentorIds.length > 0 ? (
-                    formData.mentorIds.map((mId) => {
-                      const mentor = allFaculties.find(
-                        (f) => Number(f.id) === mId,
-                      );
+                  {selectedMentors.length > 0 ? (
+                    selectedMentors.map((mentor) => {
                       return (
                         <div
-                          key={mId}
+                          key={mentor.id}
                           className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full border border-green-200 whitespace-nowrap"
                         >
                           <span className="text-xs font-semibold">
-                            {mentor?.name || `ID: ${mId}`}
+                            {mentor.name || `ID: ${mentor.id}`}
                           </span>
                           <button
                             type="button"
-                            onClick={() =>
-                              handleChange(
-                                "mentorIds",
-                                formData.mentorIds.filter((id) => id !== mId),
-                              )
-                            }
+                            onClick={() => {
+                              const newMentors = selectedMentors.filter((m) => m.id !== mentor.id);
+                              setSelectedMentors(newMentors);
+                              handleChange("mentorIds", newMentors.map(m => m.id));
+                            }}
                             className="hover:text-red-500 font-bold leading-none cursor-pointer"
                           >
                             ×
@@ -885,24 +879,24 @@ const AddProjectForm = ({
       <SelectionModal
         isOpen={isMentorModalOpen}
         onClose={() => setIsMentorModalOpen(false)}
-        isLoading={isLoading || !resolvedCollegeId}
         title="Assign Mentors"
-        items={allFaculties.map((f) => ({
-          id: Number(f.id),
-          name: f.name,
-          image: f.image,
-        }))}
-        selectedIds={formData.mentorIds}
-        onSelectionChange={(ids) => handleChange("mentorIds", ids)}
+        fetchItems={fetchMentorItems}
+        selectedItems={selectedMentors}
+        onSelectionChange={(items) => {
+          setSelectedMentors(items);
+          handleChange("mentorIds", items.map(i => i.id));
+        }}
       />
       <SelectionModal
         isOpen={isStudentModalOpen}
         onClose={() => setIsStudentModalOpen(false)}
-        isLoading={isStudentLoading || !resolvedCollegeId}
         title="Assign Team Members"
-        items={allStudents}
-        selectedIds={formData.studentIds}
-        onSelectionChange={(ids) => handleChange("studentIds", ids)}
+        fetchItems={fetchStudentItems}
+        selectedItems={selectedStudents}
+        onSelectionChange={(items) => {
+          setSelectedStudents(items);
+          handleChange("studentIds", items.map(i => i.id));
+        }}
       />
     </main>
   );

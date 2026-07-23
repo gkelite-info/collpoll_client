@@ -113,8 +113,12 @@ export async function fetchStudentById(studentId: number) {
 
 export async function fetchStudentsWithProfile(
     collegeId: number,
-    filters?: { branchId?: number; sectionId?: number; yearId?: number }
+    filters?: { branchId?: number; educationId?: number; sectionId?: number; yearId?: number; page?: number; limit?: number; searchQuery?: string }
 ) {
+    const page = filters?.page ?? 1;
+    const limit = filters?.limit ?? 10;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
     let query = supabase
         .from("students")
         .select(`
@@ -122,7 +126,7 @@ export async function fetchStudentsWithProfile(
             userId,
             collegeBranchId,
             status,
-            users (
+            users!inner (
                 fullName,
                 user_profile (
                     profileUrl
@@ -139,6 +143,14 @@ export async function fetchStudentsWithProfile(
         .is("deletedAt", null)
         .eq("student_academic_history.isCurrent", true);
 
+    if (filters?.branchId) {
+        query = query.eq("collegeBranchId", filters.branchId);
+    }
+
+    if (filters?.educationId) {
+        query = query.eq("collegeEducationId", filters.educationId);
+    }
+
     if (filters?.sectionId) {
         query = query.eq("student_academic_history.collegeSectionsId", filters.sectionId);
     }
@@ -147,10 +159,16 @@ export async function fetchStudentsWithProfile(
         query = query.eq("student_academic_history.collegeAcademicYearId", filters.yearId);
     }
 
+    if (filters?.searchQuery) {
+        query = query.ilike("users.fullName", `%${filters.searchQuery}%`);
+    }
+
+    query = query.range(from, to);
+
     const { data: students, error } = await query;
     if (error) throw error;
 
-    return students?.map((s: any) => {
+    const formattedStudents = students?.map((s: any) => {
         const profileData = s.users?.user_profile?.[0] || s.users?.user_profile;
         return {
             id: s.studentId,
@@ -159,4 +177,9 @@ export async function fetchStudentsWithProfile(
             ...s
         };
     }) ?? [];
+
+    return {
+        data: formattedStudents,
+        hasMore: formattedStudents.length === limit
+    };
 }

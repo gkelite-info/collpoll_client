@@ -87,8 +87,9 @@ export default function CourseScheduleCard({
       )}
 
       <div
-        className={`bg-white shadow-md h-[54px] rounded-lg flex items-center ${fullWidth ? "w-full" : "w-[49%]"
-          }`}
+        className={`bg-white shadow-md h-[54px] rounded-lg flex items-center ${
+          fullWidth ? "w-full" : isVisibile ? "w-[49%]" : "w-[150px]"
+        }`}
       >
         <div className="w-[30%] h-full flex flex-col justify-center items-center rounded-l-lg bg-[#16284F]">
           {day && month ? (

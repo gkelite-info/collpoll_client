@@ -1,4 +1,9 @@
-import { CaretDown } from "@phosphor-icons/react";
+"use client";
+
+import { CaretDown, Check } from "@phosphor-icons/react";
+import { useState, useRef, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { createPortal } from "react-dom";
 
 type Option = {
   label: string;
@@ -20,37 +25,125 @@ export const FilterDropdown = ({
   onChange,
   disabled,
 }: FilterDropdownProps) => {
-  return (
-    <div className="flex items-center gap-2">
-      <label className="text-[13px] text-[#525252] font-medium">{label}</label>
+  const [isOpen, setIsOpen] = useState(false);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-      <div className="relative bg-[#43C17A1C] rounded-full pl-3 pr-7 py-1 flex items-center cursor-pointer">
-        <select
-          value={value}
-          disabled={disabled}
-          onChange={(e) => onChange(e.target.value)}
-          className="appearance-none bg-transparent text-[13px] font-semibold text-[#43C17A] focus:outline-none cursor-pointer w-full px-2"
+  const selectedOption = options.find((opt) => String(opt.value) === String(value)) || options[0];
+
+  const updateRect = () => {
+    if (dropdownRef.current) {
+      setRect(dropdownRef.current.getBoundingClientRect());
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Need to check if clicking inside the portal too!
+      // But a simpler way is to just let the click on the option close it.
+      // Wait, clicking outside the portal menu and the button should close it.
+      // We can check if the click target is NOT within the button.
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        // Also check if they clicked inside the portal. The portal has class 'filter-dropdown-menu'
+        const target = event.target as Element;
+        if (!target.closest('.filter-dropdown-menu')) {
+          setIsOpen(false);
+        }
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      updateRect();
+      window.addEventListener('scroll', updateRect, true);
+      window.addEventListener('resize', updateRect);
+      return () => {
+        window.removeEventListener('scroll', updateRect, true);
+        window.removeEventListener('resize', updateRect);
+      }
+    }
+  }, [isOpen]);
+
+  const menu = (
+    <AnimatePresence>
+      {isOpen && !disabled && rect && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          style={{
+            position: "fixed",
+            top: rect.bottom + 6,
+            left: rect.left,
+            width: Math.max(140, rect.width),
+            zIndex: 9999
+          }}
+          className="filter-dropdown-menu bg-white rounded-[12px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 overflow-hidden py-1 max-h-60 overflow-y-auto"
         >
-          {/* {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))} */}
-          {options.map((option, index) => (
-            <option
-              key={`${option.value}-${index}`}
-              value={option.value}
-            >
-              {option.label}
-            </option>
-          ))}
-        </select>
+          {options.map((option, index) => {
+            const isSelected = String(option.value) === String(value);
+            return (
+              <div
+                key={`${option.value}-${index}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`px-3 py-2.5 text-[13px] cursor-pointer transition-colors duration-200 flex items-center justify-between ${
+                  isSelected
+                    ? "bg-[#43C17A15] text-[#43C17A] font-bold"
+                    : "text-[#282828] hover:bg-gray-50 font-medium"
+                }`}
+              >
+                <span className="truncate pr-2">{option.label}</span>
+                {isSelected && <Check size={14} weight="bold" className="shrink-0" />}
+              </div>
+            );
+          })}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
-        <CaretDown
-          size={12}
-          className="absolute right-2.5 text-[#43C17A] pointer-events-none cursor-pointer"
-          weight="bold"
-        />
+  return (
+    <div className="flex items-center gap-2 relative">
+      <label className="text-[13px] text-[#525252] font-medium whitespace-nowrap">{label}</label>
+
+      <div className="relative" ref={dropdownRef}>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!isOpen) updateRect();
+            setIsOpen(!isOpen);
+          }}
+          className={`relative rounded-full pl-4 pr-9 py-1.5 flex items-center justify-between min-w-[120px] transition-all duration-300 ease-in-out cursor-pointer select-none outline-none ${
+            disabled
+              ? "bg-[#43C17A1C] opacity-50 cursor-not-allowed"
+              : isOpen 
+                ? "bg-[#43C17A25] ring-2 ring-[#43C17A]/40" 
+                : "bg-[#43C17A1C] hover:bg-[#43C17A2C]"
+          }`}
+        >
+          <span className="text-[13px] font-semibold text-[#43C17A] truncate">
+            {selectedOption?.label || "Select"}
+          </span>
+          <CaretDown
+            size={12}
+            className={`absolute right-3.5 text-[#43C17A] pointer-events-none transition-transform duration-300 ease-in-out ${
+              isOpen ? "rotate-180" : ""
+            }`}
+            weight="bold"
+          />
+        </button>
+
+        {typeof document !== "undefined" ? createPortal(menu, document.body) : menu}
       </div>
     </div>
   );
