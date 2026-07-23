@@ -27,6 +27,8 @@ import { SubjectDetailsSkeleton } from "../../shimmer/subjectDetailsSkeleton";
 import AddNewClassModal from "../../modal/addNewClassModal";
 import AddWeightageModal from "@/app/(screens)/faculty/academics/components/weightageModal";
 import { TopicPdfModal } from "@/app/(screens)/faculty/academics/modal/Topicpdfmodal";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
 const colorMap = {
   purple: {
@@ -65,6 +67,7 @@ type FilterBannerProps = {
   onAddUnit: () => void;
   onAddWeightage: () => void;
   onManageWeightage: () => void;
+  isSchool?: boolean;
 };
 
 function FilterBanner({
@@ -74,6 +77,7 @@ function FilterBanner({
   onAddUnit,
   onAddWeightage,
   onManageWeightage,
+  isSchool,
 }: FilterBannerProps) {
   return (
     <div className="bg-blue-00 mb-4 flex flex-col gap-4 w-full">
@@ -86,12 +90,14 @@ function FilterBanner({
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <p className="text-[#525252] text-sm">Semester :</p>
-            <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
-              Sem {semester}
-            </p>
-          </div>
+          {!isSchool && (
+            <div className="flex items-center gap-2">
+              <p className="text-[#525252] text-sm">Semester :</p>
+              <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
+                Sem {semester}
+              </p>
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             <p className="text-[#525252] text-sm">Year :</p>
@@ -121,45 +127,7 @@ function FilterBanner({
   );
 }
 
-function ConfirmDeleteModal({
-  isOpen,
-  onClose,
-  onConfirm,
-  title,
-  message,
-  isDeleting,
-}: any) {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-3">
-        <div className="flex items-center gap-3">
-          <div className="bg-red-100 text-red-600 p-2.5 rounded-full">
-            <Trash size={22} weight="fill" />
-          </div>
-          <h3 className="text-lg font-bold text-gray-800">{title}</h3>
-        </div>
-        <p className="text-sm text-gray-600 mt-1 leading-relaxed">{message}</p>
-        <div className="flex gap-3 justify-end mt-4">
-          <button
-            onClick={onClose}
-            disabled={isDeleting}
-            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={isDeleting}
-            className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2"
-          >
-            {isDeleting ? "Deleting..." : "Delete"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+
 
 function UnitCard({
   unit,
@@ -384,11 +352,12 @@ function UnitCard({
       </div>
 
       <ConfirmDeleteModal
-        isOpen={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        open={!!deleteTarget}
+        onCancel={() => setDeleteTarget(null)}
         isDeleting={isSaving}
-        title={deleteTarget?.type === "unit" ? "Delete Unit" : "Delete Topic"}
-        message={
+        title="Delete"
+        name={deleteTarget?.type === "unit" ? "Unit" : "Topic"}
+        customDescription={
           deleteTarget?.type === "unit"
             ? "Are you sure you want to permanently delete this unit and all its topics?"
             : "Are you sure you want to permanently delete this topic?"
@@ -545,6 +514,8 @@ export default function ClientSubjectDetails({
     init();
   };
 
+  const isSchool = isSchoolEducation(context?.educationType);
+
   if (loading) return <SubjectDetailsSkeleton />;
   if (!headerInfo)
     return <div className="p-10 text-center">Subject not found</div>;
@@ -561,9 +532,11 @@ export default function ClientSubjectDetails({
               {headerInfo.subjectName}
             </h1>
           </div>
-          <p className="text-[#525252] text-sm ml-5">
-            Credits: {headerInfo.credits}
-          </p>
+          {!isSchool && (
+            <p className="text-[#525252] text-sm ml-5">
+              Credits: {headerInfo.credits || "N/A"}
+            </p>
+          )}
         </div>
         <div className="flex justify-end w-[32%] items-center gap-4">
           <CourseScheduleCard style="w-[320px]" isVisibile={false} />
@@ -573,6 +546,7 @@ export default function ClientSubjectDetails({
         subjectName={headerInfo.subjectName}
         semester={headerInfo.semester}
         year={headerInfo.year}
+        isSchool={isSchool}
         onAddUnit={() => setIsModalOpen(true)}
         onManageWeightage={() => setIsWeightageModalOpen(true)}
         onAddWeightage={() => setIsWeightageModalOpen(true)}
@@ -613,7 +587,16 @@ export default function ClientSubjectDetails({
         <AddWeightageModal
           isOpen={isWeightageModalOpen}
           onClose={() => setIsWeightageModalOpen(false)}
-          facultyCtx={facultyCtx}
+          facultyCtx={{
+            ...facultyCtx,
+            faculty_edu_type: context?.educationType,
+            collegeEducationId: context?.educationId,
+            collegeBranchId: context?.branchId ?? null,
+            academicYearIds: context?.academicYearId ? [context.academicYearId] : [],
+            subjectIds: [subjectId],
+            sectionIds: [sectionId],
+            sectionName: context?.sectionName
+          }}
           role={role}
           initialSubjectId={subjectId}
           initialSectionId={sectionId}

@@ -1,15 +1,70 @@
 "use client";
-import { useUser } from "@/app/utils/context/UserContext";
 import { FacultySectionRow, fetchFacultySections } from "@/lib/helpers/faculty/facultysectionsAPI";
 import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
 import { fetchExistingFacultyWeightageConfig, fetchFacultyWeightageConfigs, saveFacultyWeightageConfig } from "@/lib/helpers/subjectWeightage/weightageConfig";
 import { fetchFacultyWeightageItems, saveFacultyWeightageItem } from "@/lib/helpers/subjectWeightage/weightageItems";
 import { CardProps } from "@/lib/types/faculty";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { FaPlusCircle } from "react-icons/fa";
 import { FaTrash, FaCircleCheck, FaCircleExclamation } from "react-icons/fa6";
 import { FaChevronDown } from "react-icons/fa6";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+
+function CustomSelect({ value, onChange, options, placeholder, disabled = false }: any) {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const selectedOption = options.find((opt: any) => opt.value === value);
+
+    return (
+        <div ref={containerRef} className={`relative w-full ${disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}>
+            <div
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                className={`w-full p-3 bg-white text-[#282828] border transition-all flex justify-between items-center h-[52px] select-none ${
+                    isOpen ? "rounded-lg ring-1 ring-[#43C17A] border-[#43C17A]" : "rounded-lg border-gray-200 hover:border-[#43C17A]"
+                }`}
+            >
+                <span className={`truncate ${selectedOption ? "text-[#282828]" : "text-gray-400"}`}>
+                    {selectedOption ? selectedOption.label : placeholder}
+                </span>
+                <FaChevronDown className={`text-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180 text-[#43C17A]" : ""}`} />
+            </div>
+            
+            {isOpen && !disabled && (
+                <div className="absolute z-[100] mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar left-0 top-full animate-in fade-in slide-in-from-top-1 duration-150">
+                    {options.length === 0 ? (
+                        <div className="p-3 text-gray-400 text-sm text-center italic">No options available</div>
+                    ) : (
+                        options.map((opt: any) => (
+                            <div
+                                key={opt.value}
+                                onClick={() => {
+                                    onChange(opt.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`p-3 text-sm transition-colors cursor-pointer border-b border-gray-50 last:border-b-0 ${value === opt.value ? "bg-[#e8f6ef] font-semibold text-[#43C17A]" : "text-gray-700 hover:bg-gray-50"}`}
+                            >
+                                {opt.label}
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 
 interface AddWeightageModalProps {
     isOpen: boolean;
@@ -36,13 +91,53 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
         setSelectedFacultyId(id);
     };
 
-    const availableSections = useMemo(() => {
-        if (!selectedSubject || facultySections.length === 0) return [];
+    const isSchool = isSchoolEducation(facultyCtx?.faculty_edu_type);
 
-        return facultySections.filter(
-            (fs) => fs.collegeSubjectId === selectedSubject.collegeSubjectId
+    const availableSections = useMemo(() => {
+        if (!selectedSubject || facultySections.length === 0) {
+            if (role !== "Faculty" && initialSectionId && selectedSubject) {
+                return [{
+                    collegeSectionsId: initialSectionId,
+                    college_sections: {
+                        collegeSectionsId: initialSectionId,
+                        collegeSections: facultyCtx?.sectionName || (isSchool ? `Select Section` : `Section ${initialSectionId}`)
+                    },
+                    collegeSubjectId: selectedSubject.collegeSubjectId,
+                    collegeAcademicYearId: selectedSubject.collegeAcademicYearId
+                }] as unknown as FacultySectionRow[];
+            }
+            return [];
+        }
+
+        const filtered = facultySections.filter(
+            (fs) => isSchool
+                ? fs.collegeAcademicYearId === selectedSubject.collegeAcademicYearId
+                : fs.collegeSubjectId === selectedSubject.collegeSubjectId
         );
-    }, [selectedSubject, facultySections]);
+
+        const uniqueSections = new Map<number, FacultySectionRow>();
+        filtered.forEach(fs => {
+            if (!uniqueSections.has(fs.collegeSectionsId)) {
+                uniqueSections.set(fs.collegeSectionsId, fs);
+            }
+        });
+
+        const result = Array.from(uniqueSections.values());
+
+        if (result.length === 0 && role !== "Faculty" && initialSectionId) {
+            result.push({
+                collegeSectionsId: initialSectionId,
+                college_sections: {
+                    collegeSectionsId: initialSectionId,
+                    collegeSections: facultyCtx?.sectionName || (isSchool ? `Select Section` : `Section ${initialSectionId}`)
+                },
+                collegeSubjectId: selectedSubject.collegeSubjectId,
+                collegeAcademicYearId: selectedSubject.collegeAcademicYearId
+            } as unknown as FacultySectionRow);
+        }
+
+        return result;
+    }, [selectedSubject, facultySections, isSchool, role, initialSectionId]);
 
     useEffect(() => {
         if (!loading && subjects.length > 0) {
@@ -58,11 +153,17 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
 
     useEffect(() => {
         if (availableSections.length > 0) {
-            const targetSec = initialSectionId
-                ? availableSections.find(as => as.collegeSectionsId === initialSectionId)
-                : availableSections[0];
-
-            setSelectedSectionId(targetSec ? targetSec.collegeSectionsId : availableSections[0].collegeSectionsId);
+            setSelectedSectionId(prev => {
+                if (prev && availableSections.some(as => as.collegeSectionsId === prev)) {
+                    return prev;
+                }
+                const targetSec = initialSectionId
+                    ? availableSections.find(as => as.collegeSectionsId === initialSectionId)
+                    : availableSections[0];
+                return targetSec ? targetSec.collegeSectionsId : availableSections[0].collegeSectionsId;
+            });
+        } else {
+            setSelectedSectionId(null);
         }
     }, [availableSections, initialSectionId]);
 
@@ -126,7 +227,7 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
             }
         }
         loadInitialData();
-    }, [isOpen, facultyCtx, preselectedSubject]);
+    }, [isOpen, facultyCtx, preselectedSubject, selectedFacultyId, initialSubjectId, initialSectionId]);
 
     useEffect(() => {
         async function updateSections() {
@@ -135,14 +236,8 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
 
             if (targetFacultyId && targetSubjectId) {
                 try {
-                    const sectionsData = await fetchFacultySections(targetFacultyId, targetSubjectId);
+                    const sectionsData = await fetchFacultySections(targetFacultyId, isSchool ? undefined : targetSubjectId);
                     setFacultySections(sectionsData);
-
-                    if (sectionsData.length > 0) {
-                        setSelectedSectionId(sectionsData[0].collegeSectionsId);
-                    } else {
-                        setSelectedSectionId(null);
-                    }
                 } catch (err) {
                     toast.error("Failed to refresh sections");
                 }
@@ -150,7 +245,7 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
         }
 
         updateSections();
-    }, [selectedFacultyId, selectedSubject?.collegeSubjectId]);
+    }, [selectedFacultyId, selectedSubject?.collegeSubjectId, facultyCtx, isSchool]);
 
 
     useEffect(() => {
@@ -276,10 +371,10 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
                 facultyWeightageConfigId: configId,
                 collegeId: facultyCtx.collegeId,
                 collegeEducationId: facultyCtx.collegeEducationId,
-                collegeBranchId: Number(selectedSubject?.collegeBranchId || facultyCtx?.collegeBranchId),
+                collegeBranchId: selectedSubject?.collegeBranchId ?? facultyCtx?.collegeBranchId ?? null,
                 collegeSubjectId: selectedSubject.collegeSubjectId,
                 collegeSectionsId: selectedSectionId,
-                collegeSemesterId: selectedSubject.collegeSemesterId,
+                collegeSemesterId: selectedSubject.collegeSemesterId ?? null,
                 totalPercentage: totalPercentage,
             }, {
                 facultyId: selectedFacultyId || facultyCtx?.facultyId,
@@ -356,19 +451,15 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
 
                         <div className={role === "Faculty" ? "col-span-2" : "col-span-1"}>
                             <label className="block text-base font-semibold text-[#282828] mb-2.5">Subject</label>
-                            <div className="relative">
-                                <select
-                                    onChange={handleSubjectChange}
-                                    value={selectedSubject?.collegeSubjectId || ""}
-                                    className="w-full p-3 bg-white text-[#282828] border border-gray-200 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-[#43C17A] cursor-pointer"
-                                >
-                                    {loading ? <option>Loading subjects...</option> :
-                                        subjects.map(s => (
-                                            <option key={s.collegeSubjectId} value={s.collegeSubjectId}>{s.subjectTitle}</option>
-                                        ))}
-                                </select>
-                                <FaChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                            </div>
+                            <CustomSelect
+                                value={selectedSubject?.collegeSubjectId || ""}
+                                onChange={(val: number) => {
+                                    const sub = subjects.find(s => s.collegeSubjectId === val);
+                                    if (sub) setSelectedSubject(sub);
+                                }}
+                                options={loading ? [] : subjects.map(s => ({ value: s.collegeSubjectId, label: s.subjectTitle }))}
+                                placeholder={loading ? "Loading subjects..." : "Select Subject"}
+                            />
                         </div>
 
                         {role !== "Faculty" && (
@@ -376,33 +467,28 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
                                 <label className="block text-base font-semibold text-[#282828] mb-2.5">
                                     Select Faculty
                                 </label>
-                                <div className="relative">
-                                    <select
-                                        value={selectedFacultyId || ""}
-                                        onChange={(e) => setSelectedFacultyId(Number(e.target.value))}
-                                        className="w-full p-3 bg-white text-[#282828] border border-gray-200 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-[#43C17A] cursor-pointer"
-                                    >
-                                        <option value="">Select Faculty</option>
-                                        {Array.from(new Map(cardFaculties.map(f => [f.facultyId, f])).values()).map((f) => (
-                                            <option key={f.facultyId} value={f.facultyId}>
-                                                {f.fullName}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <FaChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                                </div>
+                                <CustomSelect
+                                    value={selectedFacultyId || ""}
+                                    onChange={(val: number) => setSelectedFacultyId(val)}
+                                    options={Array.from(new Map(cardFaculties.map(f => [f.facultyId, f])).values()).map(f => ({
+                                        value: f.facultyId,
+                                        label: f.fullName
+                                    }))}
+                                    placeholder="Select Faculty"
+                                />
                             </div>
                         )}
 
-
-                        <div>
-                            <label className="block text-base font-semibold text-[#282828] mb-2.5">
-                                {facultyCtx?.faculty_edu_type === "Inter" ? "Group" : "Branch"}
-                            </label>
-                            <div className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 font-medium">
-                                {selectedSubject?.branchCode || "---"}
+                        {!isSchool && (
+                            <div>
+                                <label className="block text-base font-semibold text-[#282828] mb-2.5">
+                                    {facultyCtx?.faculty_edu_type === "Inter" ? "Group" : "Branch"}
+                                </label>
+                                <div className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 font-medium">
+                                    {selectedSubject?.branchCode || "---"}
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         <div>
                             <label className="block text-base font-semibold text-[#282828] mb-2.5">Year</label>
@@ -413,33 +499,28 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
 
                         <div>
                             <label className="block text-base font-semibold text-[#282828] mb-2.5">Section <span className="text-red-500">*</span></label>
-                            <div className="relative">
-                                <select
-                                    value={selectedSectionId || ""}
-                                    onChange={(e) => setSelectedSectionId(Number(e.target.value))}
-                                    className="w-full p-3.5 bg-white text-[#282828] border border-gray-200 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-[#43C17A] lg:ml-[2px] cursor-pointer"
-                                    disabled={availableSections.length === 0}
-                                >
-                                    {availableSections.length === 0 ? (
-                                        <option>No Sections Found</option>
-                                    ) : (
-                                        availableSections.map((fs) => (
-                                            <option key={fs.collegeSectionsId} value={fs.collegeSectionsId}>
-                                                {fs.college_sections?.collegeSections || `Section ${fs.collegeSectionsId}`}
-                                            </option>
-                                        ))
-                                    )}
-                                </select>
-                                <FaChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                            </div>
+                            <CustomSelect
+                                value={selectedSectionId || ""}
+                                onChange={(val: number) => setSelectedSectionId(val)}
+                                options={availableSections.map(fs => ({
+                                    value: fs.collegeSectionsId,
+                                    label: fs.college_sections?.collegeSections 
+                                        ? (fs.college_sections.collegeSections.match(/^\d+$/) && !isSchool ? `Section ${fs.college_sections.collegeSections}` : fs.college_sections.collegeSections)
+                                        : (isSchool ? 'Select Section' : `Section ${fs.collegeSectionsId}`)
+                                }))}
+                                placeholder="Select Section"
+                                disabled={availableSections.length === 0}
+                            />
                         </div>
 
-                        <div>
-                            <label className="block text-base font-semibold text-[#282828] mb-2.5">Semester</label>
-                            <div className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 font-medium">
-                                {selectedSubject?.semester || "---"}
+                        {!isSchool && (
+                            <div>
+                                <label className="block text-base font-semibold text-[#282828] mb-2.5">Semester</label>
+                                <div className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 font-medium">
+                                    {selectedSubject?.semester || "---"}
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     <div>

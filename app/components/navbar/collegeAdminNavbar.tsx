@@ -148,7 +148,7 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
         if (item.path === basePath) {
           return pathname === basePath;
         }
-        return pathname.startsWith(item.path);
+        return pathname.startsWith(`${item.path}/`);
       });
     }
     if (current && !contextLoading) setActive(current.label);

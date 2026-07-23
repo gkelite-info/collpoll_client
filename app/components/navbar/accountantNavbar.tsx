@@ -145,9 +145,9 @@ export default function AccountantNavbar({ onClose }: AccountantNavbarProps) {
   const isActivePath = (item: NavItem) => {
     if (item.path === base) return pathname === base || pathname.startsWith("/profile");
     if (item.activePaths) {
-      return item.activePaths.some((activePath) => pathname.startsWith(activePath));
+      return item.activePaths.some((activePath) => pathname === activePath || pathname.startsWith(`${activePath}/`));
     }
-    return pathname.startsWith(item.path);
+    return pathname === item.path || pathname.startsWith(`${item.path}/`);
   };
 
   const handleLogout = async () => {

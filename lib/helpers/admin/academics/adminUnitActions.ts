@@ -36,6 +36,7 @@ export type SubjectContext = {
   subjectName: string;
   academicYear: string;
   semester: string;
+  sectionName?: string;
 };
 
 const colorByUnitNumber = (n: number): UnitColor => {
@@ -117,6 +118,14 @@ export async function getAdminSubjectDetails(
     // @ts-ignore
     const facultyName = assignment?.faculty?.fullName ?? "Not Assigned";
 
+    const { data: sectionData } = await supabase
+      .from("college_sections")
+      .select("collegeSections")
+      .eq("collegeSectionsId", sectionId)
+      .single();
+    
+    const sectionName = sectionData?.collegeSections ?? `Section ${sectionId}`;
+
     const context: SubjectContext = {
       collegeId,
       educationId: subject.collegeEducationId,
@@ -132,6 +141,7 @@ export async function getAdminSubjectDetails(
       subjectName: subject.subjectName,
       academicYear: yearName,
       semester: semesterName,
+      sectionName: sectionName,
     };
 
     const { data: units, error: unitError } = await supabase

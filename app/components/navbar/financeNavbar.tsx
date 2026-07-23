@@ -103,7 +103,7 @@ export default function FinanceNavbar() {
 
   const activeLabel = pathname.startsWith("/finance/finance-analytics")
     ? t("Finance / Analytics")
-    : (items.find((item) => item.path === pathname)?.label ?? t("Home"));
+    : ([...items].sort((a, b) => b.path.length - a.path.length).find((item) => pathname === item.path || pathname.startsWith(`${item.path}/`))?.label ?? t("Home"));
 
   return (
     <div className="bg-[#43C17A] flex flex-col items-center h-full w-full rounded-tr-3xl shadow-md">

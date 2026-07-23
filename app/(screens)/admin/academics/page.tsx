@@ -1,7 +1,9 @@
 "use client";
 
 import { Suspense, useEffect, useState, useRef } from "react";
-import { MagnifyingGlass, CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
 import toast from "react-hot-toast";
@@ -14,6 +16,7 @@ import { FilterDropdown } from "./components/filterDropdown";
 import { AcademicSectionsSkeleton } from "./shimmer/academicSectionsSkeleton";
 import { SubjectWiseAttendance } from "./components/subjectWiseAttendance";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { Loader } from "../../(student)/calendar/right/timetable";
 
 const COLOR_PALETTE = [
   { text: "#FF767D", color: "#FFB4B8", bgColor: "#FFF5F5" },
@@ -72,13 +75,12 @@ const AcademicPage = () => {
   const [loading, setLoading] = useState(true);
   const [totalRecords, setTotalRecords] = useState(0);
   const [mounted, setMounted] = useState(false);
-  const { collegeEducationId, collegeEducationType } = useAdmin();
+  const { collegeId: adminCollegeId, collegeEducationId, collegeEducationType } = useAdmin();
 
-  const cardsPerPage = 15;
+  const cardsPerPage = 12;
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
   const router = useRouter();
-  const totalPages = Math.ceil(totalRecords / cardsPerPage);
 
   useEffect(() => {
     setMounted(true);
@@ -112,8 +114,11 @@ const AcademicPage = () => {
     selectYear,
     setSection,
     setSubject,
-  } = useAcademicFilters(userId ?? undefined);
+  } = useAcademicFilters({ userId: userId ?? undefined, collegeId: adminCollegeId });
 
+  const isSchool = isSchoolEducation(
+    education?.collegeEducationType || collegeEducationType
+  );
   const apiFilters = {
     educationId: education?.collegeEducationId ?? null,
     branchId: branch?.collegeBranchId ?? null,
@@ -122,19 +127,16 @@ const AcademicPage = () => {
     subjectId: subject?.collegeSubjectId ?? null,
   };
 
+  const apiFiltersStr = JSON.stringify(apiFilters);
+
   useEffect(() => {
-    if (!userId || !collegeEducationId) return;
-    loadCardsOnly();
-  }, [
-    userId,
-    currentPage,
-    education,
-    branch,
-    year,
-    section,
-    subject,
-    debouncedSearch,
-  ]);
+    if (!adminCollegeId) return;
+    const timer = setTimeout(() => {
+      loadCardsOnly();
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [adminCollegeId, currentPage, debouncedSearch, apiFiltersStr]);
 
   const isEducationInitialized = useRef(false);
 
@@ -150,16 +152,16 @@ const AcademicPage = () => {
   }, [collegeEducationId, selectEducation, collegeEducationType]);
 
   const loadCardsOnly = async () => {
+    if (!adminCollegeId) return;
     try {
       setLoading(true);
-      const { collegeId } = await fetchAdminContext(userId!);
 
       const { data, totalCount } = await getAdminAcademicsCards(
-        collegeId,
+        adminCollegeId,
         currentPage,
         cardsPerPage,
         debouncedSearch,
-        apiFilters,
+        JSON.parse(apiFiltersStr),
       );
 
       setCards(mapAcademicCards(data));
@@ -191,7 +193,9 @@ const AcademicPage = () => {
             <h1 className="text-xl font-bold text-[#282828]">Academics</h1>
           </div>
           <p className="text-[#282828] mt-1 text-sm">
-            Track syllabus progress and manage notes by semester
+            {isSchool
+              ? "Track syllabus progress and manage notes by class"
+              : "Track syllabus progress and manage notes by semester"}
           </p>
         </div>
         <div className="w-[30%]">
@@ -240,49 +244,40 @@ const AcademicPage = () => {
             }
           />
 
-          <FilterDropdown
-            label={education?.collegeEducationType === "Inter" ? "Group" : "Branch"}
-            value={branch?.collegeBranchId?.toString() ?? "All"}
-            placeholder="All"
-            options={["All", ...branches.map((b) => b.collegeBranchId.toString())]}
-            // onChange={(val) => {
-            //   if (val === "All") {
-            //     if (education) selectEducation(education);
-            //     return;
-            //   }
-            //   const br = branches.find((b) => b.collegeBranchId === +val);
-            //   br && selectBranch(br);
-            // }}
-            onChange={(val) => {
-              if (val === "All") {
-                selectBranch(null);
-                selectYear(null);
-                setSection(null);
-                setSubject(null);
-
-                return;
+          {!isSchool && (
+            <FilterDropdown
+              label={education?.collegeEducationType === "Inter" ? "Group" : "Branch"}
+              value={branch?.collegeBranchId?.toString() ?? "All"}
+              disabled={!education}
+              placeholder={education?.collegeEducationType === "Inter" ? "Select Group" : "Select Branch"}
+              options={["All", ...branches.map((b) => b.collegeBranchId.toString())]}
+              onChange={(val) => {
+                if (val === "All") {
+                  selectBranch(null);
+                  selectYear(null);
+                  setSection(null);
+                  setSubject(null);
+                  return;
+                }
+                const br = branches.find((b) => b.collegeBranchId === +val);
+                if (br) {
+                  selectBranch(br);
+                  selectYear(null);
+                  setSection(null);
+                  setSubject(null);
+                }
+              }}
+              displayModifier={(val) =>
+                val === "All" ? "All" : (branches.find((b) => b.collegeBranchId.toString() === val)?.collegeBranchCode ?? val)
               }
-
-              const br = branches.find((b) => b.collegeBranchId === +val);
-              if (br) {
-                selectBranch(br);
-
-                // Optional but recommended
-                selectYear(null);
-                setSection(null);
-                setSubject(null);
-              }
-            }}
-            displayModifier={(val) =>
-              val === "All" ? "All" : (branches.find((b) => b.collegeBranchId.toString() === val)?.collegeBranchCode ?? val)
-            }
-          />
+            />
+          )}
 
           <FilterDropdown
             label="Year"
             value={year?.collegeAcademicYearId?.toString() ?? "All"}
-            placeholder="All"
-            disabled={false}
+            placeholder="Select Year"
+            disabled={isSchool ? !education : !branch}
             options={["All", ...[...years].sort((a, b) => (a.collegeAcademicYear || "").localeCompare(b.collegeAcademicYear || "")).map((y) => y.collegeAcademicYearId.toString())]}
             onChange={(val) => {
               if (val === "All") {
@@ -303,8 +298,8 @@ const AcademicPage = () => {
           <FilterDropdown
             label="Section"
             value={section?.collegeSectionsId?.toString() ?? "All"}
-            placeholder="All"
-            disabled={false}
+            placeholder="Select Section"
+            disabled={!year}
             options={["All", ...sections.map((s) => s.collegeSectionsId.toString())]}
             onChange={(val) => {
               if (val === "All") {
@@ -323,8 +318,8 @@ const AcademicPage = () => {
           <FilterDropdown
             label="Subject"
             value={subject?.collegeSubjectId?.toString() ?? "All"}
-            placeholder="All"
-            disabled={false}
+            placeholder="Select Subject"
+            disabled={!section}
             options={["All", ...subjects.map((s) => s.collegeSubjectId.toString())]}
             onChange={(val) => {
               if (val === "All") {
@@ -341,7 +336,7 @@ const AcademicPage = () => {
         </div>
       </div>
 
-      <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col">
+      <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col justify-between">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-[1200px] mx-auto">
           {loading ? (
             [...Array(6)].map((_, i) => <AcademicSectionsSkeleton key={i} />)
@@ -354,11 +349,14 @@ const AcademicPage = () => {
           ) : (
             cards.map((dept) => {
               const style = getDynamicBranchStyle(dept.branchCode);
+              const cardTitle = isSchool
+                ? `Section - ${dept.section}`
+                : `${dept.branchCode} - ${dept.section}`;
               return (
                 <FacultyAcademicCard
                   key={dept.id}
                   id={dept.id}
-                  name={`${dept.branchCode} - ${dept.section}`}
+                  name={cardTitle}
                   year={dept.year}
                   totalStudents={dept.totalStudents}
                   faculties={dept.faculties}
@@ -374,40 +372,16 @@ const AcademicPage = () => {
           )}
         </div>
 
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-8 mb-4">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1 || loading}
-              className="p-2 rounded-lg border cursor-pointer bg-white disabled:opacity-30 hover:bg-gray-50 transition-all"
-            >
-              <CaretLeft size={18} weight="bold" color="black" />
-            </button>
-
-            <div className="flex gap-1">
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${currentPage === i + 1
-                    ? "bg-[#16284F] text-white"
-                    : "bg-white text-gray-600 border hover:border-gray-300"
-                    }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages || loading}
-              className="p-2 rounded-lg border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all"
-            >
-              <CaretRight size={18} weight="bold" color="black" />
-            </button>
-          </div>
-        )}
+        <div className="flex justify-center items-center mt-2 mb-2 w-full max-w-[1200px] mx-auto rounded-lg shadow-sm">
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalRecords}
+            itemsPerPage={cardsPerPage}
+            onPageChange={setCurrentPage}
+            alwaysShow={true}
+            roundedBottom="rounded-lg"
+          />
+        </div>
       </div>
     </div>
   );
@@ -415,7 +389,7 @@ const AcademicPage = () => {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="w-full h-full py-10 text-center"><Loader/></div>}>
       <AcademicPage />
     </Suspense>
   );

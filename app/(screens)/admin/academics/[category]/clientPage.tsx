@@ -5,6 +5,8 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { getAdminSubjectsList } from "@/lib/helpers/admin/academics/getAdminSubjectsList";
 import { CaretLeft } from "@phosphor-icons/react";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import SubjectCard, { CardProps } from "../components/subjectCards";
@@ -20,6 +22,8 @@ export function ClientAcademicsWrapper({
 }) {
   const router = useRouter();
   const { userId } = useUser();
+  const { collegeEducationType } = useAdmin();
+  const isSchool = isSchoolEducation(collegeEducationType);
 
   const [loading, setLoading] = useState(true);
   const [subjectData, setSubjectData] = useState<CardProps[]>([]);
@@ -88,7 +92,7 @@ export function ClientAcademicsWrapper({
             ))}
           </div>
         ) : subjectData.length > 0 ? (
-          <SubjectCard subjectProps={subjectData} />
+          <SubjectCard subjectProps={subjectData} isSchool={isSchool} />
         ) : (
           <div className="flex flex-col items-center justify-center py-20">
             <p className="text-gray-500 text-lg">

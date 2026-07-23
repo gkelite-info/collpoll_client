@@ -100,7 +100,7 @@ export default function PlacementNavbar() {
 
   const isActivePath = (itemPath: string) => {
     if (itemPath === BASE) return pathname === BASE;
-    return pathname.startsWith(itemPath);
+    return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
   };
 
   return (

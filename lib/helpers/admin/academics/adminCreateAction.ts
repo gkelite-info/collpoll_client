@@ -98,9 +98,9 @@ export async function upsertAdminSubjectUnit(payload: UpsertUnitPayload) {
   if (unitError) {
     console.error("❌ Unit upsert failed:", unitError);
     if (unitError.code === "23505") {
-      throw new Error("Unit number already exists for this subject");
+      throw new Error("This unit or unit number already exists for this subject.");
     }
-    throw unitError;
+    throw new Error(unitError.message || "Failed to save unit.");
   }
 
   const collegeSubjectUnitId = unit.collegeSubjectUnitId;
@@ -125,7 +125,11 @@ export async function upsertAdminSubjectUnit(payload: UpsertUnitPayload) {
         onConflict: "collegeSubjectUnitId,topicTitle",
       });
 
-    if (topicError) throw topicError;
+    if (topicError) {
+      console.error("❌ Topic upsert failed:", topicError);
+      await supabase.from("college_subject_units").delete().eq("collegeSubjectUnitId", collegeSubjectUnitId);
+      throw new Error(topicError.message || "Failed to save topics.");
+    }
   }
 
   const { data: savedTopics, error: savedTopicsError } = await supabase
@@ -147,7 +151,8 @@ export async function upsertAdminSubjectUnit(payload: UpsertUnitPayload) {
     .order("displayOrder", { ascending: true });
 
   if (savedTopicsError) {
-    throw savedTopicsError;
+    await supabase.from("college_subject_units").delete().eq("collegeSubjectUnitId", collegeSubjectUnitId);
+    throw new Error(savedTopicsError.message || "Failed to retrieve saved topics.");
   }
 
   return {
@@ -160,9 +165,9 @@ export async function upsertAdminSubjectUnit(payload: UpsertUnitPayload) {
 export async function saveAdminAcademicUnit(params: {
   collegeId: number;
   collegeEducationId: number;
-  collegeBranchId: number;
+  collegeBranchId: number | null;
   collegeAcademicYearId: number;
-  collegeSemesterId: number;
+  collegeSemesterId: number | null;
   collegeSubjectId: number;
   collegeSectionId: number;
   collegeSubjectUnitId: number;
@@ -172,18 +177,22 @@ export async function saveAdminAcademicUnit(params: {
   const { error } = await supabase.from("academics").insert({
     collegeId: params.collegeId,
     collegeEducationId: params.collegeEducationId,
-    collegeBranchId: params.collegeBranchId,
+    collegeBranchId: params.collegeBranchId, // Will be null for schools, DB will support it
     collegeAcademicYearId: params.collegeAcademicYearId,
-    collegeSemesterId: params.collegeSemesterId,
+    collegeSemesterId: params.collegeSemesterId, // Will be null for schools, DB will support it
     collegeSubjectId: params.collegeSubjectId,
     collegeSectionsId: params.collegeSectionId,
     collegeSubjectUnitId: params.collegeSubjectUnitId,
-    createdBy: params.facultyId, // ✅ Legit Faculty ID
-    isAdmin: params.adminId, // ✅ Audit Trail
+    createdBy: params.facultyId,
+    isAdmin: params.adminId,
     isActive: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
 
-  if (error) throw error;
+  if (error) {
+    console.error("❌ saveAdminAcademicUnit failed:", error);
+    await supabase.from("college_subject_units").delete().eq("collegeSubjectUnitId", params.collegeSubjectUnitId);
+    throw new Error(error.message || "Failed to link unit to academics.");
+  }
 }

@@ -120,11 +120,9 @@ export default function HrNavbar({ onClose }: HrNavbarProps) {
   ], [t]);
 
   useEffect(() => {
-    const current = items.find(
-      (item) =>
-        item.path === pathname ||
-        (item.path !== "/hr" && pathname.startsWith(`${item.path}/`)),
-    );
+    const current = [...items]
+      .sort((a, b) => b.path.length - a.path.length)
+      .find((item) => pathname === item.path || pathname.startsWith(`${item.path}/`));
 
     if (current) {
       setActive(current.label);
