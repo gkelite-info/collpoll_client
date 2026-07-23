@@ -113,7 +113,7 @@ export async function fetchStudentById(studentId: number) {
 
 export async function fetchStudentsWithProfile(
     collegeId: number,
-    filters?: { branchId?: number; educationId?: number; sectionId?: number; yearId?: number; page?: number; limit?: number; searchQuery?: string }
+    filters?: { branchId?: number; educationId?: number; sectionId?: number; yearId?: number; page?: number; limit?: number; searchQuery?: string; fetchAll?: boolean }
 ) {
     const page = filters?.page ?? 1;
     const limit = filters?.limit ?? 10;
@@ -163,7 +163,9 @@ export async function fetchStudentsWithProfile(
         query = query.ilike("users.fullName", `%${filters.searchQuery}%`);
     }
 
-    query = query.range(from, to);
+    if (!filters?.fetchAll) {
+        query = query.range(from, to);
+    }
 
     const { data: students, error } = await query;
     if (error) throw error;
@@ -180,6 +182,6 @@ export async function fetchStudentsWithProfile(
 
     return {
         data: formattedStudents,
-        hasMore: formattedStudents.length === limit
+        hasMore: !filters?.fetchAll && formattedStudents.length === limit
     };
 }

@@ -115,10 +115,13 @@ export default function ResultsManagement() {
 
     filteredSections.forEach(async (sec) => {
       try {
-        const students = await fetchStudentsWithProfile(collegeId, {
+        const result = await fetchStudentsWithProfile(collegeId, {
           sectionId: sec.collegeSectionsId,
           yearId: sec.collegeAcademicYearId,
+          fetchAll: true,
         });
+
+        const students = result.data;
 
         setStudentCounts(prev => ({
           ...prev,

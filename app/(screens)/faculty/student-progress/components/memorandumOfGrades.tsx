@@ -162,10 +162,12 @@ export default function MemorandumOfGrades() {
         // 2. Fetch students for this section & year
         let students: any[] = [];
         if (sectionId && academicYearId && collegeId) {
-          students = await fetchStudentsWithProfile(collegeId, {
+          const result = await fetchStudentsWithProfile(collegeId, {
             sectionId: Number(sectionId),
             yearId: Number(academicYearId),
+            fetchAll: true,
           });
+          students = result.data;
         }
 
         const studentIds = students.map(s => s.id);
