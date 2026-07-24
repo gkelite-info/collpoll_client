@@ -186,7 +186,7 @@ const AcademicPage = () => {
   }
 
   return (
-    <div className="flex flex-col m-4">
+    <div className="flex flex-col m-4 min-h-[calc(100vh-100px)]">
       <div className="mb-6 flex flex-col md:flex-row w-full justify-between items-center md:items-start gap-4">
         <div className="order-2 md:order-1 w-full">
           <div className="flex items-center gap-2 group w-fit cursor-pointer">
@@ -235,13 +235,13 @@ const AcademicPage = () => {
               const edu = educations.find((e) => e.collegeEducationId === +val);
               edu && selectEducation(edu);
             }}
-            displayModifier={(val) =>
-              val === "All"
-                ? "All"
-                : (educations.find(
-                    (e) => e.collegeEducationId.toString() === val,
-                  )?.collegeEducationType ?? val)
-            }
+            displayModifier={(val) => {
+              if (val === "All") return "All";
+              const found = educations.find((e) => e.collegeEducationId.toString() === val);
+              if (found) return found.collegeEducationType;
+              if (val === collegeEducationId?.toString()) return collegeEducationType;
+              return val;
+            }}
           />
 
           {!isSchool && (
@@ -336,7 +336,7 @@ const AcademicPage = () => {
         </div>
       </div>
 
-      <div className="flex flex-col justify-between min-h-[calc(100vh-320px)] bg-[#F3F6F9] rounded-xl p-4">
+      <div className="flex flex-col flex-1 justify-between bg-[#F3F6F9] rounded-xl p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-[1200px] mx-auto">
           {loading ? (
             [...Array(6)].map((_, i) => <AcademicSectionsSkeleton key={i} />)

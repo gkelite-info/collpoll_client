@@ -8,12 +8,16 @@ import TableComponent from "@/app/utils/table/table";
 import { Avatar } from "@/app/utils/Avatar";
 import toast from "react-hot-toast";
 import { getSecureAttachmentUrl } from "@/lib/helpers/projects/projectFiles";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 export default function StudentProjectSubmissions() {
     const searchParams = useSearchParams();
     const projectId = searchParams.get("projectId");
     const [submissions, setSubmissions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(20);
+    const [totalItems, setTotalItems] = useState(0);
 
     const projectTitle = searchParams.get("title")
         ? decodeURIComponent(searchParams.get("title")!)
@@ -24,7 +28,7 @@ export default function StudentProjectSubmissions() {
             if (!projectId) return;
             setIsLoading(true);
             try {
-                const data = await fetchProjectSubmissionsWithStudents(Number(projectId));
+                const { data, total } = await fetchProjectSubmissionsWithStudents(Number(projectId), currentPage, itemsPerPage);
 
                 const formattedData = data.map((item: any, index: number) => {
                     const student = item.students;
@@ -41,9 +45,11 @@ export default function StudentProjectSubmissions() {
                         : rollData?.pinNumber;
                         
                     const studentIdDisplay = pinNumber || "N/A";
+                    
+                    const startIndex = (currentPage - 1) * itemsPerPage;
 
                     return {
-                        sno: index + 1,
+                        sno: startIndex + index + 1,
                         photo: (
                             <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden mx-auto border border-gray-100">
                                 <Avatar
@@ -70,7 +76,9 @@ export default function StudentProjectSubmissions() {
                 });
 
                 setSubmissions(formattedData);
-            } catch (err) {
+                setTotalItems(total);
+            } catch (error) {
+                console.error("Error fetching submissions:", error);
                 toast.error("Failed to load submissions", { id: "submissions-error" });
             } finally {
                 setIsLoading(false);
@@ -78,7 +86,7 @@ export default function StudentProjectSubmissions() {
         };
 
         getSubmissions();
-    }, [projectId]);
+    }, [projectId, currentPage, itemsPerPage]);
 
     const columns = [
         { title: "S.No", key: "sno" },
@@ -105,7 +113,24 @@ export default function StudentProjectSubmissions() {
                 tableData={submissions}
                 isLoading={isLoading}
                 height="60vh"
+                fillHeight={true}
             />
+            
+            <div className="flex justify-center items-center mt-4 w-full bg-white rounded-lg shadow-sm">
+                <Pagination
+                    currentPage={currentPage}
+                    totalItems={totalItems}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={(p) => setCurrentPage(p)}
+                    alwaysShow={true}
+                    itemsPerPageOptions={[10, 20, 50]}
+                    onItemsPerPageChange={(items) => {
+                        setItemsPerPage(items);
+                        setCurrentPage(1);
+                    }}
+                    roundedBottom="rounded-lg"
+                />
+            </div>
         </div>
     );
 }

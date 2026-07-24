@@ -55,7 +55,7 @@ const Page = () => {
       if (!facultyId) return;
       setIsLoading(true);
       try {
-        const enriched = await fetchEnrichedProjectsByFaculty(facultyId);
+        const { data: enriched } = await fetchEnrichedProjectsByFaculty(facultyId);
 
         const mapped: ProjectCardProps[] = enriched.map((p) => {
           const isPast = p.endDate

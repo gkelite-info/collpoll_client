@@ -252,13 +252,13 @@ export default function DiscussionForumBasic({
 
       if (dept && yearIdFromParams) {
         setCourseLoading(true);
-        const data = await fetchSubjectFacultyList(
+        const response = await fetchSubjectFacultyList(
           Number(yearIdFromParams),
           Number(branchIdFromParams),
         );
 
         const uniqueCoursesMap = new Map();
-        data.forEach((course: any) => {
+        (response.data || []).forEach((course: any) => {
           const key = `${course.subjectId}-${course.facultyId}`;
           if (!uniqueCoursesMap.has(key)) {
             uniqueCoursesMap.set(key, course);

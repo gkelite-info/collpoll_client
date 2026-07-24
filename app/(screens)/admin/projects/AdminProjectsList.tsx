@@ -2,7 +2,7 @@
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { CaretLeft } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import AddProjectForm from "../../faculty/projects/addProjectForm";
 import { fetchEnrichedProjectsByFaculty, EnrichedProject } from "@/lib/helpers/projects/project";
@@ -65,7 +65,8 @@ export default function AdminProjectsList({
     const projectView = searchParams.get("projectView") || "active";
     const subjectId = searchParams.get("subjectId") ?? subjectIdProp;
     const [currentPage, setCurrentPage] = useState(1);
-    const cardsPerPage = 8;
+    const [totalItems, setTotalItems] = useState(0);
+    const cardsPerPage = 9;
 
 
     useEffect(() => {
@@ -77,11 +78,15 @@ export default function AdminProjectsList({
 
             setLoading(true);
             try {
-                const data = await fetchEnrichedProjectsByFaculty(
+                const { data, total } = await fetchEnrichedProjectsByFaculty(
                     Number(facultyId),
-                    subjectId ? Number(subjectId) : undefined
+                    subjectId ? Number(subjectId) : undefined,
+                    currentPage,
+                    cardsPerPage,
+                    projectView as "active" | "completed"
                 );
                 setProjects(data);
+                setTotalItems(total);
             } catch (err) {
                 console.error("Failed to fetch projects:", err);
                 setProjects([]);
@@ -91,17 +96,9 @@ export default function AdminProjectsList({
         };
 
         getProjects();
-    }, [facultyId, subjectId]);
+    }, [facultyId, subjectId, projectView, currentPage, cardsPerPage]);
 
-    const filteredProjects = useMemo(() => {
-        const today = new Date();
-        return projects.filter((p) => {
-            if (projectView === "completed") {
-                return p.endDate && new Date(p.endDate) < today;
-            }
-            return !p.endDate || new Date(p.endDate) >= today;
-        });
-    }, [projects, projectView]);
+    const filteredProjects = projects;
 
     const handleViewChange = (view: "active" | "completed") => {
         const params = new URLSearchParams(searchParams.toString());
@@ -130,11 +127,15 @@ export default function AdminProjectsList({
         if (facultyId) {
             setLoading(true);
             try {
-                const data = await fetchEnrichedProjectsByFaculty(
+                const { data, total } = await fetchEnrichedProjectsByFaculty(
                     Number(facultyId),
-                    subjectId ? Number(subjectId) : undefined
+                    subjectId ? Number(subjectId) : undefined,
+                    currentPage,
+                    cardsPerPage,
+                    projectView as "active" | "completed"
                 );
                 setProjects(data);
+                setTotalItems(total);
             } catch (err) {
                 console.error("Failed to refresh projects:", err);
             } finally {
@@ -256,16 +257,10 @@ export default function AdminProjectsList({
                                     ))}
                                 </div>
                             ) : filteredProjects.length > 0 ? (
-                                (() => {
-                                    const startIndex = (currentPage - 1) * cardsPerPage;
-                                    const paginatedProjects = filteredProjects.slice(startIndex, startIndex + cardsPerPage);
-                                    return (
-                                        <ProjectCard
-                                            data={paginatedProjects.map(mapToCardProps)}
-                                            onViewDetails={(project) => setSelectedProject(project)}
-                                        />
-                                    );
-                                })()
+                                <ProjectCard
+                                    data={filteredProjects.map(mapToCardProps)}
+                                    onViewDetails={(project) => setSelectedProject(project)}
+                                />
                             ) : (
                                 <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-200">
                                     <p className="text-gray-400 italic">
@@ -276,12 +271,12 @@ export default function AdminProjectsList({
                         </div>
 
                         {!loading && filteredProjects.length > 0 && (
-                            <div className="flex justify-center items-center mt-auto pt-6 w-full max-w-[1200px] mx-auto rounded-lg shadow-sm">
+                            <div className="flex justify-center items-center mt-6 w-full max-w-[1200px] mx-auto rounded-lg shadow-sm">
                                 <Pagination
                                     currentPage={currentPage}
-                                    totalItems={filteredProjects.length}
+                                    totalItems={totalItems}
                                     itemsPerPage={cardsPerPage}
-                                    onPageChange={(p) => setCurrentPage(p)}
+                                    onPageChange={setCurrentPage}
                                     alwaysShow={true}
                                     roundedBottom="rounded-lg"
                                 />

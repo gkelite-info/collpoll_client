@@ -122,3 +122,37 @@ export async function fetchBranchOptionsForAdmin(
     }));
 }
 
+export async function fetchBranchOptionsDirectly(
+    collegeId: number,
+    collegeEducationId: number | null
+) {
+    let query = supabase
+        .from("college_branch")
+        .select(`
+      collegeBranchId,
+      collegeBranchType,
+      collegeBranchCode
+    `)
+        .eq("collegeId", collegeId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .order("collegeBranchCode", { ascending: true });
+
+    if (collegeEducationId) {
+        query = query.eq("collegeEducationId", collegeEducationId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        console.error("fetchBranchOptionsDirectly error:", error);
+        throw error;
+    }
+
+    return (data ?? []).map((b) => ({
+        collegeBranchId: b.collegeBranchId,
+        name: b.collegeBranchType,
+        code: b.collegeBranchCode,
+    }));
+}
+

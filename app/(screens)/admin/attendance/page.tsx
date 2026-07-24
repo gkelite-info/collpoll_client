@@ -383,11 +383,13 @@ const AttendancePage = () => {
               const edu = educations.find((e) => e.collegeEducationId === +val);
               if (edu) selectEducation(edu);
             }}
-            displayModifier={(val) =>
-              val === "All"
-                ? "All"
-                : educations.find((e) => e.collegeEducationId === +val)?.collegeEducationType || val
-            }
+            displayModifier={(val) => {
+              if (val === "All") return "All";
+              const found = educations.find((e) => e.collegeEducationId === +val);
+              if (found) return found.collegeEducationType;
+              if (val === defaultEduId?.toString()) return defaultEduType;
+              return val;
+            }}
           />
 
           {!isSchool && (

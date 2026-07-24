@@ -545,7 +545,7 @@ export default function FacultyListView({ onBack }: Props) {
                         if (!branchId) return;
                         setIsFetching(true);
                         const list = await fetchSubjectFacultyList(y.id, branchId);
-                        setSubjectFacultyList(list);
+                        setSubjectFacultyList(list.data || []);
                       } catch (err) {
                         console.error("Failed to fetch faculty for year:", err);
                         setSubjectFacultyList(null);
