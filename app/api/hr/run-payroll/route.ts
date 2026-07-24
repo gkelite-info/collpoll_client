@@ -22,20 +22,45 @@ export async function POST(request: Request) {
 
     const now = new Date().toISOString();
 
+    const { data: lockedRun, error: lockedRunError } = await supabase
+      .from("payroll_runs")
+      .select("payrollRunId, status")
+      .eq("collegeId", collegeId)
+      .eq("payrollMonth", month)
+      .eq("payrollYear", year)
+      .eq("is_deleted", false)
+      .is("deletedAt", null)
+      .in("status", ["finalized", "paid"])
+      .order("createdAt", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (lockedRunError) throw lockedRunError;
+    if (lockedRun) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `This payroll is already ${lockedRun.status} and cannot be recalculated.`,
+        },
+        { status: 409 },
+      );
+    }
+
     const runPayload = {
       ...result.run,
       createdAt: now,
       updatedAt: now
     };
 
-    // Soft-delete any existing draft runs for this month/year to prevent duplicates
+    // Only replace editable runs. Finalized and paid payrolls are immutable.
     await supabase
       .from("payroll_runs")
       .update({ is_deleted: true, isActive: false, deletedAt: now })
       .eq("collegeId", collegeId)
       .eq("payrollMonth", month)
       .eq("payrollYear", year)
-      .is("deletedAt", null);
+      .is("deletedAt", null)
+      .in("status", ["draft", "calculated", "processing"]);
 
     const { data: run, error: runError } = await supabase
       .from("payroll_runs")

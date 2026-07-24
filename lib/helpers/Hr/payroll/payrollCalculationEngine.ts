@@ -4,6 +4,10 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
 
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 export async function calculatePayrollEngine(
   collegeId: number,
   month: number,
@@ -153,10 +157,9 @@ export async function calculatePayrollEngine(
   let totalNetAll = 0;
 
   const entriesToInsert = [];
-  const deductionLinesToInsert: any[] = [];
 
   for (const s of staff) {
-    const monthlySalary = payMap.get(s.userId) || 0;
+    const monthlySalary = roundMoney(Number(payMap.get(s.userId)) || 0);
     const perDayRate = monthlySalary / 30; // Standard 30 days calculation
 
     let fullDays = 0;
@@ -305,14 +308,23 @@ export async function calculatePayrollEngine(
     const halfDayDeduction = halfDays * perDayRate * 0.50;
     
     // Clamp to minimum 0 to prevent negative salaries
-    const grossEarnings = Math.max(0, monthlySalary - lopDeduction - halfDayDeduction);
+    const grossEarnings = roundMoney(
+      Math.max(0, monthlySalary - lopDeduction - halfDayDeduction),
+    );
 
     const comp = compMap.get(s.userId) || { pf: 0, esi: 0, pt: 0 };
     const taxDeclared = taxMap.get(s.userId) || 0;
     const monthlyTds = taxDeclared > 0 ? taxDeclared / 12 : 0;
 
-    const totalDeductions = comp.pf + comp.esi + comp.pt + monthlyTds;
-    const netPay = Math.max(0, grossEarnings - totalDeductions);
+    const assessedDeductions = roundMoney(
+      comp.pf + comp.esi + comp.pt + monthlyTds,
+    );
+    // A payroll deduction cannot exceed the employee's earnings for this run.
+    // Keeping the applied amount here guarantees gross - deductions = net.
+    const totalDeductions = roundMoney(
+      Math.min(grossEarnings, Math.max(0, assessedDeductions)),
+    );
+    const netPay = roundMoney(grossEarnings - totalDeductions);
 
     totalGross += grossEarnings;
     totalDeductionsAll += totalDeductions;
@@ -322,7 +334,7 @@ export async function calculatePayrollEngine(
     entriesToInsert.push({
       userId: s.userId,
       monthlySalary,
-      perDayRate,
+      perDayRate: roundMoney(perDayRate),
       totalPayableDays,
       fullDaysWorked: fullDays,
       halfDays,

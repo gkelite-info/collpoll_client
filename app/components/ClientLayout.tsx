@@ -397,7 +397,7 @@ export default function ClientLayout({
         <>{children}</>
       ) : (
         // <div className="flex h-screen w-screen overflow-hidden justify-between">
-        <div className="flex h-screen w-screen overflow-hidden justify-between">
+        <div className="flex h-[100dvh] min-h-[100dvh] w-screen overflow-hidden justify-between bg-[#F4F4F4]">
           <div className="hidden md:hidden lg:block w-0 md:w-0 lg:w-[17%] lg:h-full lg:bg-[#43C17A]">
             {desktopNavbar}
           </div>
@@ -418,7 +418,7 @@ export default function ClientLayout({
           )}
 
           {/* <div className="bg-yellow-00 flex flex-col h-full w-[100%] md:w-[100%] lg:w-[83%]"> */}
-          <div className="flex h-screen min-h-0 flex-col w-full lg:w-[83%]">
+          <div className="flex h-[100dvh] min-h-0 flex-col w-full bg-[#F4F4F4] lg:w-[83%]">
             {/* <div className="bg-red-00 h-[100px] landscape:h-[110px] md:h-[120px] md:landscape:h-[120px] lg:h-[13%] lg:landscape:h-[13%] flex justify-end bg-[#F4F4F4]"> */}
             <div className="shrink-0 h-auto w-full lg:h-[92px] flex justify-end bg-[#F4F4F4] z-40 relative">
               <Header

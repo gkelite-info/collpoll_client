@@ -47,6 +47,14 @@ export type EmployeeExpenseAttachment = {
   fileSize: number;
 };
 
+export type EmployeeExpensePaymentApproval = {
+  employeeExpenseApprovalId: number;
+  status: "approved" | "rejected" | "pending";
+  approvedBy: number;
+  approvedUserRole: string;
+  approvedOn: string;
+};
+
 export type EmployeeExpenseReport = {
   employeeExpenseReportId: number;
   expenseTitle: string;
@@ -62,6 +70,7 @@ export type EmployeeExpenseReport = {
   rejectedAt: string | null;
   createdAt: string;
   attachments: EmployeeExpenseAttachment[];
+  paymentApproval?: EmployeeExpensePaymentApproval | null;
 };
 
 function validateAttachments(files: File[]) {
@@ -229,26 +238,56 @@ export async function fetchEmployeeExpenseReports(
     .order("createdAt", { ascending: false });
 
   if (error) throw error;
-  const reportRows = (reports ?? []) as Omit<EmployeeExpenseReport, "attachments">[];
+  const reportRows = (reports ?? []) as Omit<
+    EmployeeExpenseReport,
+    "attachments" | "paymentApproval"
+  >[];
   if (!reportRows.length) return [];
 
   const reportIds = reportRows.map((report) => report.employeeExpenseReportId);
-  const { data: attachments, error: attachmentError } = await supabase
-    .from("employee_expense_attachments")
-    .select("expenseAttachmentId, employeeExpenseReportId, fileName, fileUrl, fileType, fileSize")
-    .in("employeeExpenseReportId", reportIds)
-    .order("createdAt", { ascending: true });
+  const [{ data: attachments, error: attachmentError }, { data: approvals, error: approvalError }] =
+    await Promise.all([
+      supabase
+        .from("employee_expense_attachments")
+        .select("expenseAttachmentId, employeeExpenseReportId, fileName, fileUrl, fileType, fileSize")
+        .in("employeeExpenseReportId", reportIds)
+        .order("createdAt", { ascending: true }),
+      supabase
+        .from("employee_expense_approvals")
+        .select("employeeExpenseApprovalId, employeeExpenseReportId, status, approvedBy, approvedUserRole, approvedOn")
+        .in("employeeExpenseReportId", reportIds)
+        .eq("collegeId", collegeId)
+        .is("deletedAt", null),
+    ]);
 
   if (attachmentError) throw attachmentError;
+  if (approvalError) throw approvalError;
   const attachmentRows = (attachments ?? []) as (EmployeeExpenseAttachment & { employeeExpenseReportId: number })[];
+  const approvalRows = (approvals ?? []) as (EmployeeExpensePaymentApproval & {
+    employeeExpenseReportId: number;
+  })[];
+  const approvalByReportId = new Map(
+    approvalRows.map((approval) => [approval.employeeExpenseReportId, approval]),
+  );
 
-  return reportRows.map((report) => ({
-    ...report,
-    amountSpent: Number(report.amountSpent),
-    attachments: attachmentRows.filter(
-      (attachment) => attachment.employeeExpenseReportId === report.employeeExpenseReportId,
-    ),
-  }));
+  return reportRows.map((report) => {
+    const paymentApproval =
+      approvalByReportId.get(report.employeeExpenseReportId) ?? null;
+    return {
+      ...report,
+      status:
+        paymentApproval?.status === "approved"
+          ? "paid"
+          : paymentApproval?.status === "rejected"
+            ? "payment_rejected"
+            : report.status,
+      amountSpent: Number(report.amountSpent),
+      attachments: attachmentRows.filter(
+        (attachment) => attachment.employeeExpenseReportId === report.employeeExpenseReportId,
+      ),
+      paymentApproval,
+    };
+  });
 }
 
 export async function getExpenseAttachmentSignedUrl(filePath: string, downloadFileName?: string) {

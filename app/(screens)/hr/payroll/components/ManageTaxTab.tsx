@@ -125,7 +125,7 @@ export default function ManageTaxTab() {
       </div>
 
       <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col min-h-[600px]">
-        <div className="overflow-auto flex-1 relative custom-scrollbar max-h-[65vh]">
+        <div className="custom-scrollbar relative min-h-0 flex-1 overflow-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
               <tr>

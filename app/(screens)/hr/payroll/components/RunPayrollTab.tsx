@@ -8,7 +8,7 @@ import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/Confir
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { TableRowShimmer, StatCardShimmer } from "@/app/(screens)/admin/my-attendance/payroll/components/shimmers";
 import { formatCompactNumber, formatExactNumber } from "@/app/utils/numberFormat";
-import { finalizePayrollRun, markPayrollPaid } from "@/lib/helpers/Hr/payroll/payrollAPI";
+import { finalizePayrollRun } from "@/lib/helpers/Hr/payroll/payrollAPI";
 import { format } from "date-fns";
 import ViewEntryModal from "./ViewEntryModal";
 
@@ -129,20 +129,6 @@ export default function RunPayrollTab() {
     }
   };
 
-  const handleMarkPaid = async () => {
-    if (!runStats.payrollRunId) return;
-    setIsProcessing(true);
-    try {
-      await markPayrollPaid(runStats.payrollRunId);
-      toast.success("Payroll marked as paid.", { id: "payroll-paid-success" });
-      setRefreshKey(prev => prev + 1);
-    } catch (err: any) {
-      toast.error("Unable to mark payroll as paid. Please try again.", { id: "payroll-paid-error" });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const monthDisplay = selectedMonth ? format(new Date(`${selectedMonth}-01`), 'MMMM yyyy') : "";
 
   return (
@@ -195,19 +181,11 @@ export default function RunPayrollTab() {
             </button>
           )}
 
-          {runStats.status === 'finalized' && (
-            <button
-              onClick={handleMarkPaid}
-              disabled={isProcessing}
-              className="bg-green-600 text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed w-full sm:w-auto shadow-sm"
-            >
-              Mark as Paid
-            </button>
-          )}
+          {/* Payment completion is controlled by Accountant payment records. */}
 
           <button
             onClick={handleConfirmRun}
-            disabled={isProcessing || runStats.status === 'paid'}
+            disabled={isProcessing || runStats.status === 'finalized' || runStats.status === 'paid'}
             className="bg-[#43C17A] text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#38A166] transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed w-full sm:w-auto shadow-sm"
           >
             {isProcessing ? "Processing..." : (runStats.status ? "Recalculate Payroll" : "Calculate Payroll")}
@@ -239,7 +217,7 @@ export default function RunPayrollTab() {
       </div>
 
       <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col min-h-[600px]">
-        <div className="overflow-auto flex-1 relative custom-scrollbar max-h-[65vh]">
+        <div className="custom-scrollbar relative min-h-0 flex-1 overflow-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
               <tr>

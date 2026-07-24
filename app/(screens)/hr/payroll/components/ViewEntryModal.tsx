@@ -8,6 +8,20 @@ interface ViewEntryModalProps {
   onClose: () => void;
 }
 
+function formatTrackingDate(value?: string | null) {
+  if (!value) return "Date unavailable";
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? new Date(`${value}T00:00:00Z`)
+    : new Date(value);
+  if (Number.isNaN(date.getTime())) return "Date unavailable";
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+
 export default function ViewEntryModal({ entryId, onClose }: ViewEntryModalProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -229,6 +243,41 @@ export default function ViewEntryModal({ entryId, onClose }: ViewEntryModalProps
                   <span className="text-green-900 font-extrabold">₹{formatExactNumber(data.netPay || 0)}</span>
                 </div>
               </div>
+
+              <section className="rounded-xl border border-gray-200 bg-white p-4">
+                <h3 className="mb-4 text-[14px] font-bold text-gray-800">Payment Tracking</h3>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    {
+                      title: "Payroll Calculated",
+                      date: data.paymentTracking?.calculatedAt,
+                      person: data.paymentTracking?.processedBy,
+                      completed: true,
+                    },
+                    {
+                      title: "HR Finalized",
+                      date: data.paymentTracking?.finalizedAt,
+                      person: data.paymentTracking?.processedBy,
+                      completed: Boolean(data.paymentTracking?.isFinalized),
+                    },
+                    {
+                      title: data.paymentTracking?.isPaid ? "Payment Completed" : "Payment Pending",
+                      date: data.paymentTracking?.paidAt,
+                      person: data.paymentTracking?.paidBy,
+                      completed: Boolean(data.paymentTracking?.isPaid),
+                    },
+                  ].map((step) => (
+                    <div key={step.title} className="flex items-start gap-2 rounded-lg bg-gray-50 p-3">
+                      <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${step.completed ? "bg-[#43C17A] text-white" : "border-2 border-gray-300 bg-white text-transparent"}`}>✓</span>
+                      <div className="min-w-0">
+                        <p className={`text-[11px] font-bold ${step.completed ? "text-gray-900" : "text-gray-500"}`}>{step.title}</p>
+                        <p className="mt-1 text-[10px] text-gray-500">{step.completed ? formatTrackingDate(step.date) : "Awaiting confirmation"}</p>
+                        <p className="mt-1 truncate text-[10px] text-gray-400">{step.person || (step.title.includes("Payment") ? "Accountant" : "HR Manager")}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
 
             </div>
           ) : null}

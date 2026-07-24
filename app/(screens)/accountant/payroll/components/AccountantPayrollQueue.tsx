@@ -14,14 +14,22 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { formatExactNumber } from "@/app/utils/numberFormat";
-import { staticPayrollEmployees } from "../data";
+import { useUser } from "@/app/utils/context/UserContext";
+import {
+  createEmployeeSalaryPayments,
+  fetchAccountantPayrollQueue,
+  type AccountantPayrollQueueEmployee,
+  type AccountantPayrollQueueResult,
+  type CreateEmployeeSalaryPaymentInput,
+} from "@/lib/helpers/accountant/employeeSalaryPaymentsAPI";
+import PayrollQueueShimmer from "./PayrollQueueShimmer";
 
-type PaymentStatus = "ready" | "paid" | "on-hold";
-type PaymentRow = (typeof staticPayrollEmployees)[number] & { paymentStatus: PaymentStatus };
+type PaymentStatus = "ready" | "paid" | "bank-details-missing";
 type PaymentMethod = "Bank Transfer" | "NEFT" | "RTGS" | "IMPS" | "UPI" | "Cheque" | "Cash";
 type EmployeePaymentDetails = {
   paymentMethod: PaymentMethod;
@@ -31,52 +39,100 @@ type EmployeePaymentDetails = {
   bankName: string;
   upiId: string;
   chequeDate: string;
-  receivedBy: string;
 };
 
 const paymentMethods: PaymentMethod[] = ["Bank Transfer", "NEFT", "RTGS", "IMPS", "UPI", "Cheque", "Cash"];
 
 const money = (value: number) => `₹${formatExactNumber(value)}`;
-const initialRows: PaymentRow[] = staticPayrollEmployees.map((employee, index) => ({
-  ...employee,
-  paymentStatus: index < 2 ? "paid" : index === 7 ? "on-hold" : "ready",
-}));
-
 const statusStyles: Record<PaymentStatus, string> = {
   ready: "bg-[#eef4ff] text-[#2563eb]",
   paid: "bg-[#e9f8ef] text-[#168a49]",
-  "on-hold": "bg-[#fff4e5] text-[#b45309]",
+  "bank-details-missing": "bg-[#fff4e5] text-[#b45309]",
 };
 
 export default function AccountantPayrollQueue() {
-  const [employees, setEmployees] = useState(initialRows);
+  const { collegeId, userId } = useUser();
+  const [employees, setEmployees] = useState<AccountantPayrollQueueEmployee[]>([]);
+  const [payrollRun, setPayrollRun] = useState<AccountantPayrollQueueResult["run"]>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<"all" | PaymentStatus>("all");
+  const [totalItems, setTotalItems] = useState(0);
+  const [summary, setSummary] = useState<AccountantPayrollQueueResult["summary"]>({
+    totalCount: 0,
+    totalNetPay: 0,
+    readyCount: 0,
+    readyNetPay: 0,
+    paidCount: 0,
+    paidNetPay: 0,
+    bankDetailsMissingCount: 0,
+  });
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [page, setPage] = useState(1);
   const [showPayment, setShowPayment] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [successCount, setSuccessCount] = useState(0);
+  const [selectedPayrollMonth, setSelectedPayrollMonth] = useState("");
   const [paymentDetails, setPaymentDetails] = useState<Record<number, EmployeePaymentDetails>>({});
   const [showValidation, setShowValidation] = useState(false);
-  const itemsPerPage = 8;
+  const itemsPerPage = 20;
 
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return employees.filter((row) => {
-      const matchesSearch = !term || [row.name, row.email, row.employeeId, row.role].some((value) => value.toLowerCase().includes(term));
-      return matchesSearch && (status === "all" || row.paymentStatus === status);
-    });
-  }, [employees, search, status]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 400);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
-  const rows = filtered.slice((page - 1) * itemsPerPage, page * itemsPerPage);
-  const payableFilteredIds = filtered.filter((row) => row.paymentStatus === "ready").map((row) => row.payrollEntryId);
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadPayroll() {
+      if (!collegeId) {
+        if (isMounted) setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setLoadError("");
+      try {
+        const [selectedYear, selectedMonth] = selectedPayrollMonth
+          ? selectedPayrollMonth.split("-").map(Number)
+          : [undefined, undefined];
+        const result = await fetchAccountantPayrollQueue(
+          Number(collegeId),
+          selectedMonth,
+          selectedYear,
+          { search: debouncedSearch, status, page, limit: itemsPerPage },
+        );
+        if (!isMounted) return;
+        setEmployees(result.employees);
+        setPayrollRun(result.run);
+        setTotalItems(result.pagination.total);
+        setSummary(result.summary);
+        if (!selectedPayrollMonth && result.run) {
+          setSelectedPayrollMonth(`${result.run.payrollYear}-${String(result.run.payrollMonth).padStart(2, "0")}`);
+        }
+        setSelectedIds([]);
+      } catch (error) {
+        if (!isMounted) return;
+        setLoadError(error instanceof Error ? error.message : "Unable to load payroll records.");
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    loadPayroll();
+    return () => { isMounted = false; };
+  }, [collegeId, debouncedSearch, page, refreshKey, selectedPayrollMonth, status]);
+
+  const rows = employees;
+  const payableFilteredIds = employees.filter((row) => row.paymentStatus === "ready").map((row) => row.payrollEntryId);
   const selectedEmployees = employees.filter((row) => selectedIds.includes(row.payrollEntryId) && row.paymentStatus === "ready");
   const selectedTotal = selectedEmployees.reduce((sum, row) => sum + row.netPay, 0);
   const allFilteredSelected = payableFilteredIds.length > 0 && payableFilteredIds.every((id) => selectedIds.includes(id));
-  const paidEmployees = employees.filter((row) => row.paymentStatus === "paid");
-  const readyEmployees = employees.filter((row) => row.paymentStatus === "ready");
-  const totalPayroll = employees.reduce((sum, row) => sum + row.netPay, 0);
+  const totalPayroll = summary.totalNetPay;
 
   const changeFilter = (nextStatus: "all" | PaymentStatus) => {
     setStatus(nextStatus);
@@ -93,7 +149,7 @@ export default function AccountantPayrollQueue() {
       : Array.from(new Set([...current, ...payableFilteredIds])));
   };
 
-  const completePayment = () => {
+  const completePayment = async () => {
     const references = selectedEmployees.map((employee) => paymentDetails[employee.payrollEntryId]?.transactionId.trim() ?? "");
     const hasDuplicates = new Set(references.map((reference) => reference.toLowerCase())).size !== references.length;
     const hasIncompleteDetails = selectedEmployees.some((employee) => {
@@ -101,45 +157,63 @@ export default function AccountantPayrollQueue() {
       if (!details?.paymentMethod || !details.paymentDate || !details.transactionId.trim()) return true;
       if (details.paymentMethod === "UPI" && !details.upiId.trim()) return true;
       if (details.paymentMethod === "Cheque" && (!details.bankName.trim() || !details.chequeDate)) return true;
-      if (details.paymentMethod === "Cash" && !details.receivedBy.trim()) return true;
       return false;
     });
     if (hasIncompleteDetails || hasDuplicates) {
       setShowValidation(true);
       return;
     }
+    if (!collegeId || !userId) {
+      toast.error("Accountant and college details are not available.");
+      return;
+    }
+
     setIsPaying(true);
-    window.setTimeout(() => {
-      setEmployees((current) => current.map((employee) => selectedIds.includes(employee.payrollEntryId)
-        ? {
-            ...employee,
-            paymentStatus: "paid",
-            payment: {
-              ...employee.payment,
-              paymentMethod: paymentDetails[employee.payrollEntryId].paymentMethod,
-              paymentDate: paymentDetails[employee.payrollEntryId].paymentDate,
-              remarks: paymentDetails[employee.payrollEntryId].remarks,
-              transactionId: paymentDetails[employee.payrollEntryId].transactionId.trim(),
-            },
-          }
-        : employee));
+    try {
+      const inputs = selectedEmployees.map((employee): CreateEmployeeSalaryPaymentInput => {
+        const details = paymentDetails[employee.payrollEntryId];
+        const base = {
+          employeeId: employee.employeeIdPk,
+          payrollRunId: employee.payrollRunId,
+          collegeId: Number(collegeId),
+          createdBy: Number(userId),
+          paymentDate: details.paymentDate,
+          remarks: details.remarks,
+        };
+
+        switch (details.paymentMethod) {
+          case "NEFT": return { ...base, paymentMethod: "neft", neftUtrNumber: details.transactionId };
+          case "RTGS": return { ...base, paymentMethod: "rtgs", rtgsUtrNumber: details.transactionId };
+          case "IMPS": return { ...base, paymentMethod: "imps", impsReferenceNumber: details.transactionId };
+          case "UPI": return { ...base, paymentMethod: "upi", upiTransactionId: details.transactionId, upiId: details.upiId };
+          case "Cheque": return { ...base, paymentMethod: "cheque", chequeNo: details.transactionId, bankName: details.bankName, chequeDate: details.chequeDate };
+          case "Cash": return { ...base, paymentMethod: "cash", receiptNumber: details.transactionId };
+          default: return { ...base, paymentMethod: "banktransfer", transactionId: details.transactionId };
+        }
+      });
+
+      await createEmployeeSalaryPayments(inputs);
       setSuccessCount(selectedEmployees.length);
       setSelectedIds([]);
-      setIsPaying(false);
       setShowPayment(false);
-    }, 700);
+      setRefreshKey((key) => key + 1);
+      toast.success("Salary payment details recorded successfully.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to record salary payments.");
+    } finally {
+      setIsPaying(false);
+    }
   };
 
   const openPaymentDetails = () => {
     setPaymentDetails((current) => Object.fromEntries(selectedEmployees.map((employee) => [employee.payrollEntryId, current[employee.payrollEntryId] ?? {
       paymentMethod: "Bank Transfer",
       transactionId: "",
-      paymentDate: "2026-07-22",
-      remarks: "July salary payment completed",
+      paymentDate: new Date().toISOString().slice(0, 10),
+      remarks: "",
       bankName: "",
       upiId: "",
       chequeDate: "",
-      receivedBy: "",
     }])));
     setShowValidation(false);
     setShowPayment(true);
@@ -159,11 +233,26 @@ export default function AccountantPayrollQueue() {
     return new Set(Object.entries(counts).filter(([, count]) => count > 1).map(([value]) => value));
   }, [paymentDetails]);
 
+  const periodLabel = payrollRun
+    ? new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(payrollRun.payrollYear, payrollRun.payrollMonth - 1, 1)))
+    : "Latest payroll";
   const cards = [
-    { label: "Total payroll", value: money(totalPayroll), note: "July 2026 · 12 employees", Icon: IndianRupee, color: "#6751e7", bg: "#eeeaff" },
-    { label: "Awaiting confirmation", value: `${readyEmployees.length} employees`, note: money(readyEmployees.reduce((sum, row) => sum + row.netPay, 0)), Icon: Users, color: "#2563eb", bg: "#eaf1ff" },
-    { label: "Payment completed", value: `${paidEmployees.length} employees`, note: money(paidEmployees.reduce((sum, row) => sum + row.netPay, 0)), Icon: CheckCircle2, color: "#16a34a", bg: "#e8f8ee" },
+    { label: "Total payroll", value: money(totalPayroll), note: `${periodLabel} · ${summary.totalCount} employees`, Icon: IndianRupee, color: "#6751e7", bg: "#eeeaff" },
+    { label: "Awaiting confirmation", value: `${summary.readyCount} employees`, note: money(summary.readyNetPay), Icon: Users, color: "#2563eb", bg: "#eaf1ff" },
+    { label: "Payment completed", value: `${summary.paidCount} employees`, note: money(summary.paidNetPay), Icon: CheckCircle2, color: "#16a34a", bg: "#e8f8ee" },
   ];
+
+  if (isLoading) {
+    return <PayrollQueueShimmer />;
+  }
+
+  if (loadError) {
+    return <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700"><p className="font-semibold">Unable to load payroll records</p><p className="mt-1">{loadError}</p><button onClick={() => setRefreshKey((key) => key + 1)} className="mt-4 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white">Try again</button></div>;
+  }
+
+  if (!payrollRun) {
+    return <div className="rounded-2xl border border-[#e2e5e9] bg-white p-12 text-center"><Users className="mx-auto text-[#aab3c1]" size={32} /><h2 className="mt-3 font-bold">No finalized payroll found</h2><p className="mt-1 text-sm text-[#667386]">No finalized payroll is available for the selected month.</p><input aria-label="Select payroll month" type="month" value={selectedPayrollMonth} onChange={(event) => setSelectedPayrollMonth(event.target.value)} className="mt-5 h-10 cursor-pointer rounded-lg border border-[#bfe7ce] bg-[#e5f6ec] px-3 text-sm font-semibold text-[#199653] outline-none" /></div>;
+  }
 
   return (
     <div className="pb-8 [&_button]:cursor-pointer [&_button:disabled]:cursor-not-allowed">
@@ -189,15 +278,18 @@ export default function AccountantPayrollQueue() {
       <section className="mt-5 overflow-hidden rounded-2xl border border-[#e2e5e9] bg-white shadow-[0_2px_12px_rgba(20,32,56,0.04)]">
         <div className="border-b border-[#edf0f3] p-5">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-            <div><h2 className="text-base font-bold">Salary payment records</h2><p className="mt-1 text-xs text-[#667386]">Select employees whose external bank payments have been completed.</p></div>
+            <h2 className="text-base font-bold">Salary payment records</h2>
             <div className="flex flex-col gap-2 sm:flex-row">
+              <label className="relative block">
+                <input aria-label="Select payroll month" type="month" value={selectedPayrollMonth} onChange={(event) => { setSelectedPayrollMonth(event.target.value); setPage(1); }} className="h-10 w-full cursor-pointer rounded-lg border border-[#bfe7ce] bg-[#e5f6ec] px-3 text-sm font-semibold text-[#199653] outline-none focus:border-[#31b96d] sm:w-40" />
+              </label>
               <label className="relative block">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8792a3]" size={16} />
                 <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search employees" className="h-10 w-full rounded-lg border border-[#dce3eb] bg-[#f8fafc] pl-9 pr-3 text-sm outline-none focus:border-[#6751e7] sm:w-64" />
               </label>
               <label className="relative">
                 <select value={status} onChange={(event) => changeFilter(event.target.value as "all" | PaymentStatus)} className="h-10 w-full appearance-none rounded-lg border border-[#dce3eb] bg-white pl-3 pr-9 text-sm outline-none sm:w-36">
-                  <option value="all">All statuses</option><option value="ready">Ready to pay</option><option value="paid">Paid</option><option value="on-hold">On hold</option>
+                  <option value="all">All statuses</option><option value="ready">Ready to pay</option><option value="paid">Paid</option><option value="bank-details-missing">Bank details not provided</option>
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#667386]" size={15} />
               </label>
@@ -206,9 +298,9 @@ export default function AccountantPayrollQueue() {
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-[#f7f8fc] px-4 py-3 text-xs text-[#596578]">
             <button onClick={toggleAllFiltered} className="font-semibold text-[#5642d6]">{allFilteredSelected ? "Clear selection" : "Select all ready"}</button>
             <span className="h-4 w-px bg-[#d8dde6]" />
-            <span>{payableFilteredIds.length} employees can be paid</span>
+            <span>{summary.readyCount} employees can be paid</span>
             <span className="hidden text-[#a0a8b5] sm:inline">•</span>
-            <span>Employees on hold or already paid cannot be selected</span>
+            <span><span className="font-semibold text-[#3f4b5f]">Note:</span> Checkboxes are disabled for employees without bank details and employees already marked as paid.</span>
           </div>
           {selectedEmployees.length > 0 && !showPayment && (
             <div className="mt-3 flex flex-col gap-3 rounded-xl border border-[#ddd8fb] bg-[#faf9ff] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
@@ -219,10 +311,10 @@ export default function AccountantPayrollQueue() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1080px] text-left">
+          <table className="w-full min-w-[1180px] text-left">
             <thead className="bg-[#f7f8fc] text-[10px] uppercase tracking-wider text-[#657184]"><tr>
               <th className="w-14 px-5 py-3.5"><input aria-label="Select all ready employees" type="checkbox" checked={allFilteredSelected} onChange={toggleAllFiltered} className="h-4 w-4 accent-[#6751e7]" /></th>
-              {['Employee', 'Employee ID', 'Department', 'Gross pay', 'Deductions', 'Net pay', 'Status', ''].map((heading, index) => <th key={`${heading}-${index}`} className="px-4 py-3.5">{heading}</th>)}
+              {['Employee', 'Employee ID', 'Department', 'Monthly salary', 'Gross pay', 'Deductions', 'Net pay', 'Status', ''].map((heading, index) => <th key={`${heading}-${index}`} className="px-4 py-3.5">{heading}</th>)}
             </tr></thead>
             <tbody className="divide-y divide-[#edf0f3]">
               {rows.map((row) => {
@@ -233,18 +325,19 @@ export default function AccountantPayrollQueue() {
                   <td className="px-4 py-4"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ede9fe] text-xs font-bold text-[#634bdc]">{row.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</span><div><p className="text-sm font-semibold">{row.name}</p><p className="mt-0.5 text-[10px] text-[#8492a6]">{row.email}</p></div></div></td>
                   <td className="px-4 py-4 text-xs text-[#596578]">{row.employeeId}</td>
                   <td className="px-4 py-4 text-xs text-[#596578]">{row.role}</td>
+                  <td className="px-4 py-4 text-sm">{money(row.monthlySalary)}</td>
                   <td className="px-4 py-4 text-sm">{money(row.grossEarnings)}</td>
-                  <td className="px-4 py-4 text-sm text-[#b45309]">− {money(row.totalDeductions)}</td>
+                  <td className="whitespace-nowrap px-4 py-4 text-sm text-[#b45309]">−{money(row.totalDeductions)}</td>
                   <td className="px-4 py-4 text-sm font-bold">{money(row.netPay)}</td>
-                  <td className="px-4 py-4"><span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[row.paymentStatus]}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{row.paymentStatus === "ready" ? "Ready to pay" : row.paymentStatus === "on-hold" ? "On hold" : "Paid"}</span></td>
-                  <td className="px-4 py-4"><Link aria-label={`View ${row.name} payroll details`} href={`/accountant/payroll/${row.payrollEntryId}`} className="text-[#667386] hover:text-[#6751e7]"><ChevronRight size={18} /></Link></td>
+                  <td className="px-4 py-4"><span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[row.paymentStatus]}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{row.paymentStatus === "ready" ? "Ready to pay" : row.paymentStatus === "bank-details-missing" ? "Bank details not provided" : "Paid"}</span></td>
+                  <td className="px-4 py-4"><Link aria-label={`View ${row.name} payroll details`} href={`/accountant/payroll/${row.payrollEntryId}`} className="flex h-9 w-9 items-center justify-center rounded-lg text-[#667386] hover:bg-[#f3f0ff] hover:text-[#6751e7]"><ChevronRight size={21} /></Link></td>
                 </tr>;
               })}
             </tbody>
           </table>
         </div>
         {rows.length === 0 && <div className="p-12 text-center"><Users className="mx-auto text-[#b2bac6]" size={28} /><p className="mt-3 text-sm font-medium">No employees found</p><p className="mt-1 text-xs text-[#7c8798]">Try changing your search or status filter.</p></div>}
-        {filtered.length > 0 && <Pagination currentPage={page} totalItems={filtered.length} itemsPerPage={itemsPerPage} onPageChange={setPage} roundedBottom="rounded-b-xl" alwaysShow />}
+        {totalItems > 0 && <Pagination currentPage={page} totalItems={totalItems} itemsPerPage={itemsPerPage} onPageChange={setPage} roundedBottom="rounded-b-xl" alwaysShow />}
       </section>
 
       {showPayment && (
@@ -255,7 +348,7 @@ export default function AccountantPayrollQueue() {
             <div className="overflow-y-auto p-5">
               <div className="rounded-xl bg-[#f7f5ff] p-4"><div className="flex justify-between text-sm"><span className="text-[#667386]">Employees</span><span className="font-semibold">{selectedEmployees.length}</span></div><div className="mt-3 flex justify-between border-t border-[#e5e0fb] pt-3"><span className="font-semibold">Total amount</span><span className="text-xl font-bold text-[#5b45d1]">{money(selectedTotal)}</span></div></div>
               <div className="mt-5">
-                <div className="mb-3 flex items-end justify-between"><div><h4 className="text-sm font-bold">Payment information</h4><p className="mt-0.5 text-xs text-[#7c8798]">Method, reference, date, and remarks can differ for every employee.</p></div><span className="text-xs font-medium text-[#6751e7]">{Object.values(paymentDetails).filter((details) => details.transactionId.trim() && details.paymentDate && (details.paymentMethod !== "UPI" || details.upiId.trim()) && (details.paymentMethod !== "Cheque" || (details.bankName.trim() && details.chequeDate)) && (details.paymentMethod !== "Cash" || details.receivedBy.trim())).length}/{selectedEmployees.length} completed</span></div>
+                <div className="mb-3 flex items-end justify-between"><div><h4 className="text-sm font-bold">Payment information</h4><p className="mt-0.5 text-xs text-[#7c8798]">Method, reference, date, and remarks can differ for every employee.</p></div><span className="text-xs font-medium text-[#6751e7]">{Object.values(paymentDetails).filter((details) => details.transactionId.trim() && details.paymentDate && (details.paymentMethod !== "UPI" || details.upiId.trim()) && (details.paymentMethod !== "Cheque" || (details.bankName.trim() && details.chequeDate))).length}/{selectedEmployees.length} completed</span></div>
                 <div className="space-y-4">
                   {selectedEmployees.map((employee) => {
                     const details = paymentDetails[employee.payrollEntryId];
@@ -267,7 +360,6 @@ export default function AccountantPayrollQueue() {
                     const usesChequeDetails = details.paymentMethod === "Cheque";
                     const missingChequeBank = showValidation && usesChequeDetails && !details.bankName.trim();
                     const missingChequeDate = showValidation && usesChequeDetails && !details.chequeDate;
-                    const missingReceivedBy = showValidation && details.paymentMethod === "Cash" && !details.receivedBy.trim();
                     const referenceLabel = details.paymentMethod === "Cheque"
                       ? "Cheque number"
                       : details.paymentMethod === "Cash"
@@ -282,13 +374,12 @@ export default function AccountantPayrollQueue() {
                     return <section key={employee.payrollEntryId} className="overflow-hidden rounded-xl border border-[#dfe3ea] bg-white">
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#edf0f3] bg-[#f8f9fc] px-4 py-3"><div><p className="text-sm font-bold">{employee.name}</p><p className="mt-0.5 text-xs text-[#7c8798]">{employee.employeeId} · {employee.role}</p></div><div className="text-right"><p className="text-[10px] uppercase text-[#8b95a5]">Net salary</p><p className="text-sm font-bold">{money(employee.netPay)}</p></div></div>
                       <div className="grid gap-4 p-4 sm:grid-cols-2">
-                        <label className="text-xs font-semibold uppercase text-[#8492a6]">Payment method<div className="relative mt-2"><select value={details.paymentMethod} onChange={(event) => updatePaymentDetails(employee.payrollEntryId, { paymentMethod: event.target.value as PaymentMethod, transactionId: "", bankName: "", upiId: "", chequeDate: "", receivedBy: "" })} className="h-11 w-full cursor-pointer appearance-none rounded-lg border border-[#dce3eb] bg-[#f8fafc] px-3 pr-9 text-sm normal-case text-[#142038] outline-none focus:border-[#1769e0]">{paymentMethods.map((method) => <option key={method} value={method}>{method}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8492a6]" size={16} /></div></label>
+                        <label className="text-xs font-semibold uppercase text-[#8492a6]">Payment method<div className="relative mt-2"><select value={details.paymentMethod} onChange={(event) => updatePaymentDetails(employee.payrollEntryId, { paymentMethod: event.target.value as PaymentMethod, transactionId: "", bankName: "", upiId: "", chequeDate: "" })} className="h-11 w-full cursor-pointer appearance-none rounded-lg border border-[#dce3eb] bg-[#f8fafc] px-3 pr-9 text-sm normal-case text-[#142038] outline-none focus:border-[#1769e0]">{paymentMethods.map((method) => <option key={method} value={method}>{method}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8492a6]" size={16} /></div></label>
                         <label className="text-xs font-semibold uppercase text-[#8492a6]">{referenceLabel}<input value={details.transactionId} onChange={(event) => updatePaymentDetails(employee.payrollEntryId, { transactionId: event.target.value })} placeholder={`Enter ${referenceLabel.toLowerCase()}`} className={`mt-2 h-11 w-full rounded-lg border bg-[#f8fafc] px-3 text-sm normal-case text-[#142038] outline-none focus:border-[#1769e0] ${missingReference || duplicate ? "border-[#dc2626]" : "border-[#dce3eb]"}`} />{(missingReference || duplicate) && <p className="mt-1 text-[10px] normal-case text-[#dc2626]">{duplicate ? "This reference is already used for another employee." : `${referenceLabel} is required.`}</p>}</label>
                         {details.paymentMethod === "UPI" && <label className="text-xs font-semibold uppercase text-[#8492a6]">UPI ID<input value={details.upiId} onChange={(event) => updatePaymentDetails(employee.payrollEntryId, { upiId: event.target.value })} placeholder="name@bank" className={`mt-2 h-11 w-full rounded-lg border bg-[#f8fafc] px-3 text-sm normal-case text-[#142038] outline-none focus:border-[#1769e0] ${missingUpiId ? "border-[#dc2626]" : "border-[#dce3eb]"}`} />{missingUpiId && <p className="mt-1 text-[10px] normal-case text-[#dc2626]">UPI ID is required.</p>}</label>}
                         {usesChequeDetails && <><label className="text-xs font-semibold uppercase text-[#8492a6]">Bank name<input value={details.bankName} onChange={(event) => updatePaymentDetails(employee.payrollEntryId, { bankName: event.target.value })} placeholder="Enter issuing bank name" className={`mt-2 h-11 w-full rounded-lg border bg-[#f8fafc] px-3 text-sm normal-case text-[#142038] outline-none focus:border-[#1769e0] ${missingChequeBank ? "border-[#dc2626]" : "border-[#dce3eb]"}`} />{missingChequeBank && <p className="mt-1 text-[10px] normal-case text-[#dc2626]">Bank name is required.</p>}</label><label className="text-xs font-semibold uppercase text-[#8492a6]">Cheque date<input type="date" value={details.chequeDate} onChange={(event) => updatePaymentDetails(employee.payrollEntryId, { chequeDate: event.target.value })} className={`mt-2 h-11 w-full rounded-lg border bg-[#f8fafc] px-3 text-sm normal-case text-[#142038] outline-none focus:border-[#1769e0] ${missingChequeDate ? "border-[#dc2626]" : "border-[#dce3eb]"}`} />{missingChequeDate && <p className="mt-1 text-[10px] normal-case text-[#dc2626]">Date is required.</p>}</label></>}
-                        {details.paymentMethod === "Cash" && <label className="text-xs font-semibold uppercase text-[#8492a6]">Received by<input value={details.receivedBy} onChange={(event) => updatePaymentDetails(employee.payrollEntryId, { receivedBy: event.target.value })} placeholder="Enter recipient name" className={`mt-2 h-11 w-full rounded-lg border bg-[#f8fafc] px-3 text-sm normal-case text-[#142038] outline-none focus:border-[#1769e0] ${missingReceivedBy ? "border-[#dc2626]" : "border-[#dce3eb]"}`} />{missingReceivedBy && <p className="mt-1 text-[10px] normal-case text-[#dc2626]">Recipient name is required.</p>}</label>}
                         <label className="text-xs font-semibold uppercase text-[#8492a6]">Payment date<input type="date" value={details.paymentDate} onChange={(event) => updatePaymentDetails(employee.payrollEntryId, { paymentDate: event.target.value })} className={`mt-2 h-11 w-full rounded-lg border bg-[#f8fafc] px-3 text-sm normal-case text-[#142038] outline-none focus:border-[#1769e0] ${missingDate ? "border-[#dc2626]" : "border-[#dce3eb]"}`} />{missingDate && <p className="mt-1 text-[10px] normal-case text-[#dc2626]">Payment date is required.</p>}</label>
-                        <label className="text-xs font-semibold uppercase text-[#8492a6] sm:col-span-2">Remarks (optional)<textarea value={details.remarks} onChange={(event) => updatePaymentDetails(employee.payrollEntryId, { remarks: event.target.value })} rows={2} className="mt-2 w-full resize-none rounded-lg border border-[#dce3eb] bg-[#f8fafc] px-3 py-2 text-sm normal-case text-[#142038] outline-none focus:border-[#1769e0]" /></label>
+                        <label className="text-xs font-semibold uppercase text-[#8492a6] sm:col-span-2">Remarks (optional)<textarea value={details.remarks} onChange={(event) => updatePaymentDetails(employee.payrollEntryId, { remarks: event.target.value })} placeholder="Enter payment remarks (optional)" rows={2} className="mt-2 w-full resize-none rounded-lg border border-[#dce3eb] bg-[#f8fafc] px-3 py-2 text-sm normal-case text-[#142038] outline-none focus:border-[#1769e0]" /></label>
                       </div>
                     </section>;
                   })}

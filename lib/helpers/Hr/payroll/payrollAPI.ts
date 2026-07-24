@@ -19,7 +19,13 @@ export async function createPayrollRun(
   return data;
 }
 
-export async function getPayrollRuns(collegeId: number, page: number, limit: number, year?: string | number) {
+export async function getPayrollRuns(
+  collegeId: number,
+  page: number,
+  limit: number,
+  year?: string | number,
+  status?: string,
+) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
@@ -33,6 +39,10 @@ export async function getPayrollRuns(collegeId: number, page: number, limit: num
     query = query.eq("payrollYear", Number(year));
   }
 
+  if (status && status !== "all") {
+    query = query.eq("status", status);
+  }
+
   const { data, error, count } = await query
     .order("payrollYear", { ascending: false })
     .order("payrollMonth", { ascending: false })
@@ -43,7 +53,55 @@ export async function getPayrollRuns(collegeId: number, page: number, limit: num
     throw new Error(error.message);
   }
 
-  return { runs: data || [], total: count || 0 };
+  const { data: statusRows, error: statusError } = await supabase
+    .from("payroll_runs")
+    .select("status")
+    .eq("collegeId", collegeId)
+    .eq("is_deleted", false);
+
+  if (statusError) {
+    throw new Error(statusError.message);
+  }
+
+  const statuses = Array.from(new Set((statusRows || []).map((row) => row.status).filter(Boolean)));
+
+  const runs = data || [];
+  const runIds = runs.map((run) => Number(run.payrollRunId));
+  if (!runIds.length) return { runs, total: count || 0, statuses };
+
+  const { data: runEntries, error: runEntriesError } = await supabase
+    .from("payroll_entries")
+    .select("payrollEntryId, payrollRunId, status")
+    .in("payrollRunId", runIds)
+    .eq("is_deleted", false)
+    .is("deletedAt", null);
+  if (runEntriesError) throw new Error(runEntriesError.message);
+
+  const entriesByRun = new Map<number, Array<{ status: string | null }>>();
+  (runEntries || []).forEach((entry) => {
+    const runId = Number(entry.payrollRunId);
+    if (!entriesByRun.has(runId)) entriesByRun.set(runId, []);
+    entriesByRun.get(runId)?.push({ status: entry.status });
+  });
+
+  const enrichedRuns = runs.map((run) => {
+    const runId = Number(run.payrollRunId);
+    const payrollEntries = entriesByRun.get(runId) ?? [];
+    const paidCount = payrollEntries.filter((entry) => entry.status === "paid").length;
+    const payableCount = payrollEntries.length;
+    const pendingCount = Math.max(0, payableCount - paidCount);
+    const displayStatus = run.status === "paid" || (payableCount > 0 && pendingCount === 0)
+      ? "paid"
+      : paidCount > 0
+        ? "partially_paid"
+        : run.status;
+    return {
+      ...run,
+      displayStatus,
+      paymentProgress: { paidCount, pendingCount, payableCount },
+    };
+  });
+  return { runs: enrichedRuns, total: count || 0, statuses };
 }
 
 export async function getPayrollEntriesByMonth(collegeId: number, month: number, year: number, page: number, limit: number, searchQuery: string = "") {
@@ -168,7 +226,7 @@ export async function getMyPayslips(
   const runIds = entries.map((e: any) => e.payrollRunId);
   const { data: runs, error: runsError } = await supabase
     .from("payroll_runs")
-    .select("payrollRunId, payrollMonth, payrollYear, createdAt")
+    .select("payrollRunId, payrollMonth, payrollYear, status, createdAt, processedAt, paidAt, updatedAt, processor:processedBy(fullName)")
     .in("payrollRunId", runIds);
 
   if (runsError) {
@@ -178,6 +236,25 @@ export async function getMyPayslips(
   const runsMap = new Map();
   (runs || []).forEach((r: any) => runsMap.set(r.payrollRunId, r));
 
+  const { data: employeeIdentifier, error: identifierError } = await supabase
+    .from("employee_ids")
+    .select("employeeIdPk")
+    .eq("userId", userId)
+    .maybeSingle();
+  if (identifierError) throw new Error(identifierError.message);
+
+  const paymentByRun = new Map<number, any>();
+  if (employeeIdentifier?.employeeIdPk) {
+    const { data: payments, error: paymentsError } = await supabase
+      .from("employee_salary_payments")
+      .select("payrollRunId, paymentDate, createdAt, creator:createdBy(fullName)")
+      .eq("employeeId", employeeIdentifier.employeeIdPk)
+      .in("payrollRunId", runIds)
+      .is("deletedAt", null);
+    if (paymentsError) throw new Error(paymentsError.message);
+    (payments || []).forEach((payment: any) => paymentByRun.set(Number(payment.payrollRunId), payment));
+  }
+
   const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   
   // Merge and sort
@@ -186,15 +263,27 @@ export async function getMyPayslips(
     if (!run) return null;
 
     const monthName = months[run.payrollMonth - 1] || "";
+    const payment = paymentByRun.get(Number(entry.payrollRunId));
+    const processor = Array.isArray(run.processor) ? run.processor[0] : run.processor;
+    const creator = Array.isArray(payment?.creator) ? payment.creator[0] : payment?.creator;
     
     return {
       id: entry.payrollEntryId,
       month: `${monthName} ${run.payrollYear}`,
-      date: new Date(run.createdAt).toLocaleDateString('en-GB'),
+      date: payment?.paymentDate
+        ? new Date(`${payment.paymentDate}T00:00:00Z`).toLocaleDateString("en-GB", { timeZone: "UTC" })
+        : new Date(run.createdAt).toLocaleDateString('en-GB'),
       gross: entry.grossEarnings,
       deductions: entry.totalDeductions,
       net: entry.netPay,
-      status: entry.status === 'paid' ? 'Paid' : (entry.status === 'finalized' ? 'Generated' : entry.status),
+      status: payment || entry.status === 'paid' ? 'Paid' : (entry.status === 'finalized' ? 'Generated' : entry.status),
+      tracking: {
+        calculatedAt: run.createdAt,
+        finalizedAt: run.processedAt || (run.status === "finalized" || run.status === "paid" ? run.updatedAt : null),
+        paidAt: payment?.paymentDate || payment?.createdAt || run.paidAt || null,
+        processedBy: processor?.fullName || "HR Manager",
+        paidBy: creator?.fullName || "Accountant",
+      },
       _createdAt: new Date(run.createdAt).getTime()
     };
   }).filter(Boolean) as any[];
@@ -204,16 +293,17 @@ export async function getMyPayslips(
 }
 
 export async function finalizePayrollRun(payrollRunId: number) {
+  const now = new Date().toISOString();
   const { error: runError } = await supabase
     .from("payroll_runs")
-    .update({ status: 'finalized' })
+    .update({ status: 'finalized', processedAt: now, updatedAt: now })
     .eq('payrollRunId', payrollRunId);
     
   if (runError) throw new Error(runError.message);
 
   const { error: entriesError } = await supabase
     .from("payroll_entries")
-    .update({ status: 'finalized' })
+    .update({ status: 'finalized', updatedAt: now })
     .eq('payrollRunId', payrollRunId);
 
   if (entriesError) throw new Error(entriesError.message);
@@ -222,16 +312,17 @@ export async function finalizePayrollRun(payrollRunId: number) {
 }
 
 export async function markPayrollPaid(payrollRunId: number) {
+  const now = new Date().toISOString();
   const { error: runError } = await supabase
     .from("payroll_runs")
-    .update({ status: 'paid' })
+    .update({ status: 'paid', paidAt: now, updatedAt: now })
     .eq('payrollRunId', payrollRunId);
     
   if (runError) throw new Error(runError.message);
 
   const { error: entriesError } = await supabase
     .from("payroll_entries")
-    .update({ status: 'paid' })
+    .update({ status: 'paid', updatedAt: now })
     .eq('payrollRunId', payrollRunId);
 
   if (entriesError) throw new Error(entriesError.message);
@@ -244,7 +335,11 @@ export async function getPayrollEntryDetails(entryId: number) {
     .from("payroll_entries")
     .select(`
       *,
-      payroll_runs ( payrollMonth, payrollYear, totalCalendarDays, createdAt ),
+      payroll_runs (
+        payrollRunId, payrollMonth, payrollYear, totalCalendarDays, status,
+        createdAt, processedAt, paidAt, updatedAt,
+        processor:processedBy ( fullName )
+      ),
       user:userId (
         fullName,
         email,
@@ -252,7 +347,7 @@ export async function getPayrollEntryDetails(entryId: number) {
         gender,
         dateOfJoining,
         collegeId,
-        employee_ids ( employeeId ),
+        employee_ids ( employeeIdPk, employeeId ),
         staff_bank_details ( pfNumber, esiNumber, bankName, accountNumber ),
         staff_pan_details ( panNumber ),
         employee_pay_profiles (
@@ -305,12 +400,50 @@ export async function getPayrollEntryDetails(entryId: number) {
       .maybeSingle()
   ]);
 
+  const employeeIdentifier = Array.isArray(data.user?.employee_ids)
+    ? data.user.employee_ids[0]
+    : data.user?.employee_ids;
+  let salaryPayment = null;
+  if (employeeIdentifier?.employeeIdPk) {
+    const { data: payment, error: paymentError } = await supabase
+      .from("employee_salary_payments")
+      .select("paymentDate, createdAt, creator:createdBy(fullName)")
+      .eq("employeeId", employeeIdentifier.employeeIdPk)
+      .eq("payrollRunId", data.payrollRunId)
+      .is("deletedAt", null)
+      .maybeSingle();
+    if (paymentError) throw new Error(paymentError.message);
+    salaryPayment = payment;
+  }
+
+  const processor = Array.isArray(data.payroll_runs.processor)
+    ? data.payroll_runs.processor[0]
+    : data.payroll_runs.processor;
+  const paymentCreator = Array.isArray(salaryPayment?.creator)
+    ? salaryPayment.creator[0]
+    : salaryPayment?.creator;
+
   return {
     ...data,
     leavesTaken: leavesRes.data || [],
     holidaysInMonth: holidaysRes.data || [],
     weekoffsConfig: [{ dayOfWeek: 0 }], // Default to Sunday
     collegeMedia: mediaRes.data || null,
-    college: (collegeRes && collegeRes.data) || null
+    college: (collegeRes && collegeRes.data) || null,
+    paymentTracking: {
+      calculatedAt: data.payroll_runs.createdAt,
+      finalizedAt: data.payroll_runs.processedAt
+        || (data.payroll_runs.status === "finalized" || data.payroll_runs.status === "paid"
+          ? data.payroll_runs.updatedAt
+          : null),
+      paidAt: salaryPayment?.paymentDate || salaryPayment?.createdAt || data.payroll_runs.paidAt || null,
+      processedBy: processor?.fullName || "HR Manager",
+      paidBy: paymentCreator?.fullName || "Accountant",
+      isFinalized: data.payroll_runs.status === "finalized"
+        || data.payroll_runs.status === "paid"
+        || data.status === "finalized"
+        || data.status === "paid",
+      isPaid: Boolean(salaryPayment) || data.status === "paid",
+    },
   };
 }
