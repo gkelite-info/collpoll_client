@@ -67,6 +67,20 @@ export function PayslipsSection({ userId }: PayslipsSectionProps) {
     }).format(val || 0);
   };
 
+  const formatTrackingDate = (value?: string | null) => {
+    if (!value) return "Pending";
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
+      ? new Date(`${value}T00:00:00Z`)
+      : new Date(value);
+    if (Number.isNaN(date.getTime())) return "Pending";
+    return new Intl.DateTimeFormat("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(date);
+  };
+
   return (
     <>
       <div className="flex items-center justify-between -mb-2 -mt-7">
@@ -193,6 +207,37 @@ export function PayslipsSection({ userId }: PayslipsSectionProps) {
                     <span className="w-[100px] font-bold text-[#333333]">Net Pay :</span>
                     <span className="text-[#666666] font-medium">{typeof slip.net === 'number' ? formatINR(slip.net) : slip.net}</span>
                   </div>
+                </div>
+                <div className="mt-4 grid gap-2 border-t border-gray-100 pt-3 sm:grid-cols-3">
+                  {[
+                    {
+                      label: "Payroll Calculated",
+                      date: slip.tracking?.calculatedAt,
+                      person: slip.tracking?.processedBy,
+                      completed: true,
+                    },
+                    {
+                      label: "HR Finalized",
+                      date: slip.tracking?.finalizedAt,
+                      person: slip.tracking?.processedBy,
+                      completed: Boolean(slip.tracking?.finalizedAt),
+                    },
+                    {
+                      label: slip.status === "Paid" ? "Payment Completed" : "Payment Pending",
+                      date: slip.tracking?.paidAt,
+                      person: slip.tracking?.paidBy,
+                      completed: slip.status === "Paid",
+                    },
+                  ].map((step) => (
+                    <div key={step.label} className="flex items-start gap-2 rounded-lg bg-gray-50 p-2.5">
+                      <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${step.completed ? "bg-[#43C17A] text-white" : "border-2 border-gray-300 bg-white text-transparent"}`}>✓</span>
+                      <div className="min-w-0">
+                        <p className={`text-[11px] font-bold ${step.completed ? "text-[#333333]" : "text-gray-500"}`}>{step.label}</p>
+                        <p className="mt-0.5 text-[10px] text-gray-500">{step.completed ? formatTrackingDate(step.date) : "Awaiting confirmation"}</p>
+                        <p className="mt-0.5 truncate text-[10px] text-gray-400">{step.person || (step.label.includes("Payment") ? "Accountant" : "HR Manager")}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))

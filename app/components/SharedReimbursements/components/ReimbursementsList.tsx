@@ -23,7 +23,7 @@ type Props = {
 
 export function displayStatus(status: string | null): ReimbursementStatus {
   const value = status?.toLowerCase();
-  if (value === "rejected") return "Rejected";
+  if (value === "rejected" || value === "payment_rejected") return "Rejected";
   if (["paid", "approved", "completed"].includes(value ?? "")) return "Paid";
   return "Pending";
 }

@@ -1,6 +1,7 @@
 export type StaticPayrollEmployee = {
   payrollEntryId: number;
   payrollRunId: number;
+  employeeIdPk: number;
   userId: number;
   employeeId: string;
   name: string;
@@ -15,9 +16,24 @@ export type StaticPayrollEmployee = {
   fullDaysWorked: number;
   halfDays: number;
   lopDays: number;
-  status: "paid";
+  status: "ready" | "paid";
+  payrollCreatedAt?: string;
+  payrollProcessedAt?: string | null;
+  payrollFinalizedAt?: string;
+  payrollProcessedBy?: string;
+  payrollRunStatus?: string;
   bank: { bankName: string; accountNumber: string; ifscCode: string; accountHolderName: string; branch: string };
-  payment: { paymentMethod: string; transactionId: string; paymentDate: string; remarks: string; recordedByRole: string; createdAt: string };
+  payment: {
+    paymentMethod: string;
+    transactionId: string;
+    paymentDate: string;
+    remarks: string;
+    upiId: string;
+    bankName: string;
+    chequeDate: string;
+    recordedByRole: string;
+    createdAt: string;
+  };
 };
 
 const people = [
@@ -41,6 +57,7 @@ export const staticPayrollEmployees: StaticPayrollEmployee[] = people.map((perso
   return {
     payrollEntryId: 1001 + index,
     payrollRunId: 501,
+    employeeIdPk: 201 + index,
     userId: 201 + index,
     employeeId: person[0],
     name: person[1],
@@ -56,19 +73,12 @@ export const staticPayrollEmployees: StaticPayrollEmployee[] = people.map((perso
     halfDays: index % 2,
     lopDays: index % 3,
     status: "paid",
+    payrollCreatedAt: "2026-07-16T10:00:00.000Z",
+    payrollProcessedAt: "2026-07-16T10:00:00.000Z",
+    payrollFinalizedAt: "2026-07-18T10:00:00.000Z",
+    payrollProcessedBy: "HR Manager",
+    payrollRunStatus: "paid",
     bank: { bankName: index % 2 ? "HDFC Bank" : "State Bank of India", accountNumber: `62100000${String(1200 + index)}`, ifscCode: index % 2 ? "HDFC0001234" : "SBIN0004567", accountHolderName: person[1], branch: "Hyderabad" },
-    payment: { paymentMethod: "Bank Transfer", transactionId: `TXN-PAY-202607-${1001 + index}`, paymentDate: "2026-07-20", remarks: "July salary payment completed", recordedByRole: "Accountant", createdAt: "2026-07-20T10:30:00.000Z" },
+    payment: { paymentMethod: "Bank Transfer", transactionId: `TXN-PAY-202607-${1001 + index}`, paymentDate: "2026-07-20", remarks: "July salary payment completed", upiId: "", bankName: "", chequeDate: "", recordedByRole: "Accountant", createdAt: "2026-07-20T10:30:00.000Z" },
   };
 });
-
-export function getStaticAttendance(employee: StaticPayrollEmployee) {
-  return Array.from({ length: 31 }, (_, index) => {
-    const day = index + 1;
-    const date = new Date(2026, 6, day);
-    let status = date.getDay() === 0 ? "weekoff" : "present";
-    if (day === 9 + (employee.userId % 4)) status = "absent";
-    if (day === 17 + (employee.userId % 3)) status = "halfday";
-    if (day === 24) status = "leave";
-    return { day, status };
-  });
-}

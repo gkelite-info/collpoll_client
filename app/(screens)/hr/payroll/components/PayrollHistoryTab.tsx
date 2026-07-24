@@ -23,6 +23,9 @@ export default function PayrollHistoryTab() {
 
   const [filterYear, setFilterYear] = useState("all");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [availableStatuses, setAvailableStatuses] = useState<string[]>([]);
 
   const currentYear = new Date().getFullYear();
   const yearOptions = [{ value: "all", label: "All Years" }];
@@ -31,6 +34,14 @@ export default function PayrollHistoryTab() {
   }
 
   const selectedYearLabel = yearOptions.find(o => o.value === filterYear)?.label || "All Years";
+  const statusOptions = [
+    { value: "all", label: "All Statuses" },
+    ...availableStatuses.map((status) => ({
+      value: status,
+      label: status.replace(/_/g, " ").replace(/\b\w/g, (character) => character.toUpperCase()),
+    })),
+  ];
+  const selectedStatusLabel = statusOptions.find((option) => option.value === filterStatus)?.label || "All Statuses";
 
   useEffect(() => {
     let isMounted = true;
@@ -40,11 +51,12 @@ export default function PayrollHistoryTab() {
       setIsLoading(true);
       
       try {
-        const result = await getPayrollRuns(Number(collegeId), currentPage, itemsPerPage, filterYear);
+        const result = await getPayrollRuns(Number(collegeId), currentPage, itemsPerPage, filterYear, filterStatus);
         
         if (isMounted) {
           setHistoryData(result.runs);
           setTotalItems(result.total);
+          setAvailableStatuses(result.statuses);
         }
       } catch (error) {
         toast.error("Unable to load payroll history at this time.", { id: "history-fetch-error" });
@@ -56,7 +68,7 @@ export default function PayrollHistoryTab() {
     fetchData();
 
     return () => { isMounted = false; };
-  }, [collegeId, currentPage, refreshKey, filterYear]);
+  }, [collegeId, currentPage, refreshKey, filterYear, filterStatus]);
 
   return (
     <div className="flex flex-col gap-4 w-full h-full">
@@ -64,9 +76,33 @@ export default function PayrollHistoryTab() {
         <h2 className="text-lg font-semibold text-gray-800">Past Payroll Runs</h2>
         <div className="flex flex-col sm:flex-row gap-4 relative w-full sm:w-auto">
           <div className="relative w-full sm:w-auto">
+            <button
+              type="button"
+              className="relative flex w-full cursor-pointer items-center justify-between rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm sm:min-w-[160px]"
+              onClick={() => { setIsStatusDropdownOpen((open) => !open); setIsDropdownOpen(false); }}
+            >
+              <span className="font-medium text-gray-800">{selectedStatusLabel}</span>
+              <CaretDown size={16} weight="bold" className={`text-gray-500 transition-transform duration-200 ${isStatusDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+            {isStatusDropdownOpen && (
+              <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
+                {statusOptions.map((option) => (
+                  <button
+                    type="button"
+                    key={option.value}
+                    onClick={() => { setFilterStatus(option.value); setCurrentPage(1); setIsStatusDropdownOpen(false); }}
+                    className={`block w-full cursor-pointer px-3 py-2 text-left text-sm transition-colors ${filterStatus === option.value ? "bg-[#43C17A]/10 font-semibold text-[#43C17A]" : "text-gray-700 hover:bg-gray-50"}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="relative w-full sm:w-auto">
             <div 
               className="relative border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white cursor-pointer w-full sm:min-w-[160px] flex justify-between items-center"
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              onClick={() => { setIsDropdownOpen(!isDropdownOpen); setIsStatusDropdownOpen(false); }}
             >
               <span className="font-medium text-gray-800">{selectedYearLabel}</span>
               <CaretDown 
@@ -102,7 +138,7 @@ export default function PayrollHistoryTab() {
       </div>
 
       <div className="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col min-h-[400px]">
-        <div className="overflow-auto flex-1 relative custom-scrollbar max-h-[60vh]">
+        <div className="custom-scrollbar relative min-h-0 flex-1 overflow-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
               <tr>
@@ -122,6 +158,7 @@ export default function PayrollHistoryTab() {
                 historyData.map((data: any, i) => {
                   const dateStr = `${data.payrollYear}-${String(data.payrollMonth).padStart(2, '0')}-01`;
                   const monthDisplay = format(new Date(dateStr), 'MMMM yyyy');
+                  const displayStatus = data.displayStatus || data.status;
                   
                   return (
                     <tr key={i} className="hover:bg-gray-50 transition-colors">
@@ -136,14 +173,20 @@ export default function PayrollHistoryTab() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
-                          data.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                          data.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                          data.status === 'finalized' ? 'bg-indigo-100 text-indigo-800' :
-                          data.status === 'paid' ? 'bg-green-100 text-green-800' :
+                          displayStatus === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                          displayStatus === 'processing' ? 'bg-blue-100 text-blue-800' :
+                          displayStatus === 'finalized' ? 'bg-indigo-100 text-indigo-800' :
+                          displayStatus === 'partially_paid' ? 'bg-amber-100 text-amber-800' :
+                          displayStatus === 'paid' ? 'bg-green-100 text-green-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {data.status}
+                          {displayStatus === "partially_paid" ? "Partially Paid" : displayStatus}
                         </span>
+                        {data.paymentProgress?.payableCount > 0 && (
+                          <p className="mt-1 text-[10px] text-gray-500">
+                            {data.paymentProgress.paidCount}/{data.paymentProgress.payableCount} employees paid
+                          </p>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button 
