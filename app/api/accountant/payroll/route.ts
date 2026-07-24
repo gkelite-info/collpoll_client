@@ -8,6 +8,24 @@ const PAYMENT_METHODS = new Set([
 ]);
 const PAYMENT_STATUSES = new Set(["ready", "paid", "bank-details-missing"]);
 
+type PaymentInput = {
+  employeeId: unknown;
+  payrollRunId: unknown;
+  paymentMethod: string;
+  paymentDate?: string;
+  remarks?: string;
+  transactionId?: string;
+  neftUtrNumber?: string;
+  rtgsUtrNumber?: string;
+  impsReferenceNumber?: string;
+  upiTransactionId?: string;
+  upiId?: string;
+  chequeNo?: string;
+  bankName?: string;
+  chequeDate?: string;
+  receiptNumber?: string;
+};
+
 async function getAccountantContext() {
   const authenticatedClient = await createAuthenticatedClient();
   const { data: { user }, error: authError } = await authenticatedClient.auth.getUser();
@@ -297,7 +315,7 @@ export async function POST(request: Request) {
   try {
     const { admin, profile } = await getAccountantContext();
     const body = await request.json();
-    const rows = Array.isArray(body?.payments) ? body.payments : [];
+    const rows: PaymentInput[] = Array.isArray(body?.payments) ? body.payments : [];
     if (!rows.length) return NextResponse.json({ error: "At least one payment is required." }, { status: 400 });
 
     const employeeIds = rows.map((row) => Number(row.employeeId));
