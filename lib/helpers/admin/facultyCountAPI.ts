@@ -136,7 +136,12 @@ export async function fetchProfilesByUserIds(userIds: number[]) {
     return data;
 }
 
-export async function fetchSubjectFacultyList(collegeAcademicYearId: number, collegeBranchId: number | null) {
+export async function fetchSubjectFacultyList(
+    collegeAcademicYearId: number, 
+    collegeBranchId: number | null,
+    page: number = 1,
+    limit: number = 9
+): Promise<{ data: any[], total: number }> {
     try {
         let query = supabase
             .from("faculty_sections")
@@ -158,17 +163,36 @@ export async function fetchSubjectFacultyList(collegeAcademicYearId: number, col
             query = query.is("college_sections.collegeBranchId", null);
         }
 
-        const { data, error } = await query;
+        const { data: rawSections, error } = await query;
 
         if (error) {
             console.error("fetchSubjectFacultyList error:", JSON.stringify(error, null, 2));
-            return [];
+            return { data: [], total: 0 };
         }
 
-        if (!data || data.length === 0) return [];
+        if (!rawSections || rawSections.length === 0) return { data: [], total: 0 };
 
-        const subjectIds = [...new Set(data.map((d: any) => d.collegeSubjectId))];
-        const facultyIds = [...new Set(data.map((d: any) => d.facultyId))];
+        const uniquePairsMap = new Map<string, any>();
+        rawSections.forEach((d: any) => {
+            const key = `${d.collegeSubjectId}_${d.facultyId}`;
+            if (!uniquePairsMap.has(key)) {
+                uniquePairsMap.set(key, {
+                    subjectId: d.collegeSubjectId,
+                    facultyId: d.facultyId
+                });
+            }
+        });
+
+        const allPairs = Array.from(uniquePairsMap.values());
+        const totalItems = allPairs.length;
+        
+        const offset = (page - 1) * limit;
+        const paginatedPairs = allPairs.slice(offset, offset + limit);
+        
+        if (paginatedPairs.length === 0) return { data: [], total: totalItems };
+
+        const subjectIds = [...new Set(paginatedPairs.map((d: any) => d.subjectId))];
+        const facultyIds = [...new Set(paginatedPairs.map((d: any) => d.facultyId))];
 
         const today = new Date().toISOString();
 
@@ -244,14 +268,14 @@ export async function fetchSubjectFacultyList(collegeAcademicYearId: number, col
             activeProjectCountMap.set(p.facultyId, prev + 1);
         });
 
-        return data.map((item: any) => {
+        const enrichedCourses = paginatedPairs.map((item: any) => {
             const faculty = facultyMap.get(item.facultyId);
             const profile = faculty?.users?.user_profile?.[0];
 
             return {
-                id: item.facultySectionId,
-                subject: subjectsMap.get(item.collegeSubjectId) || "Unknown Subject",
-                subjectId: item.collegeSubjectId,
+                id: `${item.subjectId}_${item.facultyId}`,
+                subject: subjectsMap.get(item.subjectId) || "Unknown Subject",
+                subjectId: item.subjectId,
                 facultyName: faculty?.fullName || "No Faculty Assigned",
                 facultyId: item.facultyId || "N/A",
                 employeeId:
@@ -262,9 +286,10 @@ export async function fetchSubjectFacultyList(collegeAcademicYearId: number, col
             };
         });
 
+        return { data: enrichedCourses, total: totalItems };
     } catch (err) {
         console.error("Unexpected error:", err);
-        return [];
+        return { data: [], total: 0 };
     }
 }
 

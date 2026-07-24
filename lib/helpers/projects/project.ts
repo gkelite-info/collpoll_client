@@ -248,8 +248,13 @@ export async function fetchProjectsByAdminId(adminId: number) {
 
 export async function fetchEnrichedProjectsByFaculty(
     facultyId: number,
-    collegeSubjectId?: number
-): Promise<EnrichedProject[]> {
+    collegeSubjectId?: number,
+    page?: number,
+    limit?: number,
+    statusFilter?: "active" | "completed"
+): Promise<{ data: EnrichedProject[], total: number }> {
+
+    const today = new Date().toISOString();
 
     let query = supabase
         .from("projects")
@@ -265,7 +270,7 @@ export async function fetchEnrichedProjectsByFaculty(
             college_subjects (
                 subjectName
             )
-        `)
+        `, { count: "exact" })
         .eq("facultyId", facultyId)
         .is("deletedAt", null)
         .order("createdAt", { ascending: false });
@@ -274,9 +279,21 @@ export async function fetchEnrichedProjectsByFaculty(
         query = query.eq("collegeSubjectId", collegeSubjectId);
     }
 
-    const { data: projectData, error: projectsError } = await query;
+    if (statusFilter === "active") {
+        query = query.gte("endDate", today);
+    } else if (statusFilter === "completed") {
+        query = query.lt("endDate", today);
+    }
 
-    if (projectsError || !projectData?.length) return [];
+    if (page !== undefined && limit !== undefined) {
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
+        query = query.range(from, to);
+    }
+
+    const { data: projectData, error: projectsError, count } = await query;
+
+    if (projectsError || !projectData?.length) return { data: [], total: 0 };
 
     const projectIds = projectData.map((p) => p.projectId);
 
@@ -368,7 +385,7 @@ export async function fetchEnrichedProjectsByFaculty(
         })).map((s) => [s.studentId, s])
     );
 
-    return projectData.map((project) => {
+    const enrichedProjects = projectData.map((project) => {
         const mentors = mentorRows
             .filter((m) => m.projectId === project.projectId)
             .map((m) => facultyMap.get(m.facultyId))
@@ -405,6 +422,11 @@ export async function fetchEnrichedProjectsByFaculty(
             fileUrls,
         };
     });
+
+    return {
+        data: enrichedProjects,
+        total: count ?? 0
+    };
 }
 
 export async function fetchEnrichedProjectsByStudent(
@@ -577,8 +599,13 @@ export async function fetchEnrichedProjectsByStudent(
 }
 
 
-export async function fetchAdminPendingStats(yearId: number, collegeId: number) {
-    const { data, error } = await supabase
+export async function fetchAdminPendingStats(
+    yearId: number, 
+    collegeId: number,
+    subjectIds?: number[],
+    facultyIds?: number[]
+) {
+    let query = supabase
         .from("projects")
         .select(`
             projectId,
@@ -595,6 +622,15 @@ export async function fetchAdminPendingStats(yearId: number, collegeId: number) 
         .eq("collegeAcademicYearId", yearId)
         .eq("collegeId", collegeId)
         .is("deletedAt", null);
+
+    if (subjectIds && subjectIds.length > 0) {
+        query = query.in("collegeSubjectId", subjectIds);
+    }
+    if (facultyIds && facultyIds.length > 0) {
+        query = query.in("facultyId", facultyIds);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error("Fetch stats error:", error);

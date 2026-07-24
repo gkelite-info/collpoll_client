@@ -4,8 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import ProjectsHeader from "./components/ProjectsHeader";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
-import { fetchBranchOptionsForAdmin } from "@/lib/helpers/admin/collegeBranchAPI";
-import { fetchAcademicYearOptionsForAdmin, fetchAcademicYearOptionsForAdminBulk } from "@/lib/helpers/admin/collegeAcademicYearAPI";
+import { fetchBranchOptionsDirectly } from "@/lib/helpers/admin/collegeBranchAPI";
+import { fetchAcademicYearOptionsDirectly, fetchAcademicYearOptionsBulkDirectly } from "@/lib/helpers/admin/collegeAcademicYearAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { FilterDropdown } from "../assignments/components/filterDropdown";
 import { fetchAdminEducationTypes, fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns";
@@ -31,7 +31,10 @@ function ProjectsOverview() {
   const [branchFilter, setBranchFilter] = useState("All");
   const [yearFilter, setYearFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
+  const [currentCoursePage, setCurrentCoursePage] = useState(1);
+  const [totalCourses, setTotalCourses] = useState(0);
   const cardsPerPage = 9;
+  const coursesPerPage = 9;
   const searchParams = useSearchParams();
   const router = useRouter();
   const [courseList, setCourseList] = useState<any[]>([]);
@@ -159,7 +162,7 @@ function ProjectsOverview() {
   }, [userId, collegeId, collegeEducationId]);
 
   useEffect(() => {
-    if (!userId || !educationFilter || educationFilter === "All") {
+    if (!userId || !collegeId || !educationFilter || educationFilter === "All") {
       setBranchOptions([]);
       setBranches([]);
       setYearOptions([]);
@@ -169,8 +172,8 @@ function ProjectsOverview() {
 
     const loadMetadata = async () => {
       try {
-        const branchData = await fetchBranchOptionsForAdmin(
-          userId,
+        const branchData = await fetchBranchOptionsDirectly(
+          collegeId as number,
           Number(educationFilter)
         );
 
@@ -193,16 +196,19 @@ function ProjectsOverview() {
           return;
         }
 
+        let uniqueYears: any[] = [];
+        let newMap: Record<number, { id: number; label: string }[]> = {};
+
         if (isSchool) {
-          const years = await fetchAcademicYearOptionsForAdmin(userId, null);
-          const uniqueYears = Array.from(
+          const years = await fetchAcademicYearOptionsDirectly(collegeId as number, null);
+          uniqueYears = Array.from(
             new Map(years.map((item) => [item.label, item])).values()
           );
           setYearOptions(uniqueYears);
           setBranchYearsMap({ 0: years });
         } else {
           const branchIds = branchData.map((b) => b.collegeBranchId);
-          const bulkYears = await fetchAcademicYearOptionsForAdminBulk(userId, branchIds);
+          const bulkYears = await fetchAcademicYearOptionsBulkDirectly(collegeId as number, branchIds);
           
           const results = branchData.map((b) => {
             const yearsForBranch = bulkYears.filter(y => y.collegeBranchId === b.collegeBranchId);
@@ -212,23 +218,78 @@ function ProjectsOverview() {
             };
           });
 
-          const newMap: Record<number, { id: number; label: string }[]> = {};
           results.forEach((item) => {
             newMap[item.branchId] = item.years;
           });
           setBranchYearsMap(newMap);
 
           const allFlat = results.flatMap((r) => r.years);
-          const uniqueYears = Array.from(
+          uniqueYears = Array.from(
             new Map(allFlat.map((item) => [item.label, item])).values()
           );
           setYearOptions(uniqueYears);
         }
+
+        // --- Phase 3: Start fetching counts IMMEDIATELY without waiting for a re-render ---
+        let initialCards: any[] = [];
+        if (isSchool) {
+            initialCards = uniqueYears.map((year: any) => ({
+                branchId: null,
+                name: selectedEducationLabel || "Class",
+                year: year.label,
+                yearId: year.id,
+            }));
+        } else {
+            initialCards = branchData.flatMap((branch) => {
+                const branchYears = newMap[branch.collegeBranchId] ?? [];
+                return branchYears.map((year: any) => ({
+                    branchId: branch.collegeBranchId,
+                    name: branch.code,
+                    year: year.label,
+                    yearId: year.id,
+                }));
+            });
+        }
+        
+        const initialPaginatedCards = initialCards.slice(0, cardsPerPage);
+        
+        if (initialPaginatedCards.length > 0) {
+            const cardKeys = initialPaginatedCards.map((card) => ({
+                branchId: card.branchId,
+                yearId: card.yearId,
+            }));
+
+            // We can kick off the counts fetch while React does its render cycle!
+            setIsFetchingCounts(true);
+            const [studentCountsMap, facultyDataMap, projectCountsMap] = await Promise.all([
+                getBatchStudentCounts(Number(educationFilter), cardKeys),
+                getBatchFacultyData(Number(educationFilter), cardKeys),
+                getBatchProjectCounts(collegeId as number, cardKeys),
+            ]);
+
+            const results = initialPaginatedCards.map((card) => {
+                const key = `${card.branchId ?? "null"}-${card.yearId}`;
+                const facultyInfo = facultyDataMap.get(key) ?? { count: 0, photos: [] };
+
+                return {
+                    branchId: card.branchId,
+                    yearId: card.yearId,
+                    studentCount: studentCountsMap.get(key) ?? 0,
+                    facultyCount: facultyInfo.count,
+                    facultyPhotos: facultyInfo.photos,
+                    activeProjectCount: projectCountsMap.get(key) ?? 0,
+                };
+            });
+            setCountsData(results);
+        }
+
       } catch (err) {
         console.error("Failed to load metadata", err);
       } finally {
         setIsMetadataLoaded(true);
         setIsMetadataLoading(false);
+        setIsFetchingCounts(false);
+        setIsPageReady(true);
       }
     };
 
@@ -290,10 +351,12 @@ function ProjectsOverview() {
       try {
         setCourseLoading(true);
 
-        const [data, projectStats] = await Promise.all([
-          fetchSubjectFacultyList(Number(yearId), branchId ? Number(branchId) : null),
-          fetchAdminPendingStats(Number(yearId), collegeId)
+        const [listResponse, projectStats] = await Promise.all([
+          fetchSubjectFacultyList(Number(yearId), branchId ? Number(branchId) : null, currentCoursePage, coursesPerPage),
+          fetchAdminPendingStats(Number(yearId), collegeId as number)
         ]);
+
+        const { data, total } = listResponse;
 
         const enrichedCourses = data.map((item: any) => {
           const key = `${Number(item.subjectId)}_${Number(item.facultyId)}`;
@@ -306,15 +369,8 @@ function ProjectsOverview() {
           };
         });
 
-        const uniqueMap = new Map();
-        enrichedCourses.forEach((item: any) => {
-          const key = `${item.subjectId}_${item.facultyId}`;
-          if (!uniqueMap.has(key)) {
-            uniqueMap.set(key, item);
-          }
-        });
-
-        setCourseList(Array.from(uniqueMap.values()));
+        setCourseList(enrichedCourses);
+        setTotalCourses(total);
       } catch (err) {
         console.error("Failed to load enriched projects:", err);
       } finally {
@@ -323,7 +379,7 @@ function ProjectsOverview() {
     };
 
     loadCourses();
-  }, [branchId, yearId, collegeId, adminLoading, isSchool]);
+  }, [branchId, yearId, collegeId, adminLoading, isSchool, currentCoursePage, coursesPerPage]);
 
 
   useEffect(() => {
@@ -344,6 +400,14 @@ function ProjectsOverview() {
         return;
       }
 
+      // Optimization: if we already have the exact data for these cards, skip fetching
+      // This prevents the redundant double-fetch after loadMetadata runs
+      const currentKeys = paginatedCards.map((c) => `${c.branchId}-${c.yearId}`).join(",");
+      const existingKeys = countsData.map((c) => `${c.branchId}-${c.yearId}`).join(",");
+      if (currentKeys === existingKeys && countsData.length > 0) {
+          return;
+      }
+
       try {
         setIsFetchingCounts(true);
 
@@ -356,7 +420,7 @@ function ProjectsOverview() {
         const [studentCountsMap, facultyDataMap, projectCountsMap] = await Promise.all([
           getBatchStudentCounts(Number(educationFilter), cardKeys),
           getBatchFacultyData(Number(educationFilter), cardKeys),
-          getBatchProjectCounts(collegeId, cardKeys),
+          getBatchProjectCounts(collegeId as number, cardKeys),
         ]);
 
         const results = paginatedCards.map((card) => {
@@ -571,35 +635,50 @@ function ProjectsOverview() {
         />
       ) : (
         <>
-          <div className="bg-pink-00 gap-5 w-full mx-auto">
+          <div className="bg-pink-00 flex flex-col flex-1 justify-between gap-5 w-full mx-auto min-h-[calc(100vh-320px)] pb-10">
             {courseLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto content-start">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <DiscussionDeptCardSkeleton key={i} />
                 ))}
-              </div>
+              </div>  
             ) : courseList.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto">
-                {courseList.map((course: any) => (
-                  <DiscussionCourseCard
-                    key={course.id}
-                    id={course.subjectId}
-                    subject={course.subject}
-                    facultyName={course.facultyName}
-                    facultyId={course.facultyId}
-                    employeeId={course.employeeId}
-                    avatar={course.avatar}
-                    activeQuiz={course.activeQuiz || 0}
-                    pendingSubmissions={course.pendingSubmissions}
-                    buttonText="View Projects"
-                    activeLabel="Active Projects"
-                    branchId={Number(branchId)}
-                    yearId={Number(yearId)}
-                    role={normalizedRole}
-                    dept={dept}
-                    year={year}
+              <div className="flex flex-col flex-1 gap-5 w-full mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full content-start">
+                  {(() => {
+                    return courseList.map((course: any) => (
+                      <DiscussionCourseCard
+                        key={course.id}
+                        id={course.subjectId}
+                        subject={course.subject}
+                        facultyName={course.facultyName}
+                        facultyId={course.facultyId}
+                        employeeId={course.employeeId}
+                        avatar={course.avatar}
+                        activeQuiz={course.activeQuiz}
+                        pendingSubmissions={course.pendingSubmissions}
+                        buttonText="View All Projects"
+                        activeLabel="Active Projects"
+                        branchId={Number(branchId)}
+                        yearId={Number(yearId)}
+                        role={normalizedRole}
+                        dept={dept}
+                        year={year}
+                      />
+                    ));
+                  })()}
+                </div>
+                
+                <div className="flex justify-center items-center mt-6 w-full max-w-[1200px] mx-auto rounded-lg shadow-sm">
+                  <Pagination
+                    currentPage={currentCoursePage}
+                    totalItems={totalCourses}
+                    itemsPerPage={coursesPerPage}
+                    onPageChange={(page) => setCurrentCoursePage(page)}
+                    alwaysShow={true}
+                    roundedBottom="rounded-lg"
                   />
-                ))}
+                </div>
               </div>
             ) : (
               <div className="col-span-full py-20 sm:py-40 text-center">

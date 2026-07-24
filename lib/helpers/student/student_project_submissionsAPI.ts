@@ -110,8 +110,11 @@ export async function deleteSubmission(
     return { success: true };
 }
 
-export async function fetchProjectSubmissionsWithStudents(projectId: number) {
-    const { data, error } = await supabase
+export async function fetchProjectSubmissionsWithStudents(projectId: number, page: number = 1, limit: number = 20) {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data, error, count } = await supabase
         .from("student_project_submissions")
         .select(`
             studentProjectSubmissionId,
@@ -136,15 +139,20 @@ export async function fetchProjectSubmissionsWithStudents(projectId: number) {
                     )
                 )
             )
-        `)
-        .eq("projectId", projectId);
+        `, { count: "exact" })
+        .eq("projectId", projectId)
+        .order("updatedAt", { ascending: false })
+        .range(from, to);
 
     if (error) {
         console.error("fetchProjectSubmissionsWithStudents error:", error);
         throw error;
     }
 
-    return data ?? [];
+    return {
+        data: data ?? [],
+        total: count ?? 0
+    };
 }
 
 export async function uploadFileToStorage(file: File, projectId: number, studentId: number) {

@@ -77,31 +77,34 @@ export async function getBatchFacultyData(
     try {
         const yearIds = [...new Set(cards.map((c) => c.yearId))];
 
-        // Step 1: Get all faculty_sections for these years (single query)
-        const { data: sectionData, error: sectionError } = await supabase
-            .from("faculty_sections")
-            .select("facultyId, collegeAcademicYearId")
-            .in("collegeAcademicYearId", yearIds)
-            .eq("isActive", true)
-            .is("deletedAt", null);
+        // Step 1 & 2: Get faculty_sections and faculty in parallel
+        const [sectionResult, facultyResult] = await Promise.all([
+            supabase
+                .from("faculty_sections")
+                .select("facultyId, collegeAcademicYearId")
+                .in("collegeAcademicYearId", yearIds)
+                .eq("isActive", true)
+                .is("deletedAt", null),
+            supabase
+                .from("faculty")
+                .select("facultyId, userId, collegeBranchId")
+                .eq("collegeEducationId", collegeEducationId)
+                .eq("isActive", true)
+                .is("deletedAt", null)
+        ]);
+
+        const { data: sectionData, error: sectionError } = sectionResult;
+        const { data: facultyData, error: facultyError } = facultyResult;
 
         if (sectionError || !sectionData?.length) return result;
-
-        const allFacultyIds = [...new Set(sectionData.map((s: any) => s.facultyId))];
-
-        // Step 2: Get all faculty filtered by education (single query)
-        const { data: facultyData, error: facultyError } = await supabase
-            .from("faculty")
-            .select("facultyId, userId, collegeBranchId")
-            .in("facultyId", allFacultyIds)
-            .eq("collegeEducationId", collegeEducationId)
-            .eq("isActive", true)
-            .is("deletedAt", null);
-
         if (facultyError || !facultyData?.length) return result;
+        
+        // Filter facultyData to only include those present in sections
+        const sectionFacultyIds = new Set(sectionData.map((s: any) => s.facultyId));
+        const relevantFaculty = facultyData.filter((f: any) => sectionFacultyIds.has(f.facultyId));
 
         // Step 3: Get all profile photos (single query)
-        const userIds = [...new Set(facultyData.map((f: any) => f.userId).filter(Boolean))];
+        const userIds = [...new Set(relevantFaculty.map((f: any) => f.userId).filter(Boolean))];
         const { data: profileData } = await supabase
             .from("user_profile")
             .select("userId, profileUrl")
@@ -114,7 +117,7 @@ export async function getBatchFacultyData(
 
         // Build a map: facultyId -> { userId, branchId }
         const facultyMap = new Map(
-            facultyData.map((f: any) => [f.facultyId, { userId: f.userId, branchId: f.collegeBranchId }])
+            relevantFaculty.map((f: any) => [f.facultyId, { userId: f.userId, branchId: f.collegeBranchId }])
         );
 
         // Build a map: yearId -> Set<facultyId> from sections
@@ -172,28 +175,32 @@ export async function getBatchProjectCounts(
         const today = new Date().toISOString();
         const yearIds = [...new Set(cards.map((c) => c.yearId))];
 
-        // Step 1: Get all faculty for this college (single query)
-        const { data: facultyData, error: facultyError } = await supabase
-            .from("faculty")
-            .select("facultyId, collegeBranchId")
-            .eq("collegeId", collegeId)
-            .eq("isActive", true)
-            .is("deletedAt", null);
+        // Step 1 & 2: Get faculty and faculty_sections in parallel
+        const [facultyResult, sectionResult] = await Promise.all([
+            supabase
+                .from("faculty")
+                .select("facultyId, collegeBranchId")
+                .eq("collegeId", collegeId)
+                .eq("isActive", true)
+                .is("deletedAt", null),
+            supabase
+                .from("faculty_sections")
+                .select("facultyId, collegeAcademicYearId")
+                .in("collegeAcademicYearId", yearIds)
+                .eq("isActive", true)
+                .is("deletedAt", null)
+        ]);
+
+        const { data: facultyData, error: facultyError } = facultyResult;
+        const { data: sectionDataRaw, error: sectionError } = sectionResult;
 
         if (facultyError || !facultyData?.length) return result;
+        if (sectionError || !sectionDataRaw?.length) return result;
 
-        const allFacultyIds = facultyData.map((f: any) => f.facultyId);
-
-        // Step 2: Get all faculty_sections for relevant years (single query)
-        const { data: sectionData, error: sectionError } = await supabase
-            .from("faculty_sections")
-            .select("facultyId, collegeAcademicYearId")
-            .in("facultyId", allFacultyIds)
-            .in("collegeAcademicYearId", yearIds)
-            .eq("isActive", true)
-            .is("deletedAt", null);
-
-        if (sectionError || !sectionData?.length) return result;
+        const allFacultyIds = new Set(facultyData.map((f: any) => f.facultyId));
+        const sectionData = sectionDataRaw.filter((s: any) => allFacultyIds.has(s.facultyId));
+        
+        if (!sectionData.length) return result;
 
         // Build branchId map from faculty
         const facultyBranchMap = new Map(

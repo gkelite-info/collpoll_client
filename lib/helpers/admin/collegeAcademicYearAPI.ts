@@ -54,6 +54,46 @@ export async function fetchCollegeAcademicYears(
     return data ?? [];
 }
 
+export async function fetchAcademicYearOptionsDirectly(
+    collegeId: number,
+    collegeBranchId: number | null
+) {
+    const data = await fetchCollegeAcademicYears(
+        collegeId,
+        collegeBranchId
+    );
+
+    return data.map((row) => ({
+        id: row.collegeAcademicYearId,
+        label: row.collegeAcademicYear,
+        value: row.collegeAcademicYearId,
+        raw: row.collegeAcademicYear,
+    }));
+}
+
+export async function fetchAcademicYearOptionsBulkDirectly(
+    collegeId: number,
+    collegeBranchIds: number[]
+) {
+    if (collegeBranchIds.length === 0) return [];
+
+    const { data, error } = await supabase
+        .from("college_academic_year")
+        .select(`collegeAcademicYearId, collegeAcademicYear, collegeBranchId`)
+        .eq("collegeId", collegeId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .in("collegeBranchId", collegeBranchIds)
+        .order("collegeAcademicYearId", { ascending: true });
+
+    if (error) {
+        console.error("fetchAcademicYearOptionsBulkDirectly error:", error);
+        return [];
+    }
+
+    return data ?? [];
+}
+
 export async function fetchAcademicYearOptions(
     collegeId: number,
     collegeBranchId: number
