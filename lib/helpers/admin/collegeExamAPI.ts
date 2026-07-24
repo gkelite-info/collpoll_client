@@ -136,8 +136,15 @@ export async function createExamSchedule(
 }
 
 
-export async function fetchExamSchedules(collegeId: number): Promise<any[]> {
-  const { data: schedules, error } = await supabase
+export async function fetchExamSchedules(
+  collegeId: number,
+  page: number = 1,
+  limit: number = 20,
+  educationFilterId: number | "All" = "All",
+  branchFilterId: number | null = null,
+  yearFilter: string | null = null
+): Promise<{ data: any[]; total: number }> {
+  let query = supabase
     .from("college_exam_schedules")
     .select(`
       collegeExamScheduleId,
@@ -158,10 +165,27 @@ export async function fetchExamSchedules(collegeId: number): Promise<any[]> {
       college_branch ( collegeBranchCode ),
       college_semester ( collegeSemester ),
       college_sections ( collegeSections )
-    `)
+    `, { count: 'exact' })
     .eq("collegeId", collegeId)
-    .is("deletedAt", null)
-    .order("createdAt", { ascending: false });
+    .is("deletedAt", null);
+
+  if (educationFilterId !== "All") {
+    query = query.eq("collegeEducationId", educationFilterId);
+  }
+  if (branchFilterId) {
+    query = query.eq("collegeBranchId", branchFilterId);
+  }
+  if (yearFilter) {
+    query = query.eq("academicYear", yearFilter);
+  }
+
+  query = query.order("createdAt", { ascending: false });
+
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+  query = query.range(from, to);
+
+  const { data: schedules, count, error } = await query;
 
   if (error) {
     console.error("Error fetching exam schedules:", error);
@@ -187,7 +211,7 @@ export async function fetchExamSchedules(collegeId: number): Promise<any[]> {
     }
   }
 
-  return schedules || [];
+  return { data: schedules || [], total: count || 0 };
 }
 
 

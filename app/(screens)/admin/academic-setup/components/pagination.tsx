@@ -115,7 +115,7 @@ export function Pagination({
             </div>
           )}
           <p className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">
-            Showing <span className="font-medium">{startIndex + 1}</span> to{" "}
+            Showing <span className="font-medium">{totalItems === 0 ? 0 : startIndex + 1}</span> to{" "}
             <span className="font-medium">{endIndex}</span> of{" "}
             <span className="font-medium">{totalItems}</span> results
           </p>
