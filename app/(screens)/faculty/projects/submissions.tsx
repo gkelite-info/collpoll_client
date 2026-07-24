@@ -44,11 +44,11 @@ export default function StudentSubmissions() {
 
       setIsLoading(true);
       try {
-        const data = await fetchProjectSubmissionsWithStudents(
+        const response = await fetchProjectSubmissionsWithStudents(
           Number(parsedProjectId),
         );
 
-        const formattedData = data.map((item: any, index: number) => {
+        const formattedData = (response.data || []).map((item: any, index: number) => {
           const student = item.students;
           const user = student?.users;
 
