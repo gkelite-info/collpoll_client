@@ -19,7 +19,7 @@ type FacultyJoin = {
 
     college_branch: {
         collegeBranchCode: string;
-    };
+    } | null;
 };
 
 type FacultySectionRaw = {
@@ -64,7 +64,7 @@ export async function fetchFacultyContext(userId: number) {
       collegeBranchId,
       gender,
       isActive,
-      college_branch:collegeBranchId!inner (
+      college_branch:collegeBranchId (
       collegeBranchCode
       ),
     faculty_edu_type:collegeEducationId!inner (
@@ -152,7 +152,7 @@ export async function fetchFacultyContext(userId: number) {
         collegeId: faculty.collegeId,
         collegeEducationId: faculty.collegeEducationId,
         collegeBranchId: faculty.collegeBranchId,
-        college_branch: faculty.college_branch.collegeBranchCode,
+        college_branch: faculty.college_branch?.collegeBranchCode ?? null,
         faculty_edu_type: faculty.faculty_edu_type.collegeEducationType,
         gender: faculty.gender,
         isActive: faculty.isActive,
