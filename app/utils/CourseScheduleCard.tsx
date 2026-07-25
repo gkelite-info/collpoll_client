@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useUser } from "./context/UserContext";
 import { extractAcademicYearNumber } from "./academicYear";
 import { useFaculty } from "./context/faculty/useFaculty";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type Props = {
   style?: string;
@@ -31,6 +32,15 @@ export default function CourseScheduleCard({
   } = useUser();
   const academicYearNumber = extractAcademicYearNumber(collegeAcademicYear);
   const { college_branch } = useFaculty();
+  const isSchoolCookie =
+    typeof document !== "undefined"
+      ? document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("isSchool="))
+          ?.split("=")[1]
+      : null;
+  const isSchool =
+    isSchoolCookie === "true" || isSchoolEducation(collegeEducationType);
 
   useEffect(() => {
     const updateTime = () => {
@@ -70,7 +80,9 @@ export default function CourseScheduleCard({
             </p>
           ) : role === "Faculty" ? (
             <p className="text-[#EFEFEF] text-md font-medium">
-              {college_branch ? `${college_branch}` : "—"}
+              {isSchool
+                ? collegeEducationType || "—"
+                : college_branch || "—"}
             </p>
           ) : role === "Finance" || role === "FinanceManager" ? (
             <p className="text-[#EFEFEF] text-md font-medium">
