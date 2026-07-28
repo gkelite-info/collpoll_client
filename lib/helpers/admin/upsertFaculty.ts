@@ -93,19 +93,14 @@ export const fetchModalInitialData = async (collegeId: number) => {
   }
 };
 
-export const persistFaculty = async (
+export const createFacultyProfile = async (
   userId: number,
   basicData: UserBasicData,
-  selections: {
-    educationId: number;
-    branchId: number | null;
-    yearId: number;
-    subjectId: number;
-    sectionIds: number[];
-  },
+  educationId: number | null,
+  branchId: number | null,
   timestamp: string,
   isEditMode: boolean,
-) => {
+): Promise<number> => {
   const fullMobile = `${basicData.mobileCode}${basicData.mobileNumber}`;
 
   const facultyPayload: any = {
@@ -116,8 +111,8 @@ export const persistFaculty = async (
     gender: basicData.gender,
     collegeId: basicData.collegeIntId,
     role: "Faculty",
-    collegeEducationId: selections.educationId,
-    collegeBranchId: selections.branchId,
+    collegeEducationId: educationId,
+    collegeBranchId: branchId,
     createdBy: basicData.adminId,
     isActive: true,
     updatedAt: timestamp,
@@ -140,37 +135,79 @@ export const persistFaculty = async (
       userId: userId,
       collegeId: basicData.collegeIntId,
       employeeId: basicData.identifierValue.trim(),
-      employeeType: "Faculty", // Matches your enum type context
+      employeeType: "Faculty",
       isActive: true,
       updatedAt: timestamp,
-      ...(isEditMode ? {} : { createdAt: timestamp }) // Only add createdAt on initial insert
+      ...(isEditMode ? {} : { createdAt: timestamp }),
     };
 
     const { error: idError } = await supabase
       .from("employee_ids")
-      .upsert(employeeIdPayload, { onConflict: "userId" }); // Leverages your unique index
+      .upsert(employeeIdPayload, { onConflict: "userId" });
 
     if (idError)
       throw new Error(`Employee ID Saving Error: ${idError.message}`);
   }
 
-  if (selections.sectionIds.length > 0) {
-    const sectionPayloads = selections.sectionIds.map((sectionId) => ({
-      facultyId: faculty.facultyId,
-      collegeSectionsId: sectionId,
-      collegeSubjectId: selections.subjectId,
-      collegeAcademicYearId: selections.yearId,
-      createdBy: basicData.adminId,
-      isActive: true,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    }));
+  return faculty.facultyId;
+};
 
-    const { error: sectionError } = await supabase
-      .from("faculty_sections")
-      .insert(sectionPayloads);
-
-    if (sectionError)
-      throw new Error(`Faculty Sections Error: ${sectionError.message}`);
+export const clearExistingFacultySections = async (facultyId: number): Promise<void> => {
+  const { error } = await supabase
+    .from("faculty_sections")
+    .delete()
+    .eq("facultyId", facultyId);
+  if (error) {
+    throw new Error(`Failed to clear old faculty sections: ${error.message}`);
   }
+};
+
+export const batchInsertFacultySections = async (
+  payloads: any[]
+): Promise<void> => {
+  if (payloads.length === 0) return;
+
+  const { error: sectionError } = await supabase
+    .from("faculty_sections")
+    .insert(payloads);
+
+  if (sectionError)
+    throw new Error(`Faculty Sections Error: ${sectionError.message}`);
+};
+
+/** @deprecated Use createFacultyProfile + batchInsertFacultySections directly */
+export const persistFaculty = async (
+  userId: number,
+  basicData: UserBasicData,
+  selections: {
+    educationId: number;
+    branchId: number | null;
+    yearId: number;
+    subjectId: number;
+    sectionIds: number[];
+  },
+  timestamp: string,
+  isEditMode: boolean,
+) => {
+  const facultyId = await createFacultyProfile(
+    userId,
+    basicData,
+    selections.educationId,
+    selections.branchId,
+    timestamp,
+    isEditMode
+  );
+
+  const sectionPayloads = selections.sectionIds.map((sectionId) => ({
+    facultyId: facultyId,
+    collegeSectionsId: sectionId,
+    collegeSubjectId: selections.subjectId,
+    collegeAcademicYearId: selections.yearId,
+    createdBy: basicData.adminId,
+    isActive: true,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }));
+
+  await batchInsertFacultySections(sectionPayloads);
 };

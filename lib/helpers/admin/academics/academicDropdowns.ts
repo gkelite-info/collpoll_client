@@ -3,16 +3,27 @@ import { supabase } from "@/lib/supabaseClient";
 /* =========================
    EDUCATION TYPES
 ========================= */
-export async function fetchEducations(collegeId: number) {
-  const { data, error } = await supabase
-    .from("college_education")
-    .select("collegeEducationId, collegeEducationType")
-    .eq("collegeId", collegeId)
-    .eq("isActive", true)
-    .is("deletedAt", null);
+const inflightEducationCache = new Map<number, Promise<any>>();
 
-  if (error) throw error;
-  return data ?? [];
+export async function fetchEducations(collegeId: number) {
+  if (inflightEducationCache.has(collegeId)) {
+    return inflightEducationCache.get(collegeId)!;
+  }
+  const promise = (async () => {
+    const { data, error } = await supabase
+      .from("college_education")
+      .select("collegeEducationId, collegeEducationType")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    if (error) throw error;
+    return data ?? [];
+  })().finally(() => {
+    setTimeout(() => inflightEducationCache.delete(collegeId), 1000);
+  });
+  inflightEducationCache.set(collegeId, promise);
+  return promise;
 }
 
 export async function fetchAdminEducationTypes(adminId: number) {

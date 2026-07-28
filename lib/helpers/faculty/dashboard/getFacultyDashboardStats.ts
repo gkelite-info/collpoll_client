@@ -127,7 +127,7 @@
 
 import { createClient } from "@/app/utils/supabase/server";
 
-export async function getFacultyDashboardStats(facultyId: number) {
+export async function getFacultyDashboardStats(facultyId: number, subjectId?: number | null, sectionId?: number | null) {
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
@@ -140,12 +140,12 @@ export async function getFacultyDashboardStats(facultyId: number) {
   let totalLessons = 0,
     completedLessons = 0;
 
-  const { data: singleEvents } = await supabase
+  let singleQuery = supabase
     .from("calendar_event")
     .select(
       `
       calendarEventId, fromTime, toTime,
-      calendar_event_section ( collegeSectionId )
+      calendar_event_section!inner ( collegeSectionId )
     `,
     )
     .eq("facultyId", facultyId)
@@ -154,12 +154,17 @@ export async function getFacultyDashboardStats(facultyId: number) {
     .eq("is_deleted", false)
     .is("deletedAt", null);
 
-  const { data: bulkEvents } = await supabase
+  if (subjectId) singleQuery = singleQuery.eq("collegeSubjectId", subjectId);
+  if (sectionId) singleQuery = singleQuery.eq("calendar_event_section.collegeSectionId", sectionId);
+
+  const { data: singleEvents } = await singleQuery;
+
+  let bulkQuery = supabase
     .from("bulk_calendar_events")
     .select(
       `
       bulkCalendarEventId, fromTime, toTime,
-      bulk_calendar_event_sections ( collegeSectionId )
+      bulk_calendar_event_sections!inner ( collegeSectionId )
     `,
     )
     .eq("facultyId", facultyId)
@@ -168,6 +173,11 @@ export async function getFacultyDashboardStats(facultyId: number) {
     .gte("toDate", today)
     .eq("is_deleted", false)
     .is("deletedAt", null);
+
+  if (subjectId) bulkQuery = bulkQuery.eq("collegeSubjectId", subjectId);
+  if (sectionId) bulkQuery = bulkQuery.eq("bulk_calendar_event_sections.collegeSectionId", sectionId);
+
+  const { data: bulkEvents } = await bulkQuery;
 
   const isSunday = new Date().getDay() === 0;
   const validSingleEvents = singleEvents || [];

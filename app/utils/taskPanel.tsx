@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
 import { useStudent } from "@/app/utils/context/student/useStudent";
+import { useQuery } from "@tanstack/react-query";
 
 export type Task = {
   facultyTaskId: number;
@@ -155,121 +156,96 @@ export default function TaskPanel({
     return { start, end };
   };
 
-  useEffect(() => {
-    if (!selectedDate) {
-      setCalendarStudentTasks([]);
-      setCalendarFacultyTasks([]);
-      return;
-    }
+  const { data: calendarData, isLoading: isCalendarQueryLoading } = useQuery({
+    queryKey: ["taskPanelCalendarTasks", role, selectedDate, collegeSubjectId, studentId, studentContext.collegeAcademicYearId, studentContext.collegeSectionsId, refreshTrigger],
+    queryFn: async () => {
+      if (!selectedDate) return { facultyTasks: [], studentTasks: [] };
+      const { start, end } = getLocalDateRangeInUTC(selectedDate);
+      let newFacultyTasks: any[] = [];
+      let newStudentTasks: any[] = [];
 
-    const fetchTasksForDate = async () => {
-      setIsCalendarLoading(true);
-      try {
-        const { start, end } = getLocalDateRangeInUTC(selectedDate);
+      if (role === "faculty" && collegeSubjectId) {
+        const { data, error } = await supabase
+          .from("faculty_tasks")
+          .select(`facultyTaskId, taskTitle, description, date, time, createdAt`)
+          .eq("collegeSubjectId", collegeSubjectId)
+          .gte("createdAt", start)
+          .lte("createdAt", end)
+          .is("deletedAt", null)
+          .order("time", { ascending: true });
 
-        if (role === "faculty" && collegeSubjectId) {
-          const { data, error } = await supabase
-            .from("faculty_tasks")
-            .select(`
-              facultyTaskId,
-              taskTitle,
-              description,
-              date,
-              time,
-              createdAt
-            `)
-            .eq("collegeSubjectId", collegeSubjectId)
-            .gte("createdAt", start)
-            .lte("createdAt", end)
-            .is("deletedAt", null)
-            .order("time", { ascending: true });
-
-          if (error) throw error;
-
-          const formatted = (data || []).map((t: any) => ({
+        if (!error && data) {
+          newFacultyTasks = data.map((t: any) => ({
             facultyTaskId: t.facultyTaskId,
             title: t.taskTitle,
             description: t.description,
             time: t.time,
             date: t.date || selectedDate,
           }));
-          setCalendarFacultyTasks(formatted);
-        } else if (role === "student") {
-          // Fetch student tasks
-          if (studentId) {
-            const { data: sData, error: sError } = await supabase
-              .from("student_tasks")
-              .select(`
-                studentTaskId,
-                taskTitle,
-                description,
-                date,
-                time,
-                createdAt
-              `)
-              .eq("createdBy", studentId)
-              .gte("createdAt", start)
-              .lte("createdAt", end)
-              .is("deletedAt", null)
-              .order("time", { ascending: true });
+        }
+      } else if (role === "student") {
+        if (studentId) {
+          const { data: sData, error: sError } = await supabase
+            .from("student_tasks")
+            .select(`studentTaskId, taskTitle, description, date, time, createdAt`)
+            .eq("createdBy", studentId)
+            .gte("createdAt", start)
+            .lte("createdAt", end)
+            .is("deletedAt", null)
+            .order("time", { ascending: true });
 
-            if (sError) throw sError;
-
-            const formattedStudent = (sData || []).map((t: any) => ({
+          if (!sError && sData) {
+            newStudentTasks = sData.map((t: any) => ({
               facultyTaskId: t.studentTaskId,
               title: t.taskTitle,
               description: t.description,
               time: t.time,
               date: t.date || selectedDate,
             }));
-            setCalendarStudentTasks(formattedStudent);
           }
+        }
 
-          // Fetch faculty tasks
-          const ayId = studentContext.collegeAcademicYearId;
-          const secId = studentContext.collegeSectionsId;
-          if (ayId && secId) {
-            const { data: fData, error: fError } = await supabase
-              .from("faculty_tasks")
-              .select(`
-                facultyTaskId,
-                taskTitle,
-                description,
-                date,
-                time,
-                createdAt
-              `)
-              .eq("collegeAcademicYearId", ayId)
-              .eq("collegeSectionsId", secId)
-              .gte("createdAt", start)
-              .lte("createdAt", end)
-              .is("deletedAt", null)
-              .order("time", { ascending: true });
+        const ayId = studentContext.collegeAcademicYearId;
+        const secId = studentContext.collegeSectionsId;
+        if (ayId && secId) {
+          const { data: fData, error: fError } = await supabase
+            .from("faculty_tasks")
+            .select(`facultyTaskId, taskTitle, description, date, time, createdAt`)
+            .eq("collegeAcademicYearId", ayId)
+            .eq("collegeSectionsId", secId)
+            .gte("createdAt", start)
+            .lte("createdAt", end)
+            .is("deletedAt", null)
+            .order("time", { ascending: true });
 
-            if (fError) throw fError;
-
-            const formattedFaculty = (fData || []).map((t: any) => ({
+          if (!fError && fData) {
+            newFacultyTasks = fData.map((t: any) => ({
               facultyTaskId: t.facultyTaskId,
               title: t.taskTitle,
               description: t.description,
               time: t.time,
               date: t.date || selectedDate,
             }));
-            setCalendarFacultyTasks(formattedFaculty);
-          } else {
-            setCalendarFacultyTasks([]);
           }
         }
-      } catch (err) {
-        console.error("Error fetching tasks for calendar date:", err);
-      } finally {
-        setIsCalendarLoading(false);
       }
-    };
 
-    fetchTasksForDate();
-  }, [selectedDate, role, collegeSubjectId, studentId, subjects, refreshTrigger]);
+      return { facultyTasks: newFacultyTasks, studentTasks: newStudentTasks };
+    },
+    enabled: !!selectedDate,
+    staleTime: 5 * 60 * 1000,
+  });
 
+  useEffect(() => {
+    if (calendarData) {
+      setCalendarFacultyTasks(calendarData.facultyTasks);
+      setCalendarStudentTasks(calendarData.studentTasks);
+    }
+  }, [calendarData]);
+
+  useEffect(() => {
+    setIsCalendarLoading(isCalendarQueryLoading);
+  }, [isCalendarQueryLoading]);
 
   const handleConfirmDelete = async () => {
     if (taskToDeleteId === null) return;

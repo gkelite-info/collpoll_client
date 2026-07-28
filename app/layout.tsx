@@ -78,6 +78,7 @@ import { FontProvider } from "./utils/FontProvider";
 import SessionRefresher from "./components/sessionRefresher";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { ReactQueryProvider } from "./components/providers/ReactQueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -139,26 +140,28 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen w-screen flex justify-between`}
       >
         <NextIntlClientProvider messages={messages}>
-          <FontProvider>
-            <UserProvider>
-              <AdminProvider>
-                <FacultyProvider>
-                  <StudentProvider>
-                    <ParentProvider>
-                      <CollegeAdminProvider>
-                        <FinanceManagerProvider>
-                          <HrProvider>
-                            <SessionRefresher />
-                            <ClientLayout>{children}</ClientLayout>
-                          </HrProvider>
-                        </FinanceManagerProvider>
-                      </CollegeAdminProvider>
-                    </ParentProvider>
-                  </StudentProvider>
-                </FacultyProvider>
-              </AdminProvider>
-            </UserProvider>
-          </FontProvider>
+          <ReactQueryProvider>
+            <FontProvider>
+              <UserProvider>
+                <AdminProvider>
+                  <FacultyProvider>
+                    <StudentProvider>
+                      <ParentProvider>
+                        <CollegeAdminProvider>
+                          <FinanceManagerProvider>
+                            <HrProvider>
+                              <SessionRefresher />
+                              <ClientLayout>{children}</ClientLayout>
+                            </HrProvider>
+                          </FinanceManagerProvider>
+                        </CollegeAdminProvider>
+                      </ParentProvider>
+                    </StudentProvider>
+                  </FacultyProvider>
+                </AdminProvider>
+              </UserProvider>
+            </FontProvider>
+          </ReactQueryProvider>
         </NextIntlClientProvider>
       </body>
     </html>

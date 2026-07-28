@@ -22,6 +22,7 @@ import { getUnreadNotificationCount } from "@/lib/helpers/notifications/getUnrea
 import { supabase } from "@/lib/supabaseClient";
 import { getUnreadEmailCount } from "@/lib/helpers/notifications/emailsAPI";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import ProfileShimmer from "./ProfileShimmer";
 import { AnimatePresence, motion } from "framer-motion";
 import { getSearchRoutesByRole } from "@/lib/config/searchRoutes";
@@ -308,21 +309,30 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
     }
   }, [highlightedPostId]);
 
+  const { data: notificationCount = 0, refetch: refetchNotificationCount } = useQuery({
+    queryKey: ["unreadNotificationCount", userId],
+    queryFn: () => getUnreadNotificationCount(userId!),
+    enabled: !!userId,
+    staleTime: 60 * 1000, // 1 minute
+  });
+
+  const { data: emailCount = 0, refetch: refetchEmailCount } = useQuery({
+    queryKey: ["unreadEmailCount", userId, currentUserEmail],
+    queryFn: () => getUnreadEmailCount(userId!, currentUserEmail!),
+    enabled: !!userId && !!currentUserEmail,
+    staleTime: 60 * 1000,
+  });
+
   useEffect(() => {
-    if (!userId || !currentUserEmail) return;
+    setUnreadCount(notificationCount);
+  }, [notificationCount]);
 
-    async function fetchNotificationCount() {
-      const count = await getUnreadNotificationCount(userId!);
-      setUnreadCount(count);
-    }
+  useEffect(() => {
+    setUnreadEmailCount(emailCount);
+  }, [emailCount]);
 
-    async function fetchEmailCount() {
-      const count = await getUnreadEmailCount(userId!, currentUserEmail!);
-      setUnreadEmailCount(count);
-    }
-
-    fetchNotificationCount();
-    fetchEmailCount();
+  useEffect(() => {
+    if (!userId) return;
 
     const notificationChannel = supabase
       .channel("custom-notification-channel")
@@ -333,7 +343,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
           const record = (payload.new as any) || (payload.old as any);
 
           if (record && Number(record.userId) === Number(userId)) {
-            setTimeout(() => fetchNotificationCount(), 100);
+            setTimeout(() => refetchNotificationCount(), 100);
           }
         },
       )
@@ -350,7 +360,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
           filter: `userId=eq.${userId}`,
         },
         (payload) => {
-          setTimeout(() => fetchEmailCount(), 100);
+          setTimeout(() => refetchEmailCount(), 100);
         },
       )
       .subscribe();

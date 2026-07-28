@@ -12,8 +12,9 @@ import {
 import { supabase } from "@/lib/supabaseClient";
 import { getStudentId } from "@/lib/helpers/studentAPI";
 import { fetchStudentContext } from "./student/studentContextAPI";
-import { getUserProfilePhoto } from "@/lib/helpers/profile/profileInfo";
 import { fetchFacultyContext } from "./faculty/facultyContextAPI";
+import { useQueryClient } from "@tanstack/react-query";
+import { getUserProfilePhoto } from "@/lib/helpers/profile/profileInfo";
 import { fetchAdminContext } from "./admin/adminContextAPI";
 import { fetchFinanceManagerContext } from "./financeManager/financeManagerContextAPI";
 import { getEmployeeEmpId, getStudentRollNo } from "@/lib/helpers/identifiers/upsertIdentifier";
@@ -148,6 +149,7 @@ const UserContext = createContext<UserContextType>({
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
+  const queryClient = useQueryClient();
   const [userId, setUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState<string | null>(null);
@@ -575,17 +577,15 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     Faculty: async (uid, cid) => {
       const s = settersRef.current;
-      const [facultyData, facultyCtx, empId] = await Promise.all([
-        supabase
-          .from("faculty")
-          .select("facultyId")
-          .eq("userId", uid)
-          .is("deletedAt", null)
-          .maybeSingle(),
-        fetchFacultyContext(uid),
+      const [facultyCtx, empId] = await Promise.all([
+        queryClient.fetchQuery({
+          queryKey: ["facultyContext", uid],
+          queryFn: () => fetchFacultyContext(uid),
+          staleTime: 5 * 60 * 1000,
+        }),
         getEmployeeEmpId(uid, cid),
       ]);
-      s.setFacultyId(facultyData.data?.facultyId ?? null);
+      s.setFacultyId(facultyCtx?.facultyId ?? null);
       s.setCollegeEducationType(facultyCtx?.faculty_edu_type ?? null);
       s.setCollegeBranchCode(facultyCtx?.college_branch ?? null);
       s.setCollegeAcademicYear(facultyCtx?.collegeAcademicYear ?? null);

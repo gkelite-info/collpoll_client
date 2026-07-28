@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useUser } from "../UserContext";
 import { fetchFacultyContext } from "./facultyContextAPI";
+import { useQuery } from "@tanstack/react-query";
 
 export type FacultySubject = {
     subjectName: string;
@@ -23,6 +24,14 @@ export type FacultySection = {
     } | null;
     college_sections: {
         collegeSections: string;
+    } | null;
+    collegeEducationId?: number | null;
+    collegeBranchId?: number | null;
+    college_branch?: {
+        collegeBranchCode: string;
+    } | null;
+    faculty_edu_type?: {
+        collegeEducationType: string;
     } | null;
 };
 
@@ -48,6 +57,8 @@ export type FacultyContextType = {
     faculty_subject: FacultySubject[];
     collegeAcademicYears: CollegeAcademicYear[];
     collegeAcademicYear: string | null;
+    selectedSectionIndex: number;
+    setSelectedSectionIndex: (index: number) => void;
 };
 
 
@@ -78,52 +89,62 @@ export const FacultyProvider = ({ children }: { children: React.ReactNode }) => 
         faculty_subject: [],
         collegeAcademicYears: [],
         collegeAcademicYear: null,
+        selectedSectionIndex: 0,
+        setSelectedSectionIndex: () => {},
+    });
+
+    const setSelectedSectionIndex = (index: number) => {
+        setState(s => ({ ...s, selectedSectionIndex: index }));
+    };
+
+    const { data: facultyData, isLoading: queryLoading, error } = useQuery({
+        queryKey: ["facultyContext", userId],
+        queryFn: () => fetchFacultyContext(userId!),
+        enabled: !!userId && role === "Faculty" && !userLoading,
+        staleTime: 5 * 60 * 1000,
     });
 
     useEffect(() => {
-        const loadFaculty = async () => {
-            if (userLoading) return;
-
-            if (!userId || role !== "Faculty") {
-                setState((s) => ({ ...s, loading: false }));
-                return;
-            }
-
-            try {
-                const faculty = await fetchFacultyContext(userId);
-
-                setState({
-                    loading: false,
-                    facultyId: faculty.facultyId,
-                    userId: faculty.userId,
-                    fullName: faculty.fullName,
-                    email: faculty.email,
-                    mobile: faculty.mobile,
-                    role: faculty.role,
-                    gender: faculty.gender,
-                    collegeId: faculty.collegeId,
-                    collegeEducationId: faculty.collegeEducationId,
-                    collegeBranchId: faculty.collegeBranchId,
-                    college_branch: faculty.college_branch,
-                    faculty_edu_type: faculty.faculty_edu_type,
-                    isActive: faculty.isActive,
-                    sections: faculty.sections,
-                    sectionIds: faculty.sectionIds,
-                    subjectIds: faculty.subjectIds,
-                    academicYearIds: faculty.academicYearIds,
-                    faculty_subject: faculty.faculty_subject,
-                    collegeAcademicYears: faculty.collegeAcademicYears,
-                    collegeAcademicYear: faculty.collegeAcademicYear,
-                });
-            } catch (err) {
-                console.error("Failed to load faculty context", err);
+        if (userLoading || (!userId || role !== "Faculty")) {
+            if (!userLoading && (!userId || role !== "Faculty")) {
                 setState((s) => ({ ...s, loading: false }));
             }
-        };
+            return;
+        }
 
-
-        loadFaculty();
-    }, [userId, role, userLoading]);
+        if (facultyData) {
+            setState(s => ({
+                ...s,
+                loading: false,
+                facultyId: facultyData.facultyId,
+                userId: facultyData.userId,
+                fullName: facultyData.fullName,
+                email: facultyData.email,
+                mobile: facultyData.mobile,
+                role: facultyData.role,
+                gender: facultyData.gender,
+                collegeId: facultyData.collegeId,
+                collegeEducationId: facultyData.collegeEducationId,
+                collegeBranchId: facultyData.collegeBranchId,
+                college_branch: facultyData.college_branch,
+                faculty_edu_type: facultyData.faculty_edu_type,
+                isActive: facultyData.isActive,
+                sections: facultyData.sections,
+                sectionIds: facultyData.sectionIds,
+                subjectIds: facultyData.subjectIds,
+                academicYearIds: facultyData.academicYearIds,
+                faculty_subject: facultyData.faculty_subject,
+                collegeAcademicYears: facultyData.collegeAcademicYears,
+                collegeAcademicYear: facultyData.collegeAcademicYear,
+                setSelectedSectionIndex,
+            }));
+        } else if (error) {
+            console.error("Failed to load faculty context", error);
+            setState((s) => ({ ...s, loading: false }));
+        } else if (queryLoading) {
+            setState((s) => ({ ...s, loading: true }));
+        }
+    }, [facultyData, queryLoading, error, userLoading, userId, role]);
 
     return (
         <FacultyContext.Provider value={state}>

@@ -1,29 +1,45 @@
 "use client";
 
 import CardComponent from "@/app/utils/card";
-import { BookOpen, Chalkboard, ClockAfternoon, UsersThree } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import ScheduledLessonsStrip, { ScheduledLesson } from "../../utils/scheduledLessonsStrip";
+import { Chalkboard, ClockAfternoon, UsersThree, BookOpen } from "@phosphor-icons/react";
+import { useQuery } from "@tanstack/react-query";
 import StudentPerformanceCard from "../../utils/studentPerformanceCard";
 import UpcomingClasses from "../../utils/upcomingClasses";
-import { INITIAL_SCHEDULED_LESSONS, STUDENT_DATA } from "./data";
+import { STUDENT_DATA } from "./data";
 import { UserInfoCard } from "../../utils/userInfoCard";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { getUpcomingClasses, UpcomingLesson } from "@/lib/helpers/faculty/attendance/getClasses";
 import { getFacultyDashboardStats } from "@/lib/helpers/faculty/dashboard/getFacultyDashboardStats";
-import toast from "react-hot-toast";
+import SubjectPills from "./SubjectPills";
+import SubjectPillsShimmer from "./SubjectPillsShimmer";
 
 export default function FacultyDashLeft() {
   const { userId, fullName, gender, loading: userLoading } = useUser();
-  const { facultyId, loading: facultyLoading } = useFaculty();
+  const { facultyId, loading: facultyLoading, sections, selectedSectionIndex, setSelectedSectionIndex, collegeAcademicYears } = useFaculty();
 
-  const [upcomingClasses, setUpcomingClasses] = useState<UpcomingLesson[]>([]);
-  const [isLoadingClasses, setIsLoadingClasses] = useState(true);
-  const [scheduledLessons, setScheduledLessons] = useState<ScheduledLesson[]>(INITIAL_SCHEDULED_LESSONS);
+  const uniqueSubjectsCount = new Set(sections?.map(s => s.collegeSubjectId)).size;
+  const isSingleSubject = uniqueSubjectsCount === 1;
 
-  const [stats, setStats] = useState({
+  const activeSection = sections?.[selectedSectionIndex];
+  const subjectId = activeSection?.collegeSubjectId ?? null;
+  const sectionId = isSingleSubject ? null : (activeSection?.collegeSectionsId ?? null);
+
+  const { data: upcomingClasses = [], isLoading: isLoadingClasses } = useQuery({
+    queryKey: ["upcomingClasses", userId, subjectId, sectionId],
+    queryFn: () => getUpcomingClasses(Number(userId), subjectId, sectionId), 
+    enabled: !!userId && !userLoading && !facultyLoading,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: statsData } = useQuery({
+    queryKey: ["facultyDashboardStats", facultyId, subjectId, sectionId],
+    queryFn: () => getFacultyDashboardStats(Number(facultyId), subjectId ?? undefined, sectionId ?? undefined),
+    enabled: !!facultyId && !facultyLoading,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const stats = statsData || {
     totalClasses: 0,
     acceptedClasses: 0,
     totalHours: 0,
@@ -32,29 +48,7 @@ export default function FacultyDashLeft() {
     presentStudents: 0,
     totalLessons: 0,
     completedLessons: 0,
-  });
-
-  const loadData = async () => {
-    if (userLoading || facultyLoading || !userId || !facultyId) return;
-    try {
-      setIsLoadingClasses(true);
-      const [classesData, statsData] = await Promise.all([
-        getUpcomingClasses(Number(userId)),
-        getFacultyDashboardStats(Number(facultyId)),
-      ]);
-
-      setUpcomingClasses(classesData);
-      setStats(statsData);
-    } catch (error) {
-      toast.error("Failed to load data");
-    } finally {
-      setIsLoadingClasses(false);
-    }
   };
-
-  useEffect(() => {
-    loadData();
-  }, [userId, facultyId, userLoading, facultyLoading]);
 
   const facultyImage = gender && (gender === "Female" ? "/female-faculty.png" : "/male-faculty.png");
 
@@ -92,7 +86,6 @@ export default function FacultyDashLeft() {
       show: false,
       user: fullName ?? "User",
       studentsTaskPercentage: 0,
-      facultySubject: "(Data Structures and Algorithms)",
       image: facultyImage ?? undefined,
       top: "lg:top-[-5px]",
       imageHeight: "h-45",
@@ -100,20 +93,22 @@ export default function FacultyDashLeft() {
     },
   ];
 
-  const handleAddScheduledLesson = (
-    newLessonData: Omit<ScheduledLesson, "id">,
-  ) => {
-    const newLesson = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...newLessonData,
-    };
-    setScheduledLessons((prev) => [newLesson, ...prev]);
-  };
-
   return (
     <>
       <div className="h-full w-full overflow-y-auto md:w-[65%] lg:w-[68%] mt-2 md:mt-0 lg:mt-0 p-1 lg:p-2 pb-7 landscape:pb-7 md:pb-0 lg:pb-0">
         <UserInfoCard cardProps={card} />
+        
+        {/* Subject Pills */}
+        {!facultyLoading && !isSingleSubject && sections.length > 0 && (
+          <SubjectPills
+            sections={sections}
+            collegeAcademicYears={collegeAcademicYears}
+            selectedSectionIndex={selectedSectionIndex}
+            setSelectedSectionIndex={setSelectedSectionIndex}
+          />
+        )}
+        {facultyLoading && <SubjectPillsShimmer />}
+
         <div className="mt-4 rounded-lg grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-3 text-xs">
           {cardData.map((item, index) => (
             <CardComponent
