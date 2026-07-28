@@ -133,14 +133,14 @@ export default function AttendanceEligibility() {
         const educationData = await fetchEducations(collegeId);
         const adminEducations = collegeEducationId
           ? educationData.filter(
-            (education) =>
+            (education: any) =>
               education.collegeEducationId === collegeEducationId,
           )
           : educationData;
 
         setEducations(adminEducations);
         await loadPolicies(
-          adminEducations.map((education) => education.collegeEducationId),
+          adminEducations.map((education: any) => education.collegeEducationId),
         );
 
         const defaultEducation = adminEducations[0];
