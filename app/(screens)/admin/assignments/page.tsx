@@ -1,15 +1,9 @@
 "use client";
-import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import {
-  CaretDown,
-  CaretLeft,
-  CaretRight,
   MagnifyingGlass,
 } from "@phosphor-icons/react";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { fetchAdminDepartmentStats } from "@/lib/helpers/admin/assignments/fetchAdminDepartmentStats";
 import AssignmentCard from "./components/assignmentCard";
 import QuizBasic from "./components/quizBasic";
@@ -20,49 +14,14 @@ import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { DiscussionCourseCardSkeleton } from "./components/shimmers/courseCardSkeleton";
 import { useUser } from "@/app/utils/context/UserContext";
-import { useAcademicFilters } from "@/lib/helpers/admin/academics/useAcademicFilters";
+import { fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
-interface FilterProps {
-  label: string;
-  value: string;
-  options: string[];
-  onChange: (val: string) => void;
-  displayModifier?: (opt: string) => string;
-}
+import { AssignmentPageShimmer } from "./components/shimmers/AssignmentPageShimmer";
+import { Pagination } from "../academic-setup/components/pagination";
+import { FilterDropdown } from "../academics/components/filterDropdown";
 
-const FilterDropdown = ({
-  label,
-  value,
-  options,
-  onChange,
-  displayModifier,
-}: FilterProps) => {
-  return (
-    <div className="flex flex-col gap-1 min-w-30">
-      <label className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold px-1">
-        {label}
-      </label>
-      <div className="relative border border-gray-300 rounded-md hover:border-gray-400 transition-colors bg-white">
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none bg-transparent text-[13px] font-medium text-gray-700 pl-2 pr-2 focus:outline-none cursor-pointer"
-        >
-          {options.map((opt) => (
-            <option key={opt} value={opt} className="py-2">
-              {displayModifier ? displayModifier(opt) : opt}
-            </option>
-          ))}
-        </select>
-        <CaretDown
-          size={12}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-          weight="bold"
-        />
-      </div>
-    </div>
-  );
-};
+// FilterDropdown removed as we will use inline selects matching Calendar UI
 
 const AssignmentPage = () => {
   const searchParams = useSearchParams();
@@ -74,17 +33,36 @@ const AssignmentPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [dataList, setDataList] = useState<any[]>([]);
-  const { collegeEducationId: defaultEducationId, collegeEducationType: defaultEducationType } = useAdmin();
+  const { collegeId, collegeEducationId: defaultEducationId, collegeEducationType: defaultEducationType } = useAdmin();
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [totalRecords, setTotalRecords] = useState(0);
   const [uniqueDepts, setUniqueDepts] = useState<string[]>(["All"]);
   const [uniqueYears, setUniqueYears] = useState<string[]>(["All"]);
-  const cardsPerPage = 10;
+  const cardsPerPage = 9;
   const { userId } = useUser();
-  const { educations, education, selectEducation } = useAcademicFilters(userId ?? undefined);
 
-  const currentEducationId = education?.collegeEducationId ?? defaultEducationId;
-  const currentEducationType = education?.collegeEducationType ?? defaultEducationType;
+  const [educations, setEducations] = useState<any[]>([]);
+  const [selectedEducation, setSelectedEducation] = useState<any>(null);
+
+  useEffect(() => {
+    if (!collegeId) return;
+    let isMounted = true;
+    fetchEducations(collegeId)
+      .then((res) => {
+        if (isMounted && res) setEducations(res);
+      })
+      .catch(console.error);
+    return () => {
+      isMounted = false;
+    };
+  }, [collegeId]);
+
+  const currentEducationId = selectedEducation?.collegeEducationId ?? defaultEducationId;
+  const currentEducationType = selectedEducation?.collegeEducationType ?? defaultEducationType;
+  const isSchool = isSchoolEducation(currentEducationType);
+  const isInter = currentEducationType === "Inter";
+  const isWaitingForEducation = !userId || !currentEducationId || !collegeId || educations.length === 0;
+  const showShimmer = isWaitingForEducation || loading;
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 400);
@@ -93,18 +71,20 @@ const AssignmentPage = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, deptFilter, yearFilter]);
+  }, [debouncedSearch, deptFilter, yearFilter, currentEducationId]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !currentEducationId || !collegeId) return;
+    let isMounted = true;
+
     const loadData = async () => {
       try {
         setLoading(true);
-        const adminCtx = await fetchAdminContext(userId);
+        if (!isMounted) return;
 
         const res = await fetchAdminDepartmentStats(
-          adminCtx.collegeId,
-          currentEducationId!,
+          collegeId,
+          currentEducationId,
           currentPage,
           cardsPerPage,
           debouncedSearch,
@@ -112,19 +92,24 @@ const AssignmentPage = () => {
           yearFilter
         );
 
-        setDataList(res.data || []);
-        setTotalRecords(res.totalCount || 0);
+        if (isMounted) {
+          setDataList(res.data || []);
+          setTotalRecords(res.totalCount || 0);
 
-        if (res.uniqueDepts) setUniqueDepts(res.uniqueDepts);
-        if (res.uniqueYears) setUniqueYears(res.uniqueYears);
+          if (res.uniqueDepts) setUniqueDepts(res.uniqueDepts);
+          if (res.uniqueYears) setUniqueYears(res.uniqueYears);
+        }
       } catch (err) {
         console.error(err);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     loadData();
-  }, [userId, currentPage, debouncedSearch, deptFilter, yearFilter, currentEducationId]);
+    return () => { isMounted = false; };
+  }, [userId, currentPage, debouncedSearch, deptFilter, yearFilter, currentEducationId, collegeId]);
 
   const totalPages = Math.ceil(totalRecords / cardsPerPage);
 
@@ -140,8 +125,17 @@ const AssignmentPage = () => {
     return <AdminLabBasic />;
   }
 
+  if (isWaitingForEducation && dataList.length === 0) {
+    return (
+      <div className="flex flex-col m-4 h-[calc(100vh-100px)]">
+        <TabNavigation />
+        <AssignmentPageShimmer />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col m-4">
+    <div className="flex flex-col m-4 h-[calc(100vh-100px)]">
       <TabNavigation />
 
       <div className="mt-0 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -162,40 +156,46 @@ const AssignmentPage = () => {
 
         <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap gap-4 border border-gray-100">
           <FilterDropdown
-            label="Education"
-            value={currentEducationId?.toString() ?? ""}
-            options={educations.map((e) => e.collegeEducationId.toString())}
+            label="Education Type"
+            value={currentEducationId?.toString() ?? "All"}
             onChange={(val) => {
-              const edu = educations.find((e) => e.collegeEducationId === +val);
+              if (val === "All") return;
+              const edu = educations.find((ed) => ed.collegeEducationId.toString() === val);
               if (edu) {
-                selectEducation(edu);
+                setSelectedEducation(edu);
                 setDeptFilter("All");
                 setYearFilter("All");
               }
             }}
-            displayModifier={(val) =>
-              educations.find((e) => e.collegeEducationId === +val)?.collegeEducationType || val
-            }
+            options={["All", ...educations.map((e) => e.collegeEducationId.toString())]}
+            displayModifier={(val) => {
+              if (val === "All") return "All";
+              const edu = educations.find((e) => e.collegeEducationId.toString() === val);
+              return edu ? edu.collegeEducationType : val;
+            }}
           />
+
+          {!isSchool && (
+            <FilterDropdown
+              label={isInter ? "Group" : "Branch"}
+              value={deptFilter}
+              onChange={setDeptFilter}
+              options={uniqueDepts}
+            />
+          )}
+
           <FilterDropdown
-            label={currentEducationType === "Inter" ? "Group" : "Branch"}
-            value={deptFilter}
-            options={uniqueDepts}
-            onChange={setDeptFilter}
-          />
-          <FilterDropdown
-            label="Year"
+            label={isSchool ? "Class" : "Year"}
             value={yearFilter}
-            options={uniqueYears}
             onChange={setYearFilter}
-            displayModifier={(o) => (o === "All" ? o : `${o}`)}
+            options={uniqueYears}
           />
         </div>
       </div>
 
-      <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col p-4">
+      <div className="flex-1 rounded-xl flex flex-col p-4 overflow-y-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-[1200px] mx-auto">
-          {loading ? (
+          {showShimmer ? (
             <>
               <DiscussionCourseCardSkeleton />
               <DiscussionCourseCardSkeleton />
@@ -211,31 +211,18 @@ const AssignmentPage = () => {
           )}
         </div>
 
-        {!loading && totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-8 mb-4">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 rounded-lg border bg-white disabled:opacity-30"
-            >
-              <CaretLeft
-                size={18}
-                className="text-[#282828] cursor-pointer active:scale-90"
-              />
-            </button>
-            <span className="text-sm">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border bg-white disabled:opacity-30"
-            >
-              <CaretRight size={18} />
-            </button>
+        {!showShimmer && totalPages > 0 && (
+          <div className="mt-auto pt-8 flex justify-center">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={totalRecords}
+              itemsPerPage={cardsPerPage}
+              onPageChange={setCurrentPage}
+              alwaysShow={true}
+            />
           </div>
         )}
-        {!loading && dataList.length === 0 && (
+        {!showShimmer && dataList.length === 0 && (
           <div className="flex justify-center py-20 text-gray-400">
             No matching records found.
           </div>

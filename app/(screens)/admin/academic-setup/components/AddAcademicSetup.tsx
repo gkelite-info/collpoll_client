@@ -9,6 +9,8 @@ import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { saveAcademicSetupMaster } from "@/lib/helpers/admin/academicSetup/academicSetupMasterAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/react-query/queryKeys";
 
 export type AcademicData = {
   id?: string;
@@ -59,6 +61,7 @@ export default function AddAcademicSetup({
   const [tempCustomInput, setTempCustomInput] = useState("");
   const { collegeEducationType } = useAdmin();
   const [selectFocus, setSelectFocus] = useState({ degree: false, dept: false, batch: false });
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (editData) {
@@ -258,6 +261,14 @@ export default function AddAcademicSetup({
       );
 
       toast.success("Academic setup saved successfully!", { id: "academic-setup-save-success" });
+
+      if (adminCtx.collegeId) {
+        const key = queryKeys.admin.modalInitialData(adminCtx.collegeId);
+        queryClient.invalidateQueries({ queryKey: key });
+        const channel = new BroadcastChannel('app-react-query-sync');
+        channel.postMessage({ type: 'INVALIDATE_QUERY', queryKey: key });
+        channel.close();
+      }
 
       if (onSuccess) {
         setTimeout(() => onSuccess(), 1000);

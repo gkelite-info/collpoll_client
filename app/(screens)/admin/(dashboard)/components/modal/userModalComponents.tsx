@@ -38,6 +38,7 @@ interface MultiSelectProps {
   closedBorder?: string;
   placeholderColorActive?: string;
   gap?: string;
+  isProcessing?: boolean;
 }
 
 export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
@@ -54,6 +55,7 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
   closedBorder = "border-gray-200",
   placeholderColorActive = "text-gray-400",
   gap = "gap-2",
+  isProcessing = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -153,17 +155,16 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
                   <div
                     key={`${label}-${opt}-${idx}`}
                     onClick={() => onChange(opt)}
-                    className="
+                    className={`
                       flex
                       items-center
                       justify-between
                       px-3
                       py-2
-                      hover:bg-gray-50
                       cursor-pointer
                       text-sm
-                      text-gray-700
-                    "
+                      ${selectedValues.includes(opt) ? "bg-[#EBF7F1] font-semibold text-[#48C78E]" : "text-gray-700 hover:bg-gray-50"}
+                    `}
                   >
                     <span>{opt}</span>
 
@@ -203,18 +204,17 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
                         <div
                           key={`${label}-${category}-${opt}`}
                           onClick={() => onChange(opt)}
-                          className="
-                          flex
-                          items-center
-                          justify-between
-                          px-3
-                          py-2
-                          hover:bg-gray-50
-                          cursor-pointer
-                          text-sm
-                          text-gray-700
-                          pl-5
-                        "
+                          className={`
+                            flex
+                            items-center
+                            justify-between
+                            px-3
+                            py-2
+                            cursor-pointer
+                            text-sm
+                            pl-5
+                            ${selectedValues.includes(opt) ? "bg-[#EBF7F1] font-semibold text-[#48C78E]" : "text-gray-700 hover:bg-gray-50"}
+                          `}
                         >
                           <span>{opt}</span>
 
@@ -235,7 +235,7 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
       </div>
 
       {selectedValues.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mt-3">
           {selectedValues.map((val) => (
             <PillTag
               key={`${label}-selected-${val}`}
@@ -261,6 +261,7 @@ interface SingleSelectProps {
   closedBorder?: string;
   placeholderColorActive?: string;
   gap?: string;
+  isProcessing?: boolean;
 }
 
 export const CustomSingleSelect: React.FC<SingleSelectProps> = ({
@@ -271,10 +272,11 @@ export const CustomSingleSelect: React.FC<SingleSelectProps> = ({
   selectedValue,
   onChange,
   disabled = false,
-  paddingY = "py-1.5",
+  paddingY = "py-2",
   closedBorder = "border-gray-200",
   placeholderColorActive = "text-gray-400",
   gap = "gap-1",
+  isProcessing = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -326,7 +328,7 @@ export const CustomSingleSelect: React.FC<SingleSelectProps> = ({
       >
         <span
           className={`truncate mr-2 ${
-            selectedValue ? "text-gray-700 font-medium" : placeholderColorActive
+            selectedValue ? "text-[#48C78E] font-bold" : placeholderColorActive
           }`}
         >
           {selectedValue || placeholder}
@@ -369,17 +371,16 @@ export const CustomSingleSelect: React.FC<SingleSelectProps> = ({
                   onChange(opt);
                   setIsOpen(false);
                 }}
-                className="
+                className={`
                   flex
                   items-center
                   justify-between
                   px-3
                   py-2
-                  hover:bg-gray-50
                   cursor-pointer
                   text-sm
-                  text-gray-700
-                "
+                  ${selectedValue === opt ? "bg-[#EBF7F1] font-semibold text-[#48C78E]" : "text-gray-700 hover:bg-gray-50"}
+                `}
               >
                 <span>{opt}</span>
 

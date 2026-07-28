@@ -75,6 +75,8 @@ function safeGet(data: any, key: string, fallback: string = ""): string {
 
 export async function getUpcomingClasses(
   userId: number,
+  subjectId?: number | null,
+  sectionId?: number | null,
 ): Promise<UpcomingLesson[]> {
   const supabase = await createClient();
 
@@ -93,7 +95,7 @@ export async function getUpcomingClasses(
 
   const endDateStr = today;
 
-  const { data: events, error: eventsError } = await supabase
+  let eventsQuery = supabase
     .from("calendar_event")
     .select(
       `
@@ -109,9 +111,10 @@ export async function getUpcomingClasses(
       subjectData:college_subjects (subjectName, subjectCode),
 
       
-calendar_event_section (
+calendar_event_section!inner (
   isActive,
   deletedAt,
+  collegeSectionId,
   section:college_sections (collegeSections),
   branch:college_branch (collegeBranchCode),
   yearData:college_academic_year (collegeAcademicYear),
@@ -127,13 +130,18 @@ calendar_event_section (
     .is("deletedAt", null)
     .order("date", { ascending: true })
     .order("fromTime", { ascending: true });
+    
+  if (subjectId) eventsQuery = eventsQuery.eq("collegeSubjectId", subjectId);
+  if (sectionId) eventsQuery = eventsQuery.eq("calendar_event_section.collegeSectionId", sectionId);
+
+  const { data: events, error: eventsError } = await eventsQuery;
 
   if (eventsError) {
     console.error("GET_UPCOMING_CLASSES_ERROR", eventsError);
     return [];
   }
 
-  const { data: bulkEvents, error: bulkError } = await supabase
+  let bulkQuery = supabase
     .from("bulk_calendar_events")
     .select(
       `
@@ -148,7 +156,7 @@ calendar_event_section (
 
       subjectData:college_subjects (subjectName, subjectCode),
 
-      bulk_calendar_event_sections (
+      bulk_calendar_event_sections!inner (
         isActive,
         deletedAt,
         collegeSectionId,
@@ -170,6 +178,11 @@ calendar_event_section (
     .gte("toDate", today)
     .is("deletedAt", null)
     .or("is_deleted.eq.false,is_deleted.is.null");
+
+  if (subjectId) bulkQuery = bulkQuery.eq("collegeSubjectId", subjectId);
+  if (sectionId) bulkQuery = bulkQuery.eq("bulk_calendar_event_sections.collegeSectionId", sectionId);
+
+  const { data: bulkEvents, error: bulkError } = await bulkQuery;
 
   if (bulkError) {
     console.error("GET_UPCOMING_BULK_CLASSES_ERROR", bulkError);

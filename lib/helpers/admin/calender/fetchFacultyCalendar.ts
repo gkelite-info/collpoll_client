@@ -20,12 +20,18 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
 
   let allowedFacultyIds: number[] | null = null;
 
-  if (filters.collegeAcademicYearId || filters.collegeSubjectId) {
+  if (filters.collegeAcademicYearId || filters.collegeSubjectId || filters.collegeEducationId || filters.collegeBranchId) {
     let sectionFilterQuery = supabase
       .from("faculty_sections")
       .select("facultyId")
       .eq("isActive", true);
 
+    if (filters.collegeEducationId) {
+      sectionFilterQuery = sectionFilterQuery.eq("collegeEducationId", filters.collegeEducationId);
+    }
+    if (filters.collegeBranchId) {
+      sectionFilterQuery = sectionFilterQuery.eq("collegeBranchId", filters.collegeBranchId);
+    }
     if (filters.collegeAcademicYearId) {
       sectionFilterQuery = sectionFilterQuery.eq("collegeAcademicYearId", filters.collegeAcademicYearId);
     }
@@ -41,10 +47,6 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
     }
 
     allowedFacultyIds = Array.from(new Set((sectionRows ?? []).map((r: any) => r.facultyId)));
-
-    if (allowedFacultyIds.length === 0) {
-      return { data: [], total: 0 };
-    }
   }
 
   let facultyQuery = supabase
@@ -66,17 +68,30 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
     .eq("isActive", true)
     .eq("collegeId", filters.collegeId);
 
-  if (filters.collegeEducationId) {
-    facultyQuery = facultyQuery.eq("collegeEducationId", filters.collegeEducationId);
+  let orConditions = [];
+
+  if (allowedFacultyIds !== null && allowedFacultyIds.length > 0) {
+    orConditions.push(`facultyId.in.(${allowedFacultyIds.join(',')})`);
   }
-  if (filters.collegeBranchId) {
-    facultyQuery = facultyQuery.eq("collegeBranchId", filters.collegeBranchId);
+
+  if (!filters.collegeAcademicYearId && !filters.collegeSubjectId && (filters.collegeEducationId || filters.collegeBranchId)) {
+    let legacyConds = [];
+    if (filters.collegeEducationId) legacyConds.push(`collegeEducationId.eq.${filters.collegeEducationId}`);
+    if (filters.collegeBranchId) legacyConds.push(`collegeBranchId.eq.${filters.collegeBranchId}`);
+    if (legacyConds.length > 0) {
+      orConditions.push(`and(${legacyConds.join(',')})`);
+    }
   }
+
+  if (filters.collegeAcademicYearId || filters.collegeSubjectId || filters.collegeEducationId || filters.collegeBranchId) {
+    if (orConditions.length === 0) {
+      return { data: [], total: 0 };
+    }
+    facultyQuery = facultyQuery.or(orConditions.join(','));
+  }
+
   if (filters.facultyId) {
     facultyQuery = facultyQuery.eq("facultyId", filters.facultyId);
-  }
-  if (allowedFacultyIds !== null) {
-    facultyQuery = facultyQuery.in("facultyId", allowedFacultyIds);
   }
   if (filters.searchQuery) {
     facultyQuery = facultyQuery.ilike("fullName", `%${filters.searchQuery}%`);
@@ -100,7 +115,9 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
       .select(`
         facultyId,
         subject:collegeSubjectId (subjectName),
-        section:collegeSectionsId (collegeBranchId, collegeAcademicYearId)
+        section:collegeSectionsId (collegeBranchId, collegeAcademicYearId),
+        collegeBranchId,
+        branch:collegeBranchId (collegeBranchCode)
       `)
       .eq("isActive", true)
       .in("facultyId", facultyIds),
@@ -126,14 +143,23 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
   const subjectsByFaculty = new Map<number, Set<string>>();
   const academicYearIdsByFaculty = new Map<number, Set<number>>();
   
+  const branchesByFaculty = new Map<number, Set<string>>();
+  
   (sectionsRes.data ?? []).forEach((row: any) => {
-    if (filters.collegeBranchId && row.section?.collegeBranchId !== filters.collegeBranchId) return;
+    if (filters.collegeBranchId && row.section?.collegeBranchId !== filters.collegeBranchId && row.collegeBranchId !== filters.collegeBranchId) return;
 
     if (row.subject?.subjectName) {
       if (!subjectsByFaculty.has(row.facultyId)) {
         subjectsByFaculty.set(row.facultyId, new Set());
       }
       subjectsByFaculty.get(row.facultyId)!.add(row.subject.subjectName);
+    }
+    
+    if (row.branch?.collegeBranchCode) {
+      if (!branchesByFaculty.has(row.facultyId)) {
+        branchesByFaculty.set(row.facultyId, new Set());
+      }
+      branchesByFaculty.get(row.facultyId)!.add(row.branch.collegeBranchCode);
     }
     
     if (row.section?.collegeAcademicYearId) {
@@ -172,12 +198,15 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
       .filter(Boolean)
       .join(", ");
 
+    const sectionBranches = Array.from(branchesByFaculty.get(f.facultyId) ?? []).join(", ");
+    const finalBranch = f.branch?.collegeBranchCode ? f.branch.collegeBranchCode : (sectionBranches || "—");
+
     return {
       id: String(f.facultyId),
       employeeId: empMap.get(f.userId) || "N/A", // Correctly retrieves the mapped ID
       name: f.fullName,
       gender: f.gender,
-      branch: f.branch?.collegeBranchCode ?? "—",
+      branch: finalBranch,
       year: facultyYears || "—",
       subjects: Array.from(subjectsByFaculty.get(f.facultyId) ?? []).join(", ") || "—",
       lastUpdate: new Date(f.updatedAt).toLocaleDateString("en-IN", {

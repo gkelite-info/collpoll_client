@@ -62,7 +62,9 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
 
               {!item.show && faculty_subject?.length > 0 && (
                 <span className="text-[#454545] text-xs md:text-sm font-medium whitespace-nowrap">
-                  ({faculty_subject.map((s) => s.subjectName).join(", ")})
+                  ({faculty_subject.length === 1 
+                    ? faculty_subject[0].subjectName 
+                    : `Teaching ${faculty_subject.length} Subjects`})
                 </span>
               )}
 

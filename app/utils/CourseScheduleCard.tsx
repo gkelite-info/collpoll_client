@@ -27,10 +27,23 @@ export default function CourseScheduleCard({
     collegeBranchCode,
     collegeAcademicYear,
     role,
-    loading,
+    loading: userLoading,
   } = useUser();
   const academicYearNumber = extractAcademicYearNumber(collegeAcademicYear);
-  const { college_branch } = useFaculty();
+  const { college_branch, faculty_edu_type, sections, selectedSectionIndex, loading: facultyLoading } = useFaculty();
+
+  const loading = userLoading || facultyLoading;
+
+  let displayEducation = collegeEducationType;
+  let displayBranch = collegeBranchCode || college_branch;
+
+  if (role === "Faculty" && sections && sections.length > 0) {
+    const activeSection = sections[selectedSectionIndex];
+    if (activeSection) {
+      displayBranch = activeSection.college_branch?.collegeBranchCode || college_branch || "";
+      displayEducation = activeSection.faculty_edu_type?.collegeEducationType || faculty_edu_type || "";
+    }
+  }
 
   useEffect(() => {
     const updateTime = () => {
@@ -69,8 +82,8 @@ export default function CourseScheduleCard({
                 : "—"} – {academicYearNumber ? `${academicYearNumber}` : "—"}
             </p>
           ) : role === "Faculty" ? (
-            <p className="text-[#EFEFEF] text-md font-medium">
-              {college_branch ? `${college_branch}` : "—"}
+            <p className="text-[#EFEFEF] text-md font-medium text-center">
+              {displayBranch ? displayBranch : (displayEducation || "—")}
             </p>
           ) : role === "Finance" || role === "FinanceManager" ? (
             <p className="text-[#EFEFEF] text-md font-medium">

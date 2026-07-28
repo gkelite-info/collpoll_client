@@ -293,7 +293,7 @@ const AttendancePage = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, apiFiltersStr]);
 
   const totalPages = Math.ceil(totalRecords / cardsPerPage);
 

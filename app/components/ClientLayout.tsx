@@ -130,8 +130,9 @@ export default function ClientLayout({
       if (isExemptedRoute(pathname)) return;
 
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
+      const user = session?.user;
 
       if (!isMounted) return;
 

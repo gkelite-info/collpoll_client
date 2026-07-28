@@ -185,8 +185,9 @@ export async function deactivateFacultyTask(facultyTaskId: number) {
 export async function fetchFacultyTasksForLoggedInFaculty(
   facultyId: number,
   collegeSubjectId: number,
+  collegeSectionId?: number | null,
 ) {
-  const { data: facultyTaskData, error: facultyTaskError } = await supabase
+  let query = supabase
     .from("faculty_tasks")
     .select(`
       facultyTaskId,
@@ -202,6 +203,12 @@ export async function fetchFacultyTasksForLoggedInFaculty(
     .eq("isActive", true)
     .is("deletedAt", null)
     .order("date", { ascending: true });
+
+  if (collegeSectionId) {
+    query = query.eq("collegeSectionsId", collegeSectionId);
+  }
+
+  const { data: facultyTaskData, error: facultyTaskError } = await query;
 
   if (facultyTaskError) {
     console.error("fetchFacultyTasksForLoggedInFaculty error:", facultyTaskError);

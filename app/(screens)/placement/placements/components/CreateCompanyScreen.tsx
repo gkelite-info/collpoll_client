@@ -602,7 +602,7 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
     if (!collegeId) return;
     setLoadingEdu(true);
     fetchEducations(collegeId)
-      .then((data) => setEducations(data.map((e) => ({ id: e.collegeEducationId, label: e.collegeEducationType }))))
+      .then((data) => setEducations(data.map((e: any) => ({ id: e.collegeEducationId, label: e.collegeEducationType }))))
       .catch(console.error)
       .finally(() => setLoadingEdu(false));
   }, [collegeId]);

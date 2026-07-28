@@ -14,7 +14,7 @@ interface Props {
   name?: string;
   itemName?: string;
   customDescription?: React.ReactNode;
-  actionType?: "accept" | "reject" | "remove" | null;
+  actionType?: "accept" | "reject" | "remove" | "warning" | null;
 }
 
 export default function ConfirmDeleteModal({
@@ -33,7 +33,8 @@ export default function ConfirmDeleteModal({
   const isAccept = actionType === "accept";
   const isRemove = actionType === "remove";
   const isReject = actionType === "reject";
-  const isDefault = !isAccept && !isRemove && !isReject;
+  const isWarning = actionType === "warning";
+  const isDefault = !isAccept && !isRemove && !isReject && !isWarning;
 
   const IconComponent = isAccept ? CheckCircle : isRemove ? Trash : isReject ? XCircle : WarningCircle;
 
@@ -59,7 +60,14 @@ export default function ConfirmDeleteModal({
             btn: "bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/25",
             lightGlow: "bg-indigo-400/20",
           }
-        : {
+        : isWarning
+          ? {
+              banner: "bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600",
+              icon: "text-amber-500",
+              btn: "bg-amber-500 hover:bg-amber-600 shadow-amber-500/25",
+              lightGlow: "bg-amber-400/20",
+            }
+          : {
             // Default Neutral/Primary theme (Used for EOD Finalization, etc.)
             banner: "bg-gradient-to-br from-emerald-400 via-emerald-500 to-green-600",
             icon: "text-emerald-500",

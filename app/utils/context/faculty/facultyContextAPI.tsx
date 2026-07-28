@@ -15,7 +15,7 @@ type FacultyJoin = {
 
     faculty_edu_type: {
         collegeEducationType: string;
-    }
+    } | null;
 
     college_branch: {
         collegeBranchCode: string;
@@ -30,6 +30,10 @@ type FacultySectionRaw = {
     faculty_subject: { subjectName: string }[] | null;
     college_sections: { collegeSections: string }[] | null;
     college_academic_year: { collegeAcademicYear: string }[] | null;
+    collegeEducationId: number | null;
+    collegeBranchId: number | null;
+    college_branch: { collegeBranchCode: string }[] | null;
+    faculty_edu_type: { collegeEducationType: string }[] | null;
 };
 
 type FacultySectionJoin = {
@@ -45,6 +49,14 @@ type FacultySectionJoin = {
     } | null;
     college_academic_year: {
         collegeAcademicYear: string;
+    } | null;
+    collegeEducationId: number | null;
+    collegeBranchId: number | null;
+    college_branch: {
+        collegeBranchCode: string;
+    } | null;
+    faculty_edu_type: {
+        collegeEducationType: string;
     } | null;
 };
 
@@ -67,7 +79,7 @@ export async function fetchFacultyContext(userId: number) {
       college_branch:collegeBranchId (
       collegeBranchCode
       ),
-    faculty_edu_type:collegeEducationId!inner (
+    faculty_edu_type:collegeEducationId (
     collegeEducationType
     )
     `)
@@ -84,6 +96,8 @@ export async function fetchFacultyContext(userId: number) {
     collegeSectionsId,
     collegeSubjectId,
     collegeAcademicYearId,
+    collegeEducationId,
+    collegeBranchId,
     faculty_subject:college_subjects!collegeSubjectId (
       subjectName
     ),
@@ -92,6 +106,12 @@ export async function fetchFacultyContext(userId: number) {
     ),
     college_academic_year:collegeAcademicYearId!inner (
             collegeAcademicYear
+    ),
+    college_branch:collegeBranchId (
+        collegeBranchCode
+    ),
+    faculty_edu_type:collegeEducationId (
+        collegeEducationType
     )
   `)
         .eq("facultyId", faculty.facultyId)
@@ -112,6 +132,12 @@ export async function fetchFacultyContext(userId: number) {
         college_academic_year: Array.isArray(s.college_academic_year)
             ? s.college_academic_year[0] ?? null
             : s.college_academic_year ?? null,
+        college_branch: Array.isArray(s.college_branch)
+            ? s.college_branch[0] ?? null
+            : s.college_branch ?? null,
+        faculty_edu_type: Array.isArray(s.faculty_edu_type)
+            ? s.faculty_edu_type[0] ?? null
+            : s.faculty_edu_type ?? null,
     }));
 
     const faculty_subject = Array.from(
@@ -142,6 +168,22 @@ export async function fetchFacultyContext(userId: number) {
         ).values()
     );
 
+    let branchCodes = faculty.college_branch?.collegeBranchCode ? [faculty.college_branch.collegeBranchCode] : [];
+    let eduTypes = faculty.faculty_edu_type?.collegeEducationType ? [faculty.faculty_edu_type.collegeEducationType] : [];
+
+    if (branchCodes.length === 0 || eduTypes.length === 0) {
+        const uniqueBranches = new Set<string>();
+        const uniqueEduTypes = new Set<string>();
+        
+        sections.forEach(s => {
+            if (s.college_branch?.collegeBranchCode) uniqueBranches.add(s.college_branch.collegeBranchCode);
+            if (s.faculty_edu_type?.collegeEducationType) uniqueEduTypes.add(s.faculty_edu_type.collegeEducationType);
+        });
+
+        if (branchCodes.length === 0) branchCodes = Array.from(uniqueBranches);
+        if (eduTypes.length === 0) eduTypes = Array.from(uniqueEduTypes);
+    }
+
     return {
         facultyId: faculty.facultyId,
         userId: faculty.userId,
@@ -152,8 +194,8 @@ export async function fetchFacultyContext(userId: number) {
         collegeId: faculty.collegeId,
         collegeEducationId: faculty.collegeEducationId,
         collegeBranchId: faculty.collegeBranchId,
-        college_branch: faculty.college_branch?.collegeBranchCode ?? null,
-        faculty_edu_type: faculty.faculty_edu_type.collegeEducationType,
+        college_branch: branchCodes.join(", ") || null,
+        faculty_edu_type: eduTypes.join(", ") || null,
         gender: faculty.gender,
         isActive: faculty.isActive,
         sections,

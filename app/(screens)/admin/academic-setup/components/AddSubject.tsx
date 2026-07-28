@@ -10,6 +10,8 @@ import { fetchSubjectOptions } from "@/lib/helpers/admin/academicSetup/subjectDr
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/react-query/queryKeys";
 
 export type SubjectFormData = {
   id?: number;
@@ -84,7 +86,7 @@ export default function AddSubject({
   onFormReady?: () => void;
 }) {
   const { userId } = useUser();
-  const { collegeEducationType } = useAdmin();
+  const { collegeEducationType, collegeId } = useAdmin();
 
   const [form, setForm] = useState<SubjectFormData>(defaultFormState);
 
@@ -107,12 +109,12 @@ export default function AddSubject({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
   const [selectFocus, setSelectFocus] = useState({ education: false, branch: false, year: false, semester: false });
+  const queryClient = useQueryClient();
 
   const loadOptions = async () => {
-    if (!userId) return;
+    if (!collegeId) return;
     setIsLoadingOptions(true);
     try {
-      const { collegeId } = await fetchAdminContext(userId);
       const newOptions = await fetchSubjectOptions(collegeId, ui);
       setOptions(newOptions);
     } catch {
@@ -246,6 +248,13 @@ export default function AddSubject({
 
     try {
       await onSave(form, ui, imageFile);
+      if (collegeId) {
+        const key = queryKeys.admin.modalInitialData(collegeId);
+        queryClient.invalidateQueries({ queryKey: key });
+        const channel = new BroadcastChannel('app-react-query-sync');
+        channel.postMessage({ type: 'INVALIDATE_QUERY', queryKey: key });
+        channel.close();
+      }
     } catch (error) {
       console.error("Save error in form:", error);
     } finally {

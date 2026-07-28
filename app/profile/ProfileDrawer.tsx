@@ -65,7 +65,19 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     wellBeingCategoryName,
     wellBeingCategoryNames,
   } = useUser();
-  const { college_branch, faculty_edu_type } = useFaculty();
+  const { college_branch, faculty_edu_type, sections, collegeAcademicYears } = useFaculty();
+  const uniqueSubjectsCount = new Set(sections?.map(s => s.collegeSubjectId)).size;
+  const isSingleSubject = uniqueSubjectsCount === 1;
+
+  const getAcademicYearStr = (yearId: number) => {
+    const yearObj = collegeAcademicYears?.find((y) => y.collegeAcademicYearId === yearId);
+    if (!yearObj || !yearObj.collegeAcademicYear) return null;
+    const match = yearObj.collegeAcademicYear.match(/(Year \d+|Class \d+)/i);
+    return match ? match[0] : yearObj.collegeAcademicYear;
+  };
+  const facultyYearStr = isSingleSubject && sections?.[0]?.collegeAcademicYearId 
+    ? getAcademicYearStr(sections[0].collegeAcademicYearId) 
+    : null;
   const { collegeEducationType: adminCollegeEduType } = useCollegeAdmin();
   const [loading, setLoading] = useState(false);
   const academicYear = extractAcademicYearNumber(collegeAcademicYear);
@@ -317,9 +329,8 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
             )}
             {role === "Faculty" && (
               <>
-                <p className="text-xs text-[#282828] font-medium">
-                  {faculty_edu_type ? `${faculty_edu_type}` : "—"}{" "}
-                  {college_branch ? `${college_branch}` : "—"}
+                <p className="text-xs text-[#282828] font-medium" title={college_branch ? college_branch : (faculty_edu_type || "—")}>
+                  {college_branch ? college_branch : (faculty_edu_type || "—")} {isSingleSubject && facultyYearStr ? `- ${facultyYearStr}` : ""}
                 </p>
               </>
             )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
@@ -33,14 +34,10 @@ const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function FacultyDashRight() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [openModal, setOpenModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("others");
-  const [isAnnouncementsLoading, setIsAnnouncementsLoading] = useState(true);
-  const announcementRequestId = useRef(0);
 
   const {
     facultyId,
@@ -48,49 +45,44 @@ export default function FacultyDashRight() {
     collegeId,
     userId,
     role,
+    sections,
+    selectedSectionIndex,
     loading: facultyLoading,
   } = useFaculty();
 
-  const collegeSubjectId = subjectIds?.[0] ?? null;
+  const uniqueSubjectsCount = new Set(sections?.map(s => s.collegeSubjectId)).size;
+  const isSingleSubject = uniqueSubjectsCount === 1;
 
-  const loadTasks = async () => {
-    if (!collegeSubjectId || !facultyId) return;
+  const activeSection = sections?.[selectedSectionIndex];
+  const collegeSubjectId = activeSection?.collegeSubjectId ?? null;
+  const collegeSectionId = isSingleSubject ? null : (activeSection?.collegeSectionsId ?? null);
 
-    try {
+  const { data: tasks = [], isLoading: loading } = useQuery({
+    queryKey: ["facultyTasks", facultyId, collegeSubjectId, collegeSectionId],
+    queryFn: async () => {
+      if (!collegeSubjectId || !facultyId) return [];
       const data = await fetchFacultyTasksForLoggedInFaculty(
         facultyId,
         collegeSubjectId,
+        collegeSectionId
       );
+      return data.map((t: any) => ({
+        facultyTaskId: t.facultyTaskId,
+        title: t.taskTitle,
+        description: t.description,
+        time: t.time,
+        date: t.date,
+      }));
+    },
+    enabled: !!facultyId && !!collegeSubjectId,
+    staleTime: 5 * 60 * 1000,
+  });
 
-      setTasks(
-        data.map((t: any) => ({
-          facultyTaskId: t.facultyTaskId,
-          title: t.taskTitle,
-          description: t.description,
-          time: t.time,
-          date: t.date,
-        })),
-      );
-    } catch (err) {
-      console.error("LOAD TASK ERROR", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: announcements = [], isLoading: isAnnouncementsLoading, refetch: refetchAnnouncements } = useQuery({
+    queryKey: ["collegeAnnouncements", collegeId, userId, role, view],
+    queryFn: async () => {
+      if (!collegeId || !userId || !role) return [];
 
-  const fetchAnnouncements = useCallback(async () => {
-    if (facultyLoading) return;
-
-    if (!collegeId || !userId || !role) {
-      setAnnouncements([]);
-      setIsAnnouncementsLoading(false);
-      return;
-    }
-
-    const requestId = ++announcementRequestId.current;
-
-    try {
-      setIsAnnouncementsLoading(true);
       const res = await fetchCollegeAnnouncements({
         collegeId,
         userId,
@@ -100,45 +92,57 @@ export default function FacultyDashRight() {
         limit: 20,
       });
 
-      const formatted = res.data.map((item: any) => ({
+      return res.data.map((item: any) => ({
         collegeAnnouncementId: item.collegeAnnouncementId,
         title: item.title,
         date: item.date,
         createdAt: item.createdAt,
         type: item.type,
         targetRoles: item.targetRoles,
-
         image: typeIcons[item.type] || "/clip.png",
         imgHeight: "h-10",
         cardBg: "#E8F8EF",
         imageBg: "#D3F1E0",
-
         professor:
           view === "my"
             ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
             : `By ${formatRole(item.createdByRole)}`,
       }));
+    },
+    enabled: !!collegeId && !!userId && !!role && !facultyLoading,
+    staleTime: 5 * 60 * 1000,
+  });
 
-      if (requestId === announcementRequestId.current) {
-        setAnnouncements(formatted);
-      }
-    } catch (err) {
-      console.error("Fetch announcements error:", err);
-      if (requestId === announcementRequestId.current) {
-        setAnnouncements([]);
-      }
-    } finally {
-      if (requestId === announcementRequestId.current) {
-        setIsAnnouncementsLoading(false);
-      }
-    }
-  }, [collegeId, facultyLoading, role, userId, view]);
+  const saveTaskMutation = useMutation({
+    mutationFn: async (payload: {
+      data: any,
+      taskId?: number
+    }) => {
+      const res = await saveFacultyTask({
+        facultyTaskId: payload.taskId,
+        collegeSubjectId: collegeSubjectId!,
+        taskTitle: payload.data.title,
+        description: payload.data.description,
+        date: payload.data.dueDate,
+        time: payload.data.dueTime,
+        collegeAcademicYearId: payload.data.collegeAcademicYearId,
+        collegeSectionsId: payload.data.collegeSectionsId,
+      },
+        facultyId!,
+      );
 
-  useEffect(() => {
-    if (!facultyLoading && collegeSubjectId && facultyId) {
-      loadTasks();
+      if (!res.success) {
+        throw new Error("Save failed");
+      }
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["facultyTasks", facultyId, collegeSubjectId, collegeSectionId] });
+    },
+    onError: (error) => {
+      console.error("HANDLE SAVE ERROR:", error);
     }
-  }, [facultyLoading, collegeSubjectId, facultyId]);
+  });
 
   const handleSave = async (
     payload: {
@@ -151,40 +155,8 @@ export default function FacultyDashRight() {
     },
     taskId?: number,
   ) => {
-    try {
-      const res = await saveFacultyTask({
-        facultyTaskId: taskId,
-        collegeSubjectId: collegeSubjectId!,
-        taskTitle: payload.title,
-        description: payload.description,
-        date: payload.dueDate,
-        time: payload.dueTime,
-        collegeAcademicYearId: payload.collegeAcademicYearId,
-        collegeSectionsId: payload.collegeSectionsId,
-      },
-        facultyId!,
-      );
-
-      if (!res.success) {
-        throw new Error("Save failed");
-      }
-
-      await loadTasks();
-    } catch (error: any) {
-      console.error("HANDLE SAVE ERROR:", error);
-      throw error;
-    }
+    await saveTaskMutation.mutateAsync({ data: payload, taskId });
   };
-
-  useEffect(() => {
-    if (facultyLoading) return;
-
-    const timer = window.setTimeout(() => {
-      void fetchAnnouncements();
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [facultyLoading, fetchAnnouncements]);
 
   return (
     <div className="hidden h-full min-h-0 flex-col overflow-hidden p-2 md:flex md:w-[35%] lg:w-[32%]">
@@ -200,7 +172,7 @@ export default function FacultyDashRight() {
         onAddTask={() => { }}
         onSaveTask={handleSave}
         onDeleteTask={async () => {
-          await loadTasks();
+          queryClient.invalidateQueries({ queryKey: ["facultyTasks", facultyId, collegeSubjectId, collegeSectionId] });
         }}
       />
 
@@ -222,15 +194,14 @@ export default function FacultyDashRight() {
           }}
         />
       )}
-
       <div className="min-h-0 flex-1">
         <AnnouncementsCard
           announceCard={announcements}
           height="100%"
           currentView={view}
           isLoading={isAnnouncementsLoading}
-          onViewChange={(v) => setView(v)}
-          refreshAnnouncements={fetchAnnouncements}
+          onViewChange={(v) => setView(v as "my" | "others")}
+          refreshAnnouncements={async () => { await refetchAnnouncements(); }}
         />
       </div>
     </div>

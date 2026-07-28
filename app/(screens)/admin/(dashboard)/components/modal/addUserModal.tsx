@@ -1,58 +1,18 @@
 "use client";
-import {
-  fetchModalInitialData,
-  persistFaculty,
-} from "@/lib/helpers/admin/upsertFaculty";
-import { persistUser } from "@/lib/helpers/admin/registrations/persistUser";
-import { upsertParentEntry } from "@/lib/helpers/parent/createParent";
-import { supabase } from "@/lib/supabaseClient";
-import { CaretDown, Eye, EyeSlash, Lock, X } from "@phosphor-icons/react";
-import React, { useEffect, useMemo, useState } from "react";
-import toast, { Toaster } from "react-hot-toast";
-import { CustomMultiSelect, CustomSingleSelect } from "./userModalComponents";
-import {
-  createStudent,
-  createStudentFeeObligation,
-} from "@/lib/helpers/admin/registrations/student/studentRegistration";
-import { createStudentAcademicHistory } from "@/lib/helpers/admin/registrations/student/academicHistoryRegistration";
-import {
-  createFinanceManager,
-  upsertFinanceManagerEducationTypes,
-} from "@/lib/helpers/admin/registrations/finance/financeManagerRegistration";
-import {
-  createAccountant,
-  upsertAccountantEducationTypes,
-} from "@/lib/helpers/admin/registrations/finance/accountantRegistration";
-import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
-import {
-  upsertAdminEducationTypes,
-  upsertAdminEntry,
-  upsertCollegeHR,
-  upsertUser,
-} from "@/lib/helpers/upsertUser";
-import { fetchSessionOptions } from "@/lib/helpers/collegeSessionAPI";
+import React, { useState } from "react";
+import { Eye, EyeSlash, X } from "@phosphor-icons/react";
+import { Toaster } from "react-hot-toast";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
-import { createCollegeHR } from "@/lib/helpers/admin/registrations/collegeHr/hrRegistration";
-import { upsertIdentifier } from "@/lib/helpers/identifiers/upsertIdentifier";
-import { upsertPlacementEmployee } from "@/lib/helpers/admin/registrations/placement/placementregistration";
-import { createWellbeing } from "@/lib/helpers/admin/registrations/wellbeing/wellbeingRegistration";
-import { registerUserToHikvision } from "@/lib/helpers/biometric/registerUser";
-import { fetchAdminEducationTypes } from "@/lib/helpers/admin/adminEducationTypesAPI";
-import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import FacultyTeachingAssignments from "./faculty/FacultyTeachingAssignments";
+import { AddUserBasicFields } from "./registration/AddUserBasicFields";
+import { StudentRegistrationFields } from "./registration/StudentRegistrationFields";
+import { StaffRegistrationFields } from "./registration/StaffRegistrationFields";
+import { useAddUserModalState } from "./registration/hooks/useAddUserModalState";
+import { submitUserRegistration } from "@/lib/helpers/admin/registrations/userRegistrationSubmit";
+import toast from "react-hot-toast";
 
-type SubjectBlock = {
-  id: number;
-  yearId: number | null;
-  subjectId: number | null;
-  sectionIds: number[];
-};
-
-const toPascalCase = (str: string) => {
-  return str.replace(
-    /\w\S*/g,
-    (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(),
-  );
-};
+const ENTRY_TYPES = ["Regular", "Lateral", "Transfer"];
+const INTER_ENTRY = ["Regular", "Transfer"];
 
 const validatePassword = (password: string) => {
   const hasUpper = /[A-Z]/.test(password);
@@ -65,513 +25,34 @@ const validatePassword = (password: string) => {
   return null;
 };
 
-const IDENTIFIER_REGEX = /^(?=.*\d)[A-Za-z0-9]+(?:-[A-Za-z0-9]+){0,2}$/;
-
-const validateIdentifier = (value: string) => {
-  if (!value?.trim()) {
-    return "is required.";
-  }
-  if (value.length < 6 || value.length > 15 || !IDENTIFIER_REGEX.test(value)) {
-    return "Must be 6–15 characters and include at least one number. Only letters, numbers and up to two hyphen (-) allowed.";
-  }
-
-  return null;
-};
-
 const AddUserModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   user?: any;
 }> = ({ isOpen, onClose, user }) => {
-  const [dbData, setDbData] = useState<{
-    educations: any[];
+  const { collegeEducationType, userId: adminUserId } = useAdmin();
+  const state = useAddUserModalState(isOpen, user, collegeEducationType);
 
-    branches: any[];
-    years: any[];
-    sections: any[];
-    subjects: any[];
-    semesters: any[];
-  }>({
-    educations: [],
-    branches: [],
-    years: [],
-    sections: [],
-    subjects: [],
-    semesters: [],
-  });
-
-  const [processingFields, setProcessingFields] = useState<Record<string, boolean>>({});
-  const handleWithLoader = (fieldId: string, action: () => void) => {
-    setProcessingFields((prev) => ({ ...prev, [fieldId]: true }));
-    setTimeout(() => {
-      action();
-      setProcessingFields((prev) => ({ ...prev, [fieldId]: false }));
-    }, 400);
-  };
-
-  const [loading, setLoading] = useState(false);
-  const [isFetchingData, setIsFetchingData] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const initialBasicData = {
-    fullName: "",
-    email: "",
-    mobileCode: "+91",
-    mobileNumber: "",
-    role: "",
-    gender: "",
-    password: "",
-    confirmPassword: "",
-    studentId: "",
-    collegeId: null,
-    collegeCode: "",
-    collegeIntId: 0,
-    adminId: 0,
-    dateOfJoining: "",
-    professionalExperienceYears: undefined as number | undefined,
-    identifierValue: "",
-    batch: "",
-    wellbeingRegistrationType: "",
-    hostelBlock: "",
-    buildingNumber: "",
-    hostelType: "",
-  };
-  const [basicData, setBasicData] = useState<any>(initialBasicData);
-
-  const [selectedEducationId, setSelectedEducationId] = useState<number | null>(
-    null,
-  );
-  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
-  const [selectedYearId, setSelectedYearId] = useState<number | null>(null);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(
-    null,
-  );
-  const [selectedSectionIds, setSelectedSectionIds] = useState<number[]>([]);
-
-  const [selectedDegrees, setSelectedDegrees] = useState<string[]>([]);
-  const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
-  const [selectedYears, setSelectedYears] = useState<string[]>([]);
-  const [selectedSections, setSelectedSections] = useState<string[]>([]);
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [selectedSemester, setSelectedSemester] = useState<string[]>([]);
-  const [selectedEntryType, setSelectedEntryType] = useState<string[]>([]);
-  const [selectedSessionType, setSelectedSessionType] = useState<string[]>([]);
-  const [selectedFinanceEducationTypes, setSelectedFinanceEducationTypes] =
-    useState<string[]>([]);
-  const [selectedWellbeingEducationTypes, setSelectedWellbeingEducationTypes] =
-    useState<string[]>([]);
-  const [sessionOptions, setSessionOptions] = useState<
-    { id: number; label: string; value: number, collegeEducationId?: number }[]
-  >([]);
-  const [adminEducationOptions, setAdminEducationOptions] = useState<any[]>([]);
-
-  const [isSuccess, setIsSuccess] = useState(false);
-  const { collegeEducationId, collegeEducationType, userId: adminUserId } = useAdmin();
-
-  const ENTRY_TYPES = ["Regular", "Lateral", "Transfer"];
-  const INTER_ENTRY = ["Regular", "Transfer"];
-
-  const [subjectBlocks, setSubjectBlocks] = useState<SubjectBlock[]>([
-    { id: 1, yearId: null, subjectId: null, sectionIds: [] },
-  ]);
-
-  const addSubjectBlock = () =>
-    setSubjectBlocks((prev) => [
-      ...prev,
-      { id: Date.now(), yearId: null, subjectId: null, sectionIds: [] },
-    ]);
-
-  const removeSubjectBlock = (id: number) =>
-    setSubjectBlocks((prev) => prev.filter((b) => b.id !== id));
-
-  const resetForm = () => {
-    setBasicData((prev: any) => ({
-      ...initialBasicData,
-      identifierValue: "",
-      collegeId: prev.collegeId,
-      collegeIntId: prev.collegeIntId,
-      adminId: prev.adminId,
-    }));
-    setSelectedEducationId(null);
-    setSelectedBranchId(null);
-    setSelectedYearId(null);
-    setSelectedSubjectId(null);
-    setSelectedSectionIds([]);
-    setSubjectBlocks([
-      { id: 1, yearId: null, subjectId: null, sectionIds: [] },
-    ]);
-    setSelectedDegrees([]);
-    setSelectedDepts([]);
-    setSelectedYears([]);
-    setSelectedSections([]);
-    setSelectedSubjects([]);
-    setSelectedSemester([]);
-    setSelectedEntryType([]);
-    setSelectedFinanceEducationTypes([]);
-    setSelectedWellbeingEducationTypes([]);
-
-    setShowPassword(false);
-    setIsSuccess(false);
-  };
-
-  const handleSingleSelect = (
-    value: string,
-    setList: React.Dispatch<React.SetStateAction<string[]>>,
-  ) => {
-    setList((prev) => (prev[0] === value ? [] : [value]));
-  };
-
-  const toggleMultiSelectValue = (
-    value: string,
-    setList: React.Dispatch<React.SetStateAction<string[]>>,
-  ) => {
-    setList((prev) =>
-      prev.includes(value)
-        ? prev.filter((item) => item !== value)
-        : [...prev, value],
-    );
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      const init = async () => {
-        setIsFetchingData(true);
-        try {
-          const {
-            data: { user: authUser },
-          } = await supabase.auth.getUser();
-          if (!authUser) return;
-
-          const { data: userData } = await supabase
-            .from("users")
-            .select("userId")
-            .eq("auth_id", authUser.id)
-            .single();
-          if (!userData) return;
-
-          const adminContext = await fetchAdminContext(userData.userId);
-
-          setBasicData((prev: any) => ({
-            ...prev,
-            collegeId: adminContext.collegePublicId,
-            collegeIntId: adminContext.collegeId,
-            collegeCode: adminContext.collegeCode,
-            adminId: adminContext.adminId,
-          }));
-
-          const sessions = await fetchSessionOptions(adminContext.collegeId);
-          setSessionOptions(sessions);
-
-          const adminEducations = await fetchAdminEducationTypes(adminContext.adminId);
-          setAdminEducationOptions(adminEducations);
-
-          const data = await fetchModalInitialData(adminContext.collegeId);
-
-          const { data: semesterData } = await supabase
-            .from("college_semester")
-            .select("*")
-            .eq("collegeId", adminContext.collegeId)
-            .eq("isActive", true);
-
-          setDbData({ ...data, semesters: semesterData || [] });
-        } catch (error) {
-          toast.error("Failed to load college data");
-        } finally {
-          setIsFetchingData(false);
-        }
-      };
-
-      init();
-
-      if (user) {
-        setBasicData((p: any) => ({
-          ...p,
-          fullName: user.fullName || "",
-          email: user.email || "",
-          mobileNumber: user.mobile ? user.mobile.slice(-10) : "",
-          role: user.role || "Faculty",
-          gender: user.gender || "",
-          studentId: user.studentId ? String(user.studentId) : "",
-        }));
-      } else {
-        resetForm();
-      }
-    }
-  }, [isOpen, user]);
-
-  const selectedEducation = useMemo(
-    () =>
-      dbData.educations.find(
-        (e) => e.collegeEducationId === selectedEducationId,
-      ),
-    [dbData.educations, selectedEducationId],
-  );
-
-  const isSelectedSchool = isSchoolEducation(selectedEducation?.collegeEducationType || collegeEducationType);
-
-  const filteredBranches = useMemo(
-    () =>
-      selectedEducation
-        ? dbData.branches.filter(
-          (b) =>
-            b.collegeEducationId === selectedEducation.collegeEducationId,
-        )
-        : [],
-    [dbData.branches, selectedEducation],
-  );
-
-  const filteredSessionOptions = useMemo(
-    () =>
-      selectedEducationId
-        ? sessionOptions.filter((s) => s.collegeEducationId === selectedEducationId)
-        : sessionOptions,
-    [sessionOptions, selectedEducationId]
-  );
-
-  // const filteredYears = useMemo(
-  //   () => dbData.years.filter((y) => y.collegeBranchId == selectedBranchId),
-  //   [dbData.years, selectedBranchId],
-  // );
-
-  const filteredYears = useMemo(() => {
-    const years = dbData.years.filter((y) => y.collegeBranchId == selectedBranchId);
-    return years.sort((a, b) => {
-      // Parses "1st Year" -> 1, "2nd Year" -> 2, allowing mathematical sorting
-      const numA = parseInt(a.collegeAcademicYear) || 0;
-      const numB = parseInt(b.collegeAcademicYear) || 0;
-      return numA - numB;
-    });
-  }, [dbData.years, selectedBranchId]);
-
-  const filteredSubjects = useMemo(
-    () =>
-      dbData.subjects.filter((s) => s.collegeAcademicYearId == selectedYearId),
-    [dbData.subjects, selectedYearId],
-  );
-
-  // const filteredSections = useMemo(
-  //   () =>
-  //     dbData.sections.filter((s) => s.collegeAcademicYearId == selectedYearId),
-  //   [dbData.sections, selectedYearId],
-  // );
-
-  const filteredSections = useMemo(() => {
-    const rawSections = dbData.sections.filter(
-      (s) => s.collegeAcademicYearId == selectedYearId
-    );
-    return Array.from(
-      new Map(rawSections.map((s) => [s.collegeSections, s])).values()
-    );
-  }, [dbData.sections, selectedYearId]);
-
-  const studentSelectedEducation = useMemo(
-    () =>
-      dbData.educations.find(
-        (e) => e.collegeEducationId === selectedEducationId,
-      ),
-    [dbData.educations, selectedEducationId],
-  );
-
-  const studentAvailableBranches = useMemo(
-    () =>
-      studentSelectedEducation
-        ? dbData.branches.filter(
-          (b) =>
-            b.collegeEducationId ===
-            studentSelectedEducation.collegeEducationId,
-        )
-        : [],
-    [studentSelectedEducation, dbData.branches],
-  );
-
-  const studentSelectedBranch = useMemo(
-    () =>
-      studentAvailableBranches.find(
-        (b) => b.collegeBranchCode === selectedDepts[0],
-      ),
-    [studentAvailableBranches, selectedDepts],
-  );
-
-  // const studentAvailableYears = useMemo(
-  //   () =>
-  //     studentSelectedBranch
-  //       ? dbData.years.filter(
-  //         (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
-  //       )
-  //       : [],
-  //   [studentSelectedBranch, dbData.years],
-  // );
-
-  const studentAvailableYears = useMemo(() => {
-    if (!isSelectedSchool && !studentSelectedBranch) return [];
-
-    const years = dbData.years.filter(
-      (y) => isSelectedSchool
-        ? y.collegeEducationId === studentSelectedEducation?.collegeEducationId
-        : y.collegeBranchId === studentSelectedBranch?.collegeBranchId,
-    );
-
-    return years.sort((a, b) => {
-      const numA = parseInt(a.collegeAcademicYear) || 0;
-      const numB = parseInt(b.collegeAcademicYear) || 0;
-      return numA - numB;
-    });
-  }, [studentSelectedBranch, studentSelectedEducation, isSelectedSchool, dbData.years]);
-
-  const studentSelectedYear = useMemo(
-    () =>
-      studentAvailableYears.find(
-        (y) => y.collegeAcademicYear === selectedYears[0],
-      ),
-    [studentAvailableYears, selectedYears],
-  );
-
-  const studentAvailableSemesters = useMemo(
-    () =>
-      studentSelectedYear
-        ? dbData.semesters.filter(
-          (s) =>
-            s.collegeAcademicYearId ===
-            studentSelectedYear.collegeAcademicYearId,
-        )
-        : [],
-    [studentSelectedYear, dbData.semesters],
-  );
-
-  // const studentAvailableSections = useMemo(
-  //   () =>
-  //     studentSelectedYear
-  //       ? dbData.sections.filter(
-  //         (s) =>
-  //           s.collegeAcademicYearId ===
-  //           studentSelectedYear.collegeAcademicYearId,
-  //       )
-  //       : [],
-  //   [studentSelectedYear, dbData.sections],
-  // );
-
-  const studentAvailableSections = useMemo(() => {
-    if (!studentSelectedYear) return [];
-    const rawSections = dbData.sections.filter(
-      (s) =>
-        s.collegeAcademicYearId ===
-        studentSelectedYear.collegeAcademicYearId &&
-        (isSelectedSchool ? s.collegeEducationId === studentSelectedEducation?.collegeEducationId : s.collegeBranchId === studentSelectedBranch?.collegeBranchId)
-    );
-    return Array.from(
-      new Map(rawSections.map((s) => [s.collegeSections, s])).values()
-    );
-  }, [studentSelectedYear, dbData.sections]);
-
-  const handleBasicChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
-    const { name, value } = e.target;
-    let formattedValue = value;
-
-    if (name === "fullName") {
-      const onlyAlphabets = value.replace(/[^A-Za-z\s]/g, "");
-      formattedValue = toPascalCase(onlyAlphabets);
-    } else if (name === "email") {
-      formattedValue = value.toLowerCase();
-    } else if (name === "mobileCode") {
-      if (!/^\+?[0-9]*$/.test(value)) return;
-      formattedValue = value;
-    } else if (name === "mobileNumber") {
-      formattedValue = value.replace(/\D/g, "");
-      if (basicData.mobileCode === "+91") {
-        if (
-          formattedValue.length === 1 &&
-          !["6", "7", "8", "9"].includes(formattedValue)
-        ) {
-          return;
-        }
-      }
-      if (formattedValue.length > 10) return;
-    } else if (name === "identifierValue") {
-      const sanitized = value.replace(/[^A-Za-z0-9-]/g, "").toUpperCase();
-      const hyphenCount = (sanitized.match(/-/g) || []).length;
-      // if (hyphenCount > 1) return;
-      // formattedValue = sanitized;
-      if (hyphenCount > 2 || sanitized.includes("--")) return;
-      formattedValue = sanitized;
-    } else if (name === "studentId") {
-      formattedValue = value.replace(/[^A-Za-z0-9-]/g, "").toUpperCase();
-    } else if (name === "batch") {
-      const alphanumeric = value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-      if (alphanumeric.length > 5) return;
-      formattedValue = alphanumeric;
-    } else if (name === "hostelBlock") {
-      formattedValue = value.replace(/[^A-Za-z0-9\s/-]/g, "").toUpperCase();
-    } else if (name === "buildingNumber") {
-      formattedValue = value.replace(/[^A-Za-z0-9\s/-]/g, "").toUpperCase();
-    } else if (name === "role") {
-      setSelectedDepts([]);
-      setSelectedYears([]);
-      setSelectedSections([]);
-      setSelectedSemester([]);
-      setSelectedEntryType([]);
-      setSelectedFinanceEducationTypes([]);
-      setBasicData((p: any) => ({
-        ...p,
-        wellbeingRegistrationType: "",
-        hostelBlock: "",
-        buildingNumber: "",
-        hostelType: "",
-      }));
-      formattedValue = value;
-    }
-
-    setBasicData((p: any) => ({ ...p, [name]: formattedValue }));
-  };
-
-  const handleWellbeingRegistrationTypeChange = (value: string) => {
-    setBasicData((prev: any) => ({
-      ...prev,
-      wellbeingRegistrationType: value,
-      ...(value === "College" ? { hostelBlock: "", buildingNumber: "", hostelType: "" } : {}),
-    }));
-
-    if (value === "Hostel") {
-      setSelectedWellbeingEducationTypes([]);
-    }
-  };
-
-  const toggleSectionId = (idStr: string) => {
-    const id = parseInt(idStr);
-    setSelectedSectionIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
-    );
-  };
-
-  const degreeOptions = useMemo(
-    () => dbData.educations.map((e: any) => e.collegeEducationType),
-    [dbData.educations],
-  );
-  const branchOptions = useMemo(
-    () => studentAvailableBranches.map((b) => b.collegeBranchCode),
-    [studentAvailableBranches],
-  );
-  const yearOptions = useMemo(
-    () => studentAvailableYears.map((y) => y.collegeAcademicYear),
-    [studentAvailableYears],
-  );
-  const semesterOptions = useMemo(
-    () => studentAvailableSemesters.map((s) => s.collegeSemester.toString()),
-    [studentAvailableSemesters],
-  );
-  const sectionOptions = useMemo(
-    () => studentAvailableSections.map((s) => s.collegeSections),
-    [studentAvailableSections],
-  );
-
-  const selectedSessionId = useMemo(
-    () =>
-      sessionOptions.find((s) => s.label === selectedSessionType[0])?.id ??
-      null,
-    [selectedSessionType, sessionOptions],
-  );
+  const {
+    basicData, setBasicData, dbData, processingFields, handleWithLoader,
+    loading, setLoading, isFetchingData, setIsSuccess,
+    selectedEducationId, setSelectedEducationId, selectedBranchId, setSelectedBranchId,
+    selectedYearId, setSelectedYearId, selectedSubjectId, setSelectedSubjectId,
+    selectedSectionIds, setSelectedSectionIds, selectedDepts, setSelectedDepts,
+    selectedYears, setSelectedYears, selectedSections, setSelectedSections,
+    selectedSemester, setSelectedSemester, selectedEntryType, setSelectedEntryType,
+    selectedSessionType, setSelectedSessionType, selectedFinanceEducationTypes,
+    setSelectedFinanceEducationTypes, selectedWellbeingEducationTypes,
+    setSelectedWellbeingEducationTypes, sessionOptions,
+    adminEducationOptions, assignments, setAssignments, handleBasicChange,
+    handleSingleSelect, toggleMultiSelectValue, resetForm, studentSelectedEducation,
+    studentAvailableBranches, studentSelectedBranch, studentAvailableYears,
+    studentSelectedYear, studentAvailableSemesters, studentAvailableSections,
+    selectedSessionId, isSelectedSchool
+  } = state;
 
   const isAdmin = basicData.role === "Admin";
   const isFaculty = basicData.role === "Faculty";
@@ -584,101 +65,16 @@ const AddUserModal: React.FC<{
   const isHR = basicData.role === "CollegeHr";
   const isPlacement = basicData.role === "PlacementOfficer";
   const isWellbeing = basicData.role === "WellbeingManager";
-  const selectedWellbeingRegistrationType =
-    basicData.wellbeingRegistrationType || "";
-  const isWellbeingHostel =
-    isWellbeing && (selectedWellbeingRegistrationType === "Hostel" || selectedWellbeingRegistrationType === "Both");
-  const isWellbeingCollege =
-    isWellbeing && (selectedWellbeingRegistrationType === "College" || selectedWellbeingRegistrationType === "Both");
+  const selectedWellbeingRegistrationType = basicData.wellbeingRegistrationType || "";
+  const isWellbeingHostel = isWellbeing && (selectedWellbeingRegistrationType === "Hostel" || selectedWellbeingRegistrationType === "Both");
+  const isWellbeingCollege = isWellbeing && (selectedWellbeingRegistrationType === "College" || selectedWellbeingRegistrationType === "Both");
 
-  const resolveStudentIdFromPin = async (pinNumber: string) => {
-    const normalizedPin = pinNumber.trim();
+  const showEmploymentFields = !isStudent && !isParent && !isWellbeing && basicData.role !== "";
+  const showDateOfJoiningField = !isStudent && !isParent && basicData.role !== "";
+  const showRollNoField = isStudent;
+  const showEmployeeIdField = !isStudent && !isParent && basicData.role !== "";
 
-    const { data, error } = await supabase
-      .from("student_pins")
-      .select("studentId")
-      .eq("pinNumber", normalizedPin)
-      .eq("collegeId", basicData.collegeIntId)
-      .eq("isActive", true)
-      .is("deletedAt", null)
-      .maybeSingle();
-
-    if (error || !data?.studentId) {
-      throw new Error(`Student not found for pin number "${normalizedPin}"`);
-    }
-
-    return data.studentId as number;
-  };
-
-  const assertParentStudentAvailable = async (studentId: number) => {
-    const { data, error } = await supabase
-      .from("parents")
-      .select("parentId")
-      .eq("studentId", studentId)
-      .eq("collegeId", basicData.collegeIntId)
-      .eq("isActive", true)
-      .eq("is_deleted", false)
-      .is("deletedAt", null)
-      .limit(1)
-      .maybeSingle();
-
-    if (error) throw error;
-    if (data) {
-      throw new Error("Parent already registered for this student.");
-    }
-  };
-
-  const assertIdentifierAvailable = async (
-    role: string,
-    identifierValue: string,
-    currentUserId?: number | null,
-  ) => {
-    const normalizedIdentifier = identifierValue.trim().toUpperCase();
-
-    if (!normalizedIdentifier) return;
-
-    if (role === "Student") {
-      const { data, error } = await supabase
-        .from("student_pins")
-        .select("studentPinId, studentId")
-        .ilike("pinNumber", normalizedIdentifier)
-        .eq("collegeId", basicData.collegeIntId)
-        .eq("isActive", true)
-        .is("deletedAt", null)
-        .limit(1)
-        .maybeSingle();
-
-      if (error) throw error;
-      if (data) {
-        throw new Error(
-          `Student with roll no "${normalizedIdentifier}" already exists.`,
-        );
-      }
-
-      return;
-    }
-
-    if (role !== "Parent") {
-      const { data, error } = await supabase
-        .from("employee_ids")
-        .select("employeeIdPk, userId")
-        .ilike("employeeId", normalizedIdentifier)
-        .eq("collegeId", basicData.collegeIntId)
-        .eq("isActive", true)
-        .is("deletedAt", null)
-        .limit(1)
-        .maybeSingle();
-
-      if (error) throw error;
-      if (data && data.userId !== currentUserId) {
-        throw new Error(
-          `Employee with employee id "${normalizedIdentifier}" already exists.`,
-        );
-      }
-    }
-  };
-
-  const handleSave = async () => {
+  const handleSaveWrapper = async () => {
     if (!basicData.fullName) return toast.error("Full Name is required.");
     if (!basicData.email) return toast.error("Email is required.");
     if (!basicData.role) return toast.error("Role is required.");
@@ -698,67 +94,40 @@ const AddUserModal: React.FC<{
     }
     if (hasMobileNumber && basicData.mobileCode === "+91") {
       if (!["6", "7", "8", "9"].includes(basicData.mobileNumber.charAt(0))) {
-        return toast.error(
-          "Indian mobile number must start with 6, 7, 8, or 9.",
-        );
+        return toast.error("Indian mobile number must start with 6, 7, 8, or 9.");
       }
     }
 
     if (isWellbeing) {
-      if (!basicData.dateOfJoining) {
-        return toast.error("Date of Joining is required.");
-      }
-      if (!selectedWellbeingRegistrationType) {
-        return toast.error("Registration Type is required.");
-      }
+      if (!basicData.dateOfJoining) return toast.error("Date of Joining is required.");
+      if (!selectedWellbeingRegistrationType) return toast.error("Registration Type is required.");
       if (isWellbeingHostel) {
-        if (!basicData.hostelBlock) {
-          return toast.error("Block is required.");
-        }
-        if (!basicData.buildingNumber) {
-          return toast.error("Building Number is required.");
-        }
-        if (!basicData.hostelType) {
-          return toast.error("Hostel Type is required.");
-        }
+        if (!basicData.hostelBlock) return toast.error("Block is required.");
+        if (!basicData.buildingNumber) return toast.error("Building Number is required.");
+        if (!basicData.hostelType) return toast.error("Hostel Type is required.");
       }
       if (isWellbeingCollege) {
-        if (!selectedWellbeingEducationTypes.length) {
-          return toast.error("Select Education Type for wellbeing college registration.");
-        }
+        if (!selectedWellbeingEducationTypes.length) return toast.error("Select Education Type for wellbeing college registration.");
       }
     }
 
     if (showRollNoField || showEmployeeIdField) {
-      const error = validateIdentifier(basicData.identifierValue);
-      if (error) {
-        const label = showRollNoField ? "Roll no" : "Employee Id";
-        return toast.error(`${label} ${error}`);
+      const value = basicData.identifierValue;
+      if (!value?.trim()) return toast.error(`${showRollNoField ? "Roll no" : "Employee Id"} is required.`);
+      const IDENTIFIER_REGEX = /^(?=.*\d)[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+){0,2}$/;
+      if (value.length < 6 || value.length > 15 || !IDENTIFIER_REGEX.test(value)) {
+        return toast.error(`${showRollNoField ? "Roll no" : "Employee Id"} Must be 6–15 characters and include at least one number. Only letters, numbers and up to two hyphens (-) or slashes (/) allowed.`);
       }
     }
 
-    if (!basicData.gender)
-      return toast.error("Please select a gender.");
-
-    if (isFaculty) {
-      if (!selectedEducationId || (!selectedBranchId && !isSelectedSchool))
-        return toast.error("Complete all academic fields for Faculty.");
-      const incomplete = subjectBlocks.some(
-        (b) => !b.yearId || !b.subjectId || b.sectionIds.length === 0,
-      );
-      if (incomplete)
-        return toast.error(
-          "Complete Year, Subject and Sections for all subject blocks.",
-        );
-    }
+    if (!basicData.gender) return toast.error("Please select a gender.");
 
     if (isStudent) {
       if (
         !selectedEducationId ||
         (!selectedDepts.length && !isSelectedSchool) ||
         !selectedYears.length ||
-        (!["Inter"].includes(studentSelectedEducation?.collegeEducationType || "") &&
-          !selectedSemester.length && !isSelectedSchool) ||
+        (!["Inter"].includes(studentSelectedEducation?.collegeEducationType || "") && !selectedSemester.length && !isSelectedSchool) ||
         !selectedEntryType.length ||
         !selectedSections.length
       ) {
@@ -766,485 +135,29 @@ const AddUserModal: React.FC<{
       }
     }
 
-    if (isParent && !basicData.studentId)
-      return toast.error("Student pin number is required.");
+    if (isParent && !basicData.studentId) return toast.error("Student pin number is required.");
 
     if (showFinanceFields && !user && !isAccountant) {
-      if (!selectedFinanceEducationTypes.length) {
-        return toast.error("Select Education Type for Finance.");
-      }
+      if (!selectedFinanceEducationTypes.length) return toast.error("Select Education Type for Finance.");
     }
 
-    if (isPlacement && !selectedEducationId)
-      return toast.error("Select Education Type for Placement Officer.");
+    if (isPlacement && !selectedEducationId) return toast.error("Select Education Type for Placement Officer.");
 
     if (!user) {
-      if (!basicData.password) {
-        return toast.error("Password is required.");
-      }
+      if (!basicData.password) return toast.error("Password is required.");
       const passwordError = validatePassword(basicData.password);
-      if (passwordError) {
-        return toast.error(passwordError);
-      }
-      if (!basicData.confirmPassword) {
-        return toast.error("Confirm Password is required.");
-      }
-      if (basicData.password !== basicData.confirmPassword) {
-        return toast.error("Password and Confirm Password do not match.");
-      }
+      if (passwordError) return toast.error(passwordError);
+      if (!basicData.confirmPassword) return toast.error("Confirm Password is required.");
+      if (basicData.password !== basicData.confirmPassword) return toast.error("Password and Confirm Password do not match.");
     }
 
-    const normalizedDateOfJoining = basicData.dateOfJoining
-      ? new Date(basicData.dateOfJoining).toISOString().split("T")[0]
-      : null;
-
-    const normalizedExperience =
-      basicData.professionalExperienceYears !== undefined &&
-        basicData.professionalExperienceYears !== null
-        ? Number(basicData.professionalExperienceYears)
-        : null;
-
-    setLoading(true);
-    let createdUserId: number | null = null;
-    let createdStudentId: number | null = null;
-    let createdAccountantId: number | null = null;
-
-    try {
-      const timestamp = new Date().toISOString();
-      const parentStudentId = isParent
-        ? await resolveStudentIdFromPin(basicData.studentId)
-        : null;
-
-      if (parentStudentId && !user) {
-        await assertParentStudentAvailable(parentStudentId);
-      }
-
-      if (basicData.identifierValue && !user) {
-        await assertIdentifierAvailable(
-          basicData.role,
-          basicData.identifierValue,
-          null,
-        );
-      }
-
-      let targetUserId: number | null = null;
-
-      if (isAdmin && !user) {
-        // const { data: authData, error: authError } = await supabase.auth.signUp(
-        //   {
-        //     email: basicData.email,
-        //     password: basicData.password,
-        //   },
-        // );
-
-        const cCode = basicData.collegeCode || "";
-        const redirectUrl = cCode.toUpperCase() === "GKELITE" || !cCode
-          ? "https://tektoncampus.com/login"
-          : `https://${cCode.toLowerCase()}.tektoncampus.com/login`;
-
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: basicData.email,
-          password: basicData.password!,
-          options: {
-            data: { full_name: basicData.fullName, role: basicData.role },
-            emailRedirectTo: redirectUrl,
-          },
-        });
-
-        if (authError || !authData.user) {
-          throw new Error(authError?.message || "Auth user creation failed");
-        }
-
-        const authId = authData.user.id;
-
-        const userRes = await upsertUser({
-          auth_id: authId,
-          fullName: basicData.fullName,
-          email: basicData.email,
-          mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
-          role: "Admin",
-          collegeId: basicData.collegeIntId,
-          collegePublicId: basicData.collegeId,
-          gender: basicData.gender,
-          dateOfJoining: normalizedDateOfJoining,
-          professionalExperienceYears: normalizedExperience,
-        });
-
-        if (!userRes.success || !userRes.data) {
-          throw new Error(userRes.error || "User creation failed");
-        }
-
-        targetUserId = userRes.data.userId;
-
-        const adminRes = await upsertAdminEntry({
-          userId: targetUserId!,
-          fullName: basicData.fullName,
-          email: basicData.email,
-          collegeEducationId: null,
-          mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
-          gender: basicData.gender,
-          collegeId: basicData.collegeId,
-          collegePublicId: basicData.collegeId,
-          collegeCode: basicData.collegeCode,
-        });
-
-        if (!adminRes.success) {
-          throw new Error(adminRes.error || "Admin creation failed");
-        }
-
-        if (!adminRes.data?.adminId || !selectedEducationId) {
-          throw new Error("Admin education type creation failed");
-        }
-
-        const adminEducationRes = await upsertAdminEducationTypes({
-          adminId: adminRes.data.adminId,
-          collegeEducationIds: [selectedEducationId],
-        });
-
-        if (!adminEducationRes.success) {
-          throw new Error(
-            adminEducationRes.error || "Admin education type creation failed",
-          );
-        }
-      } else {
-        targetUserId = await persistUser(
-          !user,
-          {
-            ...basicData,
-            collegePublicId: basicData.collegeId,
-            dateOfJoining: normalizedDateOfJoining,
-            professionalExperienceYears: normalizedExperience,
-          },
-          user ? user.userId : null,
-          timestamp,
-        );
-      }
-
-      if (!user) createdUserId = targetUserId;
-
-      if (!targetUserId) throw new Error("User creation failed");
-
-      if (showFinanceFields && !user) {
-        const financeEducationIds = dbData.educations
-          .filter((education) =>
-            selectedFinanceEducationTypes.includes(
-              education.collegeEducationType,
-            ),
-          )
-          .map((education) => education.collegeEducationId);
-
-        if (!isAccountant && !financeEducationIds.length) {
-          throw new Error("Select Education Type for Finance.");
-        }
-
-        if (isAccountant) {
-          const accountantId = await createAccountant({
-            userId: targetUserId,
-            collegeId: basicData.collegeIntId,
-            collegeEducationId: financeEducationIds.length > 0 ? financeEducationIds[0] : null,
-            createdBy: adminUserId!,
-            isActive: true,
-            createdAt: timestamp,
-            updatedAt: timestamp,
-          });
-          createdAccountantId = accountantId;
-
-          if (financeEducationIds.length > 0) {
-            await upsertAccountantEducationTypes({
-              accountantId,
-              collegeEducationIds: financeEducationIds,
-            });
-          }
-        } else {
-          const financeManagerId = await createFinanceManager({
-            userId: targetUserId,
-            collegeId: basicData.collegeIntId,
-            collegeEducationId: financeEducationIds[0],
-            createdBy: basicData.adminId,
-            type: isFinanceManager ? "manager" : "executive",
-            isActive: true,
-            createdAt: timestamp,
-            updatedAt: timestamp,
-          });
-
-          await upsertFinanceManagerEducationTypes({
-            financeManagerId,
-            collegeEducationIds: financeEducationIds,
-          });
-        }
-      }
-
-      if (isHR && targetUserId) {
-        const hrRes = await upsertCollegeHR({
-          userId: targetUserId,
-          collegeId: basicData.collegeIntId,
-          createdBy: basicData.adminId,
-          isActive: true,
-        });
-        if (!hrRes.success) {
-          throw new Error(hrRes.error?.message || "College HR creation failed");
-        }
-      }
-
-      if (isPlacement && targetUserId) {
-        const placementRes = await upsertPlacementEmployee({
-          userId: targetUserId,
-          collegeId: basicData.collegeIntId,
-          createdBy: basicData.adminId,
-        });
-        if (!placementRes.success) {
-          throw new Error(
-            placementRes.error?.message || "Placement officer creation failed",
-          );
-        }
-      }
-
-      if (isWellbeing && !user) {
-        const wellbeingCollegeDetails = isWellbeingCollege
-          ? dbData.educations
-            .filter((education) =>
-              selectedWellbeingEducationTypes.includes(
-                education.collegeEducationType,
-              ),
-            )
-            .map((education) => ({
-              collegeEducationId: education.collegeEducationId,
-              collegeBranchId: null,
-              collegeAcademicYearId: null,
-              collegeSectionsId: null,
-            }))
-          : [];
-
-        if (isWellbeingCollege && !wellbeingCollegeDetails.length) {
-          throw new Error("Invalid wellbeing college selection data");
-        }
-
-        await createWellbeing({
-          userId: targetUserId,
-          collegeId: basicData.collegeIntId,
-          roleType: "wellbeingManager",
-          gender: basicData.gender,
-          employeeId: basicData.identifierValue,
-          dateOfJoining: normalizedDateOfJoining,
-          createdBy: basicData.adminId,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          collegeDetails: wellbeingCollegeDetails,
-          hostelDetails: isWellbeingHostel
-            ? {
-              block: basicData.hostelBlock,
-              buildingNumber: basicData.buildingNumber,
-              hostelType: basicData.hostelType,
-            }
-            : undefined,
-        });
-      }
-
-      if (isFaculty) {
-        for (const block of subjectBlocks) {
-          await persistFaculty(
-            targetUserId,
-            { ...basicData, collegePublicId: basicData.collegeId },
-            {
-              educationId: selectedEducationId!,
-              branchId: selectedBranchId,
-              yearId: block.yearId!,
-              subjectId: block.subjectId!,
-              sectionIds: block.sectionIds,
-            },
-            timestamp,
-            !!user,
-          );
-        }
-      }
-
-      if (!targetUserId) throw new Error("User creation failed");
-
-      let studentId: number | null = null;
-
-      if (isStudent) {
-        const eduId = studentSelectedEducation?.collegeEducationId;
-        const branchId = isSelectedSchool ? null : studentSelectedBranch?.collegeBranchId;
-        const yearId = studentSelectedYear?.collegeAcademicYearId;
-        const semesterId = studentAvailableSemesters.find(
-          (s) => s.collegeSemester.toString() === selectedSemester[0],
-        )?.collegeSemesterId || null;
-
-        const sectionId = studentAvailableSections.find(
-          (s) => s.collegeSections === selectedSections[0],
-        )?.collegeSectionsId;
-
-        if (
-          !eduId ||
-          (!branchId && !isSelectedSchool) ||
-          !yearId ||
-          (!["Inter"].includes(studentSelectedEducation?.collegeEducationType || "") && !semesterId && !isSelectedSchool) ||
-          !sectionId
-        ) {
-          throw new Error("Invalid academic selection data");
-        }
-
-        studentId = await createStudent(
-          {
-            userId: targetUserId,
-            collegeEducationId: eduId,
-            collegeBranchId: branchId,
-            collegeId: basicData.collegeIntId,
-            collegeSessionId: selectedSessionId,
-            createdBy: basicData.adminId,
-            entryType: selectedEntryType[0] as any,
-            status: "Active",
-            batch: basicData.batch || null,
-          },
-          timestamp,
-        );
-        createdStudentId = studentId;
-
-        await createStudentAcademicHistory({
-          studentId: studentId,
-          collegeAcademicYearId: yearId,
-          collegeSemesterId: semesterId,
-          collegeSectionsId: sectionId,
-          promotedBy: basicData.adminId,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          isCurrent: true,
-        });
-
-        if (selectedSessionId) {
-          await createStudentFeeObligation(
-            {
-              studentId: studentId,
-              collegeSessionId: selectedSessionId,
-              collegeAcademicYearId: yearId,
-              collegeEducationId: eduId,
-              collegeBranchId: branchId,
-              createdBy: basicData.adminId,
-            },
-            timestamp,
-          );
-        }
-
-        try {
-          let eduTypeToPass = null;
-          if (basicData.role === "Student" && studentSelectedEducation) {
-            eduTypeToPass = studentSelectedEducation.collegeEducationType;
-          }
-          await registerUserToHikvision(targetUserId, basicData.fullName, basicData.collegeIntId, basicData.role, eduTypeToPass);
-        } catch (hivErr) {
-          console.warn("Hikvision registration failed (non-blocking):", hivErr);
-        }
-      }
-
-      if (isParent && targetUserId) {
-        const parentRes = await upsertParentEntry({
-          userId: targetUserId,
-          studentId: parentStudentId!,
-          collegeId: basicData.collegeIntId,
-          createdBy: basicData.adminId,
-        });
-        if (!parentRes.success) {
-          throw new Error(parentRes.error || "Parent creation failed");
-        }
-      }
-
-      if (basicData.identifierValue && !isWellbeing) {
-        await upsertIdentifier({
-          userId: targetUserId,
-          studentId: isStudent ? studentId! : undefined,
-          collegeId: basicData.collegeIntId,
-          role: basicData.role,
-          identifierValue: basicData.identifierValue,
-        });
-      }
-
-      toast.success("User Created Successfully");
-      setIsSuccess(true);
-      setTimeout(() => {
-        resetForm();
-        onClose();
-        setLoading(false);
-        setIsSuccess(false);
-      }, 2000);
-      setSessionOptions([]);
-    } catch (e: any) {
-      console.error("Add user failed:", {
-        message: e?.message,
-        details: e?.details ?? e?.cause?.details,
-        hint: e?.hint ?? e?.cause?.hint,
-        code: e?.code ?? e?.cause?.code,
-      });
-
-      let message = "Something went wrong. Please try again.";
-
-      if (e?.message) {
-        const errMsg = e.message.toLowerCase();
-
-        if (errMsg.includes("email")) {
-          message = "This email is already registered.";
-        } else if (errMsg.includes("mobile")) {
-          message = "This mobile number is already in use.";
-        } else if (errMsg.includes("student not found for pin number")) {
-          message = e.message;
-        } else if (errMsg.includes("parent already registered for this student")) {
-          message = e.message;
-        } else if (
-          errMsg.includes("student with roll no") ||
-          errMsg.includes("employee with employee id")
-        ) {
-          message = e.message;
-        } else if (errMsg.includes("duplicate")) {
-          message = "User already exists with provided details.";
-        }
-      }
-
-      toast.error(message);
-
-      if (createdStudentId && !user) {
-        await supabase
-          .from("student_fee_obligation")
-          .delete()
-          .eq("studentId", createdStudentId);
-        await supabase
-          .from("student_academic_history")
-          .delete()
-          .eq("studentId", createdStudentId);
-        await supabase
-          .from("student_pins")
-          .delete()
-          .eq("studentId", createdStudentId);
-        await supabase
-          .from("students")
-          .delete()
-          .eq("studentId", createdStudentId);
-      }
-
-      if (createdAccountantId && !user) {
-        await supabase
-          .from("accountant_education_types")
-          .delete()
-          .eq("accountantId", createdAccountantId);
-        await supabase
-          .from("accountants")
-          .delete()
-          .eq("accountantId", createdAccountantId);
-      }
-
-      if (createdUserId && !user) {
-        await supabase.from("users").delete().eq("userId", createdUserId);
-      }
-    } finally {
-      setLoading(false);
-    }
+    await submitUserRegistration({
+      basicData, user, isAdmin, isFaculty, isStudent, isParent, isFinance, isFinanceManager, isAccountant, isHR, isPlacement, isWellbeing, isWellbeingHostel, isWellbeingCollege, showFinanceFields,
+      selectedEducationId, selectedFinanceEducationTypes, selectedWellbeingEducationTypes, selectedEntryType, selectedSemester, selectedSections, selectedSessionId,
+      assignments, studentSelectedEducation, studentSelectedBranch, studentSelectedYear, studentAvailableSemesters, studentAvailableSections, isSelectedSchool, dbData,
+      adminUserId, setLoading, setIsSuccess, resetForm, onClose
+    });
   };
-  const showEmploymentFields =
-    !isStudent && !isParent && !isWellbeing && basicData.role !== "";
-  const showDateOfJoiningField =
-    !isStudent && !isParent && basicData.role !== "";
-
-  const showRollNoField = isStudent;
-  const showEmployeeIdField =
-    !isStudent && !isParent && basicData.role !== "";
 
   if (!isOpen) return null;
 
@@ -1253,7 +166,7 @@ const AddUserModal: React.FC<{
       <Toaster position="top-right" />
       <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 font-sans">
         <div className="bg-white text-black w-full max-w-137.5 max-h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-clip animate-in fade-in zoom-in duration-200">
-          <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 shrink-0">
+          <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
             <h2 className="text-lg font-medium text-[#282828]">Add User</h2>
             <X
               size={20}
@@ -1263,914 +176,90 @@ const AddUserModal: React.FC<{
             />
           </div>
 
-          <div className="p-5 overflow-y-auto custom-scrollbar flex flex-col gap-3.5">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-[#2D3748]">
-                Full Name <span className="text-red-600">*</span>
-              </label>
-              <input
-                type="text"
-                name="fullName"
-                value={basicData.fullName}
-                onChange={handleBasicChange}
-                placeholder="Enter Fullname"
-                className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-[#2D3748]">
-                Email ID <span className="text-red-600">*</span>
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={basicData.email}
-                onChange={handleBasicChange}
-                placeholder="Enter email address"
-                className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-              />
-            </div>
-            <div className="grid landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-5">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[#2D3748]">
-                  College Code <span className="text-red-600">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={basicData.collegeCode}
-                    readOnly
-                    className="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-md px-3 py-1 text-sm outline-none cursor-not-allowed"
-                  />
-                  <Lock
-                    size={14}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[#2D3748]">
-                  Mobile {!isWellbeing && <span className="text-red-600">*</span>}
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    name="mobileCode"
-                    maxLength={5}
-                    value={basicData.mobileCode}
-                    onChange={handleBasicChange}
-                    className="w-[60px] border border-gray-200 rounded-md px-2 py-1 text-sm text-center outline-none focus:ring-1 focus:ring-[#48C78E]"
-                  />
-                  <input
-                    type="tel"
-                    name="mobileNumber"
-                    placeholder="98765432XX"
-                    value={basicData.mobileNumber}
-                    onChange={handleBasicChange}
-                    className="flex-1 border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-                    maxLength={10}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-5">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[#2D3748]">
-                  Role <span className="text-red-600">*</span>
-                </label>
-                <div className="relative">
-                  <select
-                    name="role"
-                    value={basicData.role}
-                    onChange={handleBasicChange}
-                    size={1}
-                    className="w-full border cursor-pointer border-gray-200 rounded-md px-3 py-1 text-sm appearance-none outline-none bg-white focus:ring-1 focus:ring-[#48C78E] text-gray-600"
-                  >
-                    <option value="" disabled>
-                      Select role
-                    </option>
-                    <option value="Admin">Admin</option>
-                    <option value="Faculty">Faculty</option>
-                    <option value="Student">Student</option>
-                    <option value="Parent">Parent</option>
-                    <option value="Finance">Finance</option>
-                    <option value="FinanceManager">Finance Manager</option>
-                    <option value="Accountant">Accountant</option>
-                    <option value="CollegeHr">College HR</option>
-                    <option value="PlacementOfficer">Placement Officer</option>
-                    <option value="WellbeingManager">Wellbeing Manager</option>
-                  </select>
-                  <CaretDown
-                    size={14}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  />
-                </div>
-              </div>
-
-              {isWellbeing && (
-                <CustomSingleSelect
-                  label="Registration Type"
-                  placeholder="Select registration type"
-                  options={["Hostel", "College", "Both"]}
-                  selectedValue={selectedWellbeingRegistrationType}
-                  onChange={handleWellbeingRegistrationTypeChange}
-                  required
-                />
-              )}
-
-              {showFinanceFields && (
-                <CustomMultiSelect
-                  label="Education Type"
-                  placeholder="Select Education Type"
-                  options={degreeOptions}
-                  selectedValues={selectedFinanceEducationTypes}
-                  required={isAccountant}
-                  onChange={(value) =>
-                    toggleMultiSelectValue(value, setSelectedFinanceEducationTypes)
-                  }
-                  onRemove={(value) =>
-                    setSelectedFinanceEducationTypes((prev) =>
-                      prev.filter((education) => education !== value),
-                    )
-                  }
-                  paddingY="py-1"
-                  gap="gap-1"
-                />
-              )}
-
-              {(isFaculty || isAdmin || isPlacement) && (
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-[#2D3748]">
-                    Education Type <span className="text-red-600">*</span>
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={selectedEducationId || ""}
-                      onChange={(e) => {
-                        const val = Number(e.target.value);
-                        handleWithLoader("education", () => {
-                          setSelectedEducationId(val);
-                          setSelectedBranchId(null);
-                          setSelectedYearId(null);
-                          setSelectedSubjectId(null);
-                          setSelectedSectionIds([]);
-                          setSubjectBlocks([{ id: Date.now(), yearId: null, subjectId: null, sectionIds: [] }]);
-                        });
-                      }}
-                      className="w-full border cursor-pointer border-gray-200 rounded-md px-3 py-1 text-sm appearance-none outline-none bg-white focus:ring-1 focus:ring-[#48C78E] text-gray-600"
-                    >
-                      <option value="" disabled>Select Education Type</option>
-                      {adminEducationOptions.map((edu: any) => (
-                        <option key={edu.collegeEducationId} value={edu.collegeEducationId}>
-                          {edu.collegeEducationType}
-                        </option>
-                      ))}
-                    </select>
-                    <CaretDown
-                      size={14}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {isStudent && (
-                <>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#2D3748]">
-                      Education Type <span className="text-red-600">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedEducationId || ""}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          handleWithLoader("education", () => {
-                            setSelectedEducationId(val);
-                            setSelectedDepts([]);
-                            setSelectedYears([]);
-                            setSelectedSemester([]);
-                            setSelectedSections([]);
-                            setSelectedEntryType([]);
-                            setSelectedSessionType([]);
-                          });
-                        }}
-                        className="w-full border cursor-pointer border-gray-200 rounded-md px-3 py-1 text-sm appearance-none outline-none bg-white focus:ring-1 focus:ring-[#48C78E] text-gray-600"
-                      >
-                        <option value="" disabled>Select Education Type</option>
-                        {adminEducationOptions.map((edu: any) => (
-                          <option key={edu.collegeEducationId} value={edu.collegeEducationId}>
-                            {edu.collegeEducationType}
-                          </option>
-                        ))}
-                      </select>
-                      <CaretDown
-                        size={14}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {isParent && (
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-[#2D3748]">
-                    Student Pin Number <span className="text-red-600">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="studentId"
-                    value={basicData.studentId}
-                    onChange={handleBasicChange}
-                    placeholder="Enter Student Pin Number"
-                    className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-                  />
-                </div>
-              )}
-            </div>
-
-            {isWellbeingCollege && (
-              <>
-                <div className="grid grid-cols-2 gap-5">
-                  <CustomMultiSelect
-                    label="Education Type"
-                    placeholder="Select Education Type"
-                    options={degreeOptions}
-                    selectedValues={selectedWellbeingEducationTypes}
-                    onChange={(v) => {
-                      toggleMultiSelectValue(v, setSelectedWellbeingEducationTypes);
-                    }}
-                    onRemove={(v) => {
-                      setSelectedWellbeingEducationTypes((prev) =>
-                        prev.filter((education) => education !== v),
-                      );
-                    }}
-                  />
-                </div>
-              </>
-            )}
-
-            {isWellbeingHostel && (
-              <>
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#2D3748]">
-                      Block <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="hostelBlock"
-                      value={basicData.hostelBlock}
-                      onChange={handleBasicChange}
-                      placeholder="Enter block"
-                      className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#2D3748]">
-                      Building Number <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="buildingNumber"
-                      value={basicData.buildingNumber}
-                      onChange={handleBasicChange}
-                      placeholder="Enter building number"
-                      className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#2D3748]">
-                      Hostel Type <span className="text-red-600">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        name="hostelType"
-                        value={basicData.hostelType}
-                        onChange={handleBasicChange}
-                        className="w-full border cursor-pointer border-gray-200 rounded-md px-3 py-1 text-sm appearance-none outline-none bg-white focus:ring-1 focus:ring-[#48C78E] text-gray-600"
-                      >
-                        <option value="" disabled>
-                          Select hostel type
-                        </option>
-                        <option value="boyshostel">Boys Hostel</option>
-                        <option value="girlshostel">Girls Hostel</option>
-                        <option value="both">Both</option>
-                      </select>
-                      <CaretDown
-                        size={14}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* {isFaculty && (
-              <>
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#2D3748]">
-                      {collegeEducationType === "Inter"
-                        ? "Group Type"
-                        : "Branch Type"}{" "}
-                      <span className="text-red-600">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedBranchId || ""}
-                        disabled={!selectedEducation}
-                        onChange={(e) => {
-                          setSelectedBranchId(Number(e.target.value));
-                          setSelectedYearId(null);
-                        }}
-                        className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
-                      >
-                        <option value="" disabled>
-                          {collegeEducationType === "Inter"
-                            ? "Select Group Type"
-                            : "Select Branch Type"}
-                        </option>
-                        {filteredBranches.map((b: any) => (
-                          <option
-                            key={b.collegeBranchId}
-                            value={b.collegeBranchId}
-                          >
-                            {b.collegeBranchCode}
-                          </option>
-                        ))}
-                      </select>
-                      <CaretDown
-                        size={14}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#2D3748]">
-                      Year <span className="text-red-600">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedYearId || ""}
-                        disabled={!selectedBranchId}
-                        onChange={(e) => {
-                          setSelectedYearId(Number(e.target.value));
-                          setSelectedSubjectId(null);
-                        }}
-                        className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
-                      >
-                        <option value="" disabled>
-                          Select Year
-                        </option>
-                        {filteredYears.map((y: any) => (
-                          <option
-                            key={y.collegeAcademicYearId}
-                            value={y.collegeAcademicYearId}
-                          >
-                            {y.collegeAcademicYear}
-                          </option>
-                        ))}
-                      </select>
-                      <CaretDown
-                        size={14}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#2D3748]">
-                      Subject <span className="text-red-600">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedSubjectId || ""}
-                        disabled={!selectedYearId}
-                        onChange={(e) =>
-                          setSelectedSubjectId(Number(e.target.value))
-                        }
-                        className="w-full border border-gray-200 appearance-none rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
-                      >
-                        <option value="" disabled>
-                          Select Subject
-                        </option>
-                        {filteredSubjects.map((s: any) => (
-                          <option
-                            key={s.collegeSubjectId}
-                            value={s.collegeSubjectId}
-                          >
-                            {s.subjectName}
-                          </option>
-                        ))}
-                      </select>
-                      <CaretDown
-                        size={14}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                      />
-                    </div>
-                  </div>
-                  <CustomMultiSelect
-                    label="Sections"
-                    placeholder="Select Sections"
-                    options={filteredSections.map(
-                      (s: any) => s.collegeSections,
-                    )}
-                    selectedValues={filteredSections
-                      .filter((s: any) =>
-                        selectedSectionIds.includes(s.collegeSectionsId),
-                      )
-                      .map((s: any) => s.collegeSections)}
-                    disabled={!selectedYearId}
-                    onChange={(v) => {
-                      const s = filteredSections.find(
-                        (i: any) => i.collegeSections === v,
-                      );
-                      if (s) toggleSectionId(String(s.collegeSectionsId));
-                    }}
-                    onRemove={(v) => {
-                      const s = filteredSections.find(
-                        (i: any) => i.collegeSections === v,
-                      );
-                      if (s) toggleSectionId(String(s.collegeSectionsId));
-                    }}
-                    paddingY="py-1"
-                    gap="gap-1"
-                  />
-                </div>
-              </>
-            )} */}
-
-            {isFaculty && (
-              <>
-                {!isSelectedSchool && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#2D3748]">
-                      {selectedEducation?.collegeEducationType === "Inter"
-                        ? "Group Type"
-                        : "Branch Type"}{" "}
-                      <span className="text-red-600">*</span>
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedBranchId || ""}
-                        disabled={!selectedEducation}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          handleWithLoader("branch", () => {
-                            setSelectedBranchId(val);
-                            setSubjectBlocks([
-                              {
-                                id: Date.now(),
-                                yearId: null,
-                                subjectId: null,
-                                sectionIds: [],
-                              },
-                            ]);
-                          });
-                        }}
-                        className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
-                      >
-                        <option value="" disabled>
-                          {selectedEducation?.collegeEducationType === "Inter"
-                            ? "Select Group Type"
-                            : "Select Branch Type"}
-                        </option>
-                        {filteredBranches.map((b: any) => (
-                          <option
-                            key={b.collegeBranchId}
-                            value={b.collegeBranchId}
-                          >
-                            {b.collegeBranchCode}
-                          </option>
-                        ))}
-                      </select>
-                      <CaretDown
-                        size={14}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {subjectBlocks.map((block, index) => {
-                  const blockFilteredYears = dbData.years
-                    .filter((y) => isSelectedSchool ? y.collegeEducationId == selectedEducationId : y.collegeBranchId == selectedBranchId)
-                    .sort((a, b) => {
-                      const numA = parseInt(a.collegeAcademicYear) || 0;
-                      const numB = parseInt(b.collegeAcademicYear) || 0;
-                      return numA - numB;
-                    });
-                  const blockFilteredSubjects = dbData.subjects.filter(
-                    (s) => s.collegeAcademicYearId == block.yearId,
-                  );
-                  // const blockFilteredSections = dbData.sections.filter(
-                  //   (s) => s.collegeAcademicYearId == block.yearId,
-                  // );
-
-                  const rawBlockSections = dbData.sections.filter(
-                    (s) => s.collegeAcademicYearId == block.yearId &&
-                      (isSelectedSchool ? s.collegeEducationId == selectedEducationId : s.collegeBranchId == selectedBranchId)
-                  );
-                  const blockFilteredSections = Array.from(
-                    new Map(rawBlockSections.map((s) => [s.collegeSections, s])).values()
-                  );
-
-                  return (
-                    <div
-                      key={block.id}
-                      className="border border-gray-100 rounded-lg p-3 bg-gray-50/50 flex flex-col gap-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">
-                          Subject {index + 1}
-                        </span>
-                        {subjectBlocks.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeSubjectBlock(block.id)}
-                            className="text-gray-300 hover:text-red-400 transition-colors text-base leading-none cursor-pointer"
-                          >
-                            <X size={14} className="cursor-pointer" />
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-5">
-                        <div className="space-y-1">
-                          <label className="text-xs font-bold text-[#2D3748]">
-                            Year <span className="text-red-600">*</span>
-                          </label>
-                          <div className="relative">
-                            <select
-                              value={block.yearId || ""}
-                              disabled={isSelectedSchool ? !selectedEducationId : !selectedBranchId}
-                              onChange={(e) => {
-                                const yearId = Number(e.target.value);
-                                handleWithLoader(`year-${block.id}`, () => {
-                                  setSubjectBlocks((prev) =>
-                                    prev.map((b) =>
-                                      b.id === block.id
-                                        ? {
-                                          ...b,
-                                          yearId,
-                                          subjectId: null,
-                                          sectionIds: [],
-                                        }
-                                        : b,
-                                    ),
-                                  );
-                                });
-                              }}
-                              className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
-                            >
-                              <option value="" disabled>
-                                {isFetchingData || processingFields["education"] || processingFields["branch"] ? "Loading..." : "Select Year"}
-                              </option>
-                              {blockFilteredYears.map((y: any) => (
-                                <option
-                                  key={y.collegeAcademicYearId}
-                                  value={y.collegeAcademicYearId}
-                                >
-                                  {y.collegeAcademicYear}
-                                </option>
-                              ))}
-                            </select>
-                            <CaretDown
-                              size={14}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-xs font-bold text-[#2D3748]">
-                            Subject <span className="text-red-600">*</span>
-                          </label>
-                          <div className="relative">
-                            <select
-                              value={block.subjectId || ""}
-                              disabled={!block.yearId}
-                              onChange={(e) => {
-                                const subjectId = Number(e.target.value);
-                                handleWithLoader(`subject-${block.id}`, () => {
-                                  setSubjectBlocks((prev) =>
-                                    prev.map((b) =>
-                                      b.id === block.id ? { ...b, subjectId, sectionIds: [] } : b,
-                                    ),
-                                  );
-                                });
-                              }}
-                              className="w-full border border-gray-200 appearance-none rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
-                            >
-                              <option value="" disabled>
-                                {isFetchingData || processingFields[`year-${block.id}`] ? "Loading..." : "Select Subject"}
-                              </option>
-                              {blockFilteredSubjects.map((s: any) => (
-                                <option
-                                  key={s.collegeSubjectId}
-                                  value={s.collegeSubjectId}
-                                >
-                                  {s.subjectName}
-                                </option>
-                              ))}
-                            </select>
-                            <CaretDown
-                              size={14}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <CustomMultiSelect
-                        label={processingFields[`subject-${block.id}`] ? "Loading Sections..." : "Sections"}
-                        placeholder={processingFields[`subject-${block.id}`] ? "Loading..." : "Select Sections"}
-                        options={blockFilteredSections.map(
-                          (s: any) => s.collegeSections,
-                        )}
-                        selectedValues={blockFilteredSections
-                          .filter((s: any) =>
-                            block.sectionIds.includes(s.collegeSectionsId),
-                          )
-                          .map((s: any) => s.collegeSections)}
-                        disabled={!block.yearId}
-                        onChange={(v) => {
-                          const found = blockFilteredSections.find(
-                            (s: any) => s.collegeSections === v,
-                          );
-                          if (!found) return;
-                          const sid = found.collegeSectionsId;
-                          setSubjectBlocks((prev) =>
-                            prev.map((b) =>
-                              b.id === block.id
-                                ? {
-                                  ...b,
-                                  sectionIds: b.sectionIds.includes(sid)
-                                    ? b.sectionIds.filter((i) => i !== sid)
-                                    : [...b.sectionIds, sid],
-                                }
-                                : b,
-                            ),
-                          );
-                        }}
-                        onRemove={(v) => {
-                          const found = blockFilteredSections.find(
-                            (s: any) => s.collegeSections === v,
-                          );
-                          if (!found) return;
-                          const sid = found.collegeSectionsId;
-                          setSubjectBlocks((prev) =>
-                            prev.map((b) =>
-                              b.id === block.id
-                                ? {
-                                  ...b,
-                                  sectionIds: b.sectionIds.filter(
-                                    (i) => i !== sid,
-                                  ),
-                                }
-                                : b,
-                            ),
-                          );
-                        }}
-                        paddingY="py-1"
-                        gap="gap-1"
-                      />
-                    </div>
-                  );
-                })}
-
-                <button
-                  type="button"
-                  onClick={addSubjectBlock}
-                  className="flex items-center gap-1.5 text-xs text-gray-400 border border-dashed border-gray-300 rounded-md px-3 py-1.5 hover:border-[#48C78E] hover:text-[#48C78E] hover:bg-green-50 transition-all w-fit cursor-pointer"
-                >
-                  <span className="text-base leading-none">+</span> Add Subject
-                </button>
-              </>
-            )}
+          <div className="p-4 sm:p-5 overflow-y-auto custom-scrollbar flex flex-col gap-3.5">
+            <AddUserBasicFields
+              basicData={basicData}
+              handleBasicChange={handleBasicChange}
+              isStudent={isStudent}
+              isParent={isParent}
+              isWellbeing={isWellbeing}
+              showEmploymentFields={showEmploymentFields}
+              showDateOfJoiningField={showDateOfJoiningField}
+              showEmployeeIdField={showEmployeeIdField}
+              showRollNoField={showRollNoField}
+              ENTRY_TYPES={ENTRY_TYPES}
+            />
 
             {isStudent && (
-              <>
-                <div className="grid grid-cols-2 gap-5">
-                  {!isSelectedSchool && (
-                    <CustomMultiSelect
-                      label={
-                        studentSelectedEducation?.collegeEducationType === "Inter"
-                          ? "Group Type"
-                          : "Branch Type"
-                      }
-                      placeholder={
-                        studentSelectedEducation?.collegeEducationType === "Inter"
-                          ? "Select Group"
-                          : "Select Branch"
-                      }
-                      options={branchOptions}
-                      selectedValues={selectedDepts}
-                      disabled={!selectedEducationId}
-                      onChange={(v) => {
-                        handleSingleSelect(v, setSelectedDepts);
-                        setSelectedYears([]);
-                        setSelectedSemester([]);
-                        setSelectedSections([]);
-                      }}
-                      onRemove={() => setSelectedDepts([])}
-                    />
-                  )}
-                  <CustomMultiSelect
-                    label="Year"
-                    placeholder="Select Year"
-                    options={yearOptions}
-                    selectedValues={selectedYears}
-                    disabled={isSelectedSchool ? !selectedEducationId : selectedDepts.length === 0}
-                    onChange={(v) => {
-                      handleSingleSelect(v, setSelectedYears);
-                      setSelectedSemester([]);
-                      setSelectedSections([]);
-                    }}
-                    onRemove={() => setSelectedYears([])}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-5">
-                  {!["Inter"].includes(studentSelectedEducation?.collegeEducationType || "") && !isSelectedSchool && (
-                    <CustomMultiSelect
-                      label="Semester"
-                      placeholder="Select Semester"
-                      options={semesterOptions}
-                      selectedValues={selectedSemester}
-                      disabled={selectedYears.length === 0}
-                      onChange={(v) =>
-                        handleSingleSelect(v, setSelectedSemester)
-                      }
-                      onRemove={() => setSelectedSemester([])}
-                    />
-                  )}
-                  <CustomMultiSelect
-                    label="Section"
-                    placeholder="Select Section"
-                    options={sectionOptions}
-                    selectedValues={selectedSections}
-                    disabled={selectedYears.length === 0}
-                    onChange={(v) => handleSingleSelect(v, setSelectedSections)}
-                    onRemove={() => setSelectedSections([])}
-                  />
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#2D3748]">
-                      Batch <span className="text-gray-400 font-normal ml-1">(Optional)</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="batch"
-                      value={basicData.batch}
-                      onChange={handleBasicChange}
-                      placeholder="e.g. LU"
-                      maxLength={5}
-                      className="w-full border border-gray-200 rounded-md px-3 py-2 mt-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-                    />
-                  </div>
-                  <CustomMultiSelect
-                    label="Entry Type"
-                    placeholder="Select Entry Type"
-                    options={
-                      !["Inter", "Polytechnic", "Diploma"].includes(
-                        studentSelectedEducation?.collegeEducationType || "",
-                      )
-                        ? ENTRY_TYPES
-                        : INTER_ENTRY
-                    }
-                    selectedValues={selectedEntryType}
-                    disabled={
-                      !["Inter"].includes(studentSelectedEducation?.collegeEducationType || "") &&
-                      selectedSemester.length === 0
-                    }
-                    onChange={(v) =>
-                      handleSingleSelect(v, setSelectedEntryType)
-                    }
-                    onRemove={() => setSelectedEntryType([])}
-                  />
-                  <CustomMultiSelect
-                    label="Academic Session"
-                    placeholder="Select Session Period"
-                    options={filteredSessionOptions.map((s) => s.label)}
-                    selectedValues={selectedSessionType}
-                    disabled={selectedEntryType.length === 0}
-                    onChange={(v) =>
-                      handleSingleSelect(v, setSelectedSessionType)
-                    }
-                    onRemove={() => setSelectedSessionType([])}
-                  />
-                </div>
-              </>
+              <StudentRegistrationFields
+                dbData={dbData}
+                processingFields={processingFields}
+                handleWithLoader={handleWithLoader}
+                selectedEducationId={selectedEducationId}
+                setSelectedEducationId={setSelectedEducationId}
+                selectedDepts={selectedDepts}
+                setSelectedDepts={setSelectedDepts}
+                selectedYears={selectedYears}
+                setSelectedYears={setSelectedYears}
+                selectedSemester={selectedSemester}
+                setSelectedSemester={setSelectedSemester}
+                selectedSections={selectedSections}
+                setSelectedSections={setSelectedSections}
+                selectedEntryType={selectedEntryType}
+                setSelectedEntryType={setSelectedEntryType}
+                selectedSessionType={selectedSessionType}
+                setSelectedSessionType={setSelectedSessionType}
+                studentAvailableBranches={studentAvailableBranches}
+                studentAvailableYears={studentAvailableYears}
+                studentAvailableSemesters={studentAvailableSemesters}
+                studentAvailableSections={studentAvailableSections}
+                isSelectedSchool={isSelectedSchool}
+                studentSelectedEducation={studentSelectedEducation}
+                sessionOptions={sessionOptions}
+                handleSingleSelect={handleSingleSelect}
+                ENTRY_TYPES={ENTRY_TYPES}
+                INTER_ENTRY={INTER_ENTRY}
+              />
             )}
 
-            {showDateOfJoiningField && (
-              <div className="grid grid-cols-2 gap-5 bg-pink-00">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-[#2D3748]">
-                    Date of Joining <span className="text-red-600">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    name="dateOfJoining"
-                    value={basicData.dateOfJoining || ""}
-                    onChange={handleBasicChange}
-                    max={new Date().toISOString().split("T")[0]}
-                    className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-                  />
-                </div>
+            <StaffRegistrationFields
+              dbData={dbData}
+              basicData={basicData}
+              handleBasicChange={handleBasicChange}
+              isFinance={isFinance}
+              isFinanceManager={isFinanceManager}
+              isAccountant={isAccountant}
+              showFinanceFields={showFinanceFields}
+              selectedFinanceEducationTypes={selectedFinanceEducationTypes}
+              setSelectedFinanceEducationTypes={setSelectedFinanceEducationTypes}
+              isPlacement={isPlacement}
+              selectedEducationId={selectedEducationId}
+              setSelectedEducationId={setSelectedEducationId}
+              isWellbeing={isWellbeing}
+              selectedWellbeingRegistrationType={selectedWellbeingRegistrationType}
+              isWellbeingHostel={isWellbeingHostel}
+              isWellbeingCollege={isWellbeingCollege}
+              selectedWellbeingEducationTypes={selectedWellbeingEducationTypes}
+              setSelectedWellbeingEducationTypes={setSelectedWellbeingEducationTypes}
+              handleSingleSelect={handleSingleSelect}
+              toggleMultiSelectValue={toggleMultiSelectValue}
+              adminEducationOptions={adminEducationOptions}
+              user={user}
+            />
 
-                {showEmploymentFields && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#2D3748]">
-                      Experience (Years) <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      name="professionalExperienceYears"
-                      min={0}
-                      max={60}
-                      step="0.1"
-                      placeholder="e.g. 3.5"
-                      value={basicData.professionalExperienceYears || ""}
-                      onChange={handleBasicChange}
-                      onWheel={(e) => e.currentTarget.blur()}
-                      className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {(showRollNoField || showEmployeeIdField || !isWellbeing) && (
-              <div className="grid grid-cols-2 gap-5">
-                {(showRollNoField || showEmployeeIdField) && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#2D3748]">
-                      {showRollNoField ? "Roll No" : "Employee Id"}{" "}
-                      <span className="text-red-600">*</span>
-                    </label>
-
-                    <input
-                      type="text"
-                      name="identifierValue"
-                      value={basicData.identifierValue}
-                      onChange={handleBasicChange}
-                      placeholder={
-                        showRollNoField ? "Enter Roll No" : "Enter Employee Id"
-                      }
-                      maxLength={15}
-                      className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-[#2D3748]">
-                    Gender <span className="text-red-600">*</span>
-                  </label>
-                  <div className="flex gap-6 mt-1">
-                    {["Male", "Female"].map((g) => (
-                      <label
-                        key={g}
-                        className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer"
-                      >
-                        <div
-                          className={`w-4 h-4 rounded-full border flex items-center justify-center ${basicData.gender === g ? "border-[#48C78E]" : "border-gray-300"}`}
-                        >
-                          {basicData.gender === g && (
-                            <div className="w-2 h-2 rounded-full bg-[#48C78E]" />
-                          )}
-                        </div>
-                        <input
-                          type="radio"
-                          name="gender"
-                          value={g}
-                          checked={basicData.gender === g}
-                          onChange={(e) =>
-                            setBasicData((p: any) => ({
-                              ...p,
-                              gender: e.target.value as any,
-                            }))
-                          }
-                          className="hidden"
-                        />
-                        {g}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
+            {isFaculty && (
+              <FacultyTeachingAssignments
+                dbData={dbData}
+                processingFields={processingFields}
+                handleWithLoader={handleWithLoader}
+                assignments={assignments}
+                setAssignments={setAssignments}
+                isSelectedSchool={isSelectedSchool}
+              />
             )}
 
             {!user && (
-              <div className="grid grid-cols-2 gap-5">
+              <>
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
                     Password <span className="text-red-600">*</span>
@@ -2182,18 +271,16 @@ const AddUserModal: React.FC<{
                       value={basicData.password}
                       onChange={handleBasicChange}
                       placeholder="Enter password"
-                      className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] pr-8"
+                      autoComplete="new-password"
+                      className="w-full border border-gray-200 rounded-md px-3 py-2 pr-10 text-sm outline-none focus:ring-1 focus:border-[#48C78E] focus:ring-1 focus:ring-[#48C78E]"
                     />
-                    <div
-                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400"
+                    <button
+                      type="button"
                       onClick={() => setShowPassword(!showPassword)}
+                      className="absolute cursor-pointer right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     >
-                      {showPassword ? (
-                        <Eye size={16} />
-                      ) : (
-                        <EyeSlash size={16} />
-                      )}
-                    </div>
+                      {showPassword ? <Eye size={16} /> : <EyeSlash size={16} />}
+                    </button>
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -2206,46 +293,51 @@ const AddUserModal: React.FC<{
                       name="confirmPassword"
                       value={basicData.confirmPassword}
                       onChange={handleBasicChange}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleSave();
-                        }
-                      }}
-                      placeholder="Confirm password"
-                      className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                      placeholder="Re-enter password"
+                      autoComplete="new-password"
+                      className="w-full border border-gray-200 rounded-md px-3 py-2 pr-10 text-sm outline-none focus:ring-1 focus:border-[#48C78E] focus:ring-1 focus:ring-[#48C78E]"
                     />
-                    <div
-                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute cursor-pointer right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     >
-                      {showConfirmPassword ? (
-                        <Eye size={16} />
-                      ) : (
-                        <EyeSlash size={16} />
-                      )}
-                    </div>
+                      {showConfirmPassword ? <Eye size={16} /> : <EyeSlash size={16} />}
+                    </button>
                   </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
 
-          <div className="px-6 py-5 border-t border-gray-50 flex gap-4 flex-shrink-0 bg-white">
+          <div className="px-4 sm:px-6 py-4 sm:py-5 border-t border-gray-100 flex gap-4 flex-shrink-0 bg-white rounded-b-2xl">
             <button
-              onClick={handleSave}
-              disabled={loading || isSuccess}
-              className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${isSuccess
-                ? "bg-green-600 cursor-default"
-                : "bg-[#43C17A] hover:bg-[#3ea876]"
-                }`}
+              onClick={handleSaveWrapper}
+              disabled={loading || isFetchingData}
+              className={`flex-1 focus:outline-none text-white text-sm font-bold py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 ${
+                loading || isFetchingData
+                  ? "bg-[#43C17A]/70 cursor-not-allowed opacity-80"
+                  : "bg-[#43C17A] hover:bg-[#3ea876] hover:shadow-md cursor-pointer active:scale-[0.98]"
+              }`}
             >
-              {isSuccess ? "Saved" : loading ? "Saving..." : "Save"}
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : user ? (
+                "Save Changes"
+              ) : (
+                "Save"
+              )}
             </button>
             <button
               onClick={onClose}
-              className="flex-1 border focus:outline-none cursor-pointer border-gray-300 text-[#282828] text-sm font-medium py-1 rounded-md hover:bg-gray-50 transition-all"
+              disabled={loading}
+              className="flex-1 border border-gray-200 focus:outline-none cursor-pointer bg-white text-gray-700 text-sm font-bold py-3 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>

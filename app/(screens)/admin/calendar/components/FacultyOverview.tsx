@@ -1,17 +1,17 @@
 "use client"
 import { useEffect, useState } from "react"
-import CourseScheduleCard from "@/app/utils/CourseScheduleCard"
+import { useQuery } from "@tanstack/react-query"
 import FacultyCard from "./FacultyCard"
-import { fetchFilteredFaculties } from "@/lib/helpers/admin/calender/fetchFacultyCalendar"
-import { useUser } from "@/app/utils/context/UserContext"
-import { fetchAcademicYears, fetchBranches, fetchSemesters, fetchSubjects, fetchAdminEducationTypes } from "@/lib/helpers/admin/academics/academicDropdowns"
+import { fetchAcademicYears, fetchBranches, fetchSemesters, fetchSubjects, fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns"
 import toast from "react-hot-toast"
-import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable"
 import { useAdmin } from "@/app/utils/context/admin/useAdmin"
 import FacultyCardSkeleton from "./FacultyCardSkeleton"
+import { fetchFilteredFaculties } from "@/lib/helpers/admin/calender/fetchFacultyCalendar";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { FilterDropdown } from "../../academics/components/filterDropdown";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 interface Props {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onSelect: (faculty: any) => void
 }
 
@@ -28,29 +28,31 @@ interface FacultyUI {
 }
 
 export default function FacultyOverview({ onSelect }: Props) {
-    const [facultyList, setFacultyList] = useState<FacultyUI[]>([]);
-    const [loading, setLoading] = useState(true);
     const [educationId, setEducationId] = useState<number | null>(null);
     const [branchId, setBranchId] = useState<number | null>(null);
     const [academicYearId, setAcademicYearId] = useState<number | null>(null);
     const [subjectId, setSubjectId] = useState<number | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [branches, setBranches] = useState<any[]>([]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [academicYears, setAcademicYears] = useState<any[]>([]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [subjects, setSubjects] = useState<any[]>([]);
     const [semesterId, setSemesterId] = useState<number | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [semesters, setSemesters] = useState<any[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
-    const [totalCount, setTotalCount] = useState(0);
     const itemsPerPage = 9;
 
     const { collegeId, adminId, collegeEducationId, collegeEducationType, loading: contextLoading } = useAdmin();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [educationTypes, setEducationTypes] = useState<any[]>([]);
     const [isFetchingEduTypes, setIsFetchingEduTypes] = useState(true);
 
     useEffect(() => {
-        if (!adminId) return;
+        if (!collegeId) return;
         setIsFetchingEduTypes(true);
-        fetchAdminEducationTypes(adminId)
+        fetchEducations(collegeId)
             .then(res => {
                 if (res.length > 0) {
                     setEducationTypes(res);
@@ -63,7 +65,7 @@ export default function FacultyOverview({ onSelect }: Props) {
             })
             .catch(() => toast.error("Failed to load education types"))
             .finally(() => setIsFetchingEduTypes(false));
-    }, [adminId, collegeEducationId, collegeEducationType]);
+    }, [collegeId, collegeEducationId, collegeEducationType]);
 
     useEffect(() => {
         if (collegeEducationId) {
@@ -72,8 +74,10 @@ export default function FacultyOverview({ onSelect }: Props) {
     }, [collegeEducationId]);
 
     const selectedEducation = educationTypes.find(e => e.collegeEducationId === educationId);
-    const isSchool = isSchoolEducation(selectedEducation?.collegeEducationType);
-    const isInter = selectedEducation?.collegeEducationType === "Inter";
+    
+    const currentEducationType = selectedEducation?.collegeEducationType ?? collegeEducationType;
+    const isSchool = isSchoolEducation(currentEducationType);
+    const isInter = currentEducationType === "Inter";
 
     useEffect(() => {
         if (!collegeId || !educationId) return;
@@ -113,39 +117,36 @@ export default function FacultyOverview({ onSelect }: Props) {
             .catch(() => toast.error("Failed to load subjects"));
     }, [collegeId, educationId, branchId, academicYearId, semesterId, isSchool, isInter]);
 
-    const loadFaculty = async () => {
-        if (!collegeId || !educationId) return;
-        setLoading(true);
-        try {
-            const { data, total } = await fetchFilteredFaculties({
+
+    const { data: facultyData, isLoading: loading } = useQuery({
+        queryKey: [
+            "calendar-faculty",
+            collegeId,
+            educationId,
+            isSchool ? null : branchId,
+            academicYearId,
+            subjectId,
+            currentPage
+        ],
+        queryFn: async () => {
+            if (!collegeId) return { data: [], total: 0 };
+            return await fetchFilteredFaculties({
                 collegeId,
-                collegeEducationId: educationId,
+                collegeEducationId: educationId ?? undefined,
                 collegeBranchId: isSchool ? undefined : (branchId ?? undefined),
                 collegeAcademicYearId: academicYearId ?? undefined,
                 collegeSubjectId: subjectId ?? undefined,
                 page: currentPage,
                 limit: itemsPerPage
             });
+        },
+        enabled: !!collegeId,
+        staleTime: 5 * 60 * 1000, // 5 minutes cache
+    });
 
-            setFacultyList(data);
-            setTotalCount(total);
-        } catch (error) {
-            toast.error("Failed to load faculty data.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const totalPages = Math.ceil(totalCount / itemsPerPage);
-    const paginatedFaculty = facultyList
-
-    useEffect(() => {
-        if (educationId) {
-            loadFaculty();
-        }
-    }, [collegeId, educationId, branchId, academicYearId, semesterId, subjectId, currentPage]);
-
-
+    const facultyList = facultyData?.data || [];
+    const totalCount = facultyData?.total || 0;
+    const paginatedFaculty = facultyList;
 
     return (
         <main>
@@ -160,149 +161,133 @@ export default function FacultyOverview({ onSelect }: Props) {
                 ) : (
                     <>
                         <div className="flex-1">
-                            <label className="text-xs text-[#282828]">Education Type</label>
-                    <select
-                        value={educationId ?? ""}
-                        onChange={(e) => {
-                            const val = e.target.value;
-                            setEducationId(val ? Number(val) : null);
-                            setBranchId(null);
-                            setAcademicYearId(null);
-                            setSemesterId(null);
-                            setSubjectId(null);
-                            setBranches([]);
-                            setAcademicYears([]);
-                            setSemesters([]);
-                            setSubjects([]);
-                            setCurrentPage(1);
-                        }}
-                        className="w-full mt-1 outline-none cursor-pointer border border-[#CCCCCC] text-[#282828] rounded-md px-3 py-2 text-sm"
-                    >
-                        {educationTypes.length === 0 && (
-                            <option disabled>No data available</option>
-                        )}
-                        {educationTypes.map((et) => (
-                            <option
-                                key={et.collegeEducationId}
-                                value={et.collegeEducationId}
-                            >
-                                {et.collegeEducationType}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                            <FilterDropdown
+                                label="Education Type"
+                                value={educationId?.toString() ?? "All"}
+                                placeholder="Select Education"
+                                options={["All", ...educationTypes.map((et) => et.collegeEducationId.toString())]}
+                                onChange={(val) => {
+                                    if (val === "All") {
+                                        setEducationId(null);
+                                    } else {
+                                        setEducationId(Number(val));
+                                    }
+                                    setBranchId(null);
+                                    setAcademicYearId(null);
+                                    setSemesterId(null);
+                                    setSubjectId(null);
+                                    setBranches([]);
+                                    setAcademicYears([]);
+                                    setSemesters([]);
+                                    setSubjects([]);
+                                    setCurrentPage(1);
+                                }}
+                                displayModifier={(val) => {
+                                    if (val === "All") return "All";
+                                    return educationTypes.find((et) => et.collegeEducationId.toString() === val)?.collegeEducationType || val;
+                                }}
+                            />
+                        </div>
 
-                {!isSchool && (
-                    <div className="flex-1">
-                        <label className="text-xs text-[#282828]">{isInter ? "Group" : "Branch"}</label>
-                        <select
-                            disabled={!educationId}
-                            value={branchId ?? "All"}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setBranchId(val === "All" ? null : Number(val));
-                                setAcademicYearId(null);
-                                setSubjectId(null);
-                                setAcademicYears([]);
-                                setSubjects([]);
-                                setCurrentPage(1);
-                            }}
-                            className="w-full mt-1 outline-none cursor-pointer border border-[#CCCCCC] text-[#282828] rounded-md px-3 py-2 text-sm"
-                        >
-                            <option value="All">All</option>
-                            {branches.length === 0 && educationId && (
-                                <option disabled>No data available</option>
-                            )}
-                            {branches.map((b) => (
-                                <option
-                                    key={b.collegeBranchId}
-                                    value={b.collegeBranchId}
-                                >
-                                    {b.collegeBranchCode}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                )}
-
-                <div className="flex-1">
-                    <label className="text-xs text-[#282828]">Year</label>
-                    <select
-                        disabled={!isSchool && !branchId}
-                        value={academicYearId ?? "All"}
-                        onChange={(e) => {
-                            const val = e.target.value;
-                            setAcademicYearId(val === "All" ? null : Number(val));
-                            setSubjectId(null);
-                            setSubjects([]);
-                            setSemesters([]);
-                            setCurrentPage(1);
-                        }}
-                        className="w-full mt-1 outline-none cursor-pointer border border-[#CCCCCC] text-[#282828] rounded-md px-3 py-2 text-sm"
-                    >
-                        <option value="All">All</option>
-                        {academicYears.length === 0 && (isSchool || branchId) && (
-                            <option disabled>No data available</option>
+                        {!isSchool && (
+                            <div className="flex-1">
+                                <FilterDropdown
+                                    label={isInter ? "Group" : "Branch"}
+                                    value={branchId?.toString() ?? "All"}
+                                    disabled={!educationId}
+                                    placeholder="Select Branch"
+                                    options={["All", ...branches.map((b) => b.collegeBranchId.toString())]}
+                                    onChange={(val) => {
+                                        if (val === "All") {
+                                            setBranchId(null);
+                                        } else {
+                                            setBranchId(Number(val));
+                                        }
+                                        setAcademicYearId(null);
+                                        setSubjectId(null);
+                                        setAcademicYears([]);
+                                        setSubjects([]);
+                                        setCurrentPage(1);
+                                    }}
+                                    displayModifier={(val) => {
+                                        if (val === "All") return "All";
+                                        return branches.find((b) => b.collegeBranchId.toString() === val)?.collegeBranchCode || val;
+                                    }}
+                                />
+                            </div>
                         )}
-                        {academicYears.map((y) => (
-                            <option
-                                key={y.collegeAcademicYearId}
-                                value={y.collegeAcademicYearId}
-                            >
-                                {y.collegeAcademicYear}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+
+                        <div className="flex-1">
+                            <FilterDropdown
+                                label={isSchool ? "Class" : "Year"}
+                                value={academicYearId?.toString() ?? "All"}
+                                disabled={!isSchool && !branchId}
+                                placeholder="Select Year"
+                                options={["All", ...academicYears.map((y) => y.collegeAcademicYearId.toString())]}
+                                onChange={(val) => {
+                                    if (val === "All") {
+                                        setAcademicYearId(null);
+                                    } else {
+                                        setAcademicYearId(Number(val));
+                                    }
+                                    setSubjectId(null);
+                                    setSubjects([]);
+                                    setSemesters([]);
+                                    setCurrentPage(1);
+                                }}
+                                displayModifier={(val) => {
+                                    if (val === "All") return "All";
+                                    return academicYears.find((y) => y.collegeAcademicYearId.toString() === val)?.collegeAcademicYear || val;
+                                }}
+                            />
+                        </div>
 
 
                 {!isInter && !isSchool && (
                     <div className="flex-1">
-                        <label className="text-xs text-[#282828]">Semester</label>
-                        <select
+                        <FilterDropdown
+                            label="Semester"
+                            value={semesterId?.toString() ?? "All"}
                             disabled={!academicYearId}
-                            value={semesterId ?? "All"}
-                            onChange={(e) => {
-                                setSemesterId(e.target.value === "All" ? null : Number(e.target.value))
-                                setSubjectId(null)
+                            placeholder="Select Semester"
+                            options={["All", ...semesters.map((s) => s.collegeSemesterId.toString())]}
+                            onChange={(val) => {
+                                if (val === "All") {
+                                    setSemesterId(null);
+                                } else {
+                                    setSemesterId(Number(val));
+                                }
+                                setSubjectId(null);
                                 setSubjects([]);
                                 setCurrentPage(1);
                             }}
-                            className={`w-full mt-1 outline-none border border-[#CCCCCC] rounded-md px-3 py-2 text-sm ${!academicYearId ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "text-[#282828] cursor-pointer"}`}
-                        >
-                            <option value="All">All</option>
-                            {semesters.length === 0 && academicYearId && (
-                                <option disabled>No data available</option>
-                            )}
-                            {semesters.map(s => (
-                                <option key={s.collegeSemesterId} value={s.collegeSemesterId}>
-                                    {s.collegeSemester}
-                                </option>
-                            ))}
-                        </select>
+                            displayModifier={(val) => {
+                                if (val === "All") return "All";
+                                return semesters.find((s) => s.collegeSemesterId.toString() === val)?.collegeSemester || val;
+                            }}
+                        />
                     </div>
                 )}
 
                 <div className="flex-1">
-                    <label className="text-xs text-[#282828]">Subject</label>
-                    <select
+                    <FilterDropdown
+                        label="Subject"
+                        value={subjectId?.toString() ?? "All"}
                         disabled={isSchool ? !academicYearId : (isInter ? !academicYearId : !semesterId)}
-                        value={subjectId ?? "All"}
-                        onChange={(e) =>
-                            setSubjectId(e.target.value === "All" ? null : Number(e.target.value))
-                        }
-                        className={`w-full mt-1 outline-none border border-[#CCCCCC] rounded-md px-3 py-2 text-sm ${(isSchool ? !academicYearId : (isInter ? !academicYearId : !semesterId)) ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "text-[#282828] cursor-pointer"}`}
-                    >
-                        <option value="All">All</option>
-                        {subjects.length === 0 && (isSchool ? academicYearId : (isInter ? academicYearId : semesterId)) && (
-                            <option disabled>No data available</option>
-                        )}
-                        {subjects.map(s => (
-                            <option key={s.collegeSubjectId} value={s.collegeSubjectId}>
-                                {s.subjectName}
-                            </option>
-                        ))}
-                    </select>
+                        placeholder="Select Subject"
+                        options={["All", ...subjects.map((s) => s.collegeSubjectId.toString())]}
+                        onChange={(val) => {
+                            if (val === "All") {
+                                setSubjectId(null);
+                            } else {
+                                setSubjectId(Number(val));
+                            }
+                        }}
+                        displayModifier={(val) => {
+                            if (val === "All") return "All";
+                            return subjects.find((s) => s.collegeSubjectId.toString() === val)?.subjectName || val;
+                        }}
+                    />
                 </div>
                 </>
                 )}
