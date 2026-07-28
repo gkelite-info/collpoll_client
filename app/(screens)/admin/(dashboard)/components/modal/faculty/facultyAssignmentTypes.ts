@@ -18,6 +18,8 @@ export type FacultySectionPayload = {
   collegeSectionsId: number;
   collegeSubjectId: number;
   collegeAcademicYearId: number;
+  collegeEducationId: number | null;
+  collegeBranchId: number | null;
   createdBy: number;
   isActive: boolean;
   createdAt: string;
