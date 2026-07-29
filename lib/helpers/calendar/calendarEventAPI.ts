@@ -39,6 +39,7 @@ export async function fetchCalendarEvents(
     date?: string;
     startDate?: string;
     endDate?: string;
+    types?: string[];
   } = {},
 ) {
   let query = supabase
@@ -96,6 +97,9 @@ export async function fetchCalendarEvents(
   if (filters.endDate) {
     query = query.lte("date", filters.endDate);
   }
+  if (filters.types && filters.types.length > 0) {
+    query = query.in("type", filters.types);
+  }
 
   const { data, error } = await query.order("fromTime", { ascending: true });
 
@@ -146,6 +150,9 @@ export async function saveCalendarEvent(payload: {
       .eq("calendarEventId", payload.calendarEventId);
 
     if (error) {
+      if (error.code === '23505') {
+        return { success: false, conflict: true, error: "This exact event already exists at this time." };
+      }
       console.error("updateCalendarEvent error:", error);
       return { success: false, error };
     }
@@ -189,6 +196,9 @@ export async function saveCalendarEvent(payload: {
     .single();
 
   if (error) {
+    if (error.code === '23505') {
+      return { success: false, conflict: true, error: "This exact event already exists at this time." };
+    }
     console.error("insertCalendarEvent error:", error);
     return { success: false, error };
   }

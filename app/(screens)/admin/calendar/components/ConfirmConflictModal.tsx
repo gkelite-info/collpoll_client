@@ -23,6 +23,15 @@ export default function ConfirmConflictModal({
 }: Props) {
   if (!open) return null;
 
+  const formatTime = (time24: string) => {
+    if (!time24) return "";
+    const [h, m] = time24.split(":");
+    let hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12 || 12;
+    return `${hour}:${m} ${ampm}`;
+  };
+
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-xl">
@@ -57,7 +66,7 @@ export default function ConfirmConflictModal({
                   <span className="font-semibold">Section:</span> {c.sectionName}
                 </p>
                 <p className="text-sm text-red-900">
-                  <span className="font-semibold">Time:</span> {c.fromTime} – {c.toTime}
+                  <span className="font-semibold">Time:</span> {formatTime(c.fromTime)} – {formatTime(c.toTime)}
                 </p>
               </div>
             ))}

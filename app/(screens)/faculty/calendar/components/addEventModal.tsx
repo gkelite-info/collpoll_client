@@ -1,44 +1,19 @@
 "use client";
 
-import { fetchFacultyContext } from "@/app/utils/context/faculty/facultyContextAPI";
-import { useUser } from "@/app/utils/context/UserContext";
-import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
-import { supabase } from "@/lib/supabaseClient";
-import { X, CaretDown } from "@phosphor-icons/react";
-import RoomSelectDropdown from "@/app/components/calendar/RoomSelectDropdown";
-import type { CalendarEventPayload } from "../page";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import toast from "react-hot-toast";
-import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { X } from "@phosphor-icons/react";
+import { useUser } from "@/app/utils/context/UserContext";
+import type { CalendarEventPayload } from "../page";
+import { useAddEventModalState } from "../hooks/useAddEventModalState";
+import { useAddEventModalData } from "../hooks/useAddEventModalData";
 
-type DegreeOption = {
-  collegeDegreeId: number;
-  degreeType: string;
-  departments: string[];
-  years?: string[];
-  sections?: any;
-};
-
-type SubjectRow = {
-  collegeSubjectId: number;
-  subjectName: string;
-  collegeAcademicYearId?: number;
-};
-
-type SectionRow = {
-  collegeSectionsId: number;
-  collegeSections: string;
-};
-
-type SemesterRow = {
-  collegeSemesterId: number;
-  collegeSemester: number;
-};
-
-type TopicRow = {
-  collegeSubjectUnitTopicId: number;
-  topicTitle: string;
-};
+import TypeAndModeFields from "./AddEventFields/TypeAndModeFields";
+import AcademicFields from "./AddEventFields/AcademicFields";
+import SubjectTopicFields from "./AddEventFields/SubjectTopicFields";
+import MeetingFields from "./AddEventFields/MeetingFields";
+import DateTimeRoomFields from "./AddEventFields/DateTimeRoomFields";
+import SectionFields from "./AddEventFields/SectionFields";
 
 interface AddEventModalProps {
   isOpen: boolean;
@@ -48,429 +23,120 @@ interface AddEventModalProps {
   onSave: (eventData: CalendarEventPayload) => Promise<{ success: boolean }>;
   initialData?: any | null;
   mode: "create" | "edit";
-  degreeOptions: DegreeOption[];
+  degreeOptions?: any[]; // Not needed now with react-query but keeping for compatibility
 }
 
-const getTodayDateString = () => {
-  const d = new Date();
-  return d.toISOString().split("T")[0];
-};
-
 const INPUT_HEIGHT = "h-[44px]";
-const CHIP_CONTAINER_HEIGHT = "h-[32px]";
 
-const AddEventModal: React.FC<AddEventModalProps> = ({
+const AddEventModalV2: React.FC<AddEventModalProps> = ({
   isOpen,
   onClose,
   onSave,
   value,
   isSaving = false,
-  initialData = null,
   mode,
-  degreeOptions,
 }) => {
-  const [title, setTitle] = useState("");
-  const [meetingLink, setMeetingLink] = useState("");
-  const [meetingPlatform, setMeetingPlatform] = useState<
-    "meet" | "zoom" | "others"
-  >("meet");
-  const [meetingId, setMeetingId] = useState("");
-  const [meetingPassword, setMeetingPassword] = useState("");
-
-  const [selectedType, setSelectedType] = useState("class");
-  const [calendarMode, setCalendarMode] = useState<"single" | "bulk">("single");
-  const [date, setDate] = useState(getTodayDateString());
-  const [fromDate, setFromDate] = useState(getTodayDateString());
-  const [toDate, setToDate] = useState(getTodayDateString());
-  const TODAY = getTodayDateString();
-  const [startHour, setStartHour] = useState("09");
-  const [startMinute, setStartMinute] = useState("00");
-  const [startPeriod, setStartPeriod] = useState<"AM" | "PM">("AM");
-  const [endHour, setEndHour] = useState("10");
-  const [endMinute, setEndMinute] = useState("00");
-  const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("AM");
-  const closedByUserRef = useRef(false);
-  const [roomNo, setRoomNo] = useState("");
-  const [collegeRoomId, setCollegeRoomId] = useState<number | null>(null);
-  const [year, setYear] = useState<string>("");
-  const [semester, setSemester] = useState<number | undefined>();
-  const [isSemesterAuto, setIsSemesterAuto] = useState(false);
-  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
-  const [selectedSections, setSelectedSections] = useState<string[]>([]);
-  const [isDeptOpen, setIsDeptOpen] = useState(false);
-  const [isSectionOpen, setIsSectionOpen] = useState(false);
-  const [degree, setDegree] = useState("");
-  const [subject, setSubject] = useState("");
-  const [topicId, setTopicId] = useState<number | null>(null);
-  const [unitIds, setUnitIds] = useState<number[]>([]);
-  const [isUnitOpen, setIsUnitOpen] = useState(false);
-  const unitDropdownRef = useRef<HTMLDivElement>(null);
-  const [isDateInputFocused, setIsDateInputFocused] = useState(false);
-  const [isSubjectFocused, setIsSubjectFocused] = useState(false);
-  const [isTopicFocused, setIsTopicFocused] = useState(false);
-  const [isSemesterFocused, setIsSemesterFocused] = useState(false);
-  const deptDropdownRef = useRef<HTMLDivElement>(null);
-  const sectionDropdownRef = useRef<HTMLDivElement>(null);
-  const { userId, collegeId, loading } = useUser();
-  const [topics, setTopics] = useState<any[]>([]);
-  const [units, setUnits] = useState<any[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [facultyCtx, setFacultyCtx] = useState<any>(null);
-  const [educationId, setEducationId] = useState<number | undefined>(undefined);
-  const [branchId, setBranchId] = useState<number | undefined>(undefined);
-  const [academicYearId, setAcademicYearId] = useState<number | undefined>(
-    undefined,
+  const { userId, collegeId } = useUser();
+  
+  const state = useAddEventModalState(isOpen, value, mode);
+  const data = useAddEventModalData(
+    userId, 
+    collegeId, 
+    state.educationId, 
+    state.branchId, 
+    state.academicYearId, 
+    state.semester,
+    state.subjectId
   );
-  const [sectionId, setSectionId] = useState<number | undefined>(undefined);
-  const [subjectId, setSubjectId] = useState<number | undefined>(undefined);
-  const [semesters, setSemesters] = useState<SemesterRow[]>([]);
-  const [educations, setEducations] = useState<any[]>([]);
-  const [branches, setBranches] = useState<any[]>([]);
-  const [academicYears, setAcademicYears] = useState<any[]>([]);
-  const [sections, setSections] = useState<any[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [sectionIds, setSectionIds] = useState<number[]>([]);
-  const [editSectionIds, setEditSectionIds] = useState<number[] | null>(null);
-  const { faculty_edu_type } = useFaculty();
 
-  const resetFormState = () => {
-    setTitle("");
-    setMeetingLink("");
-    setMeetingId("");
-    setMeetingPassword("");
-    setMeetingPlatform("meet");
-    setSelectedType("class");
-    setCalendarMode("single");
-    setDate(getTodayDateString());
-    setFromDate(getTodayDateString());
-    setToDate(getTodayDateString());
-    setStartHour("09");
-    setStartMinute("00");
-    setStartPeriod("AM");
-    setEndHour("10");
-    setEndMinute("00");
-    setEndPeriod("AM");
-    setRoomNo("");
-    setYear("");
-    setSemester(undefined);
-    setSelectedDepartments([]);
-    setSelectedSections([]);
-    setTopicId(null);
-    setUnitIds([]);
-    setSectionIds([]);
-    setIsDeptOpen(false);
-    setIsSectionOpen(false);
-    setIsUnitOpen(false);
-    setIsSemesterAuto(false);
-  };
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleDropdownClose = (e: MouseEvent) => {
-      const target = e.target as Node;
-
-      if (
-        isDeptOpen &&
-        deptDropdownRef.current &&
-        !deptDropdownRef.current.contains(target)
-      ) {
-        setIsDeptOpen(false);
-      }
-
-      if (
-        isSectionOpen &&
-        sectionDropdownRef.current &&
-        !sectionDropdownRef.current.contains(target)
-      ) {
-        setIsSectionOpen(false);
-      }
-
-      if (
-        isUnitOpen &&
-        unitDropdownRef.current &&
-        !unitDropdownRef.current.contains(target)
-      ) {
-        setIsUnitOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleDropdownClose);
-
-    return () => {
-      document.removeEventListener("mousedown", handleDropdownClose);
-    };
-  }, [isOpen, isDeptOpen, isSectionOpen, isUnitOpen]);
-
-  const dateInputRef = useRef<HTMLInputElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
   const isEditMode = mode === "edit";
+  const TODAY = new Date().toISOString().split("T")[0];
 
-  const selectedDegreeObj = React.useMemo(() => {
-    return degreeOptions.find((d) => d.degreeType === degree);
-  }, [degree, degreeOptions]);
+  // Auto-fill logic for dropdowns if there's only one option available (or single subject)
+  useEffect(() => {
+    if (!data.facultyCtx) return;
 
-  const departmentOptions = useMemo(() => {
-    if (!selectedDegreeObj?.departments) return [];
-    return selectedDegreeObj.departments.map((d: string) => d.trim());
-  }, [selectedDegreeObj]);
-
-  const yearOptions = useMemo(() => {
-    if (!selectedDegreeObj?.years) return [];
-    return selectedDegreeObj?.years ?? [];
-  }, [selectedDegreeObj?.years]);
-
-  const sectionMap = React.useMemo<Record<string, string[]>>(() => {
-    if (
-      !selectedDegreeObj?.sections ||
-      typeof selectedDegreeObj.sections !== "object"
-    ) {
-      return {};
+    if (data.isSingleSubject) {
+      // Single subject: lock everything to the first available option
+      if (data.educations.length === 1 && !state.educationId) state.setEducationId(data.educations[0].collegeEducationId);
+      if (data.branches.length === 1 && !state.branchId) state.setBranchId(data.branches[0].collegeBranchId);
+      if (data.academicYears.length === 1 && !state.academicYearId) state.setAcademicYearId(data.academicYears[0].collegeAcademicYearId);
+    } else {
+      // Multi-subject: auto-select ONLY if there's strictly 1 option in the dropdown list
+      if (data.educations.length === 1 && !state.educationId) state.setEducationId(data.educations[0].collegeEducationId);
+      if (state.educationId && data.branches.length === 1 && !state.branchId) state.setBranchId(data.branches[0].collegeBranchId);
+      if (state.educationId && data.academicYears.length === 1 && !state.academicYearId) state.setAcademicYearId(data.academicYears[0].collegeAcademicYearId);
     }
-    return selectedDegreeObj.sections;
-  }, [selectedDegreeObj]);
 
-  const normalizeYear = (y: any) =>
-    ["1", "2", "3", "4", "5", "6", "7", "8"].includes(String(y))
-      ? String(y)
-      : "";
-
-  const hasInitializedRef = useRef(false);
+    // Auto-select subject if exactly 1 is available (works for both single and multi-subject after filtering)
+    if (data.subjects.length === 1 && !state.subjectId) {
+      state.setSubjectId(data.subjects[0].collegeSubjectId);
+      state.setSubject(data.subjects[0].subjectName);
+    }
+  }, [
+    data.facultyCtx,
+    data.isSingleSubject,
+    data.educations,
+    data.branches,
+    data.academicYears,
+    data.subjects,
+    state.educationId,
+    state.branchId,
+    state.academicYearId,
+    state.subjectId,
+    state.setEducationId,
+    state.setBranchId,
+    state.setAcademicYearId,
+    state.setSubjectId,
+    state.setSubject
+  ]);
 
   useEffect(() => {
-    if (!isOpen) {
-      hasInitializedRef.current = false;
-      resetFormState();
+    if (!state.semester) {
+      // 1. If only one semester exists in the dropdown, select it
+      if (data.semesters.length === 1) {
+        state.setSemester(data.semesters[0].collegeSemesterId);
+        state.setIsSemesterAuto(true);
+        return;
+      }
+      
+      // 2. If all fetched subjects belong to the exact same semester, auto-select it!
+      if (data.subjects.length > 0) {
+        const uniqueSemesters = Array.from(new Set(data.subjects.map((s: any) => s.collegeSemesterId).filter(Boolean)));
+        if (uniqueSemesters.length === 1) {
+          state.setSemester(uniqueSemesters[0] as number);
+          state.setIsSemesterAuto(true);
+        }
+      }
     }
-  }, [isOpen]);
+  }, [data.semesters, data.subjects, state.semester, state.setSemester, state.setIsSemesterAuto]);
+
+  useEffect(() => {
+    if (!data.isSectionsFetching) {
+      // Clear out any selected section IDs that are no longer valid for the current dropdowns
+      const validSectionIds = state.sectionIds.filter((id) =>
+        data.sections.some((s) => s.collegeSectionsId === id)
+      );
+      if (validSectionIds.length !== state.sectionIds.length) {
+        state.setSectionIds(validSectionIds);
+      } else if (data.sections.length === 1 && state.sectionIds.length === 0) {
+        // Auto-select if there is exactly 1 valid section available
+        state.setSectionIds([data.sections[0].collegeSectionsId]);
+      }
+    }
+  }, [data.sections, data.isSectionsFetching, state.sectionIds, state.setSectionIds]);
 
   const to24Hour = (hour: string, minute: string, period: "AM" | "PM") => {
     let h = parseInt(hour, 10);
     if (period === "PM" && h !== 12) h += 12;
     if (period === "AM" && h === 12) h = 0;
-
     return `${String(h).padStart(2, "0")}:${minute}`;
   };
 
-  const isValidMeetingLink = (url: string) => {
-    try {
-      const parsed = new URL(url);
-      return ["http:", "https:"].includes(parsed.protocol);
-    } catch {
-      return false;
-    }
-  };
-
-  useEffect(() => {
-    if (!isEditMode) return;
-    if (!value?.year) return;
-    if (!degree) return;
-    if (!yearOptions.length) return;
-
-    const incomingYear = String(value.year).trim();
-
-    const exists = yearOptions.some((y: any) => {
-      const optionYear = String(y.label).trim();
-      return optionYear === incomingYear;
-    });
-
-    if (exists) {
-      setYear(incomingYear);
-    } else {
-      console.warn(
-        `Year ${incomingYear} not found in yearOptions`,
-        yearOptions,
-      );
-    }
-  }, [isEditMode, value?.year, degree, yearOptions]);
-
-  useEffect(() => {
-    if (!userId || loading) return;
-
-    fetchFacultyContext(userId).then((ctx) => {
-      setFacultyCtx(ctx);
-      setEducationId(ctx.collegeEducationId);
-      setBranchId(ctx.collegeBranchId);
-
-      if (ctx.academicYearIds?.length === 1) {
-        setAcademicYearId(ctx.academicYearIds[0]);
-      }
-    });
-  }, [userId, loading]);
-
-  useEffect(() => {
-    if (!collegeId || !facultyCtx) return;
-
-    let cancelled = false;
-
-    const loadAcademics = async () => {
-      try {
-        const educations = await fetchAcademicDropdowns({
-          type: "education",
-          collegeId,
-        });
-        if (cancelled) return;
-        setEducations(educations ?? []);
-        const branches = await fetchAcademicDropdowns({
-          type: "branch",
-          collegeId,
-          educationId: facultyCtx.collegeEducationId,
-        });
-        if (cancelled) return;
-        setBranches(branches ?? []);
-        const academicYears = await fetchAcademicDropdowns({
-          type: "academicYear",
-          collegeId,
-          educationId: facultyCtx.collegeEducationId,
-          branchId: facultyCtx.collegeBranchId,
-        });
-        if (cancelled) return;
-        setAcademicYears(academicYears ?? []);
-
-        const { data: subjectRows, error } = await supabase
-          .from("college_subjects")
-          .select("collegeSubjectId, subjectName, collegeAcademicYearId")
-          .eq("collegeId", collegeId)
-          .eq("collegeEducationId", facultyCtx.collegeEducationId)
-          .eq("collegeBranchId", facultyCtx.collegeBranchId)
-          .in("collegeSubjectId", facultyCtx.subjectIds)
-          .eq("isActive", true)
-          .is("deletedAt", null);
-
-        if (cancelled) return;
-
-        const subjects: SubjectRow[] = subjectRows ?? [];
-
-        setSubjects(subjects);
-        if (subjects.length === 1) {
-          setSubjectId(subjects[0].collegeSubjectId);
-          setSubject(subjects[0].subjectName);
-          setAcademicYearId(subjects[0].collegeAcademicYearId);
-        } else if (facultyCtx.academicYearIds?.length === 1) {
-          setAcademicYearId(facultyCtx.academicYearIds[0]);
-        }
-      } catch (err) { }
-    };
-
-    loadAcademics();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [collegeId, facultyCtx]);
-
-  useEffect(() => {
-    if (!collegeId || !facultyCtx || !academicYearId || !subjectId) {
-      setSections([]);
-      setSemesters([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadSectionsAndSemesters = async () => {
-      try {
-        const semesters = await fetchAcademicDropdowns({
-          type: "semester",
-          collegeId,
-          educationId: facultyCtx.collegeEducationId,
-          branchId: facultyCtx.collegeBranchId,
-          academicYearId: academicYearId,
-        });
-        if (cancelled) return;
-        setSemesters(semesters ?? []);
-        if ((semesters ?? []).length === 1) {
-          setSemester(semesters[0].collegeSemesterId);
-          setIsSemesterAuto(true);
-        }
-
-        const sections = await fetchAcademicDropdowns({
-          type: "section",
-          collegeId,
-          educationId: facultyCtx.collegeEducationId,
-          branchId: facultyCtx.collegeBranchId,
-          academicYearId: academicYearId,
-        });
-        if (cancelled) return;
-
-        // Filter sections to only those assigned to the faculty for the selected subject
-        const assignedSectionIds = facultyCtx.sections
-          .filter((s: any) => s.collegeSubjectId === subjectId)
-          .map((s: any) => s.collegeSectionsId);
-
-        const filteredSections = (sections ?? []).filter((s: any) =>
-          assignedSectionIds.includes(s.collegeSectionsId),
-        );
-
-        setSections(filteredSections);
-        if (filteredSections.length === 1) {
-          setSectionIds([filteredSections[0].collegeSectionsId]);
-        }
-      } catch (err) {
-        console.error("Error loading sections/semesters:", err);
-      }
-    };
-
-    loadSectionsAndSemesters();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [collegeId, facultyCtx, academicYearId, subjectId]);
-
-  useEffect(() => {
-    if (!subjectId) return;
-
-    supabase
-      .from("college_subjects")
-      .select("collegeSemesterId")
-      .eq("collegeSubjectId", subjectId)
-      .single()
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("Semester auto-fetch failed", error);
-          return;
-        }
-
-        if (data?.collegeSemesterId) {
-          setSemester(data.collegeSemesterId);
-          setIsSemesterAuto(true);
-        }
-      });
-  }, [subjectId]);
-
-  useEffect(() => {
-    if (!subjectId) {
-      return;
-    }
-
-    // Fetch Topics
-    supabase
-      .from("college_subject_unit_topics")
-      .select("collegeSubjectUnitTopicId, topicTitle")
-      .eq("collegeSubjectId", subjectId)
-      .eq("collegeId", collegeId)
-      .then(({ data }) => {
-        setTopics(data ?? []);
-      });
-
-    // Fetch Units
-    supabase
-      .from("college_subject_units")
-      .select("collegeSubjectUnitId, unitTitle, unitNumber")
-      .eq("collegeSubjectId", subjectId)
-      .eq("collegeId", collegeId)
-      .order("unitNumber", { ascending: true })
-      .then(({ data }) => {
-        const unitsData = data ?? [];
-        unitsData.sort((a, b) => Number(a.unitNumber) - Number(b.unitNumber));
-        setUnits(unitsData);
-      });
-  }, [subjectId, collegeId]);
-
   const validateTimeRange = () => {
-    const startTime = to24Hour(startHour, startMinute, startPeriod);
-    const endTime = to24Hour(endHour, endMinute, endPeriod);
+    const startTime = to24Hour(state.startHour, state.startMinute, state.startPeriod);
+    const endTime = to24Hour(state.endHour, state.endMinute, state.endPeriod);
 
     if (startTime === endTime) {
       toast.error("Start and End time cannot be the same");
@@ -489,143 +155,159 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     return true;
   };
 
+  const isValidMeetingLink = (url: string) => {
+    try {
+      const parsed = new URL(url);
+      return ["http:", "https:"].includes(parsed.protocol);
+    } catch {
+      return false;
+    }
+  };
+
   const handleSave = async () => {
-    if (!date) {
-      toast.error("Please select date");
+    // 1. Academic Fields Validation
+    if (!state.educationId) {
+      toast.error("Please provide an Education Type");
       return;
     }
-    if (date < TODAY) {
-      toast.error("Past dates are not allowed");
+    if (state.faculty_edu_type !== "Inter" && !state.branchId) {
+      toast.error("Please provide a Branch");
       return;
     }
-    if (!["Inter"].includes(faculty_edu_type!)) {
-      if (!semester) {
-        toast.error("Please select semester");
-        return;
-      }
-    }
-
-    if (selectedType === "class" && !roomNo.trim()) {
-      toast.error("Please select a Room No.");
+    if (!state.academicYearId) {
+      toast.error("Please provide a Year");
       return;
     }
-    if (!sectionIds.length) {
-      toast.error("Please select at least one section.");
+    if (state.faculty_edu_type !== "Inter" && !state.semester) {
+      toast.error("Please select a Semester");
       return;
     }
 
-    const startTime = to24Hour(startHour, startMinute, startPeriod);
-    const endTime = to24Hour(endHour, endMinute, endPeriod);
-
-    if (!validateTimeRange()) return;
-
-    if (startTime < "08:00" || endTime > "22:00") {
-      toast.error("Events must be between 08:00 AM and 10:00 PM");
+    // 2. Subject Validation
+    if (!state.subjectId) {
+      toast.error("Please select a Subject");
       return;
     }
 
-    if (calendarMode === "single" && !topicId) {
-      toast.error("Please select a topic");
+    // 3. Topic & Unit Validation
+    if (state.calendarMode === "single" && !state.topicId && state.selectedType !== "meeting") {
+      toast.error("Please select a Topic");
+      return;
+    }
+    if (state.calendarMode === "bulk" && state.unitIds.length === 0 && state.selectedType !== "meeting") {
+      toast.error("Please select at least one Unit");
       return;
     }
 
-    if (calendarMode === "bulk" && unitIds.length === 0) {
-      toast.error("Please select at least one unit");
-      return;
-    }
-
-    if (selectedType === "meeting") {
-      if (!title.trim()) {
+    // 4. Meeting Validations
+    if (state.selectedType === "meeting") {
+      if (!state.title.trim()) {
         toast.error("Please enter meeting title");
         return;
       }
-
-      if (meetingPlatform === "zoom") {
-        if (!meetingId.trim()) {
+      if (state.meetingPlatform === "zoom") {
+        if (!state.meetingId.trim()) {
           toast.error("Please enter Zoom Meeting ID");
           return;
         }
-        if (!meetingPassword.trim()) {
+        if (!state.meetingPassword.trim()) {
           toast.error("Please enter Meeting Password");
           return;
         }
-      } else if (meetingPlatform === "meet") {
-        if (!meetingLink.trim()) {
+      } else if (state.meetingPlatform === "meet") {
+        if (!state.meetingLink.trim()) {
           toast.error("Please enter Google Meet Link");
           return;
         }
-        if (!meetingLink.includes("meet.google.com")) {
+        if (!state.meetingLink.includes("meet.google.com")) {
           toast.error("Please enter a valid Google Meet link");
           return;
         }
-      } else if (meetingPlatform === "others") {
-        if (!meetingLink.trim()) {
+      } else if (state.meetingPlatform === "others") {
+        if (!state.meetingLink.trim()) {
           toast.error("Please enter Meeting Link");
           return;
         }
-        if (!isValidMeetingLink(meetingLink.trim())) {
+        if (!isValidMeetingLink(state.meetingLink.trim())) {
           toast.error("Please enter a valid meeting link");
           return;
         }
       }
     }
 
+    // 5. Date Validations
+    if (state.calendarMode === "single") {
+      if (!state.date) {
+        toast.error("Please select date");
+        return;
+      }
+      if (state.date < TODAY) {
+        toast.error("Past dates are not allowed");
+        return;
+      }
+    } else {
+      if (!state.fromDate || !state.toDate) {
+        toast.error("Please select both from and to dates");
+        return;
+      }
+      if (state.fromDate > state.toDate) {
+        toast.error("To Date must be after From Date");
+        return;
+      }
+      if (state.fromDate < TODAY) {
+        toast.error("Past dates are not allowed");
+        return;
+      }
+    }
+
+    // 6. Time & Room & Section Validations
+    if (!validateTimeRange()) return;
+
+    if (state.selectedType === "class" && !state.roomNo.trim()) {
+      toast.error("Please select a Room No.");
+      return;
+    }
+    if (!state.sectionIds.length) {
+      toast.error("Please select at least one section.");
+      return;
+    }
+
     const payload: CalendarEventPayload = {
       facultyId: userId!,
-      subjectId: subjectId!,
-      eventTopic: calendarMode === "single" ? topicId : null,
-      eventUnitIds: calendarMode === "bulk" ? unitIds : undefined,
-
-      eventTitle:
-        selectedType === "meeting" ? title.trim() || "Meeting" : subject,
-
-      type: selectedType.toLowerCase() as any,
-      calendarMode,
-      date: calendarMode === "single" ? date : "",
-      fromDate: calendarMode === "bulk" ? fromDate : undefined,
-      toDate: calendarMode === "bulk" ? toDate : undefined,
-      fromTime: startTime,
-      toTime: endTime,
-      roomNo,
-      collegeRoomId: collegeRoomId ?? null,
-
-      meetingLink:
-        selectedType === "meeting" && meetingPlatform !== "zoom"
-          ? meetingLink
-          : null,
-      meetingId:
-        selectedType === "meeting" && meetingPlatform === "zoom"
-          ? meetingId
-          : null,
-      meetingPassword:
-        selectedType === "meeting" && meetingPlatform === "zoom"
-          ? meetingPassword
-          : null,
-
-      collegeEducationId: educationId!,
-      collegeBranchId: branchId!,
-      collegeAcademicYearId: academicYearId!,
-      collegeSemesterId: semester!,
-      sectionIds,
+      subjectId: state.subjectId!,
+      eventTopic: state.calendarMode === "single" ? state.topicId : null,
+      eventUnitIds: state.calendarMode === "bulk" ? state.unitIds : undefined,
+      eventTitle: state.selectedType === "meeting" ? state.title.trim() || "Meeting" : state.subject,
+      type: state.selectedType.toLowerCase() as any,
+      calendarMode: state.calendarMode,
+      date: state.calendarMode === "single" ? state.date : "",
+      fromDate: state.calendarMode === "bulk" ? state.fromDate : undefined,
+      toDate: state.calendarMode === "bulk" ? state.toDate : undefined,
+      fromTime: to24Hour(state.startHour, state.startMinute, state.startPeriod),
+      toTime: to24Hour(state.endHour, state.endMinute, state.endPeriod),
+      roomNo: state.roomNo,
+      collegeRoomId: state.collegeRoomId ?? null,
+      meetingLink: state.selectedType === "meeting" && state.meetingPlatform !== "zoom" ? state.meetingLink : null,
+      meetingId: state.selectedType === "meeting" && state.meetingPlatform === "zoom" ? state.meetingId : null,
+      meetingPassword: state.selectedType === "meeting" && state.meetingPlatform === "zoom" ? state.meetingPassword : null,
+      collegeEducationId: state.educationId!,
+      collegeBranchId: state.branchId!,
+      collegeAcademicYearId: state.academicYearId!,
+      collegeSemesterId: state.semester!,
+      sectionIds: state.sectionIds,
     };
 
     try {
-      setIsSubmitting(true);
-
+      state.setIsSubmitting(true);
       const result = await onSave(payload);
-
       if (result?.success !== false) {
-        toast.success(
-          isEditMode
-            ? "Event updated successfully"
-            : "Event created successfully",
-        );
+        toast.success(isEditMode ? "Event updated successfully" : "Event created successfully");
         onClose();
       }
     } catch (error) {
       toast.error("Failed to save event. Please try again.");
     } finally {
-      setIsSubmitting(false);
+      state.setIsSubmitting(false);
     }
   };
 
@@ -633,10 +315,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     if (!isOpen) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        modalContentRef.current &&
-        !modalContentRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target as Element;
+      // Ignore clicks on floating portals (dropdowns)
+      if (target?.closest && target.closest('.modal-dropdown-menu')) {
+        return;
+      }
+      
+      if (modalContentRef.current && !modalContentRef.current.contains(event.target as Node)) {
         onClose();
       }
     };
@@ -656,76 +341,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     };
   }, [isOpen, onClose, handleSave]);
 
-  useEffect(() => {
-    if (isOpen && value && mode === "edit" && !hasInitializedRef.current) {
-      hasInitializedRef.current = true;
-
-      setSelectedType(value.type);
-      setRoomNo(value.roomNo ?? "");
-      setCollegeRoomId(value.collegeRoomId ?? null);
-      setDate(value.date ?? getTodayDateString());
-
-      setStartHour(value.startHour ?? "09");
-      setStartMinute(value.startMinute ?? "00");
-      setStartPeriod(value.startPeriod ?? "AM");
-
-      setEndHour(value.endHour ?? "10");
-      setEndMinute(value.endMinute ?? "00");
-      setEndPeriod(value.endPeriod ?? "AM");
-
-      setTitle(value.title ?? "");
-      setMeetingLink(value.meetingLink ?? "");
-      setMeetingId(value.meetingId ?? "");
-      setMeetingPassword(value.meetingPassword ?? "");
-
-      if (value.meetingId) setMeetingPlatform("zoom");
-      else if (value.meetingLink?.includes("meet.google"))
-        setMeetingPlatform("meet");
-      else setMeetingPlatform("others");
-
-      setTopicId(value.topicId ?? null);
-      if (value.semesterId) {
-        setSemester(value.semesterId);
-        setIsSemesterAuto(false);
-      }
-
-      if (value.calendarMode) {
-        setCalendarMode(value.calendarMode);
-      }
-
-      if (value.fromDate) setFromDate(value.fromDate);
-      if (value.toDate) setToDate(value.toDate);
-      
-      if (Array.isArray(value.unitIds)) {
-        setUnitIds(value.unitIds);
-      }
-
-      if (Array.isArray(value.sectionIds)) {
-        setEditSectionIds(value.sectionIds);
-      }
-    }
-  }, [isOpen, value, mode]);
-
-  useEffect(() => {
-    if (!editSectionIds) return;
-    if (!sections.length) return;
-
-    setSectionIds(editSectionIds);
-    setEditSectionIds(null);
-  }, [sections, editSectionIds]);
-
   if (!isOpen) return null;
-
-  const eventTypes = ["class", "meeting", "exam"];
-
-  const formatLabel = (value: string) =>
-    value.charAt(0).toUpperCase() + value.slice(1);
-
-  const handleClose = () => {
-    closedByUserRef.current = true;
-    resetFormState();
-    onClose();
-  };
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -733,13 +349,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         ref={modalContentRef}
         className="bg-white rounded-xl shadow-2xl w-[95%] md:max-w-[450px] lg:max-w-[450px] max-h-[90vh] flex flex-col relative"
       >
-        <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky z-10">
+        {/* Sticky Header */}
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 shrink-0">
           <h2 className="text-xl font-bold text-gray-800">
             {value ? "Edit Event" : "New Calendar Event"}
           </h2>
           <button
-            onClick={handleClose}
-            aria-label="Close modal"
+            onClick={() => { state.resetFormState(); onClose(); }}
             className="text-gray-500 cursor-pointer hover:text-gray-800 transition-colors p-1"
           >
             <X size={24} weight="bold" />
@@ -747,750 +363,143 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         </div>
 
         <div className="p-5 space-y-5 overflow-y-auto flex-1">
-          <div className="space-y-1">
-            <label className="block text-gray-700 font-medium text-sm">
-              Calendar Mode
-            </label>
-            <div className="flex gap-2">
-              {["single", "bulk"].map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setCalendarMode(mode as "single" | "bulk")}
-                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${calendarMode === mode
-                    ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
-                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                    }`}
-                >
-                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
+          
+          <TypeAndModeFields
+            calendarMode={state.calendarMode}
+            setCalendarMode={state.setCalendarMode}
+            selectedType={state.selectedType}
+            setSelectedType={state.setSelectedType}
+          />
 
-          <div className="space-y-1">
-            <label className="block text-gray-700 font-medium text-sm">
-              Type
-            </label>
-            <div className="flex gap-2">
-              {eventTypes.map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setSelectedType(type)}
-                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${selectedType === type
-                    ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
-                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                    }`}
-                >
-                  {formatLabel(type)}
-                </button>
-              ))}
-            </div>
-          </div>
+          <AcademicFields
+            educationId={state.educationId}
+            setEducationId={(id) => {
+               state.setEducationId(id);
+               state.setBranchId(undefined);
+               state.setAcademicYearId(undefined);
+               state.setSemester(undefined);
+               state.setSubjectId(undefined);
+               state.setSubject("");
+               state.setTopicId(null);
+               state.setUnitIds([]);
+            }}
+            educations={data.educations}
+            branchId={state.branchId}
+            setBranchId={(id) => {
+               state.setBranchId(id);
+               state.setAcademicYearId(undefined);
+               state.setSemester(undefined);
+               state.setSubjectId(undefined);
+               state.setSubject("");
+               state.setTopicId(null);
+               state.setUnitIds([]);
+            }}
+            branches={data.branches}
+            academicYearId={state.academicYearId}
+            setAcademicYearId={(id) => {
+               state.setAcademicYearId(id);
+               state.setSemester(undefined);
+               state.setSubjectId(undefined);
+               state.setSubject("");
+               state.setTopicId(null);
+               state.setUnitIds([]);
+            }}
+            academicYears={data.academicYears}
+            semester={state.semester}
+            setSemester={(sem) => {
+               state.setSemester(sem);
+               state.setSubjectId(undefined);
+               state.setSubject("");
+               state.setTopicId(null);
+               state.setUnitIds([]);
+            }}
+            semesters={data.semesters}
+            facultyEduType={data.educations.find((e: any) => e.collegeEducationId === state.educationId)?.collegeEducationType || data.facultyCtx?.faculty_edu_type}
+            INPUT_HEIGHT={INPUT_HEIGHT}
+            isSingleSubject={data.isSingleSubject}
+          />
 
-          {/* <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Subject <span className="text-red-500">*</span>
-            </label>
+          <SubjectTopicFields
+            calendarMode={state.calendarMode}
+            subjects={data.subjects}
+            subjectId={state.subjectId}
+            setSubjectId={state.setSubjectId}
+            subject={state.subject}
+            setSubject={state.setSubject}
+            topicId={state.topicId}
+            setTopicId={state.setTopicId}
+            topics={data.topics}
+            unitIds={state.unitIds}
+            setUnitIds={state.setUnitIds}
+            units={data.units}
+            isUnitOpen={state.isUnitOpen}
+            setIsUnitOpen={state.setIsUnitOpen}
+            INPUT_HEIGHT={INPUT_HEIGHT}
+          />
 
-            <input
-              type="text"
-              readOnly
-              value={
-                subjects.find((s) => s.collegeSubjectId === subjectId)
-                  ?.subjectName ||
-                subject ||
-                ""
-              }
-              className={`
-    w-full ${INPUT_HEIGHT}
-    border border-[#C9C9C9]
-    rounded-lg px-3
-    bg-gray-50 text-gray-900
-    cursor-not-allowed
-    outline-none
-  `}
-            />
-          </div> */}
+          <MeetingFields
+            selectedType={state.selectedType}
+            title={state.title}
+            setTitle={state.setTitle}
+            meetingPlatform={state.meetingPlatform}
+            setMeetingPlatform={state.setMeetingPlatform}
+            meetingId={state.meetingId}
+            setMeetingId={state.setMeetingId}
+            meetingPassword={state.meetingPassword}
+            setMeetingPassword={state.setMeetingPassword}
+            meetingLink={state.meetingLink}
+            setMeetingLink={state.setMeetingLink}
+          />
 
-          <div className={calendarMode === "bulk" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-5"}>
-            <div className="flex-1 space-y-1">
-              <label className="block text-sm font-medium text-gray-700">
-                Subject <span className="text-red-500">*</span>
-              </label>
+          <DateTimeRoomFields
+            calendarMode={state.calendarMode}
+            selectedType={state.selectedType}
+            date={state.date} setDate={state.setDate}
+            fromDate={state.fromDate} setFromDate={state.setFromDate}
+            toDate={state.toDate} setToDate={state.setToDate}
+            TODAY={TODAY}
+            roomNo={state.roomNo} setRoomNo={state.setRoomNo}
+            setCollegeRoomId={state.setCollegeRoomId}
+            collegeId={collegeId || 0}
+            startHour={state.startHour} setStartHour={state.setStartHour}
+            startMinute={state.startMinute} setStartMinute={state.setStartMinute}
+            startPeriod={state.startPeriod} setStartPeriod={state.setStartPeriod}
+            endHour={state.endHour} setEndHour={state.setEndHour}
+            endMinute={state.endMinute} setEndMinute={state.setEndMinute}
+            endPeriod={state.endPeriod} setEndPeriod={state.setEndPeriod}
+            isDateInputFocused={false} setIsDateInputFocused={() => {}}
+            INPUT_HEIGHT={INPUT_HEIGHT}
+          />
 
-              {subjects.length <= 1 ? (
-                <input
-                  type="text"
-                  readOnly
-                  value={
-                    subjects.find((s) => s.collegeSubjectId === subjectId)
-                      ?.subjectName || subject || ""
-                  }
-                  className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9]
-          rounded-lg px-3 bg-gray-50 text-gray-900 cursor-not-allowed outline-none`}
-                />
-              ) : (
-                <div className="relative">
-                  <select
-                    value={subjectId ?? ""}
-                    onChange={(e) => {
-                      const selected = subjects.find(
-                        (s) => s.collegeSubjectId === Number(e.target.value)
-                      );
-                      if (selected) {
-                        setSubjectId(selected.collegeSubjectId);
-                        setSubject(selected.subjectName);
-                        setTopicId(null);
-                      }
-                      e.currentTarget.blur();
-                    }}
-                    onMouseDown={() => setIsSubjectFocused((prev) => !prev)}
-                    onBlur={() => setIsSubjectFocused(false)}
-                    className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9]
-            rounded-lg pl-3 pr-10 text-sm bg-white cursor-pointer appearance-none
-            focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
-            outline-none transition-all
-            ${!subjectId ? "text-gray-400" : "text-gray-900"}`}
-                  >
-                    <option value="" disabled>Select Subject</option>
-                    {subjects.map((s) => (
-                      <option key={s.collegeSubjectId} value={s.collegeSubjectId} className="text-[#282828] cursor-pointer">
-                        {s.subjectName}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                    <CaretDown
-                      size={16}
-                      weight="bold"
-                      className={`transition-transform duration-200 ${isSubjectFocused ? "rotate-180" : "rotate-0"
-                        }`}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+          <SectionFields
+            sectionIds={state.sectionIds}
+            setSectionIds={state.setSectionIds}
+            sections={data.sections}
+            isSectionOpen={state.isSectionOpen}
+            setIsSectionOpen={state.setIsSectionOpen}
+            INPUT_HEIGHT={INPUT_HEIGHT}
+          />
+        </div>
 
-            <div className="flex-1 space-y-1">
-              <label className="block text-sm font-medium text-gray-700">
-                {calendarMode === "bulk" ? "Unit" : "Topic"} <span className="text-red-500">*</span>
-              </label>
-
-              {calendarMode === "bulk" ? (
-                <div className="relative" ref={unitDropdownRef}>
-                  <div
-                    onClick={() => setIsUnitOpen((p) => !p)}
-                    className={`
-                    w-full ${INPUT_HEIGHT}
-                    border border-[#C9C9C9]
-                    rounded-lg px-3
-                    bg-white text-sm
-                    cursor-pointer
-                    flex items-center justify-between
-                    focus:ring-2 focus:ring-[#43C17A]
-                  `}
-                  >
-                    <span
-                      className={
-                        unitIds.length ? "text-gray-900" : "text-gray-400"
-                      }
-                    >
-                      {unitIds.length === 0
-                        ? "Select Units"
-                        : units
-                          .filter((u) => unitIds.includes(u.collegeSubjectUnitId))
-                          .map((u) => `Unit ${u.unitNumber}`)
-                          .join(", ")}
-                    </span>
-                    <CaretDown
-                      size={16}
-                      weight="bold"
-                      className={`text-gray-400 transition-transform duration-200 ${isUnitOpen ? "rotate-180" : "rotate-0"
-                        }`}
-                    />
-                  </div>
-
-                  {isUnitOpen && (
-                    <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-md max-h-48 overflow-y-auto">
-                      {units.map((u) => {
-                        const checked = unitIds.includes(u.collegeSubjectUnitId);
-
-                        return (
-                          <label
-                            key={u.collegeSubjectUnitId}
-                            className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => {
-                                setUnitIds((prev) =>
-                                  checked
-                                    ? prev.filter((id) => id !== u.collegeSubjectUnitId)
-                                    : [...prev, u.collegeSubjectUnitId],
-                                );
-                              }}
-                              className="accent-emerald-500"
-                            />
-                            <span className="text-sm text-gray-700">
-                              Unit {u.unitNumber}: {u.unitTitle}
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="relative">
-                  <select
-                    value={topicId ?? ""}
-                    onChange={(e) => {
-                      setTopicId(Number(e.target.value));
-                      e.currentTarget.blur();
-                    }}
-                    onMouseDown={() => setIsTopicFocused((prev) => !prev)}
-                    onBlur={() => setIsTopicFocused(false)}
-                    className={`w-full h-[44px] border border-[#C9C9C9] rounded-lg pl-3 pr-10
-        bg-white text-gray-900 outline-none cursor-pointer appearance-none
-        focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
-        transition-all ${!topicId ? "text-gray-400" : "text-gray-900"}`}
-                  >
-                    <option value="" disabled>
-                      Select Topic
-                    </option>
-                    {topics.map((t) => (
-                      <option
-                        key={t.collegeSubjectUnitTopicId}
-                        value={t.collegeSubjectUnitTopicId}
-                      >
-                        {t.topicTitle}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                    <CaretDown
-                      size={16}
-                      weight="bold"
-                      className={`transition-transform duration-200 ${isTopicFocused ? "rotate-180" : "rotate-0"
-                        }`}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {selectedType === "meeting" && (
-            <>
-              <div className="space-y-1">
-                <label className="block text-gray-700 font-medium text-sm">
-                  Meeting Title <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Parent Meeting / Dept Review"
-                  className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div className="space-y-2 mt-2 mb-2">
-                <label className="block text-gray-700 font-medium text-sm">
-                  Meeting Platform
-                </label>
-                <div className="flex gap-4">
-                  {[
-                    { id: "meet", label: "Google Meet" },
-                    { id: "zoom", label: "Zoom Meeting" },
-                    { id: "others", label: "Others" },
-                  ].map((platform) => (
-                    <label
-                      key={platform.id}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        name="meetingPlatform"
-                        value={platform.id}
-                        checked={meetingPlatform === platform.id}
-                        onChange={() => setMeetingPlatform(platform.id as any)}
-                        className="accent-emerald-500 cursor-pointer"
-                      />
-                      <span className="text-sm text-gray-700 whitespace-nowrap">
-                        {platform.label}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {meetingPlatform === "zoom" ? (
-                <div className="flex gap-4 animate-in fade-in duration-200 mt-4">
-                  <div className="flex-1 space-y-1">
-                    <label className="block text-gray-700 font-medium text-sm">
-                      Zoom ID <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={meetingId}
-                      onChange={(e) => setMeetingId(e.target.value)}
-                      placeholder="Enter Zoom ID"
-                      className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 placeholder-gray-500"
-                    />
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <label className="block text-gray-700 font-medium text-sm">
-                      Password <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={meetingPassword}
-                      onChange={(e) => setMeetingPassword(e.target.value)}
-                      placeholder="Enter Password"
-                      className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 placeholder-gray-500"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-1 animate-in fade-in duration-200 mt-4">
-                  <label className="block text-gray-700 font-medium text-sm">
-                    {meetingPlatform === "meet"
-                      ? "Google Meet Link"
-                      : "Meeting Link"}{" "}
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={meetingLink}
-                    onChange={(e) => setMeetingLink(e.target.value)}
-                    placeholder={
-                      meetingPlatform === "meet"
-                        ? "https://meet.google.com/..."
-                        : "https://..."
-                    }
-                    className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 placeholder-gray-500"
-                  />
-                </div>
-              )}
-            </>
-          )}
-
-          <div>
-            {calendarMode === "single" ? (
-              <div className="flex flex-col md:flex-row gap-4 items-start">
-                <div className="flex-1 w-full min-w-0">
-                  <label className="block text-gray-700 font-medium text-sm mb-1">
-                    Date <span className="text-red-500">*</span>
-                  </label>
-                  <div
-                    className={`relative flex items-center border rounded-xl overflow-hidden transition-colors ${isDateInputFocused
-                      ? "border-primary ring-1 ring-primary"
-                      : "border-gray-300"
-                      }`}
-                  >
-                    <input
-                      type="date"
-                      ref={dateInputRef}
-                      value={date}
-                      min={TODAY}
-                      onChange={(e) => setDate(e.target.value)}
-                      onFocus={() => setIsDateInputFocused(true)}
-                      onBlur={() => setIsDateInputFocused(false)}
-                      className={`w-full ${INPUT_HEIGHT} px-4 focus:outline-none bg-transparent cursor-pointer`}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex-1 w-full min-w-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Room No. {selectedType === "class" && <span className="text-red-500">*</span>}
-                  </label>
-                  <RoomSelectDropdown
-                    value={roomNo}
-                    onChange={(rNo, rId) => { setRoomNo(rNo); setCollegeRoomId(rId); }}
-                    collegeId={collegeId || 0}
-                    placeholder="Select Room No. / Room Name"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex-1 relative">
-                    <label className="block text-gray-700 font-medium text-sm mb-1">
-                      From Date <span className="text-red-500">*</span>
-                    </label>
-                    <div
-                      className={`relative flex items-center border rounded-xl overflow-hidden transition-colors ${isDateInputFocused
-                        ? "border-primary ring-1 ring-primary"
-                        : "border-gray-300"
-                        }`}
-                    >
-                      <input
-                        type="date"
-                        value={fromDate}
-                        min={TODAY}
-                        onChange={(e) => setFromDate(e.target.value)}
-                        onFocus={() => setIsDateInputFocused(true)}
-                        onBlur={() => setIsDateInputFocused(false)}
-                        className={`w-full ${INPUT_HEIGHT} px-4 focus:outline-none bg-transparent cursor-pointer`}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex-1 relative">
-                    <label className="block text-gray-700 font-medium text-sm mb-1">
-                      To Date <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative flex items-center border rounded-xl overflow-hidden transition-colors border-gray-300">
-                      <input
-                        type="date"
-                        value={toDate}
-                        min={fromDate || TODAY}
-                        onChange={(e) => setToDate(e.target.value)}
-                        className={`w-full ${INPUT_HEIGHT} px-4 focus:outline-none bg-transparent cursor-pointer`}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex-1 w-full min-w-0">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Room No. {selectedType === "class" && <span className="text-red-500">*</span>}
-                    </label>
-                    <RoomSelectDropdown
-                      value={roomNo}
-                      onChange={(rNo, rId) => { setRoomNo(rNo); setCollegeRoomId(rId); }}
-                      collegeId={collegeId || 0}
-                      placeholder="Select Room No. / Room Name"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-red-00 flex flex-col space-y-1 mt-3">
-
-            <label className="block text-gray-700 font-medium text-sm">
-              Time
-            </label>
-
-            <div className="bg-green-00 flex flex-col landscape:flex-row md:flex md:flex-row lg:flex lg:flex-row gap-4">
-              <div className="flex-1">
-                <div className="flex gap-0.5">
-                  <span className="block text-gray-500 text-xs mb-1">
-                    From
-                  </span>
-                  <span className="text-red-500 -mt-1">*</span>
-                </div>
-                <div className="flex gap-1.5">
-                  <select
-                    value={startHour}
-                    onChange={(e) => setStartHour(e.target.value)}
-                    className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-14 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-                  >
-                    {Array.from({ length: 12 }, (_, i) => {
-                      const h = String(i + 1).padStart(2, "0");
-                      return <option key={h}>{h}</option>;
-                    })}
-                  </select>
-
-                  <select
-                    value={startMinute}
-                    onChange={(e) => setStartMinute(e.target.value)}
-                    className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-                  >
-                    {Array.from({ length: 12 }, (_, i) => {
-                      const m = String(i * 5).padStart(2, "0");
-                      return <option key={m}>{m}</option>;
-                    })}
-                  </select>
-
-                  <select
-                    value={startPeriod}
-                    onChange={(e) =>
-                      setStartPeriod(e.target.value as "AM" | "PM")
-                    }
-                    className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-                  >
-                    <option>AM</option>
-                    <option>PM</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex-1">
-                <div className="flex gap-0.5">
-                  <span className="block text-gray-500 text-xs mb-1">To</span>
-                  <span className="text-red-500 -mt-1">*</span>
-                </div>
-                <div className="flex gap-1.5">
-                  <select
-                    value={endHour}
-                    onChange={(e) => setEndHour(e.target.value)}
-                    className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-14 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-                  >
-                    {Array.from({ length: 12 }, (_, i) => {
-                      const h = String(i + 1).padStart(2, "0");
-                      return <option key={h}>{h}</option>;
-                    })}
-                  </select>
-
-                  <select
-                    value={endMinute}
-                    onChange={(e) => setEndMinute(e.target.value)}
-                    className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-                  >
-                    {Array.from({ length: 12 }, (_, i) => {
-                      const m = String(i * 5).padStart(2, "0");
-                      return <option key={m}>{m}</option>;
-                    })}
-                  </select>
-
-                  <select
-                    value={endPeriod}
-                    onChange={(e) =>
-                      setEndPeriod(e.target.value as "AM" | "PM")
-                    }
-                    className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-                  >
-                    <option>AM</option>
-                    <option>PM</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col md:flex-row gap-4 items-start">
-            <div className="flex-1 w-full min-w-0">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Education Type <span className="text-red-500">*</span>
-              </label>
-              <input
-                readOnly
-                value={
-                  educations.find((e) => e.collegeEducationId === educationId)
-                    ?.collegeEducationType || ""
-                }
-                className={`
-    w-full ${INPUT_HEIGHT}
-    border border-[#C9C9C9]
-    rounded-lg px-3
-    bg-gray-50 text-gray-900
-    cursor-not-allowed
-    outline-none
-  `}
-              />
-
-              {degree && (
-                <div className={`${CHIP_CONTAINER_HEIGHT} mt-2 flex gap-2`}>
-                  <span
-                    className="flex items-center gap-1 bg-green-100 text-green-700
-      px-3 py-1 rounded-full text-xs"
-                  >
-                    {degree}
-                    <button
-                      onClick={() => setDegree("")}
-                      className="hover:text-blue-900 cursor-pointer"
-                    >
-                      ✕
-                    </button>
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex-1 w-full min-w-0">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {educations.find((e) => e.collegeEducationId === educationId)?.collegeEducationType === "Inter" ? "Group" : "Branch"} <span className="text-red-500">*</span>
-              </label>
-
-              <input
-                type="text"
-                readOnly
-                value={
-                  branches.find((b) => b.collegeBranchId === branchId)
-                    ?.collegeBranchCode || ""
-                }
-                className={`
-      w-full ${INPUT_HEIGHT}
-      border border-[#C9C9C9]
-      rounded-lg px-3
-      bg-gray-50 text-gray-900
-      cursor-not-allowed
-      outline-none
-    `}
-              />
-            </div>
-          </div>
-          <div className="flex flex-col md:flex-row gap-4 items-start">
-            <div className="flex-1 w-full min-w-0">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Year <span className="text-red-500">*</span>
-              </label>
-              <input
-                readOnly
-                value={
-                  academicYears.find(
-                    (y) => y.collegeAcademicYearId === academicYearId,
-                  )?.collegeAcademicYear || ""
-                }
-                className={`
-    w-full ${INPUT_HEIGHT}
-    border border-[#C9C9C9]
-    rounded-lg px-3
-    bg-gray-50 text-gray-900
-    cursor-not-allowed
-    outline-none
-  `}
-              />
-            </div>
-            {!["Inter"].includes(faculty_edu_type!) && (
-              <div className="flex-1 w-full min-w-0">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Semester <span className="text-red-500">*</span>
-                </label>
-
-                <div className="relative">
-                  <select
-                    value={semester ?? ""}
-                    onChange={(e) => {
-                      const selected = Number(e.target.value);
-                      setSemester(selected);
-                      e.currentTarget.blur();
-                    }}
-                    onMouseDown={() => setIsSemesterFocused((prev) => !prev)}
-                    onBlur={() => setIsSemesterFocused(false)}
-                    className={`
-                      w-full ${INPUT_HEIGHT}
-                      border border-[#C9C9C9]
-                      rounded-lg pl-3 pr-10 text-sm
-                      focus:ring-2 focus:ring-[#43C17A]
-                      focus:outline-none appearance-none
-                      bg-white cursor-pointer text-gray-900
-                    `}
-                  >
-                    <option value="" disabled hidden>
-                      Select Semester
-                    </option>
-
-                    {semesters.map((s) => (
-                      <option
-                        key={s.collegeSemesterId}
-                        value={s.collegeSemesterId}
-                      >
-                        Semester {s.collegeSemester}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                    <CaretDown
-                      size={16}
-                      weight="bold"
-                      className={`transition-transform duration-200 ${isSemesterFocused ? "rotate-180" : "rotate-0"
-                        }`}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex-1 min-w-0 relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Section <span className="text-red-500">*</span>
-            </label>
-
-            <div
-              onClick={() => setIsSectionOpen((p) => !p)}
-              className={`
-      w-full ${INPUT_HEIGHT}
-      border border-[#C9C9C9]
-      rounded-lg px-3
-      bg-white text-sm
-      cursor-pointer
-      flex items-center justify-between
-      focus:ring-2 focus:ring-[#43C17A]
-    `}
-            >
-              <span
-                className={
-                  sectionIds.length ? "text-gray-900" : "text-gray-400"
-                }
-              >
-                {sectionIds.length === 0
-                  ? "Select sections"
-                  : sections
-                    .filter((s) => sectionIds.includes(s.collegeSectionsId))
-                    .map((s) => s.collegeSections)
-                    .join(", ")}
-              </span>
-
-              <CaretDown
-                size={16}
-                weight="bold"
-                className={`text-gray-400 transition-transform duration-200 ${isSectionOpen ? "rotate-180" : "rotate-0"
-                  }`}
-              />
-            </div>
-
-            {isSectionOpen && (
-              <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-md max-h-48 overflow-y-auto">
-                {sections.map((s) => {
-                  const checked = sectionIds.includes(s.collegeSectionsId);
-
-                  return (
-                    <label
-                      key={s.collegeSectionsId}
-                      className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => {
-                          setSectionIds((prev) =>
-                            checked
-                              ? prev.filter((id) => id !== s.collegeSectionsId)
-                              : [...prev, s.collegeSectionsId],
-                          );
-                        }}
-                        className="accent-emerald-500"
-                      />
-                      <span className="text-sm text-gray-700">
-                        {s.collegeSections}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="pt-2">
-            <button
-              onClick={handleSave}
-              disabled={isSubmitting}
-              className={`w-full text-white font-semibold py-3 rounded-lg shadow-md transition-colors text-base ${isSubmitting
+        {/* Sticky Footer */}
+        <div className="p-5 border-t border-gray-100 bg-white rounded-b-xl shrink-0">
+          <button
+            onClick={handleSave}
+            disabled={state.isSubmitting || isSaving}
+            className={`w-full text-white font-semibold py-3 rounded-lg shadow-md transition-colors text-base ${
+              state.isSubmitting || isSaving
                 ? "bg-emerald-400 cursor-not-allowed"
                 : "bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
-                }`}
-            >
-              {isSubmitting
-                ? isEditMode
-                  ? "Updating..."
-                  : "Saving..."
-                : isEditMode
-                  ? "Update Event"
-                  : "Save Event"}
-            </button>
-          </div>
+            }`}
+          >
+            {state.isSubmitting || isSaving
+              ? isEditMode ? "Updating..." : "Saving..."
+              : isEditMode ? "Update Event" : "Save Event"}
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-export default AddEventModal;
+export default AddEventModalV2;
