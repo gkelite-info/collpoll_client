@@ -240,17 +240,23 @@ export async function getStudentAttendanceDetails({
 
 
 
-  const allRows = filteredRows.map((r) => ({
-    calendarEventId: r.calendarEventId ?? r.bulkCalendarEventId,
-    date: r.event!.date,
-    time: `${r.event!.fromTime} - ${r.event!.toTime}`,
-    subjectId: r.event!.subject,
-    facultyId: r.event!.facultyId,
-    subjectName: subjectMap.get(r.event!.subject) ?? "-",
-    facultyName: facultyMap.get(r.event!.facultyId) ?? "-",
-    status: r.status,
-    reason: r.reason ?? "-",
-  }));
+  const allRows = filteredRows
+    .map((r) => ({
+      calendarEventId: r.calendarEventId ?? r.bulkCalendarEventId,
+      date: r.event!.date,
+      time: `${r.event!.fromTime} - ${r.event!.toTime}`,
+      subjectId: r.event!.subject,
+      facultyId: r.event!.facultyId,
+      subjectName: subjectMap.get(r.event!.subject) ?? "-",
+      facultyName: facultyMap.get(r.event!.facultyId) ?? "-",
+      status: r.status,
+      reason: r.reason ?? "-",
+    }))
+    .sort(
+      (first, second) =>
+        first.date.localeCompare(second.date) ||
+        first.time.localeCompare(second.time),
+    );
 
   const paginatedRows = allRows.slice(from, to);
 

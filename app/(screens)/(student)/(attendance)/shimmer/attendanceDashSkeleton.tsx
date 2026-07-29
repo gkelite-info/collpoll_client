@@ -19,7 +19,7 @@ export const TableSkeleton = () => {
     <div className="border border-gray-100 rounded-xl overflow-hidden bg-white p-4 max-md:p-0 max-md:border-none max-md:bg-transparent">
       <div className="hidden md:block">
         <div className="flex justify-between mb-4 border-b pb-2">
-          {[1, 2, 3, 4, 5].map((i) => (
+          {[1, 2, 3].map((i) => (
             <Skeleton key={i} variant="text" className="h-4 mr-1 w-20" />
           ))}
         </div>
@@ -32,11 +32,6 @@ export const TableSkeleton = () => {
             <Skeleton variant="text" className="h-4 w-32 mr-1" />
             <Skeleton variant="text" className="h-4 w-32 mr-1" />
             <Skeleton variant="text" className="h-4 w-12 mr-1" />
-            <Skeleton variant="text" className="h-4 w-12 mr-2" />
-            <Skeleton
-              variant="circular"
-              className="h-6 w-6 mr-1 aspect-square rounded-full"
-            />
           </div>
         ))}
       </div>
@@ -61,3 +56,59 @@ export const TableSkeleton = () => {
     </div>
   );
 };
+
+function AttendanceCardRowShimmer({ count }: { count: number }) {
+  return (
+    <div
+      className={`grid gap-3 ${
+        count === 4 ? "grid-cols-4" : "grid-cols-3"
+      } max-md:grid-cols-2`}
+    >
+      {Array.from({ length: count }).map((_, index) => (
+        <Skeleton
+          key={index}
+          className="h-32 w-full rounded-xl max-md:h-[76px]"
+        />
+      ))}
+    </div>
+  );
+}
+
+export function SubjectAttendancePageShimmer() {
+  return (
+    <div className="flex w-full flex-col gap-5 py-2 animate-pulse">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-52 rounded-md" />
+        <Skeleton className="h-4 w-96 max-w-full rounded-md" />
+      </div>
+      <AttendanceCardRowShimmer count={3} />
+      <Skeleton className="h-24 w-[70%] rounded-xl max-md:w-full" />
+      <div className="space-y-3">
+        <Skeleton className="h-6 w-56 rounded-md" />
+        <TableSkeleton />
+      </div>
+    </div>
+  );
+}
+
+export function SubjectAttendanceDetailsPageShimmer() {
+  return (
+    <div className="flex w-full flex-col gap-5 py-2 animate-pulse">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-52 rounded-md" />
+        <Skeleton className="h-4 w-96 max-w-full rounded-md" />
+      </div>
+      <AttendanceCardRowShimmer count={4} />
+      <Skeleton className="h-24 w-[68%] rounded-xl max-md:w-full" />
+      <div className="space-y-3">
+        <Skeleton className="h-6 w-48 rounded-md" />
+        <div className="flex gap-4">
+          <Skeleton className="h-7 w-32 rounded-full" />
+          <Skeleton className="h-7 w-32 rounded-full" />
+          <Skeleton className="h-7 w-72 rounded-full max-md:hidden" />
+        </div>
+        <TableSkeleton />
+      </div>
+    </div>
+  );
+}

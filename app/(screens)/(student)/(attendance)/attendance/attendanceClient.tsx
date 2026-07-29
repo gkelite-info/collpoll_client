@@ -1,6 +1,6 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import CardComponent from "@/app/utils/card";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import AttendanceInsight from "@/app/utils/insightChart";
@@ -12,14 +12,17 @@ import SubjectAttendance from "../../(attendance)/subject-attendance/page";
 import SubjectAttendanceDetails from "../../(attendance)/subject-attendance-details/page";
 import { useUser } from "@/app/utils/context/UserContext";
 import {
-  DashboardSkeleton,
   TableSkeleton,
 } from "../shimmer/attendanceDashSkeleton";
+import MainAttendanceShimmer, {
+  AttendanceInsightShimmer,
+} from "../shimmer/mainAttendanceShimmer";
 import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studentAttendanceActions";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { useTranslations } from "next-intl";
 import AiAttendanceNotificationBanner from "@/app/utils/AiAttendanceNotificationBanner";
 import { motion, AnimatePresence } from "framer-motion";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 type DashboardData = Awaited<ReturnType<typeof getStudentDashboardData>>;
 
@@ -28,7 +31,6 @@ interface TableRow {
   Faculty: string;
   "Today's Status": React.ReactNode;
   "Class Attendance": string;
-  "Percentage %": string;
 }
 
 function getStatusClass(status: string) {
@@ -82,11 +84,12 @@ export default function AttendanceClient() {
   const router = useRouter();
   const { userId, loading: userLoading } = useUser();
   const tab = searchParams.get("tab");
+  const previousTabRef = useRef(tab);
   const showSubjectAttendanceTable = tab === "subject-attendance";
   const showSubjectAttendanceDetails = tab === "subject-attendance-details";
   const hideRightSection =
     showSubjectAttendanceTable || showSubjectAttendanceDetails;
-  const [dataLoading, setDataLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null,
   );
@@ -97,17 +100,21 @@ export default function AttendanceClient() {
   const [totalRecords, setTotalRecords] = useState(0);
 
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
+  const showDashboardLoading =
+    dataLoading || (!tab && Boolean(previousTabRef.current));
+
+  useEffect(() => {
+    previousTabRef.current = tab;
+  }, [tab]);
 
   const rowsPerPage = 10;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
-
   const [, setTableLoading] = useState(false);
 
   const columns = [
     t("Subject"),
     t("Faculty"),
     t("Today's Status"),
-    t("Percentage %"),
   ];
 
   useEffect(() => {
@@ -154,7 +161,15 @@ export default function AttendanceClient() {
     return () => {
       isMounted = false;
     };
-  }, [userId, viewDate, currentPage, isInter, userLoading, studentLoading]);
+  }, [
+    userId,
+    viewDate,
+    currentPage,
+    isInter,
+    userLoading,
+    studentLoading,
+    tab,
+  ]);
 
   const handleCardClick = (cardId: number) => {
     if (cardId === 2) {
@@ -172,8 +187,15 @@ export default function AttendanceClient() {
         </span>
       ),
       "Class Attendance": row.classAttendance,
-      "Percentage %": row.percentage,
     })) || [];
+
+  const todayAttendancePercentage = dashboardData?.todayStats.total
+    ? Math.round(
+        (dashboardData.todayStats.attended /
+          dashboardData.todayStats.total) *
+          100,
+      )
+    : 0;
 
   const dynamicCards = [
     {
@@ -182,10 +204,19 @@ export default function AttendanceClient() {
       value: dashboardData
         ? `${dashboardData.todayStats.attended}/${dashboardData.todayStats.total}`
         : "0/0",
-      label: t("Today Total Classes"),
-      style: "bg-[#FFEDDA] w-44",
+      label: (
+        <>
+          {t("Today Total Classes")}
+          <span className="block whitespace-nowrap text-[11px] tracking-tight max-md:whitespace-normal">
+            Present Classes / Total Classes
+          </span>
+        </>
+      ),
+      style: "bg-[#FFEDDA] w-full",
       iconBgColor: "#FFBB70",
       iconColor: "#EFEFEF",
+      totalPercentage: `${todayAttendancePercentage}%`,
+      totalPercentageColor: "#282828",
     },
     {
       id: 2,
@@ -193,13 +224,18 @@ export default function AttendanceClient() {
       value: dashboardData
         ? `${dashboardData.cards.attended}/${dashboardData.cards.totalClasses}`
         : "0/0",
-      label: t("Sem Attendance"),
-      style: "bg-[#CEE6FF] w-44",
+      label: (
+        <>
+          {t("Sem Attendance")}
+          <span className="block whitespace-nowrap text-[11px] tracking-tight max-md:whitespace-normal">
+            Present Classes / Total Classes
+          </span>
+        </>
+      ),
+      style:
+        "bg-[#C6E0FF] w-full ring-2 ring-[#7764FF]/25 shadow-md",
       iconBgColor: "#7764FF",
       iconColor: "#EFEFEF",
-      totalPercentage: dashboardData
-        ? `${dashboardData.cards.percentage}%`
-        : "0%",
     },
   ];
 
@@ -231,10 +267,10 @@ export default function AttendanceClient() {
                 </p>
               </div>
 
-              {dataLoading ? (
-                <DashboardSkeleton />
+              {showDashboardLoading ? (
+                <MainAttendanceShimmer />
               ) : (
-                <div className="flex gap-4 flex-wrap max-md:grid max-md:grid-cols-[1fr_1fr] max-md:gap-3">
+                <div className="grid w-[90%] grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.25fr)] gap-4 max-md:w-full max-md:grid-cols-[1fr_1fr] max-md:gap-3">
                   <div className="contents max-md:flex max-md:flex-col max-md:gap-3">
                     {dynamicCards.map((card) => (
                       <div key={card.id}>
@@ -245,6 +281,8 @@ export default function AttendanceClient() {
                           label={card.label}
                           iconBgColor={card.iconBgColor}
                           iconColor={card.iconColor}
+                          totalPercentage={card.totalPercentage}
+                          totalPercentageColor={card.totalPercentageColor}
                           onClick={
                             card.id === 2
                               ? () => handleCardClick(card.id)
@@ -260,6 +298,8 @@ export default function AttendanceClient() {
                       absentPercent={dashboardData?.semesterStats.absent || 0}
                       leavePercent={dashboardData?.semesterStats.leave || 0}
                       overallPercent={dashboardData?.cards.percentage || 0}
+                      title={t("Sem Attendance")}
+                      percentageClassName="font-normal"
                     />
                   </div>
                 </div>
@@ -284,7 +324,7 @@ export default function AttendanceClient() {
                 <p className="text-[#282828] text-sm max-md:hidden">
                   {t("Classes on {date}", { date: formattedDate })}
                 </p>
-                {dataLoading ? (
+                {showDashboardLoading ? (
                   <div className="mt-5">
                     <TableSkeleton />
                   </div>
@@ -367,14 +407,6 @@ export default function AttendanceClient() {
                                       {row["Class Attendance"]}
                                     </span>
                                   </div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-[#282828] font-medium">
-                                      {t("Percentage %")}
-                                    </span>
-                                    <span className="text-gray-600">
-                                      {row["Percentage %"]}
-                                    </span>
-                                  </div>
                                 </motion.div>
                               )}
                             </AnimatePresence>
@@ -383,7 +415,7 @@ export default function AttendanceClient() {
                       })}
                     </div>
 
-                    {totalPages > 1 && (
+                    {false && totalPages > 1 && (
                       <div className="flex justify-end items-center gap-3 mt-6 mb-4 w-full">
                         <button
                           onClick={() =>
@@ -429,11 +461,21 @@ export default function AttendanceClient() {
                       </div>
                     )}
 
+                    {totalRecords > 0 && (
+                      <div className="mt-6 mb-4 w-full">
+                        <Pagination
+                          currentPage={currentPage}
+                          totalItems={totalRecords}
+                          itemsPerPage={rowsPerPage}
+                          onPageChange={setCurrentPage}
+                          alwaysShow
+                        />
+                      </div>
+                    )}
+
                     {tableRows.length === 0 && (
                       <p className="text-gray-400 italic text-sm mt-4 text-center border p-4 rounded-lg">
-                        {t("No classes scheduled for {date}", {
-                          date: formattedDate,
-                        })}
+                        No Data Available
                       </p>
                     )}
                   </>
@@ -451,12 +493,21 @@ export default function AttendanceClient() {
             <CourseScheduleCard />
             <WorkWeekCalendar
               activeDate={viewDate}
-              onDateSelect={setViewDate}
+              onDateSelect={(date) => {
+                setCurrentPage(1);
+                setViewDate(date);
+              }}
             />
             <div className="mt-5">
-              <AttendanceInsight
-                weeklyData={dashboardData?.weeklyData || [0, 0, 0, 0, 0, 0, 0]}
-              />
+              {showDashboardLoading ? (
+                <AttendanceInsightShimmer />
+              ) : (
+                <AttendanceInsight
+                  weeklyData={
+                    dashboardData?.weeklyData || [0, 0, 0, 0, 0, 0, 0]
+                  }
+                />
+              )}
             </div>
           </div>
         )}

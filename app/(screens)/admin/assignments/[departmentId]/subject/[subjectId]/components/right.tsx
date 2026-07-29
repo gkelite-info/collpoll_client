@@ -187,7 +187,7 @@ export default function AssignmentsRight({ facultyId, collegeSubjectId, selected
                 <div className="bg-[#E7F7EE] rounded-full p-1">
                   <CheckCircle size={22} weight="fill" color="#43C17A" />
                 </div>
-                <p className="text-[#282828] font-medium">My Tasks</p>
+                <p className="text-[#282828] font-medium">Faculty Tasks</p>
               </div>
               <button
                 onClick={() => setOpenTaskModal(true)}
@@ -203,6 +203,7 @@ export default function AssignmentsRight({ facultyId, collegeSubjectId, selected
         ) : (
           <TaskPanel
             role="faculty"
+            heading="Faculty Tasks"
             facultyTasks={facultyTasks}
             facultyId={facultyId}
             collegeSubjectId={collegeSubjectId}

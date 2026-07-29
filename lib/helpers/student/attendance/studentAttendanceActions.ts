@@ -193,6 +193,23 @@ export async function getStudentDashboardData(
 
   if (todayErr) throw todayErr;
 
+  const {
+    data: todayStudentPage,
+    count: todayStudentCount,
+    error: todayStudentPageError,
+  } = await (supabase as any)
+    .from("attendance_record")
+    .select(
+      "studentId, calendarEventId, bulkCalendarEventId, status, markedAt",
+      { count: "exact" },
+    )
+    .eq("studentId", studentId)
+    .eq("markedAt", dateStr)
+    .order("attendanceRecordId", { ascending: true })
+    .range(from, to);
+
+  if (todayStudentPageError) throw todayStudentPageError;
+
   const { data: semAll, error: semErr } = await (supabase as any)
     .from("attendance_record")
     .select("studentId, calendarEventId, bulkCalendarEventId, status, markedAt")
@@ -418,9 +435,7 @@ export async function getStudentDashboardData(
     },
   );
 
-  const todayStudentRows = (todayAll ?? []).filter(
-    (r: any) => r.studentId === studentId,
-  );
+  const todayStudentRows = todayStudentPage ?? [];
   const todayConductedSet = new Set<string>();
   const todayAttendedSet = new Set<string>();
 
@@ -474,7 +489,6 @@ export async function getStudentDashboardData(
     };
   });
 
-  const paginatedRows = tableData.slice(from, to + 1);
   const weeklyStats = weekDateKeys.map((dayKey) => {
     const conductedSet = new Set<string>();
     const attendedSet = new Set<string>();
@@ -528,8 +542,8 @@ export async function getStudentDashboardData(
       absent: absentPercent,
       leave: leavePercent,
     },
-    tableData: paginatedRows,
-    totalCount: tableData.length,
+    tableData,
+    totalCount: todayStudentCount || 0,
     subjectWiseStats,
     weeklyData: weeklyStats,
     attendancePolicyInsight,

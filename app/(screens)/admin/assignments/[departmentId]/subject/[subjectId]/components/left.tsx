@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import AssignmentCard from "./assignmentCard";
 import toast from "react-hot-toast";
 import { fetchAdminFacultyAssignments } from "@/lib/helpers/admin/assignments/fetchAdminFacultyAssignments";
-import AssignmentSkeleton from "@/app/(screens)/faculty/assignments/shimmer/assignmentShimmer";
+import AdminAssignmentCardShimmer from "../../../../components/shimmers/adminAssignmentCardShimmer";
 import AssignmentForm from "./assignmentForm";
 import { CaretLeftIcon } from "@phosphor-icons/react";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
@@ -133,9 +133,9 @@ export default function AssignmentsLeft({
       <div className="h-[114.6vh] overflow-y-auto pr-1 pb-4">
         {isLoading ? (
           <>
-            <AssignmentSkeleton />
-            <AssignmentSkeleton />
-            <AssignmentSkeleton />
+            <AdminAssignmentCardShimmer />
+            <AdminAssignmentCardShimmer />
+            <AdminAssignmentCardShimmer />
           </>
         ) : assignments.length === 0 ? (
           <div className="py-20 text-center text-gray-400 border border-dashed rounded-xl bg-white">
@@ -150,12 +150,13 @@ export default function AssignmentsLeft({
           />
         )}
       </div>
-      {!isLoading && totalCount > pageSize && (
+      {!isLoading && totalCount > 0 && (
         <Pagination
           currentPage={page}
           totalItems={totalCount}
           itemsPerPage={pageSize}
           onPageChange={(p: number) => setPage(p)}
+          alwaysShow
         />
       )}
     </div>

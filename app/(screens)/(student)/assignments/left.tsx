@@ -445,6 +445,10 @@ function AssignmentsLeftContent() {
     loadAssignments();
   }, [activeView, currentPage, selectedDate]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedDate]);
+
   async function loadAssignments() {
     try {
       setLoading(true);
@@ -526,7 +530,7 @@ function AssignmentsLeftContent() {
           return {
             assignmentId: a.assignmentId,
             status: a.status,
-            image: "/ds.jpg",
+            image: "/assignment.jpg",
             title: a.topicName,
             topicName: a.topicName,
             subjectName: a.subject?.subjectName ?? "—",
@@ -877,9 +881,11 @@ function AssignmentsLeftContent() {
                       activeView={activeView}
                     />
                   ) : (
-                    <p className="text-sm text-gray-500 mt-4 text-center">
-                      {t("No active assignments available")}
-                    </p>
+                    <div className="flex min-h-48 items-center justify-center">
+                      <p className="text-sm text-gray-500">
+                        {t("No Assignments Available")}
+                      </p>
+                    </div>
                   ))}
 
                 {activeView === "previous" &&
@@ -891,9 +897,11 @@ function AssignmentsLeftContent() {
                       />
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500 mt-4 text-center">
-                      {t("No assignments available")}
-                    </p>
+                    <div className="flex min-h-48 items-center justify-center">
+                      <p className="text-sm text-gray-500">
+                        {t("No Assignments Available")}
+                      </p>
+                    </div>
                   ))}
               </>
             ))}
@@ -1078,13 +1086,14 @@ function AssignmentsLeftContent() {
           )}
         </div>
 
-        {activeTab === "assignments" && (
+        {activeTab === "assignments" && totalRecords > 0 && !loading && (
           <div className="mt-4 pb-6">
             <Pagination
               currentPage={currentPage}
               totalItems={totalRecords}
               itemsPerPage={rowsPerPage}
               onPageChange={setCurrentPage}
+              alwaysShow
             />
           </div>
         )}

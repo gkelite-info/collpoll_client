@@ -23,6 +23,7 @@ export type Task = {
 
 export type TaskPanelProps = {
   role?: "faculty" | "student";
+  heading?: string;
   style?: boolean;
   loading?: boolean;
   facultyTasks?: Task[];
@@ -46,6 +47,7 @@ export type TaskPanelProps = {
 
 export default function TaskPanel({
   role = "student",
+  heading,
   style = false,
   facultyTasks = [],
   studentTasks = [],
@@ -312,7 +314,9 @@ export default function TaskPanel({
             </div>
             {role === "faculty" && (
               <div className="flex items-center justify-between w-[100%]">
-                <p className="text-[#282828] font-medium">{t("My Tasks")}</p>
+                <p className="text-[#282828] font-medium">
+                  {heading ?? t("My Tasks")}
+                </p>
                 {!onAddTask && (
                   <div className="relative cursor-pointer w-6 h-6 flex items-center justify-center">
                     <CalendarIcon size={22} weight="fill" className="text-indigo-500" />

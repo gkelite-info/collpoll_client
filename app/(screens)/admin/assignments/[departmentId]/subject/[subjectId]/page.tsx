@@ -21,7 +21,7 @@ export default function AdminSubjectAssignmentPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   return (
-    <main className="flex w-full min-h-screen bg-[#F3F6F9]">
+    <main className="flex w-full min-h-screen bg-[#F4F4F4]">
       <AssignmentsLeft
         subjectId={subjectId}
         facultyId={facultyId}

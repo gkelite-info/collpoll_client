@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { insertAssignmentSubmission } from "@/lib/helpers/student/assignments/insertAssignmentSubmission";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
 type UploadModalProps = {
   isOpen: boolean;
@@ -34,6 +35,7 @@ export default function UploadModal({
   const [fileDeleted, setFileDeleted] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const t = useTranslations("Assignment.student"); // Hook
 
   useEffect(() => {
@@ -190,6 +192,7 @@ export default function UploadModal({
 
       setSelectedFiles([]);
       setFileDeleted(true);
+      setShowDeleteConfirmation(false);
       onUpload("", index!);
       toast.success(t("File deleted You can upload a new file now")); // No dot
     } catch (err) {
@@ -315,10 +318,10 @@ export default function UploadModal({
         {existingFilePath && (
           <button
             className="text-red-500 text-sm underline mt-3 self-start cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={handleDeleteExistingFile}
+            onClick={() => setShowDeleteConfirmation(true)}
             disabled={isDeleting}
           >
-            {isDeleting ? t("Deleting...") : t("Delete uploaded file")}
+            {t("Delete uploaded file")}
           </button>
         )}
 
@@ -328,7 +331,7 @@ export default function UploadModal({
             onClick={handleUpload}
             disabled={isUploading}
           >
-            {isUploading ? t("Submitting...") : t("Submit Assignment")}
+            {isUploading ? t("Submitting") : t("Submit Assignment")}
           </button>
           <button
             className="border w-[49%] py-2 rounded-md text-sm text-[#282828] cursor-pointer"
@@ -338,6 +341,18 @@ export default function UploadModal({
           </button>
         </div>
       </div>
+
+      <ConfirmDeleteModal
+        open={showDeleteConfirmation}
+        onConfirm={handleDeleteExistingFile}
+        onCancel={() => setShowDeleteConfirmation(false)}
+        isDeleting={isDeleting}
+        title="Delete uploaded"
+        name="file"
+        confirmText={t("Delete uploaded file")}
+        loadingText={t("Deleting")}
+        actionType="remove"
+      />
     </div>
   );
 }

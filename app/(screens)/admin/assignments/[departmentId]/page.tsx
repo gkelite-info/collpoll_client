@@ -8,7 +8,7 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { fetchAdminSubjectDetails } from "@/lib/helpers/admin/assignments/fetchAdminSubjectDetails";
 import { CaretLeftIcon } from "@phosphor-icons/react";
-import { Pagination } from "@/app/(screens)/faculty/assignments/components/pagination";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { DiscussionDeptCardSkeleton } from "../components/shimmers/DiscussionDeptCardSkeleton";
 import { DiscussionCourseCardSkeleton } from "../components/shimmers/courseCardSkeleton";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -120,13 +120,14 @@ const DepartmentSubjectPage = () => {
                   ))}
                 </div>
 
-                {totalCount > ITEMS_PER_PAGE && (
+                {totalCount > 0 && (
                   <div className="mt-auto pt-4">
                     <Pagination
                       currentPage={currentPage}
                       totalItems={totalCount}
                       itemsPerPage={ITEMS_PER_PAGE}
                       onPageChange={setCurrentPage}
+                      alwaysShow
                     />
                   </div>
                 )}

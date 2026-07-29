@@ -14,6 +14,8 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import AiAttendanceNotificationBanner from "@/app/utils/AiAttendanceNotificationBanner";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import SubjectAttendanceDetailsShimmer from "../shimmer/subjectAttendanceDetailsShimmer";
 
 type StudentAttendanceDetails = Awaited<
   ReturnType<typeof getStudentAttendanceDetails>
@@ -45,6 +47,11 @@ function normalizeStatus(status: string) {
   if (status === "LATE") return "Late";
   if (status === "LEAVE") return "Leave";
   return status;
+}
+
+function formatDateDMY(date: string) {
+  const match = date?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : date;
 }
 
 const StatusBadge = ({ status }: { status: string }) => {
@@ -186,13 +193,22 @@ export default function SubjectAttendanceDetailsClient() {
   ];
 
   const tableData: AttendanceTableRow[] =
-    data?.rows.map((r: any) => ({
-      date: r.date,
-      time: r.time,
-      rawStatus: r.status as AttendanceTableRow["rawStatus"],
-      status: <StatusBadge status={normalizeStatus(r.status)} />,
-      reason: r.reason,
-    })) ?? [];
+    data?.rows
+      .slice()
+      .sort((first, second) => {
+        const firstDate = new Date(first.date).getTime();
+        const secondDate = new Date(second.date).getTime();
+        const dateDifference = firstDate - secondDate;
+
+        return dateDifference || first.time.localeCompare(second.time);
+      })
+      .map((r) => ({
+        date: formatDateDMY(r.date),
+        time: r.time,
+        rawStatus: r.status as AttendanceTableRow["rawStatus"],
+        status: <StatusBadge status={normalizeStatus(r.status)} />,
+        reason: r.reason,
+      })) ?? [];
 
   const filteredTableData = (() => {
     if (activeView === "ATTENDED") {
@@ -216,11 +232,15 @@ export default function SubjectAttendanceDetailsClient() {
     router.push("/attendance?tab=subject-attendance");
   };
 
+  if (loading && !data) {
+    return <SubjectAttendanceDetailsShimmer />;
+  }
+
   return (
     <div className="flex flex-col pb-3 max-md:pb-0">
       <div className="flex justify-between items-center">
         <div className="flex flex-col w-[50%] max-md:w-full">
-          <div className="flex gap-0 items-center">
+          <div className="flex gap-2 items-center">
             <button onClick={handleBack} className="cursor-pointer">
               <CaretLeft
                 size={23}
@@ -247,11 +267,20 @@ export default function SubjectAttendanceDetailsClient() {
             return (
               <div
                 key={index}
-                className="cursor-pointer max-md:w-full"
+                className={`${index < 3 ? "cursor-pointer" : ""} max-md:w-full`}
                 onClick={() => {
-                  if (index === 0) setActiveView("ALL");
-                  if (index === 1) setActiveView("ATTENDED");
-                  if (index === 2) setActiveView("LEAVE");
+                  if (index === 0) {
+                    setCurrentPage(1);
+                    setActiveView("ALL");
+                  }
+                  if (index === 1) {
+                    setCurrentPage(1);
+                    setActiveView("ATTENDED");
+                  }
+                  if (index === 2) {
+                    setCurrentPage(1);
+                    setActiveView("ABSENT");
+                  }
                 }}
               >
                 <CardComponent
@@ -341,7 +370,7 @@ export default function SubjectAttendanceDetailsClient() {
               isLoading={loading}
             />
           </div>
-          {totalPages > 1 && (
+          {false && totalPages > 1 && (
             <div className="flex justify-end items-center gap-3 mt-6">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -382,6 +411,17 @@ export default function SubjectAttendanceDetailsClient() {
               >
                 ›
               </button>
+            </div>
+          )}
+          {totalRecords > 0 && (
+            <div className="mt-6 w-full">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalRecords}
+                itemsPerPage={rowsPerPage}
+                onPageChange={setCurrentPage}
+                alwaysShow
+              />
             </div>
           )}
         </div>
