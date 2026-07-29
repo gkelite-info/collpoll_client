@@ -259,6 +259,8 @@ export function AddRevenueRecordModal({
   const [selectedEducationIds, setSelectedEducationIds] = useState<number[]>([]);
   const [isEducationDropdownOpen, setIsEducationDropdownOpen] = useState(false);
   const [revenueSource, setRevenueSource] = useState("");
+  const [customRevenueSource, setCustomRevenueSource] = useState("");
+  const [showCustomRevenueSource, setShowCustomRevenueSource] = useState(false);
   const [revenueTitle, setRevenueTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [dateReceived, setDateReceived] = useState("");
@@ -272,6 +274,19 @@ export function AddRevenueRecordModal({
   const selectedEducations = educationOptions.filter((education) =>
     selectedEducationIds.includes(education.collegeEducationId),
   );
+  const numericAmount = Number(amount);
+  const isFormValid =
+    revenueSource.trim().length > 0 &&
+    revenueTitle.trim().length >= 3 &&
+    Number.isSafeInteger(numericAmount) &&
+    numericAmount > 0 &&
+    Boolean(dateReceived) &&
+    dateReceived <= new Date().toISOString().split("T")[0] &&
+    Boolean(paymentMethod) &&
+    selectedEducationIds.length > 0 &&
+    Boolean(collegeId) &&
+    Boolean(userId) &&
+    !showCustomRevenueSource;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -347,6 +362,8 @@ export function AddRevenueRecordModal({
     setSelectedEducationIds([]);
     setIsEducationDropdownOpen(false);
     setRevenueSource("");
+    setCustomRevenueSource("");
+    setShowCustomRevenueSource(false);
     setRevenueTitle("");
     setAmount("");
     setDateReceived("");
@@ -365,6 +382,8 @@ export function AddRevenueRecordModal({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFormError("");
+
+    if (!isFormValid) return;
 
     if (!collegeId || !userId) {
       setFormError("Unable to identify the current accountant and college.");
@@ -466,24 +485,73 @@ export function AddRevenueRecordModal({
           className="custom-scrollbar flex-1 overflow-y-auto px-8 pb-5"
         >
           <div className="grid gap-5 sm:grid-cols-2">
-            <label className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
               <span className="text-[12px] font-bold text-[#17213D]">
                 Revenue Source <span className="text-[#E5484D]">*</span>
               </span>
               <select
                 required
-                value={revenueSource}
-                onChange={(event) => setRevenueSource(event.target.value)}
+                value={showCustomRevenueSource ? "Other" : revenueSource}
+                onChange={(event) => {
+                  if (event.target.value === "Other") {
+                    setRevenueSource("");
+                    setCustomRevenueSource("");
+                    setShowCustomRevenueSource(true);
+                    return;
+                  }
+                  setRevenueSource(event.target.value);
+                  setShowCustomRevenueSource(false);
+                }}
                 className={`${inputClass} cursor-pointer`}
               >
                 <option value="">Select Revenue Source</option>
+                {revenueSource &&
+                  !["Student Fees", "Hostel Fees", "Transport Fees", "Examination Fees"].includes(revenueSource) && (
+                    <option value={revenueSource}>{revenueSource}</option>
+                  )}
                 <option value="Student Fees">Student Fees</option>
                 <option value="Hostel Fees">Hostel Fees</option>
                 <option value="Transport Fees">Transport Fees</option>
                 <option value="Examination Fees">Examination Fees</option>
                 <option value="Other">Other</option>
               </select>
-            </label>
+              {showCustomRevenueSource && (
+                <div className="rounded-md border border-[#DDE3EA] bg-white p-2 shadow-sm">
+                  <input
+                    type="text"
+                    autoFocus
+                    maxLength={100}
+                    value={customRevenueSource}
+                    onChange={(event) => setCustomRevenueSource(event.target.value)}
+                    placeholder="Enter revenue source"
+                    className="h-9 w-full rounded-md border border-[#DDE3EA] bg-white px-3 text-[12px] font-medium text-[#17213D] outline-none placeholder:text-[#9AA4B2] focus:border-[#24C96F]"
+                  />
+                  <div className="mt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomRevenueSource("");
+                        setShowCustomRevenueSource(false);
+                      }}
+                      className="h-8 cursor-pointer rounded-md border border-[#DDE3EA] px-3 text-[11px] font-bold text-[#525252]"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!customRevenueSource.trim()}
+                      onClick={() => {
+                        setRevenueSource(customRevenueSource.trim());
+                        setShowCustomRevenueSource(false);
+                      }}
+                      className="h-8 cursor-pointer rounded-md bg-[#08743B] px-3 text-[11px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div
               ref={educationDropdownRef}
@@ -787,6 +855,7 @@ export function AddRevenueRecordModal({
             form="add-revenue-record-form"
             disabled={
               isSubmitting ||
+              !isFormValid ||
               isEducationLoading ||
               educationOptions.length === 0 ||
               selectedEducationIds.length === 0
@@ -801,5 +870,3 @@ export function AddRevenueRecordModal({
     </div>
   );
 }
-
-

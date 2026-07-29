@@ -372,7 +372,12 @@ export async function fetchAccountantExpenses({
     query = query.in("collegeEducationId", collegeEducationIds);
   }
   if (category?.trim()) query = query.eq("category", category.trim());
-  if (search?.trim()) query = query.ilike("expenseName", `%${search.trim()}%`);
+  if (search?.trim()) {
+    const safeSearch = search.trim().replace(/[,%()]/g, " ");
+    query = query.or(
+      `expenseName.ilike.%${safeSearch}%,remarks.ilike.%${safeSearch}%`,
+    );
+  }
   if (fromDate) query = query.gte("expenseDate", fromDate);
   if (toDate) query = query.lte("expenseDate", toDate);
   if (collegeEducationIds?.length) {

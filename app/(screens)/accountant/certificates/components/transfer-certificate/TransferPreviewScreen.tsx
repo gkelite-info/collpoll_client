@@ -8,6 +8,7 @@ import Image from "next/image";
 
 import type { TransferCertificateData } from "./TransferCreateForm";
 import type { HeaderConfig } from "./TransferUploadHeaderScreen";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 function DetailsRow({ label, value }: { label: string; value: string }) {
   return (
@@ -990,6 +991,7 @@ export function TransferPreviewScreen({
   onCancel: () => void;
   onGenerate: (saveStatus: "Draft" | "Saved" | "Generated") => void;
 }) {
+  const { academicBranchLabel } = useInstitutionTerminology();
   const certificateRef = useRef<HTMLDivElement>(null);
   const downloadLockRef = useRef(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -1074,7 +1076,7 @@ export function TransferPreviewScreen({
               <DetailsRow label="Roll No." value={data.rollNo} />
               <DetailsRow label="Student Name" value={data.studentName} />
               <DetailsRow label="Course" value={data.course} />
-              <DetailsRow label="Branch / Sub Course" value={data.subCourse} />
+              <DetailsRow label={`${academicBranchLabel} / Sub Course`} value={data.subCourse} />
               <DetailsRow label="Course Year" value={data.courseYear} />
               <DetailsRow label="Date of Admission" value={formatDate(data.dateOfAdmission)} />
               <DetailsRow label="Date of Leaving" value={formatDate(data.dateOfLeaving)} />

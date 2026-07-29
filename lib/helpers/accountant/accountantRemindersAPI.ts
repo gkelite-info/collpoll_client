@@ -69,11 +69,14 @@ export async function fetchAccountantReminders(
   category?: string,
   status?: string,
   date?: string,
+  page?: number,
+  itemsPerPage?: number,
 ) {
   let query = supabase
     .from("accountant_reminders")
     .select(
       "accountantReminderId, reminderTitle, type, category, amount, dueDate, repeat, notifyBefore, description, collegeId, createdBy, isActive, createdAt, updatedAt",
+      { count: "exact" },
     )
     .eq("collegeId", collegeId)
     .eq("is_deleted", false)
@@ -115,13 +118,26 @@ export async function fetchAccountantReminders(
 
   query = query.order("dueDate", { ascending: true }).order("createdAt", { ascending: false });
 
-  const { data, error } = await query;
+  if (page !== undefined && itemsPerPage !== undefined) {
+    const safePage = Math.max(1, Math.trunc(page));
+    const safeItemsPerPage = Math.min(
+      100,
+      Math.max(1, Math.trunc(itemsPerPage)),
+    );
+    const from = (safePage - 1) * safeItemsPerPage;
+    query = query.range(from, from + safeItemsPerPage - 1);
+  }
+
+  const { data, error, count } = await query;
 
   if (error) throw error;
-  return (data ?? []).map((row) => ({
-    ...row,
-    amount: Number(row.amount) || 0,
-  })) as AccountantReminder[];
+  return {
+    data: (data ?? []).map((row) => ({
+      ...row,
+      amount: Number(row.amount) || 0,
+    })) as AccountantReminder[],
+    total: count ?? 0,
+  };
 }
 
 export async function createAccountantReminder(
@@ -167,8 +183,9 @@ export async function updateAccountantReminderStatus(id: number, isActive: boole
 export async function updateAccountantReminder(id: number, input: Partial<CreateAccountantReminderInput>) {
   const now = new Date().toISOString();
   
-  // Create an object to hold the fields we are actually updating
-  const updates: any = { updatedAt: now };
+  const updates: Partial<CreateAccountantReminderInput> & {
+    updatedAt: string;
+  } = { updatedAt: now };
   if (input.reminderTitle !== undefined) updates.reminderTitle = input.reminderTitle.trim();
   if (input.type !== undefined) updates.type = input.type;
   if (input.category !== undefined) updates.category = input.category.trim();

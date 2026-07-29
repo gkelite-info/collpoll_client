@@ -13,6 +13,7 @@ import TableComponent from "@/app/utils/table/table";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import { useState } from "react";
 import { deleteBonafideCertificate } from "@/lib/helpers/accountant/bonafideCertificatesAPI";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 export type BonafideCertificate = {
   collegeBonafideId?: number;
@@ -80,6 +81,7 @@ export function BonafideCertificatesTable({
   onEditCertificate: (certificate: BonafideCertificate) => void;
   onDeleteSuccess: () => void;
 }) {
+  const { isSchool, academicBranchLabel } = useInstitutionTerminology();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [certificateToDelete, setCertificateToDelete] = useState<BonafideCertificate | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -180,7 +182,7 @@ export function BonafideCertificatesTable({
           { title: "Bonafide No.", key: "bonafideNo" },
           { title: "Student Name", key: "studentName" },
           { title: "Education Type", key: "educationType" },
-          { title: "Branch", key: "branch" },
+          { title: academicBranchLabel, key: "branch" },
           { title: "Purpose", key: "purpose" },
           { title: "Date Issued", key: "dateIssued" },
           { title: "Status", key: "status" },
@@ -236,7 +238,7 @@ export function BonafideCertificatesTable({
                   <button
                     type="button"
                     onClick={() => {
-                      toast.promise(downloadBonafidePdf(cert), {
+                      toast.promise(downloadBonafidePdf(cert, isSchool), {
                         loading: "Downloading PDF...",
                         success: "PDF downloaded successfully!",
                         error: "Failed to download PDF.",

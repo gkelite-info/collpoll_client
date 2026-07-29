@@ -8,7 +8,7 @@ import {
   FileText,
   Plus,
 } from "@phosphor-icons/react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -46,6 +46,7 @@ function StatCardsShimmer() {
 export function CategoryDetailScreen() {
   const params = useParams<{ category: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { collegeId, loading: userLoading } = useUser();
   const [isRecordExpenseOpen, setIsRecordExpenseOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<AccountantExpense | null>(null);
@@ -56,9 +57,23 @@ export function CategoryDetailScreen() {
   const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedDateKey, setSelectedDateKey] = useState(
+    () => searchParams.get("date") ?? "",
+  );
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(true);
   const category = decodeURIComponent(params.category);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setCurrentPage(1);
+    }, 400);
+
+    return () => window.clearTimeout(timeout);
+  }, [search]);
 
   const loadSummary = useCallback(async () => {
     if (!collegeId) {
@@ -95,6 +110,9 @@ export function CategoryDetailScreen() {
         category,
         page,
         itemsPerPage: perPage,
+        search: debouncedSearch || undefined,
+        fromDate: selectedDateKey || undefined,
+        toDate: selectedDateKey || undefined,
       });
       setPageExpenses(response.data);
       setTotalItems(response.total);
@@ -105,14 +123,19 @@ export function CategoryDetailScreen() {
     } finally {
       setTableLoading(false);
     }
-  }, [category, collegeId, userLoading]);
+  }, [category, collegeId, debouncedSearch, selectedDateKey, userLoading]);
 
   useEffect(() => {
-    void loadSummary();
+    const timeout = window.setTimeout(() => void loadSummary(), 0);
+    return () => window.clearTimeout(timeout);
   }, [loadSummary]);
 
   useEffect(() => {
-    void loadExpensePage(currentPage, itemsPerPage);
+    const timeout = window.setTimeout(
+      () => void loadExpensePage(currentPage, itemsPerPage),
+      0,
+    );
+    return () => window.clearTimeout(timeout);
   }, [currentPage, itemsPerPage, loadExpensePage]);
 
   const totalSpending = summaryExpenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -177,7 +200,13 @@ export function CategoryDetailScreen() {
           <div className="flex items-start gap-2">
             <button
               type="button"
-              onClick={() => router.push("/accountant/expense-categories")}
+              onClick={() =>
+                router.push(
+                  selectedDateKey
+                    ? `/accountant/expense-categories?date=${encodeURIComponent(selectedDateKey)}`
+                    : "/accountant/expense-categories",
+                )
+              }
               aria-label="Back to expense categories"
               className="mt-1 cursor-pointer border-0 bg-transparent p-0 text-[#282828]"
             >
@@ -242,6 +271,13 @@ export function CategoryDetailScreen() {
           onPageChange={setCurrentPage}
           onItemsPerPageChange={(items) => {
             setItemsPerPage(items);
+            setCurrentPage(1);
+          }}
+          search={search}
+          selectedDateKey={selectedDateKey}
+          onSearchChange={setSearch}
+          onDateChange={(date) => {
+            setSelectedDateKey(date);
             setCurrentPage(1);
           }}
           onEdit={(expense) => {

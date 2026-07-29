@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 const fallbackCertificate: BonafideCertificate = {
   bonafideNo: "BON/24-25/0001",
@@ -49,7 +50,13 @@ function DetailsCard({
   );
 }
 
-export function BonafideCertificateLayout({ details }: { details: BonafideCertificate }) {
+export function BonafideCertificateLayout({
+  details,
+  isSchool = false,
+}: {
+  details: BonafideCertificate;
+  isSchool?: boolean;
+}) {
   return (
     <div className="min-h-[530px] border-[3px] border-[#242424] p-8 pb-12 relative">
       <div className="text-right text-[14px] font-bold mb-6">
@@ -80,7 +87,7 @@ export function BonafideCertificateLayout({ details }: { details: BonafideCertif
           </span>{" "}
           Year,{" "}
           <span className="inline-block min-w-[80px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]"></span>{" "}
-          Sem. {details.educationType} Branch,{" "}
+          {!isSchool && "Sem. "}{details.educationType} {isSchool ? "Year" : "Branch"},{" "}
           <span className="inline-block min-w-[100px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]">
             {details.branch}
           </span>{" "}
@@ -105,7 +112,7 @@ export function BonafideCertificateLayout({ details }: { details: BonafideCertif
   );
 }
 
-export async function downloadBonafidePdf(details: BonafideCertificate) {
+export async function downloadBonafidePdf(details: BonafideCertificate, isSchool = false) {
   const container = document.createElement("div");
   container.className = "w-[620px] mx-auto min-h-[540px] max-w-[620px] border border-[#242424] bg-white p-0.5 text-[#111827] absolute left-[-9999px] top-[-9999px]";
   document.body.appendChild(container);
@@ -113,7 +120,7 @@ export async function downloadBonafidePdf(details: BonafideCertificate) {
   const root = createRoot(container);
   
   flushSync(() => {
-    root.render(<BonafideCertificateLayout details={details} />);
+    root.render(<BonafideCertificateLayout details={details} isSchool={isSchool} />);
   });
 
   try {
@@ -155,6 +162,7 @@ export function BonafidePreviewScreen({
   onBackToEdit: () => void;
   onCancel: () => void;
 }) {
+  const { isSchool, academicBranchLabel } = useInstitutionTerminology();
   const details = certificate ?? fallbackCertificate;
   const certificateRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -164,7 +172,7 @@ export function BonafidePreviewScreen({
     ["Student Name", details.studentName],
     ["Father Name", details.fatherName ?? "-"],
     ["Course", details.educationType],
-    ["Branch", details.branch],
+    [academicBranchLabel, details.branch],
     ["Course Year", details.courseYear ?? "-"],
     ["Academic Year", details.academicYear ?? "-"],
   ];
@@ -233,7 +241,7 @@ export function BonafidePreviewScreen({
             ref={certificateRef}
             className="mx-auto min-h-[540px] max-w-[620px] border border-[#242424] bg-white p-0.5 text-[#111827]"
           >
-            <BonafideCertificateLayout details={details} />
+            <BonafideCertificateLayout details={details} isSchool={isSchool} />
           </div>
         </section>
 

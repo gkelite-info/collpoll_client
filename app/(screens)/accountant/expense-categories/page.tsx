@@ -12,7 +12,7 @@ import {
   Wrench,
   X,
 } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import CardComponent from "@/app/utils/card";
@@ -33,7 +33,7 @@ const breakdownColumns = [
   { title: "CATEGORY", key: "category" },
   { title: "EXPENSE RECORDS", key: "records" },
   { title: "TOTAL SPENDING", key: "spending" },
-  { title: "LAST UPDATED", key: "updated" },
+  { title: "LAST EXPENSE DATE", key: "updated" },
 ];
 
 type CategorySummary = {
@@ -98,12 +98,15 @@ const categoryVisual = (category: string) => {
 
 export default function AccountantExpenseCategoriesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { accountantId, collegeId, loading: userLoading } = useUser();
   const [isRecordExpenseOpen, setIsRecordExpenseOpen] = useState(false);
   const [expenses, setExpenses] = useState<AccountantExpense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedDateKey, setSelectedDateKey] = useState("");
+  const [selectedDateKey, setSelectedDateKey] = useState(
+    () => searchParams.get("date") ?? "",
+  );
   const dateInputRef = useRef<HTMLInputElement>(null);
   const [educationOptions, setEducationOptions] = useState<
     AccountantEducationOption[]
@@ -141,7 +144,8 @@ export default function AccountantExpenseCategoriesPage() {
   }, [collegeId, userLoading]);
 
   useEffect(() => {
-    void loadExpenses();
+    const timeout = window.setTimeout(() => void loadExpenses(), 0);
+    return () => window.clearTimeout(timeout);
   }, [loadExpenses]);
 
   useEffect(() => {
@@ -206,6 +210,16 @@ export default function AccountantExpenseCategoriesPage() {
     [expenses, selectedEducationIds],
   );
 
+  const filteredExpenses = useMemo(
+    () =>
+      selectedDateKey
+        ? educationExpenses.filter(
+            (expense) => expense.expenseDate === selectedDateKey,
+          )
+        : educationExpenses,
+    [educationExpenses, selectedDateKey],
+  );
+
   const educationFilterLabel = useMemo(() => {
     if (selectedEducationIds.length === 0) return "All";
 
@@ -221,9 +235,6 @@ export default function AccountantExpenseCategoriesPage() {
 
   const categories = useMemo<CategorySummary[]>(() => {
     const grouped = new Map<string, CategorySummary>();
-    const filteredExpenses = selectedDateKey
-      ? educationExpenses.filter((e) => e.expenseDate === selectedDateKey)
-      : educationExpenses;
 
     filteredExpenses.forEach((expense) => {
       const current = grouped.get(expense.category);
@@ -232,27 +243,30 @@ export default function AccountantExpenseCategoriesPage() {
         records: (current?.records ?? 0) + 1,
         spending: (current?.spending ?? 0) + expense.amount,
         lastUpdated:
-          !current?.lastUpdated || new Date(expense.updatedAt) > new Date(current.lastUpdated)
-            ? expense.updatedAt
+          !current?.lastUpdated || expense.expenseDate > current.lastUpdated
+            ? expense.expenseDate
             : current.lastUpdated,
       });
     });
     return Array.from(grouped.values()).sort((a, b) => b.spending - a.spending);
-  }, [educationExpenses, selectedDateKey]);
+  }, [filteredExpenses]);
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(categories.length / itemsPerPage));
-    if (currentPage > totalPages) setCurrentPage(totalPages);
+    if (currentPage <= totalPages) return;
+
+    const timeout = window.setTimeout(() => setCurrentPage(totalPages), 0);
+    return () => window.clearTimeout(timeout);
   }, [categories.length, currentPage]);
 
   const highestSpending = categories[0];
-  const totalSpending = educationExpenses.reduce(
+  const totalSpending = filteredExpenses.reduce(
     (sum, expense) => sum + expense.amount,
     0,
   );
   const summaryCards = [
     { label: "HIGHEST SPENDING", title: highestSpending?.category ?? "No expenses", value: formatAmount(highestSpending?.spending ?? 0), helper: "Current", icon: Money, iconBgColor: "#DFF3E7", iconColor: "#147A3D" },
-    { label: "TOTAL EXPENSE RECORDS", title: "", value: String(educationExpenses.length), helper: "", icon: Receipt, iconBgColor: "#E8EEF8", iconColor: "#172B58" },
+    { label: "TOTAL EXPENSE RECORDS", title: "", value: String(filteredExpenses.length), helper: "", icon: Receipt, iconBgColor: "#E8EEF8", iconColor: "#172B58" },
     { label: "TOTAL INSTITUTIONAL EXPENDITURE", title: "", value: formatAmount(totalSpending), helper: "", icon: Buildings, iconBgColor: "#E8F4EC", iconColor: "#147A3D" },
   ];
   const activeCategories = categories;
@@ -263,14 +277,20 @@ export default function AccountantExpenseCategoriesPage() {
   const breakdownTableData = pageCategories.map((item) => {
     const visual = categoryVisual(item.category);
     const Icon = visual.icon;
-    const openCategory = () =>
-      router.push(`/accountant/expense-categories/${encodeURIComponent(item.category)}`);
+    const openCategory = () => {
+      const dateQuery = selectedDateKey
+        ? `?date=${encodeURIComponent(selectedDateKey)}`
+        : "";
+      router.push(
+        `/accountant/expense-categories/${encodeURIComponent(item.category)}${dateQuery}`,
+      );
+    };
     const cellButtonClass = "-m-2 block w-[calc(100%+1rem)] cursor-pointer p-2 text-inherit";
     return {
       category: <button type="button" onClick={openCategory} className={`${cellButtonClass} text-left`}><span className="flex items-center gap-4 font-semibold text-[#282828]"><span className={`flex h-8 w-8 items-center justify-center rounded-full ${visual.tone}`}><Icon size={16} weight="fill" /></span>{item.category}</span></button>,
       records: <button type="button" onClick={openCategory} className={`${cellButtonClass} font-semibold text-[#282828]`}>{item.records}</button>,
       spending: <button type="button" onClick={openCategory} className={`${cellButtonClass} font-bold text-[#147A3D]`}>{formatAmount(item.spending)}</button>,
-      updated: <button type="button" onClick={openCategory} className={`${cellButtonClass} font-semibold text-[#525252]`}>{item.lastUpdated ? new Date(item.lastUpdated).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</button>,
+      updated: <button type="button" onClick={openCategory} className={`${cellButtonClass} font-semibold text-[#525252]`}>{item.lastUpdated ? new Date(`${item.lastUpdated}T00:00:00`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</button>,
     };
   });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarBlank, Eye, MagnifyingGlass, PencilSimple, Trash, X } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import {
@@ -17,6 +17,10 @@ export function ExpenseRecordsTable({
   itemsPerPage,
   onPageChange,
   onItemsPerPageChange,
+  search,
+  selectedDateKey,
+  onSearchChange,
+  onDateChange,
   onEdit,
   onDelete,
 }: {
@@ -27,29 +31,17 @@ export function ExpenseRecordsTable({
   itemsPerPage: number;
   onPageChange: (page: number) => void;
   onItemsPerPageChange: (items: number) => void;
+  search: string;
+  selectedDateKey: string;
+  onSearchChange: (value: string) => void;
+  onDateChange: (value: string) => void;
   onEdit: (expense: AccountantExpense) => void;
   onDelete: (expense: AccountantExpense) => void;
 }) {
-  const [search, setSearch] = useState("");
-  const [selectedDateKey, setSelectedDateKey] = useState("");
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   
   const formatDateKey = (dateKey: string) =>
     new Date(`${dateKey}T00:00:00`).toLocaleDateString("en-GB");
-
-  const filteredRows = useMemo(() => {
-    let result = rows;
-    if (selectedDateKey) {
-      result = result.filter((row) => row.expenseDate === selectedDateKey);
-    }
-    const query = search.trim().toLowerCase();
-    if (!query) return result;
-    return result.filter((row) =>
-      [row.expenseName, row.remarks ?? "", row.category, row.paymentMethod].some((value) =>
-        value.toLowerCase().includes(query),
-      ),
-    );
-  }, [rows, search, selectedDateKey]);
 
   const openAttachment = async (row: AccountantExpense) => {
     const attachment = row.attachments[0];
@@ -80,7 +72,7 @@ export function ExpenseRecordsTable({
                 <CalendarBlank size={18} weight="fill" />
                 {selectedDateKey
                   ? formatDateKey(selectedDateKey)
-                  : new Date().toLocaleDateString("en-GB")}
+                  : "Select Date"}
               </button>
             ) : (
               <div className="flex h-9 items-center gap-2 rounded-md border border-[#43C17A] bg-white p-1 shadow-sm">
@@ -94,7 +86,7 @@ export function ExpenseRecordsTable({
                   value={selectedDateKey}
                   onChange={(event) => {
                     if (event.target.value) {
-                      setSelectedDateKey(event.target.value);
+                      onDateChange(event.target.value);
                       setIsDatePickerOpen(false);
                     }
                   }}
@@ -104,7 +96,7 @@ export function ExpenseRecordsTable({
                   <button
                     type="button"
                     onClick={() => {
-                      setSelectedDateKey("");
+                      onDateChange("");
                       setIsDatePickerOpen(false);
                     }}
                     className="cursor-pointer rounded px-1 text-xs font-medium text-red-500 hover:text-red-700"
@@ -128,26 +120,37 @@ export function ExpenseRecordsTable({
             <input
               type="search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by expense name, category, or remarks..."
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="Search by expense name or remarks..."
               className="w-full bg-transparent text-[11px] font-medium outline-none placeholder:text-[#7B8190]"
             />
           </label>
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[820px] border-collapse text-left">
+      <div className="w-full overflow-x-auto lg:overflow-hidden">
+        <table className="w-full min-w-[900px] table-fixed border-collapse text-left lg:min-w-0">
+          <colgroup>
+            <col className="w-[6%]" />
+            <col className="w-[11.75%]" />
+            <col className="w-[11.75%]" />
+            <col className="w-[11.75%]" />
+            <col className="w-[11.75%]" />
+            <col className="w-[11.75%]" />
+            <col className="w-[11.75%]" />
+            <col className="w-[11.75%]" />
+            <col className="w-[11.75%]" />
+          </colgroup>
           <thead className="bg-[#F0F2F4]">
             <tr className="text-[10px] font-bold tracking-wide text-[#6B7280]">
-              <th className="px-7 py-4">#</th>
-              <th className="px-7 py-4">EXPENSE NAME</th>
-              <th className="px-7 py-4">REMARKS</th>
-              <th className="px-7 py-4">AMOUNT (Rs)</th>
-              <th className="px-7 py-4">DATE</th>
-              <th className="px-7 py-4">PAYMENT METHOD</th>
-              <th className="px-7 py-4">RECORDED BY</th>
-              <th className="px-7 py-4">ATTACHMENT</th>
-              <th className="px-7 py-4">ACTIONS</th>
+              <th className="px-4 py-4">#</th>
+              <th className="px-4 py-4">EXPENSE NAME</th>
+              <th className="px-4 py-4">REMARKS</th>
+              <th className="px-4 py-4">AMOUNT (Rs)</th>
+              <th className="px-4 py-4">DATE</th>
+              <th className="px-4 py-4">PAYMENT METHOD</th>
+              <th className="px-4 py-4">RECORDED BY</th>
+              <th className="px-4 py-4">ATTACHMENT</th>
+              <th className="px-4 py-4">ACTIONS</th>
             </tr>
           </thead>
           <tbody>
@@ -155,30 +158,60 @@ export function ExpenseRecordsTable({
               Array.from({ length: 4 }, (_, index) => (
                 <tr key={index} className="animate-pulse border-b border-[#E6E8EB]">
                   {Array.from({ length: 9 }, (_, column) => (
-                    <td key={column} className="px-7 py-5"><div className="h-4 rounded bg-gray-200" /></td>
+                    <td key={column} className="px-4 py-5"><div className="h-4 rounded bg-gray-200" /></td>
                   ))}
                 </tr>
               ))
-            ) : filteredRows.length ? (
-              filteredRows.map((row, index) => (
+            ) : rows.length ? (
+              rows.map((row, index) => (
                 <tr key={row.accountantExpenseId} className="border-b border-[#E6E8EB] text-[11px] font-medium text-[#282828]">
-                  <td className="px-7 py-5">{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                  <td className="px-7 py-5 font-semibold">{row.expenseName}</td>
-                  <td className="px-7 py-5">
-                    <div className="custom-scrollbar max-w-[240px] overflow-x-auto whitespace-nowrap pb-1" title={row.remarks ?? ""}>
+                  <td className="px-4 py-5">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                  <td className="overflow-hidden px-4 py-5 font-semibold">
+                    <div
+                      className="custom-scrollbar w-full overflow-x-auto whitespace-nowrap pb-1"
+                      title={row.expenseName}
+                    >
+                      {row.expenseName}
+                    </div>
+                  </td>
+                  <td className="overflow-hidden px-4 py-5">
+                    <div className="custom-scrollbar w-full overflow-x-auto whitespace-nowrap pb-1" title={row.remarks ?? ""}>
                       {row.remarks || "—"}
                     </div>
                   </td>
-                  <td className="px-7 py-5 font-bold">{row.amount.toLocaleString("en-IN")}</td>
-                  <td className="px-7 py-5">{new Date(`${row.expenseDate}T00:00:00`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</td>
-                  <td className="px-7 py-5"><span className="rounded-full bg-[#E2FAF0] px-3 py-1 text-[9px] font-bold text-[#147A3D]">{row.paymentMethod}</span></td>
-                  <td className="px-7 py-5">{row.createdByName}</td>
-                  <td className="px-7 py-5">
+                  <td className="overflow-hidden px-4 py-5 font-bold">
+                    <div
+                      className="custom-scrollbar w-full overflow-x-auto whitespace-nowrap pb-1"
+                      title={row.amount.toLocaleString("en-IN")}
+                    >
+                      {row.amount.toLocaleString("en-IN")}
+                    </div>
+                  </td>
+                  <td className="px-4 py-5">{new Date(`${row.expenseDate}T00:00:00`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</td>
+                  <td className="overflow-hidden px-4 py-5">
+                    <div
+                      className="custom-scrollbar w-full overflow-x-auto whitespace-nowrap pb-1"
+                      title={row.paymentMethod}
+                    >
+                      <span className="inline-flex rounded-full bg-[#E2FAF0] px-3 py-1 text-[9px] font-bold text-[#147A3D]">
+                        {row.paymentMethod}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="overflow-hidden px-4 py-5">
+                    <div
+                      className="custom-scrollbar w-full overflow-x-auto whitespace-nowrap pb-1"
+                      title={row.createdByName}
+                    >
+                      {row.createdByName}
+                    </div>
+                  </td>
+                  <td className="px-4 py-5">
                     {row.attachments.length ? (
                       <button type="button" onClick={() => void openAttachment(row)} aria-label={`View attachment for ${row.expenseName}`} className="cursor-pointer text-[#147A3D]"><Eye size={16} weight="bold" /></button>
                     ) : "—"}
                   </td>
-                  <td className="px-7 py-5">
+                  <td className="px-4 py-5">
                     <div className="flex items-center gap-3">
                       <button type="button" onClick={() => onEdit(row)} aria-label={`Update ${row.expenseName}`} className="cursor-pointer text-[#1769E0] hover:text-[#0F4FAF]"><PencilSimple size={16} weight="bold" /></button>
                       <button type="button" onClick={() => onDelete(row)} aria-label={`Delete ${row.expenseName}`} className="cursor-pointer text-[#D14343] hover:text-[#A52F2F]"><Trash size={16} weight="bold" /></button>
@@ -187,7 +220,7 @@ export function ExpenseRecordsTable({
                 </tr>
               ))
             ) : (
-              <tr><td colSpan={9} className="px-7 py-12 text-center text-sm text-[#6B7280]">No expense records found.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-12 text-center text-sm text-[#6B7280]">No expense records found.</td></tr>
             )}
           </tbody>
         </table>

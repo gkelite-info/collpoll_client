@@ -41,6 +41,8 @@ export default function RecordNewExpenseModal({
   const { userId, collegeId, accountantId } = useUser();
   const [expenseName, setExpenseName] = useState(initialExpense?.expenseName ?? "");
   const [category, setCategory] = useState(initialExpense?.category ?? initialCategory ?? "");
+  const [customCategory, setCustomCategory] = useState("");
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
   const [amount, setAmount] = useState(initialExpense ? String(initialExpense.amount) : "");
   const [expenseDate, setExpenseDate] = useState(initialExpense?.expenseDate ?? "");
   const [paymentMethod, setPaymentMethod] = useState(initialExpense?.paymentMethod ?? "");
@@ -75,6 +77,8 @@ export default function RecordNewExpenseModal({
   const resetForm = () => {
     setExpenseName(initialExpense?.expenseName ?? "");
     setCategory(initialExpense?.category ?? initialCategory ?? "");
+    setCustomCategory("");
+    setShowCustomCategory(false);
     setAmount(initialExpense ? String(initialExpense.amount) : "");
     setExpenseDate(initialExpense?.expenseDate ?? "");
     setPaymentMethod(initialExpense?.paymentMethod ?? "");
@@ -148,56 +152,65 @@ export default function RecordNewExpenseModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    setExpenseName(initialExpense?.expenseName ?? "");
-    setCategory(initialExpense?.category ?? initialCategory ?? "");
-    setAmount(initialExpense ? String(initialExpense.amount) : "");
-    setExpenseDate(initialExpense?.expenseDate ?? "");
-    setPaymentMethod(initialExpense?.paymentMethod ?? "");
-    setSelectedEducationIds(initialExpense?.collegeEducationId ? [initialExpense.collegeEducationId] : []);
-    setRemarks(initialExpense?.remarks ?? "");
-    setAttachments([]);
-    setIsEducationOpen(false);
+    const timeout = window.setTimeout(() => {
+      setExpenseName(initialExpense?.expenseName ?? "");
+      setCategory(initialExpense?.category ?? initialCategory ?? "");
+      setCustomCategory("");
+      setShowCustomCategory(false);
+      setAmount(initialExpense ? String(initialExpense.amount) : "");
+      setExpenseDate(initialExpense?.expenseDate ?? "");
+      setPaymentMethod(initialExpense?.paymentMethod ?? "");
+      setSelectedEducationIds(initialExpense?.collegeEducationId ? [initialExpense.collegeEducationId] : []);
+      setRemarks(initialExpense?.remarks ?? "");
+      setAttachments([]);
+      setIsEducationOpen(false);
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
   }, [initialCategory, initialExpense, isOpen]);
 
   useEffect(() => {
     if (!isOpen || !accountantId || !collegeId) return;
 
     let isCurrent = true;
-    setIsEducationLoading(true);
+    const timeout = window.setTimeout(() => {
+      setIsEducationLoading(true);
 
-    fetchAccountantEducationOptions(accountantId, collegeId)
-      .then((options) => {
-        if (!isCurrent) return;
+      fetchAccountantEducationOptions(accountantId, collegeId)
+        .then((options) => {
+          if (!isCurrent) return;
 
-        setEducationOptions(options);
-        setSelectedEducationIds((currentIds) => {
-          if (
-            currentIds.length > 0 &&
-            currentIds.every((id) =>
-              options.some((option) => option.collegeEducationId === id)
-            )
-          ) {
-            return currentIds;
-          }
-          return options.length === 1 ? [options[0].collegeEducationId] : [];
+          setEducationOptions(options);
+          setSelectedEducationIds((currentIds) => {
+            if (
+              currentIds.length > 0 &&
+              currentIds.every((id) =>
+                options.some((option) => option.collegeEducationId === id)
+              )
+            ) {
+              return currentIds;
+            }
+            return options.length === 1 ? [options[0].collegeEducationId] : [];
+          });
+        })
+        .catch((error) => {
+          if (!isCurrent) return;
+          setEducationOptions([]);
+          setSelectedEducationIds([]);
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Unable to load assigned education types.",
+          );
+        })
+        .finally(() => {
+          if (isCurrent) setIsEducationLoading(false);
         });
-      })
-      .catch((error) => {
-        if (!isCurrent) return;
-        setEducationOptions([]);
-        setSelectedEducationIds([]);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Unable to load assigned education types.",
-        );
-      })
-      .finally(() => {
-        if (isCurrent) setIsEducationLoading(false);
-      });
+    }, 0);
 
     return () => {
       isCurrent = false;
+      window.clearTimeout(timeout);
     };
   }, [accountantId, collegeId, isOpen]);
 
@@ -259,12 +272,30 @@ export default function RecordNewExpenseModal({
               />
             </label>
 
-            <label className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5">
               <span className="text-[12px] font-semibold text-[#282828]">
                 Category <RequiredMark />
               </span>
-              <select required value={category} onChange={(event) => setCategory(event.target.value)} className="h-9 cursor-pointer rounded-md border border-[#BFCDBE] bg-[#F2F3F4] px-3 text-[12px] font-medium text-[#282828] outline-none focus:border-[#43C17A]">
+              <select
+                required
+                value={showCustomCategory ? "Other" : category}
+                onChange={(event) => {
+                  if (event.target.value === "Other") {
+                    setCategory("");
+                    setCustomCategory("");
+                    setShowCustomCategory(true);
+                    return;
+                  }
+                  setCategory(event.target.value);
+                  setShowCustomCategory(false);
+                }}
+                className="h-9 cursor-pointer rounded-md border border-[#BFCDBE] bg-[#F2F3F4] px-3 text-[12px] font-medium text-[#282828] outline-none focus:border-[#43C17A]"
+              >
                 <option value="">Select a category</option>
+                {category &&
+                  !["Salaries", "Events", "Infrastructure", "Utilities", "Internet & Network", "Sports", "Safety and Security", "Administration"].includes(category) && (
+                    <option value={category}>{category}</option>
+                  )}
                 <option value="Salaries">Salaries</option>
                 <option value="Events">Events</option>
                 <option value="Infrastructure">Infrastructure</option>
@@ -275,7 +306,43 @@ export default function RecordNewExpenseModal({
                 <option value="Administration">Administration</option>
                 <option value="Other">Other</option>
               </select>
-            </label>
+              {showCustomCategory && (
+                <div className="rounded-md border border-[#BFCDBE] bg-white p-2 shadow-sm">
+                  <input
+                    type="text"
+                    autoFocus
+                    maxLength={100}
+                    value={customCategory}
+                    onChange={(event) => setCustomCategory(event.target.value)}
+                    placeholder="Enter category"
+                    className="h-8 w-full rounded border border-[#D6DDD5] bg-white px-2 text-[12px] font-medium text-[#17213D] outline-none placeholder:text-[#9AA4B2] focus:border-[#43C17A]"
+                  />
+                  <div className="mt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomCategory("");
+                        setShowCustomCategory(false);
+                      }}
+                      className="h-7 cursor-pointer rounded border border-[#BFCDBE] px-3 text-[11px] font-semibold text-[#525252]"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!customCategory.trim()}
+                      onClick={() => {
+                        setCategory(customCategory.trim());
+                        setShowCustomCategory(false);
+                      }}
+                      className="h-7 cursor-pointer rounded bg-[#086C20] px-3 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div
               ref={educationDropdownRef}
