@@ -37,6 +37,9 @@ export async function saveBulkCalendarEvent(payload: {
       .eq("bulkCalendarEventId", payload.bulkCalendarEventId);
 
     if (error) {
+      if (error.code === '23505') {
+        return { success: false, conflict: true, error: "This exact event already exists at this time." };
+      }
       console.error("updateBulkCalendarEvent error:", error);
       return { success: false, error };
     }
@@ -70,6 +73,9 @@ export async function saveBulkCalendarEvent(payload: {
     .single();
 
   if (error) {
+    if (error.code === '23505') {
+      return { success: false, conflict: true, error: "This exact event already exists at this time." };
+    }
     console.error("insertBulkCalendarEvent error:", error);
     return { success: false, error };
   }
@@ -144,6 +150,9 @@ export async function saveBulkCalendarEventSections(
       .insert(inserts);
 
     if (insertError) {
+      if (insertError.code === '23505') {
+          return { success: false, conflict: true, error: "This section is already scheduled for this exact event." };
+      }
       console.error("insertBulkCalendarEventSections error:", insertError);
       return { success: false, error: insertError };
     }
@@ -218,6 +227,7 @@ export async function fetchBulkCalendarEvents(
     facultyId?: number;
     startDate?: string;
     endDate?: string;
+    types?: string[];
   } = {}
 ) {
   let query = supabase
@@ -274,6 +284,9 @@ export async function fetchBulkCalendarEvents(
   }
   if (filters.endDate) {
     query = query.lte("fromDate", filters.endDate);
+  }
+  if (filters.types && filters.types.length > 0) {
+    query = query.in("type", filters.types);
   }
 
   const { data, error } = await query.order("fromTime", { ascending: true });

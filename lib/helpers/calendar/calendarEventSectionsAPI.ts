@@ -136,6 +136,9 @@ export async function saveCalendarEventSections(
             .insert(inserts);
 
         if (insertError) {
+            if (insertError.code === '23505') {
+                return { success: false, conflict: true, error: "This section is already scheduled for this exact event." };
+            }
             console.error("insert sections error:", insertError);
             return { success: false, error: insertError };
         }

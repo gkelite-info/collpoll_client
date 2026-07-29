@@ -26,13 +26,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onEditRequest,
   onEventClick,
 }) => {
-  const matchesFilter = (event: CalendarEvent): boolean => {
-    if (activeTab === "All") {
-      return true;
-    }
-
-    return event.type.toLowerCase() === activeTab.toLowerCase();
-  };
 
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [hoveredEvent, setHoveredEvent] = useState<CalendarEvent | null>(null);
@@ -154,7 +147,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                     new Map(
                       events
                         .filter((e) => e.startTime.startsWith(dayObj.fullDate))
-                        .filter(matchesFilter)
                         .map((e) => [
                           `${e.id}-${e.startTime}-${e.endTime}`,
                           e,
