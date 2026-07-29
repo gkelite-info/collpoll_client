@@ -276,17 +276,20 @@ import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studen
 import { useTranslations } from "next-intl";
 import AiAttendanceNotificationBanner from "@/app/utils/AiAttendanceNotificationBanner";
 import { motion, AnimatePresence } from "framer-motion";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import SubjectAttendanceShimmer from "../shimmer/subjectAttendanceShimmer";
 
 interface CardItem {
   id: number;
   icon: React.ReactNode;
   value: string | number;
-  label: string;
+  label: React.ReactNode;
   style?: string;
   iconBgColor?: string;
   iconColor?: string;
   underlineValue?: boolean;
   totalPercentage?: string | number;
+  totalPercentageColor?: string;
 }
 
 type DashboardData = Awaited<ReturnType<typeof getStudentDashboardData>>;
@@ -329,7 +332,7 @@ export default function SubjectAttendance() {
       );
 
       setDashboardData(data);
-      setTotalRecords(data.totalCount || 0);
+      setTotalRecords(data.subjectWiseStats?.length || 0);
 
       setLoading(false);
     }
@@ -337,7 +340,14 @@ export default function SubjectAttendance() {
     loadData();
   }, [userId, currentPage, userLoading]);
 
-  // Notice how dynamic cards match screenshot logic
+  const todayPercentage = dashboardData?.todayStats.total
+    ? Math.round(
+        (dashboardData.todayStats.attended /
+          dashboardData.todayStats.total) *
+          100,
+      )
+    : 0;
+
   const cards: CardItem[] = [
     {
       id: 1,
@@ -345,10 +355,19 @@ export default function SubjectAttendance() {
       value: dashboardData
         ? `${dashboardData.todayStats.attended}/${dashboardData.todayStats.total}`
         : "0/0",
-      label: t("Today Total Classes"),
+      label: (
+        <>
+          {t("Today Total Classes")}
+          <span className="block whitespace-nowrap text-[11px] tracking-tight max-md:whitespace-normal">
+            Present Classes / Total Classes
+          </span>
+        </>
+      ),
       style: "bg-[#FFEDDA] w-44 max-md:bg-[#FFEDDA]",
       iconBgColor: "#FFBB70",
       iconColor: "#EFEFEF",
+      totalPercentage: `${todayPercentage}%`,
+      totalPercentageColor: "#282828",
     },
     {
       id: 2,
@@ -356,13 +375,17 @@ export default function SubjectAttendance() {
       value: dashboardData
         ? `${dashboardData.cards.attended}/${dashboardData.cards.totalClasses}`
         : "0/0",
-      label: t("Semester Attendance"),
-      style: "bg-[#FFEDDA] w-44",
+      label: (
+        <>
+          {t("Sem Attendance")}
+          <span className="block whitespace-nowrap text-[11px] tracking-tight max-md:whitespace-normal">
+            Present Classes / Total Classes
+          </span>
+        </>
+      ),
+      style: "bg-[#CEE6FF] w-44",
       iconBgColor: "#7764FF",
       iconColor: "#EFEFEF",
-      totalPercentage: dashboardData
-        ? `${dashboardData.cards.percentage}%`
-        : "0%",
     },
   ];
 
@@ -376,7 +399,10 @@ export default function SubjectAttendance() {
     { title: t("Actions"), key: "actions" },
   ];
 
-  const rawTableData = dashboardData?.subjectWiseStats || [];
+  const rawTableData = (dashboardData?.subjectWiseStats || []).slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage,
+  );
 
   const tableData =
     rawTableData.map((row) => ({
@@ -406,12 +432,16 @@ export default function SubjectAttendance() {
     }
   };
 
+  if (loading && !dashboardData) {
+    return <SubjectAttendanceShimmer />;
+  }
+
   return (
     <>
       <div className="flex flex-col pb-3 max-md:pb-0">
         <div className="flex justify-between items-center">
           <div className="flex flex-col w-[50%] max-md:w-full">
-            <div className="flex gap-0 items-center">
+            <div className="flex gap-2 items-center">
               <button
                 onClick={() => handleCardClick(1)}
                 className="cursor-pointer"
@@ -449,6 +479,7 @@ export default function SubjectAttendance() {
                 iconColor={card.iconColor}
                 underlineValue={card.underlineValue}
                 totalPercentage={card.totalPercentage}
+                totalPercentageColor={card.totalPercentageColor}
               />
             ))}
           </div>
@@ -459,6 +490,8 @@ export default function SubjectAttendance() {
               absentPercent={dashboardData?.semesterStats.absent || 0}
               leavePercent={dashboardData?.semesterStats.leave || 0}
               overallPercent={dashboardData?.cards.percentage || 0}
+              title={t("Sem Attendance")}
+              percentageClassName="font-normal"
             />
           </div>
 
@@ -598,7 +631,7 @@ export default function SubjectAttendance() {
             )}
           </div>
 
-          {totalPages > 1 && (
+          {false && totalPages > 1 && (
             <div className="flex justify-end items-center gap-3 mt-6 mb-4 w-full">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -639,6 +672,17 @@ export default function SubjectAttendance() {
               >
                 ›
               </button>
+            </div>
+          )}
+          {totalRecords > 0 && (
+            <div className="mt-6 mb-4 w-full">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalRecords}
+                itemsPerPage={rowsPerPage}
+                onPageChange={setCurrentPage}
+                alwaysShow
+              />
             </div>
           )}
         </div>

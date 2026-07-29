@@ -178,7 +178,7 @@ export default function AssignmentCard({
                   <div className="flex items-center justify-end gap-3 w-full">
                     <div className="flex items-center gap-3">
                       <div
-                        className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer"
+                        className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center"
                         onClick={() => handleDownload(index, item)}
                       >
                         <FiDownload className="text-md text-[#57C788]" />
@@ -202,11 +202,11 @@ export default function AssignmentCard({
                     </h4>
                   </div>
 
-                  {activeView === "previous" && (
-                    <div className="flex flex-col items-center justify-center mt-auto pb-1 mr-4">
+                  {(uploadedFiles[index] || item.existingFilePath) && (
+                    <div className="flex flex-col items-center justify-center mt-auto mr-4 translate-y-3">
                       <div className="rounded-full w-[62px] h-[62px] bg-[#16284F] flex flex-col items-center justify-center px-1">
                         <p className="text-white text-[14px] font-medium leading-none">
-                          {item.marksScored ?? "-"}
+                          {item.marksScored ?? 0}
                         </p>
                         <span className="my-1 h-px w-9 bg-white/70" />
                         <p className="text-white text-[14px] font-medium leading-none">
@@ -223,7 +223,7 @@ export default function AssignmentCard({
 
               <div className="flex items-center gap-5 mt-auto">
                 <div className="flex items-center gap-2">
-                  <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer">
+                  <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center">
                     <UserCircle className="text-md text-[#57C788]" />
                   </div>
                   <p className="text-[#474747] text-xs truncate max-w-[120px]">
@@ -305,7 +305,7 @@ export default function AssignmentCard({
                         e.stopPropagation();
                         handleDownload(index, item);
                       }}
-                      className="w-[20px] h-[20px] rounded-full border border-[#43C17A] flex items-center justify-center text-[#43C17A] cursor-pointer"
+                      className="w-[20px] h-[20px] rounded-full border border-[#43C17A] flex items-center justify-center text-[#43C17A]"
                     >
                       <FiDownload size={10} strokeWidth={3} />
                     </button>
@@ -366,16 +366,29 @@ export default function AssignmentCard({
                         </button>
                       )}
                     </>
-                  ) : (
+                  ) : (uploadedFiles[index] || item.existingFilePath) ? (
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] text-gray-500 font-medium">
-                        Marks :
+                        {t("Marks")} :
                       </span>
                       <span className="bg-[#16284F] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-                        {item.marksScored ?? "-"}/{item.marksTotal ?? "-"}
+                        {item.marksScored ?? 0}/{item.marksTotal ?? "-"}
                       </span>
                     </div>
+                  ) : (
+                    <span />
                   )}
+                  {activeView === "active" &&
+                    (uploadedFiles[index] || item.existingFilePath) && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-gray-500 font-medium">
+                          {t("Marks")} :
+                        </span>
+                        <span className="bg-[#16284F] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                          {item.marksScored ?? 0}/{item.marksTotal ?? "-"}
+                        </span>
+                      </div>
+                    )}
                   <h4
                     className="text-[#43C17A] text-[11px] font-semibold cursor-pointer"
                     onClick={() => openModal(item)}

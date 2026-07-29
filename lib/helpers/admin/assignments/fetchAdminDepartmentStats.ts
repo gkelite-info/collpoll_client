@@ -136,6 +136,79 @@ export async function fetchAdminDepartmentStats(
   return promise;
 }
 
+export async function fetchAdminAllEducationStats(
+  collegeId: number,
+  collegeEducationIds: number[],
+  page: number = 1,
+  limit: number = 10,
+  search: string = "",
+  deptFilter: string = "All",
+  yearFilter: string = "All",
+) {
+  if (!collegeId || collegeEducationIds.length === 0) {
+    return {
+      data: [],
+      totalCount: 0,
+      uniqueDepts: ["All"],
+      uniqueYears: ["All"],
+      error: null,
+    };
+  }
+
+  const results = await Promise.all(
+    collegeEducationIds.map(async (educationId) => {
+      const result = await fetchAdminDepartmentStats(
+        collegeId,
+        educationId,
+        1,
+        10000,
+        search,
+        deptFilter,
+        yearFilter,
+      );
+
+      return {
+        ...result,
+        data: (result.data || []).map(
+          (item: { id: string | number; [key: string]: unknown }) => ({
+          ...item,
+          id: `${educationId}-${item.id}`,
+          }),
+        ),
+      };
+    }),
+  );
+
+  const allData = results.flatMap((result) => result.data || []);
+  const from = (page - 1) * limit;
+
+  return {
+    data: allData.slice(from, from + limit),
+    totalCount: allData.length,
+    uniqueDepts: [
+      "All",
+      ...Array.from(
+        new Set(
+          results.flatMap((result) =>
+            (result.uniqueDepts || []).filter((value: string) => value !== "All"),
+          ),
+        ),
+      ),
+    ],
+    uniqueYears: [
+      "All",
+      ...Array.from(
+        new Set(
+          results.flatMap((result) =>
+            (result.uniqueYears || []).filter((value: string) => value !== "All"),
+          ),
+        ),
+      ),
+    ],
+    error: results.find((result) => result.error)?.error || null,
+  };
+}
+
 async function executeFetch(
   collegeId: number,
   collegeEducationId: number,

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CaretDown, Check, X, FilePdf } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { fetchAssignmentTableData } from "@/lib/helpers/faculty/assignment/fetchAssignmentTableData";
+import type { AssignmentSubmissionFilter } from "@/lib/helpers/faculty/assignment/fetchAssignmentTableData";
 import { generateSubmissionSignedUrl } from "@/lib/helpers/faculty/assignment/generateSubmissionSignedUrl";
 import { updateSubmissionEvaluation } from "@/lib/helpers/faculty/assignment/updateSubmissionEvaluation";
 import { Avatar } from "@/app/utils/Avatar";
-import { Pagination } from "@/app/(screens)/faculty/assignments/components/pagination";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 type Status = "Evaluated" | "Pending" | "Not Submitted";
 
@@ -27,12 +28,14 @@ interface Row {
 
 export default function AssignmentTable({
   assignmentId,
+  selectedDate,
 }: {
   assignmentId: string;
+  selectedDate: Date;
 }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"All" | Status>("All");
+  const [filter, setFilter] = useState<AssignmentSubmissionFilter>("All");
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [tempData, setTempData] = useState<{
@@ -44,17 +47,36 @@ export default function AssignmentTable({
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const pageSize = 10;
+  const selectedDateKey = [
+    selectedDate.getFullYear(),
+    String(selectedDate.getMonth() + 1).padStart(2, "0"),
+    String(selectedDate.getDate()).padStart(2, "0"),
+  ].join("-");
+  const previousDateKey = useRef(selectedDateKey);
 
   useEffect(() => {
+    if (previousDateKey.current !== selectedDateKey) {
+      previousDateKey.current = selectedDateKey;
+      if (page !== 1) {
+        setPage(1);
+        return;
+      }
+    }
     if (assignmentId) fetchDynamicData(page);
-  }, [assignmentId, page]);
+  }, [assignmentId, page, filter, selectedDateKey]);
 
   async function fetchDynamicData(currentPage: number) {
     try {
       setLoading(true);
 
       const { students, submissions, totalCount: fetchedCount } =
-        await fetchAssignmentTableData(assignmentId, currentPage, pageSize);
+        await fetchAssignmentTableData(
+          assignmentId,
+          currentPage,
+          pageSize,
+          filter,
+          selectedDateKey,
+        );
 
       setTotalCount(fetchedCount);
 
@@ -152,9 +174,6 @@ export default function AssignmentTable({
     setShowConfirm(false);
   };
 
-  const filtered =
-    filter === "All" ? rows : rows.filter((r) => r.status === filter);
-
   if (loading) {
     return (
       <div className="w-full animate-pulse">
@@ -251,7 +270,10 @@ export default function AssignmentTable({
         <span className="text-gray-500">Sort :</span>
         <select
           value={filter}
-          onChange={(e) => setFilter(e.target.value as any)}
+          onChange={(e) => {
+            setPage(1);
+            setFilter(e.target.value as AssignmentSubmissionFilter);
+          }}
           className="rounded-full bg-green-50 px-2 py-1 text-green-600 outline-none border-none cursor-pointer"
         >
           <option>All</option>
@@ -277,13 +299,22 @@ export default function AssignmentTable({
             </tr>
           </thead>
           <tbody className="font-poppins">
-            {filtered.map((r, i) => (
+            {rows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={9}
+                  className="h-40 px-4 py-10 text-center text-sm font-medium text-gray-400"
+                >
+                  No Data Available
+                </td>
+              </tr>
+            ) : rows.map((r, i) => (
               <tr
                 key={r.id}
                 className="text-[#515151] border-b border-gray-50 hover:bg-gray-50"
               >
                 <td className="px-4 py-3 font-medium">
-                  {String(i + 1).padStart(2, "0")}
+                  {String((page - 1) * pageSize + i + 1).padStart(2, "0")}
                 </td>
                 <td className="px-4 py-3">
                   <Avatar
@@ -408,13 +439,14 @@ export default function AssignmentTable({
           </tbody>
         </table>
       </div>
-      {!loading && totalCount > pageSize && (
+      {!loading && totalCount > 0 && (
         <div className="mt-4 pb-2">
           <Pagination
             currentPage={page}
             totalItems={totalCount}
             itemsPerPage={pageSize}
             onPageChange={(p) => setPage(p)}
+            alwaysShow
           />
         </div>
       )}

@@ -101,6 +101,9 @@ interface SemesterAttendanceCardProps {
   absentPercent?: number;
   leavePercent?: number;
   overallPercent?: number;
+  title?: string;
+  percentageClassName?: string;
+  highlighted?: boolean;
 }
 
 export default function SemesterAttendanceCard({
@@ -108,6 +111,9 @@ export default function SemesterAttendanceCard({
   absentPercent = 0,
   leavePercent = 0,
   overallPercent = 0,
+  title,
+  percentageClassName = "font-bold",
+  highlighted = false,
 }: SemesterAttendanceCardProps) {
   const t = useTranslations("Attendance.student");
 
@@ -135,17 +141,25 @@ export default function SemesterAttendanceCard({
   return (
     <>
       {/* 🖥️ DESKTOP VIEW */}
-      <div className="hidden md:flex h-32 flex-1 min-w-[16rem] rounded-lg p-3 bg-[#E9FFF0] flex-col justify-between shadow-sm">
-        <div className="flex justify-between mb-2 items-center">
+      <div
+        className={`hidden md:flex h-32 flex-1 min-w-[16rem] rounded-lg p-3 flex-col justify-between shadow-sm ${
+          highlighted
+            ? "bg-[#DDF8E7] ring-1 ring-[#43C17A]/25"
+            : "bg-[#E9FFF0]"
+        }`}
+      >
+        <div className="flex justify-between gap-3 mb-2 items-center">
           <div className="flex items-center gap-2">
             <div className="bg-[#43C17A] w-9 h-8 rounded-sm flex items-center justify-center">
               <CalendarCheck size={24} color="#EFEFEF" weight="fill" />
             </div>
             <p className="text-[#282828] font-semibold">
-              {t("Semester Attendance")}
+              {title ?? t("Semester Attendance")}
             </p>
           </div>
-          <p className="text-[#43C17A] text-2xl font-bold">{overallPercent}%</p>
+          <p className={`shrink-0 text-[#43C17A] text-2xl ${percentageClassName}`}>
+            {overallPercent}%
+          </p>
         </div>
 
         <div className="flex items-end justify-between gap-2">
@@ -190,14 +204,20 @@ export default function SemesterAttendanceCard({
       </div>
 
       {/* 📱 MOBILE VIEW (Stacked horizontal bars matching screenshot) */}
-      <div className="flex md:hidden w-full rounded-lg p-3 bg-[#E9FFF0] flex-col shadow-sm gap-2">
+      <div
+        className={`flex md:hidden w-full rounded-lg p-3 flex-col shadow-sm gap-2 ${
+          highlighted
+            ? "bg-[#DDF8E7] ring-1 ring-[#43C17A]/25"
+            : "bg-[#E9FFF0]"
+        }`}
+      >
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <div className="bg-[#43C17A] w-7 h-7 rounded flex items-center justify-center">
               <CalendarCheck size={18} color="#EFEFEF" weight="fill" />
             </div>
             <p className="text-[#282828] font-semibold text-sm">
-              {t("Semester Attendance")}
+              {title ?? t("Semester Attendance")}
             </p>
           </div>
         </div>

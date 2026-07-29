@@ -29,6 +29,7 @@ export default function AdminAssignmentDetailPage() {
 
   const [assignment, setAssignment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
     if (assignmentId) fetchAssignmentDetails();
@@ -102,7 +103,7 @@ export default function AdminAssignmentDetailPage() {
     : [];
 
   return (
-    <main className="px-4 py-4 min-h-screen bg-[#F3F6F9]">
+    <main className="px-4 py-4 min-h-screen bg-[#F4F4F4]">
       <section className="flex mb-4 items-center justify-between">
         <div className="flex text-black items-start gap-2">
           <button
@@ -150,12 +151,19 @@ export default function AdminAssignmentDetailPage() {
         )}
 
         <div className="flex-[1.6]">
-          <WorkWeekCalendar style="h-full" />
+          <WorkWeekCalendar
+            style="h-full"
+            activeDate={selectedDate}
+            onDateSelect={setSelectedDate}
+          />
         </div>
       </section>
 
       <section>
-        <AssignmentTable assignmentId={assignmentId.toString()} />
+        <AssignmentTable
+          assignmentId={assignmentId.toString()}
+          selectedDate={selectedDate}
+        />
       </section>
     </main>
   );

@@ -140,6 +140,7 @@ type CardProps = {
   iconColor?: string;
   underlineValue?: boolean;
   totalPercentage?: string | number;
+  totalPercentageColor?: string;
   to?: string;
   onClick?: () => void;
   iconStyle?: string;
@@ -158,6 +159,7 @@ export default function CardComponent({
   iconColor = "#000000",
   underlineValue = false,
   totalPercentage,
+  totalPercentageColor,
   onClick,
   iconStyle
 
@@ -192,7 +194,7 @@ export default function CardComponent({
           <div className="flex items-baseline gap-1">
             <span
               className="text-lg font-semibold"
-              style={{ color: iconBgColor }}
+              style={{ color: totalPercentageColor ?? iconBgColor }}
             >
               {totalPercentage}
             </span>

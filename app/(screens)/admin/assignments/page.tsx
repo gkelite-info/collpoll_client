@@ -4,7 +4,10 @@ import {
 } from "@phosphor-icons/react";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { fetchAdminDepartmentStats } from "@/lib/helpers/admin/assignments/fetchAdminDepartmentStats";
+import {
+  fetchAdminAllEducationStats,
+  fetchAdminDepartmentStats,
+} from "@/lib/helpers/admin/assignments/fetchAdminDepartmentStats";
 import AssignmentCard from "./components/assignmentCard";
 import QuizBasic from "./components/quizBasic";
 import DiscussionForumBasic from "./components/discussionForumBasic";
@@ -22,6 +25,7 @@ import { Pagination } from "../academic-setup/components/pagination";
 import { FilterDropdown } from "../academics/components/filterDropdown";
 
 // FilterDropdown removed as we will use inline selects matching Calendar UI
+let rememberedEducationId = "All";
 
 const AssignmentPage = () => {
   const searchParams = useSearchParams();
@@ -33,7 +37,7 @@ const AssignmentPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [dataList, setDataList] = useState<any[]>([]);
-  const { collegeId, collegeEducationId: defaultEducationId, collegeEducationType: defaultEducationType } = useAdmin();
+  const { collegeId, collegeEducationType: defaultEducationType } = useAdmin();
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [totalRecords, setTotalRecords] = useState(0);
   const [uniqueDepts, setUniqueDepts] = useState<string[]>(["All"]);
@@ -42,7 +46,9 @@ const AssignmentPage = () => {
   const { userId } = useUser();
 
   const [educations, setEducations] = useState<any[]>([]);
-  const [selectedEducation, setSelectedEducation] = useState<any>(null);
+  const [educationFilter, setEducationFilter] = useState(
+    rememberedEducationId,
+  );
 
   useEffect(() => {
     if (!collegeId) return;
@@ -57,11 +63,21 @@ const AssignmentPage = () => {
     };
   }, [collegeId]);
 
-  const currentEducationId = selectedEducation?.collegeEducationId ?? defaultEducationId;
-  const currentEducationType = selectedEducation?.collegeEducationType ?? defaultEducationType;
+  const activeEducation =
+    educationFilter === "All"
+      ? null
+      : educations.find(
+          (education) =>
+            education.collegeEducationId.toString() === educationFilter,
+        );
+  const currentEducationId = activeEducation?.collegeEducationId ?? null;
+  const currentEducationType =
+    activeEducation?.collegeEducationType ??
+    (educationFilter === "All" ? "" : defaultEducationType);
   const isSchool = isSchoolEducation(currentEducationType);
   const isInter = currentEducationType === "Inter";
-  const isWaitingForEducation = !userId || !currentEducationId || !collegeId || educations.length === 0;
+  const isWaitingForEducation =
+    !userId || !collegeId || educations.length === 0;
   const showShimmer = isWaitingForEducation || loading;
 
   useEffect(() => {
@@ -71,10 +87,10 @@ const AssignmentPage = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, deptFilter, yearFilter, currentEducationId]);
+  }, [debouncedSearch, deptFilter, yearFilter, educationFilter]);
 
   useEffect(() => {
-    if (!userId || !currentEducationId || !collegeId) return;
+    if (!userId || !collegeId || educations.length === 0) return;
     let isMounted = true;
 
     const loadData = async () => {
@@ -82,15 +98,26 @@ const AssignmentPage = () => {
         setLoading(true);
         if (!isMounted) return;
 
-        const res = await fetchAdminDepartmentStats(
-          collegeId,
-          currentEducationId,
-          currentPage,
-          cardsPerPage,
-          debouncedSearch,
-          deptFilter,
-          yearFilter
-        );
+        const res =
+          educationFilter === "All"
+            ? await fetchAdminAllEducationStats(
+                collegeId,
+                educations.map((education) => education.collegeEducationId),
+                currentPage,
+                cardsPerPage,
+                debouncedSearch,
+                deptFilter,
+                yearFilter,
+              )
+            : await fetchAdminDepartmentStats(
+                collegeId,
+                currentEducationId!,
+                currentPage,
+                cardsPerPage,
+                debouncedSearch,
+                deptFilter,
+                yearFilter,
+              );
 
         if (isMounted) {
           setDataList(res.data || []);
@@ -109,7 +136,7 @@ const AssignmentPage = () => {
     };
     loadData();
     return () => { isMounted = false; };
-  }, [userId, currentPage, debouncedSearch, deptFilter, yearFilter, currentEducationId, collegeId]);
+  }, [userId, currentPage, debouncedSearch, deptFilter, yearFilter, currentEducationId, collegeId, educationFilter, educations]);
 
   const totalPages = Math.ceil(totalRecords / cardsPerPage);
 
@@ -157,15 +184,12 @@ const AssignmentPage = () => {
         <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap gap-4 border border-gray-100">
           <FilterDropdown
             label="Education Type"
-            value={currentEducationId?.toString() ?? "All"}
+            value={educationFilter}
             onChange={(val) => {
-              if (val === "All") return;
-              const edu = educations.find((ed) => ed.collegeEducationId.toString() === val);
-              if (edu) {
-                setSelectedEducation(edu);
-                setDeptFilter("All");
-                setYearFilter("All");
-              }
+              rememberedEducationId = val;
+              setEducationFilter(val);
+              setDeptFilter("All");
+              setYearFilter("All");
             }}
             options={["All", ...educations.map((e) => e.collegeEducationId.toString())]}
             displayModifier={(val) => {
