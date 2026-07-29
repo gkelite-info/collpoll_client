@@ -173,7 +173,8 @@ export default function LeaveRequestsTable({ view }: LeaveRequestsTableProps) {
   }, [query]);
 
   useEffect(() => {
-    setPage(1);
+    const timeout = window.setTimeout(() => setPage(1), 0);
+    return () => window.clearTimeout(timeout);
   }, [activeStatus, selectedDateKey, view]);
 
   const loadRequests = useCallback(async () => {
@@ -247,7 +248,8 @@ export default function LeaveRequestsTable({ view }: LeaveRequestsTableProps) {
   ]);
 
   useEffect(() => {
-    loadRequests();
+    const timeout = window.setTimeout(() => void loadRequests(), 0);
+    return () => window.clearTimeout(timeout);
   }, [loadRequests]);
 
   useEffect(() => {

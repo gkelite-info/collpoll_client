@@ -1,10 +1,107 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
+
+import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import LiveAnnouncementsCard from "@/app/utils/liveAnnouncementsCard";
+import { useUser } from "@/app/utils/context/UserContext";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
+import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
+
+type AnnouncementItem = {
+  collegeAnnouncementId: number;
+  title: string;
+  date: string;
+  createdAt: string;
+  type: string;
+  targetRoles?: string[] | null;
+  createdByRole: string;
+};
+
+type AnnouncementCardItem = {
+  collegeAnnouncementId: number;
+  title: string;
+  date: string;
+  createdAt: string;
+  type: string;
+  targetRoles?: string[];
+  image: string;
+  imgHeight: string;
+  cardBg: string;
+  imageBg: string;
+  professor: string;
+};
+
+const typeIcons: Record<string, string> = {
+  class: "/class.png",
+  exam: "/exam.png",
+  meeting: "/meeting.png",
+  holiday: "/calendar-3d.png",
+  event: "/event.png",
+  notice: "/clip.png",
+  result: "/result.jpg",
+  timetable: "/timetable.png",
+  placement: "/placement.png",
+  emergency: "/emergency.png",
+  finance: "/finance.jpg",
+  other: "/others.png",
+};
+
+const formatRole = (role: string) =>
+  role?.replaceAll("_", " ").replace(/\b\w/g, (character) =>
+    character.toUpperCase(),
+  );
 
 export default function LeaveRequestRightPanel() {
+  const { role, collegeId, userId } = useUser();
+  const [announcements, setAnnouncements] = useState<AnnouncementCardItem[]>([]);
+  const [view, setView] = useState<"my" | "others">("others");
+
+  const loadAnnouncements = useCallback(async () => {
+    if (!collegeId || !userId || !role) {
+      setAnnouncements([]);
+      return;
+    }
+
+    try {
+      const response = await fetchCollegeAnnouncements({
+        collegeId,
+        userId,
+        role,
+        view,
+        page: 1,
+        limit: 20,
+      });
+
+      setAnnouncements(
+        (response.data as AnnouncementItem[]).map((item) => ({
+          collegeAnnouncementId: item.collegeAnnouncementId,
+          title: item.title,
+          date: item.date,
+          createdAt: item.createdAt,
+          type: item.type,
+          targetRoles: item.targetRoles ?? undefined,
+          image: typeIcons[item.type] || "/clip.png",
+          imgHeight: "h-10",
+          cardBg: "#E8F8EF",
+          imageBg: "#D3F1E0",
+          professor:
+            view === "my"
+              ? `For ${item.targetRoles?.map(formatRole).join(", ") || "All"}`
+              : `By ${formatRole(item.createdByRole)}`,
+        })),
+      );
+    } catch (error) {
+      console.error("Unable to load accountant announcements", error);
+      setAnnouncements([]);
+    }
+  }, [collegeId, role, userId, view]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => void loadAnnouncements(), 0);
+    return () => window.clearTimeout(timeout);
+  }, [loadAnnouncements]);
+
   return (
     <aside className="hidden min-h-0 w-[32%] flex-col p-2 pr-0 md:flex">
       <div className="flex justify-end">
@@ -12,9 +109,17 @@ export default function LeaveRequestRightPanel() {
           <CourseScheduleCard isVisibile={false} fullWidth />
         </div>
       </div>
+
       <WorkWeekCalendar style="mt-3 max-w-full" />
+
       <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto">
-        <LiveAnnouncementsCard />
+        <AnnouncementsCard
+          announceCard={announcements}
+          height="80vh"
+          currentView={view}
+          onViewChange={setView}
+          refreshAnnouncements={loadAnnouncements}
+        />
       </div>
     </aside>
   );

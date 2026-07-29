@@ -76,6 +76,7 @@ export function StatCard({
   onClick?: () => void;
 }) {
   const Icon = item.icon;
+  const isTotalRevenue = item.label === "Total Revenue";
 
   return (
     <article
@@ -89,7 +90,11 @@ export function StatCard({
           onClick();
         }
       }}
-      className={`flex h-[82px] min-w-0 items-center gap-4 rounded-lg bg-white px-5 shadow-[0_3px_12px_rgba(15,23,42,0.08)] ${
+      className={`flex h-[82px] min-w-0 items-center gap-4 rounded-lg px-5 ${
+        isTotalRevenue
+          ? "border-2 border-[#24C96F] bg-gradient-to-r from-[#F0FFF6] to-white shadow-[0_8px_24px_rgba(36,201,111,0.22)] ring-2 ring-[#24C96F]/10"
+          : "bg-white shadow-[0_3px_12px_rgba(15,23,42,0.08)]"
+      } ${
         onClick ? "cursor-pointer transition hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(15,23,42,0.12)]" : ""
       }`}
     >
@@ -100,10 +105,10 @@ export function StatCard({
         <Icon size={20} weight="fill" />
       </span>
       <div className="min-w-0">
-        <p className="truncate text-[12px] font-medium text-[#7B8190]">
+        <p className={`truncate text-[12px] font-medium ${isTotalRevenue ? "text-[#08743B]" : "text-[#7B8190]"}`}>
           {item.label}
         </p>
-        <p className="mt-1 truncate text-[18px] font-bold leading-tight text-[#17213D]">
+        <p className={`mt-1 truncate text-[18px] font-bold leading-tight ${isTotalRevenue ? "text-[#086C20]" : "text-[#17213D]"}`}>
           {item.value}
         </p>
       </div>
@@ -114,9 +119,16 @@ export function StatCard({
 
 export function RevenueStatCard({ item }: { item: (typeof revenueStats)[number] }) {
   const Icon = item.icon;
+  const isTotalRevenue = item.label === "Total Revenue";
 
   return (
-    <article className="flex h-[88px] min-w-0 items-center gap-4 rounded-lg bg-white px-5 shadow-[0_3px_12px_rgba(15,23,42,0.14)]">
+    <article
+      className={`flex h-[88px] min-w-0 items-center gap-4 rounded-lg px-5 transition ${
+        isTotalRevenue
+          ? "border-2 border-[#24C96F] bg-gradient-to-r from-[#F0FFF6] to-white shadow-[0_8px_24px_rgba(36,201,111,0.22)] ring-2 ring-[#24C96F]/10"
+          : "bg-white shadow-[0_3px_12px_rgba(15,23,42,0.14)]"
+      }`}
+    >
       <span
         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md"
         style={{ backgroundColor: item.bg, color: item.color }}
@@ -124,10 +136,10 @@ export function RevenueStatCard({ item }: { item: (typeof revenueStats)[number] 
         <Icon size={20} weight="fill" />
       </span>
       <div className="min-w-0">
-        <p className="truncate text-[11px] font-medium text-[#6B7280]">
+        <p className={`truncate text-[11px] font-medium ${isTotalRevenue ? "text-[#08743B]" : "text-[#6B7280]"}`}>
           {item.label}
         </p>
-        <p className="mt-1 truncate text-[18px] font-bold leading-tight text-[#17213D]">
+        <p className={`mt-1 truncate text-[18px] font-bold leading-tight ${isTotalRevenue ? "text-[#086C20]" : "text-[#17213D]"}`}>
           {item.value}
         </p>
         <p className="mt-0.5 truncate text-[10px] font-medium text-[#8A9099]">
@@ -249,5 +261,3 @@ export function FeeTypeCard({ item }: { item: (typeof feeTypeSummary)[number] })
     </article>
   );
 }
-
-

@@ -3,6 +3,7 @@
 import { Avatar } from "@/app/utils/Avatar";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { fetchStaffOnboardingSummary } from "@/lib/helpers/staffOnBoarding/onboardingSummaryAPI";
 import { User } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
@@ -55,8 +56,16 @@ const SummaryShimmer = () => (
 );
 
 export default function SummaryPage() {
-  const { role, fullName, facultyId, college_branch, mobile, email } =
-    useFaculty();
+  const {
+    role,
+    fullName,
+    facultyId,
+    faculty_edu_type,
+    college_branch,
+    collegeAcademicYear,
+    mobile,
+    email,
+  } = useFaculty();
   const { userId, profilePhoto, dateOfJoining, professionalExperienceYears, identifierId } =
     useUser();
   const [onboardingData, setOnboardingData] = useState<any>(null);
@@ -88,6 +97,7 @@ export default function SummaryPage() {
   };
 
   const isInter = ["Inter"].includes(role);
+  const isSchool = isSchoolEducation(faculty_edu_type);
   const systemId = identifierId ? `ID-${identifierId}` : `ID-${userId}`;
 
   return (
@@ -108,10 +118,14 @@ export default function SummaryPage() {
         </div>
         <div className="flex flex-col items-center justify-center space-y-0.5">
           <InfoRow label={`${role} ID`} value={systemId} />
-          <InfoRow
-            label={isInter ? "Group" : "Branch"}
-            value={college_branch}
-          />
+          {isSchool ? (
+            <InfoRow label="Year" value={collegeAcademicYear} />
+          ) : (
+            <InfoRow
+              label={isInter ? "Group" : "Branch"}
+              value={college_branch}
+            />
+          )}
           <InfoRow label="Mobile" value={mobile} />
           <InfoRow label="Email" value={email} />
           <InfoRow label="Date of Joining" value={formatDate(dateOfJoining)} />

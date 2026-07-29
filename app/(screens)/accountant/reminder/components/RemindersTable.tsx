@@ -6,7 +6,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { StatusBadge, TypeBadge } from "./ReminderBadges";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toneClasses, type Reminder } from "./reminderData";
 import { Pagination } from "../../../admin/academic-setup/components/pagination";
 
@@ -23,6 +23,11 @@ export function RemindersTable({
   onCategoryChange,
   selectedStatus,
   onStatusChange,
+  currentPage,
+  totalItems,
+  itemsPerPage,
+  onPageChange,
+  onItemsPerPageChange,
 }: {
   reminders: Reminder[];
   isLoading: boolean;
@@ -36,15 +41,13 @@ export function RemindersTable({
   onCategoryChange: (val: string) => void;
   selectedStatus: string;
   onStatusChange: (val: string) => void;
+  currentPage: number;
+  totalItems: number;
+  itemsPerPage: number;
+  onPageChange: (page: number) => void;
+  onItemsPerPageChange: (items: number) => void;
 }) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-
-  // Reset page when filters change (reminders array changes)
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [reminders]);
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -63,9 +66,6 @@ export function RemindersTable({
   };
 
   const categories = ["Utility", "Salary", "Fee Collection", "Subscription", "Tax", "Purchase", "Furniture"];
-
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedReminders = reminders.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <section className="overflow-hidden rounded-xl bg-white shadow-[0_4px_12px_rgba(15,23,42,0.08)] flex flex-col h-full">
@@ -112,7 +112,17 @@ export function RemindersTable({
       </div>
 
       <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)]">
-        <table className="w-full min-w-[980px] border-collapse text-left relative">
+        <table className="relative w-full min-w-[980px] table-fixed border-collapse text-left">
+          <colgroup>
+            <col className="w-[6%]" />
+            <col className="w-[20%]" />
+            <col className="w-[11%]" />
+            <col className="w-[13%]" />
+            <col className="w-[13%]" />
+            <col className="w-[14%]" />
+            <col className="w-[14%]" />
+            <col className="w-[9%]" />
+          </colgroup>
           <thead className="bg-[#F1F4F7] sticky top-0 z-10 shadow-[0_1px_0_#DDE5EE]">
             <tr className="text-[10px] font-bold uppercase tracking-wide text-[#8C9AB0]">
               <th className="px-7 py-4 w-[40px]">
@@ -146,8 +156,8 @@ export function RemindersTable({
                   ))}
                 </tr>
               ))
-            ) : paginatedReminders.length > 0 ? (
-              paginatedReminders.map((reminder) => {
+            ) : reminders.length > 0 ? (
+              reminders.map((reminder) => {
                 const Icon = reminder.icon;
 
                 return (
@@ -163,35 +173,53 @@ export function RemindersTable({
                         className="cursor-pointer"
                       />
                     </td>
-                    <td className="px-7 py-5">
+                    <td className="overflow-hidden px-7 py-5">
                       <div className="flex items-center gap-4">
                         <span
                           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${toneClasses[reminder.tone]}`}
                         >
                           <Icon size={16} weight="bold" />
                         </span>
-                        <span className="font-bold">{reminder.title}</span>
+                        <span
+                          className="custom-scrollbar min-w-0 flex-1 overflow-x-auto whitespace-nowrap pb-1 font-bold"
+                          title={reminder.title}
+                        >
+                          {reminder.title}
+                        </span>
                       </div>
                     </td>
-                    <td className="px-7 py-5">
-                      <TypeBadge type={reminder.type} />
+                    <td className="overflow-hidden px-7 py-5">
+                      <div className="custom-scrollbar w-full overflow-x-auto whitespace-nowrap pb-1">
+                        <TypeBadge type={reminder.type} />
+                      </div>
                     </td>
-                    <td className="px-7 py-5">{reminder.category}</td>
-                    <td className="px-7 py-5 font-bold">{reminder.amount}</td>
-                    <td className="px-7 py-5">
-                      <p className="font-bold">{reminder.dueDate}</p>
-                      <p
-                        className={`mt-0.5 text-[9px] font-bold ${reminder.dueMeta.includes("OVERDUE")
-                          ? "text-[#FF4B4B]"
-                          : reminder.dueMeta === "DUE TODAY"
+                    <td className="overflow-hidden px-7 py-5">
+                      <div className="custom-scrollbar w-full overflow-x-auto whitespace-nowrap pb-1" title={reminder.category}>
+                        {reminder.category}
+                      </div>
+                    </td>
+                    <td className="overflow-hidden px-7 py-5 font-bold">
+                      <div className="custom-scrollbar w-full overflow-x-auto whitespace-nowrap pb-1" title={reminder.amount}>
+                        {reminder.amount}
+                      </div>
+                    </td>
+                    <td className="overflow-hidden px-7 py-5">
+                      <div className="custom-scrollbar w-full overflow-x-auto whitespace-nowrap pb-1" title={`${reminder.dueDate} ${reminder.dueMeta}`}>
+                        <p className="font-bold">{reminder.dueDate}</p>
+                        <p
+                          className={`mt-0.5 text-[9px] font-bold ${reminder.dueMeta.includes("OVERDUE")
                             ? "text-[#FF4B4B]"
-                            : "text-[#3478F6]"
-                          }`}
-                      >
-                        {reminder.dueMeta}
-                      </p>
+                            : reminder.dueMeta === "DUE TODAY"
+                              ? "text-[#FF4B4B]"
+                              : "text-[#3478F6]"
+                            }`}
+                        >
+                          {reminder.dueMeta}
+                        </p>
+                      </div>
                     </td>
-                    <td className="px-7 py-5">
+                    <td className="overflow-hidden px-7 py-5">
+                      <div className="custom-scrollbar w-full overflow-x-auto whitespace-nowrap pb-1">
                       {onUpdateStatus && reminder.id ? (
                         <select
                           value={reminder.status}
@@ -228,6 +256,7 @@ export function RemindersTable({
                       ) : (
                         <StatusBadge status={reminder.status} />
                       )}
+                      </div>
                     </td>
                     <td className="px-7 py-5">
                       <div className="flex justify-end gap-3">
@@ -265,9 +294,11 @@ export function RemindersTable({
 
       <Pagination
         currentPage={currentPage}
-        totalItems={reminders.length}
+        totalItems={totalItems}
         itemsPerPage={itemsPerPage}
-        onPageChange={setCurrentPage}
+        onPageChange={onPageChange}
+        itemsPerPageOptions={[5, 10, 20]}
+        onItemsPerPageChange={onItemsPerPageChange}
         disabled={isLoading}
       />
     </section>

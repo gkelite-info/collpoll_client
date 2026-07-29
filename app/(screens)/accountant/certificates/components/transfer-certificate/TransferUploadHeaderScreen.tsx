@@ -4,6 +4,7 @@ import { Info } from "@phosphor-icons/react";
 import Image from "next/image";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 export type HeaderConfig = {
   collegeTcHeaderId?: number;
@@ -25,6 +26,7 @@ export function TransferUploadHeaderScreen({
   onSave: (updatedConfig: HeaderConfig) => Promise<void> | void;
   onDraft: () => void;
 }) {
+  const { institutionLabel, institutionLabelLower } = useInstitutionTerminology();
   const [collegeName, setCollegeName] = useState(config.collegeName);
   const [affiliation, setAffiliation] = useState(config.affiliation);
   const [address, setAddress] = useState(config.address);
@@ -76,7 +78,7 @@ export function TransferUploadHeaderScreen({
       <div className="flex items-center gap-3 rounded-md border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-3 text-[#1E40AF]">
         <Info size={20} className="shrink-0" />
         <span className="text-[12px] font-semibold">
-          Upload the college header information that will appear at the top of the Transfer Certificate.
+          Upload the {institutionLabelLower} header information that will appear at the top of the Transfer Certificate.
         </span>
       </div>
 
@@ -92,13 +94,13 @@ export function TransferUploadHeaderScreen({
           {/* College Name */}
           <label className="flex flex-col gap-2">
             <span className="text-[12px] font-bold text-[#17213D]">
-              College / Institution Name <span className="text-[#EF4444]">*</span>
+              {institutionLabel} / Institution Name <span className="text-[#EF4444]">*</span>
             </span>
             <input
               type="text"
               value={collegeName}
               onChange={(e) => setCollegeName(e.target.value)}
-              placeholder="Enter College Name"
+              placeholder={`Enter ${institutionLabel} Name`}
               className="h-10 rounded-md border border-[#D7DEE8] bg-white px-3 text-[13px] font-medium text-[#17213D] outline-none focus:border-[#43C17A] transition-colors w-full"
             />
           </label>
@@ -125,7 +127,7 @@ export function TransferUploadHeaderScreen({
             <textarea
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="Enter College Address"
+              placeholder={`Enter ${institutionLabel} Address`}
               rows={3}
               className="rounded-md border border-[#D7DEE8] bg-white px-3 py-2 text-[13px] font-medium text-[#17213D] outline-none focus:border-[#43C17A] transition-colors w-full resize-none h-[80px]"
             />
@@ -148,24 +150,24 @@ export function TransferUploadHeaderScreen({
           {/* College Logo */}
           <div className="flex flex-col gap-2">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#17213D]">
-              College Logo
+              {institutionLabel} Logo
             </span>
             <div className="rounded-md border border-[#D7DEE8] bg-[#F8FAFC] p-6 flex min-h-[140px] flex-col items-center justify-center text-center">
               {logoUrl ? (
                 <>
                 <Image
                   src={logoUrl}
-                  alt="College Logo"
+                  alt={`${institutionLabel} Logo`}
                   width={64}
                   height={64}
                   unoptimized
                   className="mb-3 h-16 w-16 rounded-full object-contain"
                 />
-                  <p className="text-[13px] font-bold text-[#17213D]">College logo loaded</p>
+                  <p className="text-[13px] font-bold text-[#17213D]">{institutionLabel} logo loaded</p>
                 </>
               ) : (
                 <p className="max-w-[360px] text-[13px] font-bold leading-relaxed text-[#E11D48]">
-                  College logo is not available. Please contact admin to add the logo.
+                  {institutionLabel} logo is not available. Please contact admin to add the logo.
                 </p>
               )}
             </div>
@@ -211,7 +213,7 @@ export function TransferUploadHeaderScreen({
                 {logoUrl ? (
                   <Image
                     src={logoUrl}
-                    alt="College Logo Preview"
+                    alt={`${institutionLabel} Logo Preview`}
                     width={112}
                     height={112}
                     unoptimized
@@ -229,7 +231,7 @@ export function TransferUploadHeaderScreen({
 
               {/* College Name */}
               <h3 className="text-[18px] font-extrabold uppercase text-[#17213D] leading-tight tracking-wide">
-                {collegeName || "COLLEGE NAME"}
+                {collegeName || `${institutionLabel.toUpperCase()} NAME`}
               </h3>
 
               {/* Affiliation */}
@@ -246,7 +248,7 @@ export function TransferUploadHeaderScreen({
 
               {/* Address */}
               <p className="px-2 text-[16px] font-medium leading-relaxed text-slate-600">
-                {address || "College Address Details"}
+                {address || `${institutionLabel} Address Details`}
               </p>
 
               {/* Phone */}

@@ -101,6 +101,10 @@ export function ReminderScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [summaryReminders, setSummaryReminders] = useState<Reminder[]>([]);
 
   const [reminderToDelete, setReminderToDelete] = useState<Reminder | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -121,6 +125,11 @@ export function ReminderScreen() {
   }, [searchQuery]);
 
   useEffect(() => {
+    const timeout = window.setTimeout(() => setCurrentPage(1), 0);
+    return () => window.clearTimeout(timeout);
+  }, [debouncedSearchQuery, selectedCategory, selectedStatus, selectedDate]);
+
+  useEffect(() => {
     if (userLoading) return;
     let isActive = true;
 
@@ -136,14 +145,29 @@ export function ReminderScreen() {
       setError(null);
 
       try {
-        const rows = await fetchAccountantReminders(
-          collegeId,
-          debouncedSearchQuery,
-          selectedCategory,
-          selectedStatus,
-          selectedDate
-        );
-        if (isActive) setReminders(rows.map(mapReminder));
+        const [pageResult, summaryResult] = await Promise.all([
+          fetchAccountantReminders(
+            collegeId,
+            debouncedSearchQuery,
+            selectedCategory,
+            selectedStatus,
+            selectedDate,
+            currentPage,
+            itemsPerPage,
+          ),
+          fetchAccountantReminders(
+            collegeId,
+            debouncedSearchQuery,
+            selectedCategory,
+            selectedStatus,
+            selectedDate,
+          ),
+        ]);
+        if (isActive) {
+          setReminders(pageResult.data.map(mapReminder));
+          setTotalItems(pageResult.total);
+          setSummaryReminders(summaryResult.data.map(mapReminder));
+        }
       } catch (err) {
         console.error("Failed to load accountant reminders", err);
         if (isActive) {
@@ -160,7 +184,7 @@ export function ReminderScreen() {
     return () => {
       isActive = false;
     };
-  }, [collegeId, refreshKey, userLoading, debouncedSearchQuery, selectedCategory, selectedStatus, selectedDate]);
+  }, [collegeId, currentPage, itemsPerPage, refreshKey, userLoading, debouncedSearchQuery, selectedCategory, selectedStatus, selectedDate]);
 
   const handleUpdateStatus = async (id: number, statusStr: string) => {
     setStatusToUpdate({ id, status: statusStr });
@@ -175,7 +199,7 @@ export function ReminderScreen() {
       await updateAccountantReminderStatus(id, isActive);
       toast.success("Status updated");
       setRefreshKey((k) => k + 1);
-    } catch (err) {
+    } catch {
       toast.error("Failed to update status");
     } finally {
       setIsUpdatingStatus(false);
@@ -190,7 +214,7 @@ export function ReminderScreen() {
       await deleteAccountantReminder(reminderToDelete.id);
       toast.success("Reminder deleted");
       setRefreshKey((k) => k + 1);
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete reminder");
     } finally {
       setIsDeleting(false);
@@ -199,7 +223,7 @@ export function ReminderScreen() {
   };
 
   const dynamicSummaryCards = useMemo(() => {
-    const totals = reminders.reduce(
+    const totals = summaryReminders.reduce(
       (acc, reminder) => {
         const amount = Number(reminder.amount.replace(/[^\d]/g, "")) || 0;
         if (reminder.status === "DUE TODAY") acc.dueToday += amount;
@@ -223,7 +247,7 @@ export function ReminderScreen() {
 
       return { ...card, value: formatCurrency(totals[key]) };
     });
-  }, [reminders]);
+  }, [summaryReminders]);
 
   return (
     <main className="min-h-full w-full overflow-x-hidden bg-[#F4F4F4] px-4 py-5 pb-8">
@@ -298,6 +322,14 @@ export function ReminderScreen() {
           onCategoryChange={setSelectedCategory}
           selectedStatus={selectedStatus}
           onStatusChange={setSelectedStatus}
+          currentPage={currentPage}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={(items) => {
+            setItemsPerPage(items);
+            setCurrentPage(1);
+          }}
         />
       </div>
 
