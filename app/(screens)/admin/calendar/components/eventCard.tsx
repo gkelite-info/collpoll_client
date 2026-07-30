@@ -1,5 +1,6 @@
 import { ChalkboardTeacher, Exam, Question, Trash, PencilSimple, VideoConference } from "@phosphor-icons/react";
 import { CalendarEvent, EventType } from "../types";
+import { useUser } from "@/app/utils/context/UserContext";
 
 const EVENT_STYLES: Record<
   EventType,
@@ -34,6 +35,7 @@ const EVENT_STYLES: Record<
 };
 
 const EventCard = ({ event, onDelete, onEdit, onClick, isSchool }: { event: CalendarEvent; onDelete: () => void; onEdit: () => void; onClick: () => void; isSchool?: boolean }) => {
+  const { collegeEducationType } = useUser();
   const style =
     EVENT_STYLES[event.type.toLowerCase() as EventType] || EVENT_STYLES.meeting;
   const Icon = style.Icon;
@@ -43,7 +45,12 @@ const EventCard = ({ event, onDelete, onEdit, onClick, isSchool }: { event: Cale
   const timeStr = `${start.toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
-  })} - ${end.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+    hour12: true,
+  })} - ${end.toLocaleTimeString([], { 
+    hour: "numeric", 
+    minute: "2-digit", 
+    hour12: true 
+  })}`;
 
   return (
     <div
@@ -102,24 +109,24 @@ const EventCard = ({ event, onDelete, onEdit, onClick, isSchool }: { event: Cale
           className="text-[11px] space-y-0.5"
           style={{ color: style.text }}
         >
-          {!isSchool && event.branch && (
-            <div className="flex gap-1">
-              <span className="font-medium">Branch:</span>
-              <span>{event.branch}</span>
+          {!isSchool && event.branch && event.branch !== "-" && (
+            <div className="flex gap-1 overflow-hidden" title={event.branch}>
+              <span className="font-medium shrink-0">{collegeEducationType === "Inter" ? "Group:" : "Branch:"}</span>
+              <span className="truncate">{event.branch}</span>
             </div>
           )}
 
           {event.section && (
-            <div className="flex gap-1">
-              <span className="font-medium">Section:</span>
-              <span>{event.section}</span>
+            <div className="flex gap-1 overflow-hidden" title={event.section}>
+              <span className="font-medium shrink-0">Section:</span>
+              <span className="truncate">{event.section}</span>
             </div>
           )}
 
           {event.year && (
-            <div className="flex gap-1">
-              <span className="font-medium">Year:</span>
-              <span>{event.year}</span>
+            <div className="flex gap-1 overflow-hidden" title={event.year}>
+              <span className="font-medium shrink-0">Year:</span>
+              <span className="truncate">{event.year}</span>
             </div>
           )}
         </div>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
 const getTodayDateString = () => {
   const d = new Date();
@@ -9,8 +8,6 @@ const getTodayDateString = () => {
 };
 
 export const useAddEventModalState = (isOpen: boolean, value: any, mode: "create" | "edit") => {
-  const { faculty_edu_type } = useFaculty();
-
   const [title, setTitle] = useState("");
   const [meetingLink, setMeetingLink] = useState("");
   const [meetingPlatform, setMeetingPlatform] = useState<"meet" | "zoom" | "others">("meet");
@@ -96,8 +93,19 @@ export const useAddEventModalState = (isOpen: boolean, value: any, mode: "create
     }
   }, [isOpen]);
 
+  const parse24HourTo12Hour = (time: string) => {
+    const [h, m] = time.split(":").map(Number);
+    const period: "AM" | "PM" = h >= 12 ? "PM" : "AM";
+    const hour12 = h % 12 === 0 ? 12 : h % 12;
+    return {
+      hour: String(hour12).padStart(2, "0"),
+      minute: String(m).padStart(2, "0"),
+      period,
+    };
+  };
+
   useEffect(() => {
-    if (isOpen && value && mode === "edit" && !hasInitializedRef.current) {
+    if (isOpen && value && !hasInitializedRef.current) {
       hasInitializedRef.current = true;
 
       setSelectedType(value.type || "class");
@@ -105,13 +113,23 @@ export const useAddEventModalState = (isOpen: boolean, value: any, mode: "create
       setCollegeRoomId(value.collegeRoomId ?? null);
       setDate(value.date ?? getTodayDateString());
 
-      setStartHour(value.startHour ?? "09");
-      setStartMinute(value.startMinute ?? "00");
-      setStartPeriod(value.startPeriod ?? "AM");
-
-      setEndHour(value.endHour ?? "10");
-      setEndMinute(value.endMinute ?? "00");
-      setEndPeriod(value.endPeriod ?? "AM");
+      if (value.startHour && value.startMinute && value.startPeriod) {
+        setStartHour(value.startHour);
+        setStartMinute(value.startMinute);
+        setStartPeriod(value.startPeriod);
+        setEndHour(value.endHour ?? "10");
+        setEndMinute(value.endMinute ?? "00");
+        setEndPeriod(value.endPeriod ?? "AM");
+      } else if (value.startTime && value.endTime) {
+        const start = parse24HourTo12Hour(value.startTime);
+        const end = parse24HourTo12Hour(value.endTime);
+        setStartHour(start.hour);
+        setStartMinute(start.minute);
+        setStartPeriod(start.period);
+        setEndHour(end.hour);
+        setEndMinute(end.minute);
+        setEndPeriod(end.period);
+      }
 
       setTitle(value.title ?? "");
       setMeetingLink(value.meetingLink ?? "");
@@ -123,8 +141,8 @@ export const useAddEventModalState = (isOpen: boolean, value: any, mode: "create
       else setMeetingPlatform("others");
 
       setTopicId(value.topicId ?? null);
-      if (value.semesterId) {
-        setSemester(value.semesterId);
+      if (value.semesterId || value.semester) {
+        setSemester(value.semesterId || value.semester);
         setIsSemesterAuto(false);
       }
 
@@ -139,8 +157,11 @@ export const useAddEventModalState = (isOpen: boolean, value: any, mode: "create
         setUnitIds(value.unitIds);
       }
 
+      // Legacy fallback mapping sections
       if (Array.isArray(value.sectionIds)) {
         setSectionIds(value.sectionIds);
+      } else if (Array.isArray(value.sections)) {
+        setSectionIds(value.sections.map((s: any) => s.collegeSectionId || s.collegeSectionsId));
       }
       
       if (value.educationId) setEducationId(value.educationId);
@@ -151,7 +172,6 @@ export const useAddEventModalState = (isOpen: boolean, value: any, mode: "create
   }, [isOpen, value, mode]);
 
   return {
-    faculty_edu_type,
     title, setTitle,
     meetingLink, setMeetingLink,
     meetingPlatform, setMeetingPlatform,

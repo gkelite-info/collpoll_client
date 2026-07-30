@@ -1,8 +1,7 @@
 "use client";
 
-import React from "react";
-import { CaretDown } from "@phosphor-icons/react";
 import { ModalSelect } from "./ModalSelect";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 interface AcademicFieldsProps {
   educationId?: number;
@@ -39,12 +38,8 @@ const AcademicFields: React.FC<AcademicFieldsProps> = ({
   INPUT_HEIGHT,
   isSingleSubject,
 }) => {
-  const [isEducationFocused, setIsEducationFocused] = React.useState(false);
-  const [isBranchFocused, setIsBranchFocused] = React.useState(false);
-  const [isYearFocused, setIsYearFocused] = React.useState(false);
-  const [isSemesterFocused, setIsSemesterFocused] = React.useState(false);
-
-  const isSchool = facultyEduType === "Inter";
+  const isSchool = isSchoolEducation(facultyEduType);
+  const isInter = facultyEduType === "Inter";
 
   const educationInput = (
     <div className="flex-1 w-full min-w-0">
@@ -150,6 +145,16 @@ const AcademicFields: React.FC<AcademicFieldsProps> = ({
           {educationInput}
           {yearInput}
         </div>
+      ) : isInter ? (
+        <>
+          <div className="flex flex-col md:flex-row gap-4 items-start">
+            {educationInput}
+            {branchInput}
+          </div>
+          <div className="flex flex-col md:flex-row gap-4 items-start">
+            {yearInput}
+          </div>
+        </>
       ) : (
         <>
           <div className="flex flex-col md:flex-row gap-4 items-start">

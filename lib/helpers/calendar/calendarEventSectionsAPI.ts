@@ -121,9 +121,9 @@ export async function saveCalendarEventSections(
         const inserts = toInsert.map((sectionId) => ({
             calendarEventId,
             collegeEducationId: payload.collegeEducationId,
-            collegeBranchId: payload.collegeBranchId,
+            collegeBranchId: payload.collegeBranchId ?? null,
             collegeAcademicYearId: payload.collegeAcademicYearId,
-            collegeSemesterId: payload.collegeSemesterId,
+            collegeSemesterId: payload.collegeSemesterId ?? null,
             collegeSectionId: sectionId,
             createdAt: now,
             updatedAt: now,

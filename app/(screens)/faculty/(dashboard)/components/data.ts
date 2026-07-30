@@ -170,6 +170,12 @@ export const STUDENT_DATA: StudentPerformance[] = [
     imageUrl: "https://i.pravatar.cc/150?img=12",
     percentage: 60,
   },
+  {
+    id: "8",
+    name: "John Doe",
+    imageUrl: "https://i.pravatar.cc/150?img=12",
+    percentage: 60,
+  },
 ];
 
 export const TOP_PERFORMERS: TopPerformer[] = [

@@ -115,6 +115,7 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
       .select(`
         facultyId,
         subject:collegeSubjectId (subjectName),
+        college_subjects (subjectName),
         section:collegeSectionsId (collegeBranchId, collegeAcademicYearId),
         collegeBranchId,
         branch:collegeBranchId (collegeBranchCode)
@@ -146,27 +147,32 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
   const branchesByFaculty = new Map<number, Set<string>>();
   
   (sectionsRes.data ?? []).forEach((row: any) => {
-    if (filters.collegeBranchId && row.section?.collegeBranchId !== filters.collegeBranchId && row.collegeBranchId !== filters.collegeBranchId) return;
+    const sectionObj = Array.isArray(row.section) ? row.section[0] : row.section;
+    const branchObj = Array.isArray(row.branch) ? row.branch[0] : row.branch;
+    const rawSubject = row.college_subjects || row.subject;
+    const subjectObj = Array.isArray(rawSubject) ? rawSubject[0] : rawSubject;
 
-    if (row.subject?.subjectName) {
+    if (filters.collegeBranchId && sectionObj?.collegeBranchId !== filters.collegeBranchId && row.collegeBranchId !== filters.collegeBranchId) return;
+
+    if (subjectObj?.subjectName) {
       if (!subjectsByFaculty.has(row.facultyId)) {
         subjectsByFaculty.set(row.facultyId, new Set());
       }
-      subjectsByFaculty.get(row.facultyId)!.add(row.subject.subjectName);
+      subjectsByFaculty.get(row.facultyId)!.add(subjectObj.subjectName);
     }
     
-    if (row.branch?.collegeBranchCode) {
+    if (branchObj?.collegeBranchCode) {
       if (!branchesByFaculty.has(row.facultyId)) {
         branchesByFaculty.set(row.facultyId, new Set());
       }
-      branchesByFaculty.get(row.facultyId)!.add(row.branch.collegeBranchCode);
+      branchesByFaculty.get(row.facultyId)!.add(branchObj.collegeBranchCode);
     }
     
-    if (row.section?.collegeAcademicYearId) {
+    if (sectionObj?.collegeAcademicYearId) {
       if (!academicYearIdsByFaculty.has(row.facultyId)) {
         academicYearIdsByFaculty.set(row.facultyId, new Set());
       }
-      academicYearIdsByFaculty.get(row.facultyId)!.add(row.section.collegeAcademicYearId);
+      academicYearIdsByFaculty.get(row.facultyId)!.add(sectionObj.collegeAcademicYearId);
     }
   });
 
@@ -199,7 +205,11 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
       .join(", ");
 
     const sectionBranches = Array.from(branchesByFaculty.get(f.facultyId) ?? []).join(", ");
-    const finalBranch = f.branch?.collegeBranchCode ? f.branch.collegeBranchCode : (sectionBranches || "—");
+    
+    const rawBranchFallback = f.college_branches || f.branch;
+    const facultyBranchObj = Array.isArray(rawBranchFallback) ? rawBranchFallback[0] : rawBranchFallback;
+    
+    const finalBranch = facultyBranchObj?.collegeBranchCode ? facultyBranchObj.collegeBranchCode : (sectionBranches || "—");
 
     return {
       id: String(f.facultyId),

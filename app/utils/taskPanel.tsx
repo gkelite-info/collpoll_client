@@ -11,7 +11,9 @@ import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
 import { useStudent } from "@/app/utils/context/student/useStudent";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useInView } from "react-intersection-observer";
+import { fetchFacultyTasksForLoggedInFaculty } from "@/lib/helpers/faculty/facultyTasks";
 
 export type Task = {
   facultyTaskId: number;
@@ -25,6 +27,7 @@ export type TaskPanelProps = {
   role?: "faculty" | "student";
   heading?: string;
   style?: boolean;
+  enableInfiniteScroll?: boolean;
   loading?: boolean;
   facultyTasks?: Task[];
   studentTasks?: Task[];
@@ -49,6 +52,7 @@ export default function TaskPanel({
   role = "student",
   heading,
   style = false,
+  enableInfiniteScroll = false,
   facultyTasks = [],
   studentTasks = [],
   collegeSubjectId,
@@ -80,6 +84,45 @@ export default function TaskPanel({
 
   const [dbFacultyTasks, setDbFacultyTasks] = useState<Task[]>([]);
   const [isDbFacultyLoading, setIsDbFacultyLoading] = useState(false);
+
+  const { ref: loadMoreRef, inView } = useInView();
+
+  const {
+    data: infiniteFacultyTasksData,
+    fetchNextPage: fetchNextFacultyTasks,
+    hasNextPage: hasNextFacultyTasks,
+    isFetchingNextPage: isFetchingNextFacultyTasks,
+    isLoading: isInfiniteFacultyLoading,
+  } = useInfiniteQuery({
+    queryKey: ["facultyTasksInfinite", facultyId, collegeSubjectId, selectedDate],
+    queryFn: async ({ pageParam = 1 }) => {
+      if (role !== "faculty" || !facultyId || !collegeSubjectId) return { data: [], totalPages: 0 };
+      return await fetchFacultyTasksForLoggedInFaculty({
+        facultyId,
+        collegeSubjectId,
+        selectedDate,
+        page: pageParam,
+        limit: 10,
+      });
+    },
+    getNextPageParam: (lastPage, allPages) => lastPage.totalPages > allPages.length ? allPages.length + 1 : undefined,
+    enabled: role === "faculty" && enableInfiniteScroll && !!facultyId && !!collegeSubjectId,
+    initialPageParam: 1,
+  });
+
+  useEffect(() => {
+    if (inView && hasNextFacultyTasks && !isFetchingNextFacultyTasks) {
+      fetchNextFacultyTasks();
+    }
+  }, [inView, hasNextFacultyTasks, isFetchingNextFacultyTasks, fetchNextFacultyTasks]);
+
+  const infiniteFacultyTasks = (infiniteFacultyTasksData?.pages.flatMap(p => p.data) || []).map(t => ({
+    facultyTaskId: t.facultyTaskId,
+    title: t.taskTitle,
+    description: t.description,
+    time: t.time,
+    date: t.date,
+  }));
 
   const fetchStudentFacultyTasks = async (dateStr: string | null) => {
     const ayId = studentContext.collegeAcademicYearId;
@@ -280,7 +323,7 @@ export default function TaskPanel({
 
   const tasksToShow =
     role === "faculty"
-      ? (selectedDate ? calendarFacultyTasks : facultyTasks)
+      ? (enableInfiniteScroll ? infiniteFacultyTasks : (selectedDate ? calendarFacultyTasks : facultyTasks))
       : activeView === "student"
         ? (selectedDate ? calendarStudentTasks : studentTasks)
         : dbFacultyTasks;
@@ -436,7 +479,6 @@ export default function TaskPanel({
                   <p className="text-xs font-medium text-[#6B7280]">
                     {formatTime(task.time)}
                   </p>
-
                   <div className="flex gap-2">
                     {(role === "faculty" ||
                       (role === "student" && activeView === "student")) && (
@@ -472,6 +514,12 @@ export default function TaskPanel({
               </div>
             ))
           )}
+          {enableInfiniteScroll && isFetchingNextFacultyTasks && (
+            <div className="mt-3">
+              <TaskCardShimmer />
+            </div>
+          )}
+          {enableInfiniteScroll && <div ref={loadMoreRef} className="h-1" />}
         </div>
       </div>
 

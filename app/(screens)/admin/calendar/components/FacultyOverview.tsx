@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useCallback, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import FacultyCard from "./FacultyCard"
 import { fetchAcademicYears, fetchBranches, fetchSemesters, fetchSubjects, fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns"
@@ -10,6 +10,8 @@ import { fetchFilteredFaculties } from "@/lib/helpers/admin/calender/fetchFacult
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { FilterDropdown } from "../../academics/components/filterDropdown";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+
 interface Props {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onSelect: (faculty: any) => void
@@ -28,97 +30,154 @@ interface FacultyUI {
 }
 
 export default function FacultyOverview({ onSelect }: Props) {
-    const [educationId, setEducationId] = useState<number | null>(null);
-    const [branchId, setBranchId] = useState<number | null>(null);
-    const [academicYearId, setAcademicYearId] = useState<number | null>(null);
-    const [subjectId, setSubjectId] = useState<number | null>(null);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [branches, setBranches] = useState<any[]>([]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [academicYears, setAcademicYears] = useState<any[]>([]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [subjects, setSubjects] = useState<any[]>([]);
-    const [semesterId, setSemesterId] = useState<number | null>(null);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [semesters, setSemesters] = useState<any[]>([]);
-    const [currentPage, setCurrentPage] = useState(1);
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+
+    const rawEduId = searchParams.get("educationId");
+    const educationId = rawEduId === "all" ? null : (rawEduId ? Number(rawEduId) : null);
+    const branchId = searchParams.get("branchId") ? Number(searchParams.get("branchId")) : null;
+    const academicYearId = searchParams.get("academicYearId") ? Number(searchParams.get("academicYearId")) : null;
+    const semesterId = searchParams.get("semesterId") ? Number(searchParams.get("semesterId")) : null;
+    const subjectId = searchParams.get("subjectId") ? Number(searchParams.get("subjectId")) : null;
+    const currentPage = searchParams.get("page") ? Number(searchParams.get("page")) : 1;
+
     const itemsPerPage = 9;
 
     const { collegeId, adminId, collegeEducationId, collegeEducationType, loading: contextLoading } = useAdmin();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [educationTypes, setEducationTypes] = useState<any[]>([]);
-    const [isFetchingEduTypes, setIsFetchingEduTypes] = useState(true);
+
+    const [localParams, setLocalParams] = useState<Record<string, string | null>>({
+        educationId: searchParams.get("educationId"),
+        branchId: searchParams.get("branchId"),
+        academicYearId: searchParams.get("academicYearId"),
+        semesterId: searchParams.get("semesterId"),
+        subjectId: searchParams.get("subjectId")
+    });
 
     useEffect(() => {
-        if (!collegeId) return;
-        setIsFetchingEduTypes(true);
-        fetchEducations(collegeId)
-            .then(res => {
-                if (res.length > 0) {
-                    setEducationTypes(res);
-                } else if (collegeEducationId && collegeEducationType) {
-                    setEducationTypes([{
+        setLocalParams({
+            educationId: searchParams.get("educationId"),
+            branchId: searchParams.get("branchId"),
+            academicYearId: searchParams.get("academicYearId"),
+            semesterId: searchParams.get("semesterId"),
+            subjectId: searchParams.get("subjectId")
+        });
+    }, [searchParams]);
+
+    const updateQueryParams = useCallback((paramsToUpdate: Record<string, string | null>) => {
+        setLocalParams(prev => ({ ...prev, ...paramsToUpdate }));
+        const current = new URLSearchParams(Array.from(searchParams.entries()));
+        Object.entries(paramsToUpdate).forEach(([key, value]) => {
+            if (value === null) {
+                current.delete(key);
+            } else {
+                current.set(key, value);
+            }
+        });
+        router.push(`${pathname}?${current.toString()}`, { scroll: false });
+    }, [pathname, router, searchParams]);
+
+    useEffect(() => {
+        if (collegeEducationId && !rawEduId) {
+            updateQueryParams({ educationId: collegeEducationId.toString() });
+        }
+    }, [collegeEducationId, rawEduId, updateQueryParams]);
+
+    const { data: educationTypes = [], isLoading: isFetchingEduTypes } = useQuery({
+        queryKey: ["educationTypes", collegeId],
+        queryFn: async () => {
+            if (!collegeId) return [];
+            try {
+                const res = await fetchEducations(collegeId);
+                if (res.length > 0) return res;
+                if (collegeEducationId && collegeEducationType) {
+                    return [{
                         collegeEducationId,
                         collegeEducationType
-                    }]);
+                    }];
                 }
-            })
-            .catch(() => toast.error("Failed to load education types"))
-            .finally(() => setIsFetchingEduTypes(false));
-    }, [collegeId, collegeEducationId, collegeEducationType]);
+                return [];
+            } catch (err) {
+                toast.error("Failed to load education types");
+                return [];
+            }
+        },
+        enabled: !!collegeId,
+        staleTime: 10 * 60 * 1000,
+    });
 
-    useEffect(() => {
-        if (collegeEducationId) {
-            setEducationId(collegeEducationId);
-        }
-    }, [collegeEducationId]);
-
-    const selectedEducation = educationTypes.find(e => e.collegeEducationId === educationId);
-    
+    const selectedEducation = educationTypes.find((e: any) => e.collegeEducationId === educationId);
     const currentEducationType = selectedEducation?.collegeEducationType ?? collegeEducationType;
     const isSchool = isSchoolEducation(currentEducationType);
     const isInter = currentEducationType === "Inter";
 
-    useEffect(() => {
-        if (!collegeId || !educationId) return;
+    const { data: branches = [] } = useQuery({
+        queryKey: ["branches", collegeId, educationId],
+        queryFn: async () => {
+            if (!collegeId || !educationId) return [];
+            try {
+                return await fetchBranches(collegeId, educationId);
+            } catch (err) {
+                toast.error("Failed to load branches");
+                return [];
+            }
+        },
+        enabled: !!collegeId && !!educationId,
+        staleTime: 10 * 60 * 1000,
+    });
 
-        fetchBranches(collegeId, educationId)
-            .then(setBranches)
-            .catch(() => toast.error("Failed to load branches"));
-    }, [collegeId, educationId]);
+    const { data: academicYears = [] } = useQuery({
+        queryKey: ["academicYears", collegeId, educationId, branchId, isSchool],
+        queryFn: async () => {
+            if (!collegeId || !educationId || (!isSchool && !branchId)) return [];
+            try {
+                return await fetchAcademicYears(collegeId, educationId, isSchool ? null : branchId);
+            } catch (err) {
+                toast.error("Failed to load academic years");
+                return [];
+            }
+        },
+        enabled: !!collegeId && !!educationId && (isSchool || !!branchId),
+        staleTime: 10 * 60 * 1000,
+    });
 
+    const { data: semesters = [] } = useQuery({
+        queryKey: ["semesters", collegeId, educationId, academicYearId, isSchool],
+        queryFn: async () => {
+            if (!collegeId || !educationId || !academicYearId || isSchool) return [];
+            try {
+                return await fetchSemesters(collegeId, educationId, academicYearId);
+            } catch (err) {
+                toast.error("Failed to load semesters");
+                return [];
+            }
+        },
+        enabled: !!collegeId && !!educationId && !!academicYearId && !isSchool,
+        staleTime: 10 * 60 * 1000,
+    });
 
-    useEffect(() => {
-        if (!collegeId || !educationId || (!isSchool && !branchId)) return;
-        fetchAcademicYears(collegeId, educationId, isSchool ? null : branchId)
-            .then(setAcademicYears)
-            .catch(() => toast.error("Failed to load academic years"));
-    }, [collegeId, educationId, branchId, isSchool]);
+    const { data: subjects = [] } = useQuery({
+        queryKey: ["subjects", collegeId, educationId, branchId, academicYearId, semesterId, isSchool, isInter],
+        queryFn: async () => {
+            if (
+                !collegeId ||
+                !educationId ||
+                (!isSchool && !branchId) ||
+                !academicYearId ||
+                (!semesterId && !isInter && !isSchool)
+            ) return [];
+            try {
+                return await fetchSubjects(collegeId, educationId, isSchool ? null : branchId, academicYearId, isSchool ? null : semesterId);
+            } catch (err) {
+                toast.error("Failed to load subjects");
+                return [];
+            }
+        },
+        enabled: !!collegeId && !!educationId && !!academicYearId && (isSchool || !!branchId) && (isSchool || isInter || !!semesterId),
+        staleTime: 10 * 60 * 1000,
+    });
 
-    useEffect(() => {
-        if (!collegeId || !educationId || !academicYearId || isSchool) return;
-
-        fetchSemesters(collegeId, educationId, academicYearId)
-            .then(setSemesters)
-            .catch(() => toast.error("Failed to load semesters"));
-    }, [collegeId, educationId, academicYearId, isSchool]);
-
-    useEffect(() => {
-        if (
-            !collegeId ||
-            !educationId ||
-            (!isSchool && !branchId) ||
-            !academicYearId ||
-            (!semesterId && !isInter && !isSchool)
-        ) return;
-
-        fetchSubjects(collegeId, educationId, isSchool ? null : branchId, academicYearId, isSchool ? null : semesterId)
-            .then(setSubjects)
-            .catch(() => toast.error("Failed to load subjects"));
-    }, [collegeId, educationId, branchId, academicYearId, semesterId, isSchool, isInter]);
-
-
-    const { data: facultyData, isLoading: loading } = useQuery({
+    const { data: facultyData, isLoading, isFetching } = useQuery({
         queryKey: [
             "calendar-faculty",
             collegeId,
@@ -144,6 +203,7 @@ export default function FacultyOverview({ onSelect }: Props) {
         staleTime: 5 * 60 * 1000, // 5 minutes cache
     });
 
+    const loading = isLoading || isFetching || contextLoading || isFetchingEduTypes;
     const facultyList = facultyData?.data || [];
     const totalCount = facultyData?.total || 0;
     const paginatedFaculty = facultyList;
@@ -163,28 +223,33 @@ export default function FacultyOverview({ onSelect }: Props) {
                         <div className="flex-1">
                             <FilterDropdown
                                 label="Education Type"
-                                value={educationId?.toString() ?? "All"}
+                                value={localParams.educationId === "all" ? "All" : (localParams.educationId ?? "All")}
                                 placeholder="Select Education"
-                                options={["All", ...educationTypes.map((et) => et.collegeEducationId.toString())]}
+                                options={["All", ...educationTypes.map((et: any) => et.collegeEducationId.toString())]}
                                 onChange={(val) => {
                                     if (val === "All") {
-                                        setEducationId(null);
+                                        updateQueryParams({
+                                            educationId: "all",
+                                            branchId: null,
+                                            academicYearId: null,
+                                            semesterId: null,
+                                            subjectId: null,
+                                            page: "1"
+                                        });
                                     } else {
-                                        setEducationId(Number(val));
+                                        updateQueryParams({
+                                            educationId: val,
+                                            branchId: null,
+                                            academicYearId: null,
+                                            semesterId: null,
+                                            subjectId: null,
+                                            page: "1"
+                                        });
                                     }
-                                    setBranchId(null);
-                                    setAcademicYearId(null);
-                                    setSemesterId(null);
-                                    setSubjectId(null);
-                                    setBranches([]);
-                                    setAcademicYears([]);
-                                    setSemesters([]);
-                                    setSubjects([]);
-                                    setCurrentPage(1);
                                 }}
                                 displayModifier={(val) => {
                                     if (val === "All") return "All";
-                                    return educationTypes.find((et) => et.collegeEducationId.toString() === val)?.collegeEducationType || val;
+                                    return educationTypes.find((et: any) => et.collegeEducationId.toString() === val)?.collegeEducationType || val;
                                 }}
                             />
                         </div>
@@ -193,25 +258,30 @@ export default function FacultyOverview({ onSelect }: Props) {
                             <div className="flex-1">
                                 <FilterDropdown
                                     label={isInter ? "Group" : "Branch"}
-                                    value={branchId?.toString() ?? "All"}
+                                    value={localParams.branchId ?? "All"}
                                     disabled={!educationId}
                                     placeholder="Select Branch"
-                                    options={["All", ...branches.map((b) => b.collegeBranchId.toString())]}
+                                    options={["All", ...branches.map((b: any) => b.collegeBranchId.toString())]}
                                     onChange={(val) => {
                                         if (val === "All") {
-                                            setBranchId(null);
+                                            updateQueryParams({
+                                                branchId: null,
+                                                academicYearId: null,
+                                                subjectId: null,
+                                                page: "1"
+                                            });
                                         } else {
-                                            setBranchId(Number(val));
+                                            updateQueryParams({
+                                                branchId: val,
+                                                academicYearId: null,
+                                                subjectId: null,
+                                                page: "1"
+                                            });
                                         }
-                                        setAcademicYearId(null);
-                                        setSubjectId(null);
-                                        setAcademicYears([]);
-                                        setSubjects([]);
-                                        setCurrentPage(1);
                                     }}
                                     displayModifier={(val) => {
                                         if (val === "All") return "All";
-                                        return branches.find((b) => b.collegeBranchId.toString() === val)?.collegeBranchCode || val;
+                                        return branches.find((b: any) => b.collegeBranchId.toString() === val)?.collegeBranchCode || val;
                                     }}
                                 />
                             </div>
@@ -220,24 +290,30 @@ export default function FacultyOverview({ onSelect }: Props) {
                         <div className="flex-1">
                             <FilterDropdown
                                 label={isSchool ? "Class" : "Year"}
-                                value={academicYearId?.toString() ?? "All"}
-                                disabled={!isSchool && !branchId}
+                                value={localParams.academicYearId ?? "All"}
+                                disabled={!educationId || (!isSchool && !branchId)}
                                 placeholder="Select Year"
-                                options={["All", ...academicYears.map((y) => y.collegeAcademicYearId.toString())]}
+                                options={["All", ...academicYears.map((y: any) => y.collegeAcademicYearId.toString())]}
                                 onChange={(val) => {
                                     if (val === "All") {
-                                        setAcademicYearId(null);
+                                        updateQueryParams({
+                                            academicYearId: null,
+                                            subjectId: null,
+                                            semesterId: null,
+                                            page: "1"
+                                        });
                                     } else {
-                                        setAcademicYearId(Number(val));
+                                        updateQueryParams({
+                                            academicYearId: val,
+                                            subjectId: null,
+                                            semesterId: null,
+                                            page: "1"
+                                        });
                                     }
-                                    setSubjectId(null);
-                                    setSubjects([]);
-                                    setSemesters([]);
-                                    setCurrentPage(1);
                                 }}
                                 displayModifier={(val) => {
                                     if (val === "All") return "All";
-                                    return academicYears.find((y) => y.collegeAcademicYearId.toString() === val)?.collegeAcademicYear || val;
+                                    return academicYears.find((y: any) => y.collegeAcademicYearId.toString() === val)?.collegeAcademicYear || val;
                                 }}
                             />
                         </div>
@@ -247,23 +323,28 @@ export default function FacultyOverview({ onSelect }: Props) {
                     <div className="flex-1">
                         <FilterDropdown
                             label="Semester"
-                            value={semesterId?.toString() ?? "All"}
+                            value={localParams.semesterId ?? "All"}
                             disabled={!academicYearId}
                             placeholder="Select Semester"
-                            options={["All", ...semesters.map((s) => s.collegeSemesterId.toString())]}
+                            options={["All", ...semesters.map((s: any) => s.collegeSemesterId.toString())]}
                             onChange={(val) => {
                                 if (val === "All") {
-                                    setSemesterId(null);
+                                    updateQueryParams({
+                                        semesterId: null,
+                                        subjectId: null,
+                                        page: "1"
+                                    });
                                 } else {
-                                    setSemesterId(Number(val));
+                                    updateQueryParams({
+                                        semesterId: val,
+                                        subjectId: null,
+                                        page: "1"
+                                    });
                                 }
-                                setSubjectId(null);
-                                setSubjects([]);
-                                setCurrentPage(1);
                             }}
                             displayModifier={(val) => {
                                 if (val === "All") return "All";
-                                return semesters.find((s) => s.collegeSemesterId.toString() === val)?.collegeSemester || val;
+                                return semesters.find((s: any) => s.collegeSemesterId.toString() === val)?.collegeSemester || val;
                             }}
                         />
                     </div>
@@ -272,20 +353,20 @@ export default function FacultyOverview({ onSelect }: Props) {
                 <div className="flex-1">
                     <FilterDropdown
                         label="Subject"
-                        value={subjectId?.toString() ?? "All"}
+                        value={localParams.subjectId ?? "All"}
                         disabled={isSchool ? !academicYearId : (isInter ? !academicYearId : !semesterId)}
                         placeholder="Select Subject"
-                        options={["All", ...subjects.map((s) => s.collegeSubjectId.toString())]}
+                        options={["All", ...subjects.map((s: any) => s.collegeSubjectId.toString())]}
                         onChange={(val) => {
                             if (val === "All") {
-                                setSubjectId(null);
+                                updateQueryParams({ subjectId: null, page: "1" });
                             } else {
-                                setSubjectId(Number(val));
+                                updateQueryParams({ subjectId: val, page: "1" });
                             }
                         }}
                         displayModifier={(val) => {
                             if (val === "All") return "All";
-                            return subjects.find((s) => s.collegeSubjectId.toString() === val)?.subjectName || val;
+                            return subjects.find((s: any) => s.collegeSubjectId.toString() === val)?.subjectName || val;
                         }}
                     />
                 </div>
@@ -324,7 +405,7 @@ export default function FacultyOverview({ onSelect }: Props) {
                     currentPage={currentPage}
                     totalItems={totalCount}
                     itemsPerPage={itemsPerPage}
-                    onPageChange={setCurrentPage}
+                    onPageChange={(page) => updateQueryParams({ page: page.toString() })}
                     alwaysShow={true}
                     roundedBottom="rounded-lg"
                 />
@@ -333,3 +414,4 @@ export default function FacultyOverview({ onSelect }: Props) {
         </main >
     )
 }
+

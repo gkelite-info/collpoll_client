@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, UIEvent } from "react";
 import { CaretLeft, MagnifyingGlass } from "@phosphor-icons/react";
 import { fetchCollegeRooms, CollegeRoom } from "@/lib/helpers/rooms/roomHelper";
 import { RoomDropdownShimmer } from "../shimmers/RoomDropdownShimmer";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
 interface RoomSelectDropdownProps {
@@ -9,22 +10,19 @@ interface RoomSelectDropdownProps {
   onChange: (roomNo: string, collegeRoomId: number) => void;
   collegeId: number;
   placeholder?: string;
+  isSchool?: boolean;
 }
 
 export default function RoomSelectDropdown({
   value,
   onChange,
   collegeId,
-  placeholder = "Select Room No. / Room Name",
+  placeholder,
+  isSchool = false,
 }: RoomSelectDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [rooms, setRooms] = useState<CollegeRoom[]>([]);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -50,72 +48,47 @@ export default function RoomSelectDropdown({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (!isOpen || !collegeId) return;
-
-    let active = true;
-
-    async function loadInitial() {
-      setLoading(true);
-      try {
-        const result = await fetchCollegeRooms({
-          collegeId,
-          search: debouncedSearch,
-          page: 1,
-          limit: 10,
-        });
-        if (active) {
-          setRooms(result.data);
-          setHasMore(result.hasMore);
-          setPage(1);
-        }
-      } catch (err) {
-        toast.error("Unable to load college rooms. Please try again.");
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadInitial();
-
-    return () => {
-      active = false;
-    };
-  }, [isOpen, collegeId, debouncedSearch]);
-
-  const loadMore = async () => {
-    if (loading || loadingMore || !hasMore || !collegeId) return;
-
-    setLoadingMore(true);
-    const nextPage = page + 1;
-
-    try {
-      const result = await fetchCollegeRooms({
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage,
+    isError
+  } = useInfiniteQuery({
+    queryKey: ["collegeRooms", collegeId, debouncedSearch],
+    queryFn: async ({ pageParam = 1 }) => {
+      return await fetchCollegeRooms({
         collegeId,
         search: debouncedSearch,
-        page: nextPage,
+        page: pageParam as number,
         limit: 10,
       });
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.hasMore ? allPages.length + 1 : undefined;
+    },
+    enabled: !!collegeId && isOpen,
+  });
 
-      setRooms((prev) => [...prev, ...result.data]);
-      setHasMore(result.hasMore);
-      setPage(nextPage);
-    } catch (err) {
-      toast.error("Unable to load more college rooms. Please try again.");
-    } finally {
-      setLoadingMore(false);
+  useEffect(() => {
+    if (isError) {
+      toast.error(`Unable to load ${isSchool ? "school" : "college"} rooms. Please try again.`);
     }
-  };
+  }, [isError, isSchool]);
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const rooms = data?.pages.flatMap((page) => page.data) ?? [];
+  const loading = isFetching && !isFetchingNextPage;
+  const loadingMore = isFetchingNextPage;
+
+  const handleScroll = (e: UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     const isCloseToBottom =
       target.scrollHeight - target.scrollTop <= target.clientHeight + 30;
 
-    if (isCloseToBottom) {
-      loadMore();
+    if (isCloseToBottom && hasNextPage && !loadingMore) {
+      fetchNextPage();
     }
   };
 
@@ -123,10 +96,6 @@ export default function RoomSelectDropdown({
     onChange(room.roomNo, room.collegeRoomId);
     setIsOpen(false);
   };
-
-  const exactMatch = rooms.some(
-    (r) => r.roomNo.toLowerCase() === search.trim().toLowerCase()
-  );
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -139,7 +108,7 @@ export default function RoomSelectDropdown({
         }`}
       >
         <span className={`block truncate min-w-0 mr-2 flex-1 text-left ${value ? "text-gray-900" : "text-gray-400"}`}>
-          {value || placeholder}
+          {value || placeholder || `Select ${isSchool ? "School" : "College"} Room No. / Name`}
         </span>
         <CaretLeft
           size={18}
@@ -214,7 +183,7 @@ export default function RoomSelectDropdown({
 
                 {rooms.length === 0 && !loading && (
                   <div className="px-4 py-8 text-center text-sm text-gray-400">
-                    {search.trim() ? "No matching rooms found." : "No college rooms configured."}
+                    {search.trim() ? "No matching rooms found." : `No ${isSchool ? "school" : "college"} rooms configured.`}
                   </div>
                 )}
 

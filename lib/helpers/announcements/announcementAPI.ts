@@ -106,6 +106,7 @@ export async function fetchCollegeAnnouncements({
   userId,
   role,
   view = "others",
+  selectedDate,
   page = 1,
   limit = 10,
 }: {
@@ -115,6 +116,7 @@ export async function fetchCollegeAnnouncements({
   view?: "my" | "others";
   page?: number;
   limit?: number;
+  selectedDate?: string | null;
 }): Promise<{
   data: FormattedCollegeAnnouncement[];
   totalPages: number;
@@ -125,17 +127,6 @@ export async function fetchCollegeAnnouncements({
   const today = new Date().toISOString().split("T")[0];
   const now = new Date().toISOString();
   const numericUserId = Number(userId);
-
-  await supabase
-    .from("college_announcements")
-    .update({
-      isActive: false,
-      updatedAt: now,
-    })
-    .eq("collegeId", collegeId)
-    .eq("isActive", true)
-    .is("is_deleted", false)
-    .lt("date", today);
 
   const roleRelation =
     view === "others"
@@ -159,8 +150,11 @@ export async function fetchCollegeAnnouncements({
     )
     .eq("collegeId", collegeId)
     .eq("isActive", true)
-    .is("is_deleted", false)
-    .eq("date", today);
+    .is("is_deleted", false);
+
+  if (selectedDate) {
+    query = query.eq("date", selectedDate);
+  }
 
   if (view === "my") {
     query = query.eq("createdBy", numericUserId);

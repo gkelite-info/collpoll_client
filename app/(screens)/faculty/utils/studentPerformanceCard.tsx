@@ -1,70 +1,107 @@
 import { CaretRight } from "@phosphor-icons/react";
-import React from "react";
 import { useRouter } from "next/navigation";
-
-export interface StudentPerformance {
-  id: string;
-  name: string;
-  imageUrl: string;
-  percentage: number;
-}
+import { Avatar } from "@/app/utils/Avatar";
+import React, { useEffect, useRef } from "react";
+import type { FacultyStudentProgressRow } from "@/lib/helpers/faculty/studentProgress/getFacultyStudentProgressSummary";
 
 interface StudentPerformanceCardProps {
-  students: StudentPerformance[];
+  students: FacultyStudentProgressRow[];
+  loading: boolean;
+  fetchNextPage?: () => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
 }
 
-export const DefaultAvatar = () => (
-  <div className="w-10 h-10 rounded-full border border-[#43C17A] bg-gray-200 flex items-center justify-center text-gray-400">
-    <svg
-      className="w-6 h-6"
-      fill="currentColor"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-    </svg>
+const StudentPerformanceShimmer = () => (
+  <div className="flex items-center py-3 border-b border-gray-100 last:border-b-0 gap-3 md:gap-4 animate-pulse">
+    <div className="w-10 h-10 shrink-0 rounded-full bg-gray-200" />
+    <div className="flex-1 flex flex-col gap-1.5">
+      <div className="h-4 bg-gray-200 rounded w-1/2" />
+      <div className="h-3 bg-gray-200 rounded w-1/3" />
+      <div className="flex items-center gap-3 w-full mt-1">
+        <div className="h-1.5 md:h-2 w-full bg-gray-200 rounded-full" />
+        <div className="h-3 w-8 bg-gray-200 rounded shrink-0" />
+      </div>
+    </div>
   </div>
 );
 
-const StudentRow: React.FC<{ student: StudentPerformance, number: number }> = ({ student, number }) => {
+const StudentRow: React.FC<{ student: FacultyStudentProgressRow }> = ({ student }) => {
   return (
-    <div className="flex items-center py-3 border-b border-gray-100 last:border-b-0">
-      <div className="mr-4 shrink-0">
-        <DefaultAvatar />
+    <div className="flex items-center py-3 border-b border-gray-100 last:border-b-0 gap-3 md:gap-4">
+      <div className="w-10 h-10 shrink-0 overflow-hidden rounded-full border border-gray-100">
+        <Avatar src={student.profileUrl} size={40} alt={student.studentName} />
       </div>
 
-      <div className="flex-1 font-medium text-gray-800 text-xs">
-        Student {number + 1}
-      </div>
-
-      <div className="flex items-center ml-4 w-[180px]">
-        <div className="h-2 bg-[#16284F] rounded-full flex-1 overflow-hidden mr-3 relative">
-          <div
-            className="h-full bg-emerald-500 rounded-full absolute left-0 top-0 transition-all duration-500 ease-out"
-            style={{ width: `${0}%` }}
-          ></div>
-        </div>
-
-        <span className="text-gray-700 font-medium text-sm w-8 text-right">
-          {0}%
+      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+        <h4
+          className="text-[13px] md:text-sm font-semibold text-gray-800 truncate"
+          title={student.studentName}
+        >
+          {student.studentName}
+        </h4>
+        <span
+          className="text-[10px] md:text-[11px] text-gray-500 font-medium truncate"
+          title={student.rollNo}
+        >
+          {student.rollNo}
         </span>
+        <div className="flex items-center gap-3 w-full mt-1.5">
+          <div className="h-1.5 md:h-2 w-full bg-[#16284F] rounded-full overflow-hidden relative">
+            <div
+              className="absolute top-0 left-0 h-full bg-[#43C17A] rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${student.progressPercent}%` }}
+            />
+          </div>
+          <span className="text-[11px] md:text-xs font-bold text-gray-700 w-8 text-right shrink-0">
+            {student.progressPercent}%
+          </span>
+        </div>
       </div>
     </div>
   );
 };
 
-export default function studentPerformanceCard({
+export default function StudentPerformanceCard({
   students,
+  loading,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
 }: StudentPerformanceCardProps) {
   const router = useRouter();
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const bottom =
+      e.currentTarget.scrollHeight - e.currentTarget.scrollTop <=
+      e.currentTarget.clientHeight + 10;
+    if (bottom && hasNextPage && !isFetchingNextPage && fetchNextPage) {
+      fetchNextPage();
+    }
+  };
+
+  useEffect(() => {
+    if (!scrollRef.current || !hasNextPage || isFetchingNextPage || loading) return;
+
+    const timer = setTimeout(() => {
+      if (scrollRef.current) {
+        const { scrollHeight, clientHeight } = scrollRef.current;
+        if (scrollHeight <= clientHeight + 5 && fetchNextPage) {
+          fetchNextPage();
+        }
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [students, hasNextPage, isFetchingNextPage, loading, fetchNextPage]);
 
   return (
     <>
       <div
-        className={`bg-white relative overflow-hidden rounded-2xl shadow-lg p-6 w-full lg:max-w-[420px] font-sans flex flex-col`}
+        className={`bg-white relative overflow-hidden rounded-2xl shadow-lg p-5 lg:p-6 w-full h-full font-sans flex flex-col min-h-0`}
       >
         <div className="flex items-center justify-between mb-4 shrink-0">
-          <h2 className="text-lg font-bold text-gray-900">
+          <h2 className="text-base lg:text-lg font-bold text-gray-900">
             My Students Performance
           </h2>
           <button
@@ -75,10 +112,36 @@ export default function studentPerformanceCard({
           </button>
         </div>
 
-        <div className="flex flex-col overflow-y-auto custom-scrollbar max-h-[355px] pr-3 md:pr-3 lg:pr-2">
-          {students.map((student, index) => (
-            <StudentRow key={student.id} student={student} number={index} />
-          ))}
+        <div
+          ref={scrollRef}
+          className="flex flex-col overflow-y-auto custom-scrollbar flex-1 min-h-0 pr-2 lg:pr-3"
+          onScroll={handleScroll}
+        >
+          {loading && students.length === 0 ? (
+            <>
+              {[1, 2, 3, 4].map((i) => (
+                <StudentPerformanceShimmer key={`shimmer-init-${i}`} />
+              ))}
+            </>
+          ) : (
+            <>
+              {students.map((student) => (
+                <StudentRow key={`${student.studentId}`} student={student} />
+              ))}
+              {students.length === 0 && !loading && (
+                <div className="text-center py-10 text-gray-400 text-sm italic">
+                  No student performance data available.
+                </div>
+              )}
+              {isFetchingNextPage && (
+                <>
+                  {[1, 2, 3].map((i) => (
+                    <StudentPerformanceShimmer key={`shimmer-next-${i}`} />
+                  ))}
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
     </>

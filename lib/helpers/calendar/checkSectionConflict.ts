@@ -136,9 +136,9 @@ export async function checkSectionConflict(params: {
         s.isActive === true &&
         s.deletedAt === null &&
         s.collegeEducationId === collegeEducationId &&
-        s.collegeBranchId === collegeBranchId &&
+        (s.collegeBranchId === collegeBranchId || (s.collegeBranchId == null && collegeBranchId == null)) &&
         s.collegeAcademicYearId === collegeAcademicYearId &&
-        s.collegeSemesterId === collegeSemesterId &&
+        (s.collegeSemesterId === collegeSemesterId || (s.collegeSemesterId == null && collegeSemesterId == null)) &&
         sectionIds.includes(s.collegeSectionId),
     );
 
@@ -178,9 +178,9 @@ export async function checkSectionConflict(params: {
         s.isActive === true &&
         s.deletedAt === null &&
         s.collegeEducationId === collegeEducationId &&
-        s.collegeBranchId === collegeBranchId &&
+        (s.collegeBranchId === collegeBranchId || (s.collegeBranchId == null && collegeBranchId == null)) &&
         s.collegeAcademicYearId === collegeAcademicYearId &&
-        s.collegeSemesterId === collegeSemesterId &&
+        (s.collegeSemesterId === collegeSemesterId || (s.collegeSemesterId == null && collegeSemesterId == null)) &&
         sectionIds.includes(s.collegeSectionId),
     );
 
