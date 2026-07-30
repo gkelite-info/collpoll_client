@@ -68,9 +68,10 @@ const AttendancePage = ({ userId, profile }: Props) => {
 
   const formattedProfile: FacultyProfile = {
     name: staffName,
+    role: profile.role,
     image: profile.image || "",
     id: String(profile.identifierId || profile.id || profile.userId || userId),
-    department: profile.role || "N/A",
+    department: profile.department || "N/A",
     mobile: profile.mobile || "N/A",
     email: profile.email || "N/A",
     joiningDate: profile.joiningDate || "N/A",

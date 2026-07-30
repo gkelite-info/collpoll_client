@@ -6,6 +6,16 @@ interface Props {
 }
 
 const AnalyticsFacultyInfo: React.FC<Props> = ({ profile }) => {
+  const isSchoolStr =
+    typeof document !== "undefined"
+      ? document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("isSchool="))
+          ?.split("=")[1]
+      : null;
+  const isSchool = isSchoolStr === "true";
+  const isAccountant = profile.role?.toLowerCase() === "accountant";
+
   return (
     <div className="w-full mb-5 px-4 text-[14px]">
       <h2 className="text-[#282828] font-bold text-[17px] mb-4">
@@ -18,7 +28,9 @@ const AnalyticsFacultyInfo: React.FC<Props> = ({ profile }) => {
           <span className="text-[#525252]">{profile.name}</span>
         </div>
         <div>
-          <span className="font-semibold text-[#282828]">Department : </span>
+          <span className="font-semibold text-[#282828]">
+            {isAccountant ? "Education Type" : isSchool ? "Year" : "Branch"} :{" "}
+          </span>
           <span className="text-[#525252]">{profile.department}</span>
         </div>
         <div>

@@ -74,7 +74,7 @@ const AttendanceAnalyticsPage = ({ userId, profile }: Props) => {
 
   useEffect(() => {
     const staffName = profile.name || "Unknown Staff";
-    const role = profile.role || "N/A";
+    const branchOrYear = profile.department || "N/A";
     const experience = profile.experience
       ? `${profile.experience} Years`
       : "N/A";
@@ -83,7 +83,8 @@ const AttendanceAnalyticsPage = ({ userId, profile }: Props) => {
     fetchUserAttendanceStats(userId).then((stats) => {
       setFacultyInfo({
         name: staffName,
-        department: role,
+        role: profile.role,
+        department: branchOrYear,
         employeeId: String(profile.identifierId || "N/A"),
         experience: experience,
         leavesTaken: stats.leavesTaken,

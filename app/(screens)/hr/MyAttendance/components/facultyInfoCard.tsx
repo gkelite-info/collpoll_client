@@ -11,6 +11,7 @@ const FacultyInfoCard: React.FC<Props> = ({ profile }) => {
     ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
     : null;
   const isSchool = isSchoolStr === "true";
+  const isAccountant = profile.role?.toLowerCase() === "accountant";
 
   return (
     <div className="flex bg-white rounded-xl p-4 w-[70%] shadow-sm items-center gap-8 border border-gray-100/50">
@@ -26,7 +27,9 @@ const FacultyInfoCard: React.FC<Props> = ({ profile }) => {
         <div className="text-[#282828] font-semibold">{isSchool ? "School Staff ID" : "College Staff ID"}</div>
         <div className="text-gray-500">{profile.id}</div>
 
-        <div className="text-[#282828] font-semibold">Department</div>
+        <div className="text-[#282828] font-semibold">
+          {isAccountant ? "Education Type" : isSchool ? "Year" : "Branch"}
+        </div>
         <div className="text-gray-500">{profile.department}</div>
 
         <div className="text-[#282828] font-semibold">Mobile</div>
