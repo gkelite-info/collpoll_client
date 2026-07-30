@@ -71,7 +71,7 @@ export const fetchUniversalStaffProfile = async (
         .maybeSingle();
 
       if (!roleErr && roleData) {
-        const roleId = (roleData as Record<string, unknown>)[
+        const roleId = (roleData as unknown as Record<string, unknown>)[
           roleConfig.idColumn
         ];
         if (typeof roleId === "number" || typeof roleId === "string") {
