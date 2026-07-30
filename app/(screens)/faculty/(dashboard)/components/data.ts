@@ -1,5 +1,10 @@
 import { ScheduledLesson } from "../../utils/scheduledLessonsStrip";
-import { StudentPerformance } from "../../utils/studentPerformanceCard";
+export interface StudentPerformance {
+  id: string;
+  name: string;
+  imageUrl: string;
+  percentage: number;
+}
 import { TopPerformer } from "./topFivePerformers";
 
 export interface DetailedStudent {
