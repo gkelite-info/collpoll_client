@@ -118,17 +118,22 @@ const formatRole = (role: string, isSchool?: boolean) => {
 
 function ViewAnnouncementModal({
   basicData,
-  fullData,
-  isLoading,
   onClose,
   isSchool
 }: {
   basicData: AnnounceCard;
-  fullData: AnnouncementDetails | null;
-  isLoading: boolean;
   onClose: () => void;
   isSchool?: boolean;
 }) {
+  const { data: fullData, isLoading, isError } = useQuery({
+    queryKey: ["announcementDetails", basicData.collegeAnnouncementId],
+    queryFn: async () => {
+      if (!basicData.collegeAnnouncementId) throw new Error("No ID");
+      return await fetchAnnouncementDetails(basicData.collegeAnnouncementId);
+    },
+    enabled: !!basicData.collegeAnnouncementId,
+  });
+
   const t = useTranslations("Dashboard");
 
   const formattedType = basicData.type
@@ -172,10 +177,14 @@ function ViewAnnouncementModal({
           </div>
         </div>
 
-        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 min-h-[150px]">
+        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 min-h-[175px]">
           {isLoading ? (
             <AnnouncementDetailsShimmer />
-          ) : fullData ? (
+          ) : isError || !fullData ? (
+            <div className="text-center text-gray-400 py-8 text-sm">
+              {t("Failed to load details")}
+            </div>
+          ) : (
             <div className="flex flex-col gap-4 text-sm text-[#454545]">
               <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
                 <img
@@ -195,7 +204,7 @@ function ViewAnnouncementModal({
 
               <div className="flex justify-between items-center pb-2 border-b border-gray-200">
                 <span className="font-semibold text-gray-700 flex-shrink-0">
-                  {t("Date")}:
+                  Date:
                 </span>
                 <span className="font-medium text-right">
                   {fullData.formattedDate || fullData.date}
@@ -205,7 +214,7 @@ function ViewAnnouncementModal({
               {fullData.targetRoles && fullData.targetRoles.length > 0 && (
                 <div className="flex flex-col gap-2 pt-1">
                   <span className="font-semibold text-gray-700">
-                    {t("Targeted Roles")}:
+                    Targeted Roles:
                   </span>
                   <div className="flex flex-wrap gap-2">
                     {fullData.targetRoles.map((r: string) => (
@@ -213,16 +222,12 @@ function ViewAnnouncementModal({
                         key={r}
                         className="bg-white border border-gray-200 text-[#43C17A] px-2.5 py-1 rounded-md text-xs font-bold shadow-sm"
                       >
-                        {t(formatRole(r, isSchool))}
+                        {formatRole(r, isSchool)}
                       </span>
                     ))}
                   </div>
                 </div>
               )}
-            </div>
-          ) : (
-            <div className="text-center text-gray-400 py-8 text-sm">
-              {t("Failed to load details")}
             </div>
           )}
         </div>
@@ -276,11 +281,7 @@ export default function AnnouncementsCard({
   const [openModal, setOpenModal] = useState(false);
   const [editData, setEditData] = useState<AnnounceCard | null>(null);
 
-  const [viewingAnnouncement, setViewingAnnouncement] =
-    useState<AnnounceCard | null>(null);
-  const [fullDetailsData, setFullDetailsData] =
-    useState<AnnouncementDetails | null>(null);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [viewingAnnouncement, setViewingAnnouncement] = useState<AnnounceCard | null>(null);
 
   const { userId, collegeId, role: userRole, collegeEducationType } = useUser();
   const isSchool = isSchoolEducation(collegeEducationType);
@@ -528,21 +529,8 @@ export default function AnnouncementsCard({
     onViewChange?.(v);
   };
 
-  const handleCardClick = async (card: AnnounceCard) => {
+  const handleCardClick = (card: AnnounceCard) => {
     setViewingAnnouncement(card);
-    setIsLoadingDetails(true);
-    try {
-      if (card.collegeAnnouncementId) {
-        const details = await fetchAnnouncementDetails(
-          card.collegeAnnouncementId,
-        );
-        setFullDetailsData(details);
-      }
-    } catch (error) {
-      toast.error(t("Failed to load details"));
-    } finally {
-      setIsLoadingDetails(false);
-    }
   };
 
   const handleDelete = (announcementId: number) => {
@@ -583,7 +571,7 @@ export default function AnnouncementsCard({
           </button>
         </div>
       </div>
-    ));
+    ), { id: `delete-ann-${announcementId}` });
   };
 
   return (
@@ -591,13 +579,8 @@ export default function AnnouncementsCard({
       {viewingAnnouncement && (
         <ViewAnnouncementModal
           basicData={viewingAnnouncement}
-          fullData={fullDetailsData}
-          isLoading={isLoadingDetails}
           isSchool={isSchool}
-          onClose={() => {
-            setViewingAnnouncement(null);
-            setFullDetailsData(null);
-          }}
+          onClose={() => setViewingAnnouncement(null)}
         />
       )}
 
