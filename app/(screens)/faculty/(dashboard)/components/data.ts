@@ -1,5 +1,10 @@
 import { ScheduledLesson } from "../../utils/scheduledLessonsStrip";
-import { StudentPerformance } from "../../utils/studentPerformanceCard";
+export interface StudentPerformance {
+  id: string;
+  name: string;
+  imageUrl: string;
+  percentage: number;
+}
 import { TopPerformer } from "./topFivePerformers";
 
 export interface DetailedStudent {
@@ -166,6 +171,12 @@ export const STUDENT_DATA: StudentPerformance[] = [
   },
   {
     id: "7",
+    name: "John Doe",
+    imageUrl: "https://i.pravatar.cc/150?img=12",
+    percentage: 60,
+  },
+  {
+    id: "8",
     name: "John Doe",
     imageUrl: "https://i.pravatar.cc/150?img=12",
     percentage: 60,

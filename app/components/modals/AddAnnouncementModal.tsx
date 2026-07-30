@@ -190,7 +190,7 @@ export default function AddAnnouncementModal({
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [type, setType] = useState<string>("notice");
   const roleDropdownRef = useRef<HTMLDivElement>(null);
-  const availableRoles = role ? roleOptionsMap[role] || [] : [];
+  const availableRoles = (role ? roleOptionsMap[role] || [] : []).filter(r => isSchool ? r !== "PlacementOfficer" : true);
 
   const t = useTranslations("Dashboard.student");
 
@@ -373,7 +373,7 @@ export default function AddAnnouncementModal({
     "emergency",
     "finance",
     "other",
-  ];
+  ].filter(t => isSchool ? t !== "placement" : true);
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">

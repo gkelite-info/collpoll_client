@@ -21,9 +21,11 @@ export default function EventDetailsModal({ open, event, onClose, isSchool }: Pr
   const timeStr = `${start.toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: true,
   })} - ${end.toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: true,
   })}`;
 
   const dateStr = start.toLocaleDateString("en-GB");
@@ -110,7 +112,7 @@ export default function EventDetailsModal({ open, event, onClose, isSchool }: Pr
           )}
 
           <div className="my-2 space-y-2">
-            {!isSchool && (
+            {!isSchool && event.branch && event.branch !== "-" && (
               <Detail label={collegeEducationType === "Inter" ? "Group" : "Branch"} value={event.branch} />
             )}
             <Detail label="Year" value={event.year} />

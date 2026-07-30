@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import {
-  fetchFacultyTasksForLoggedInFaculty,
+
   saveFacultyTask,
 } from "@/lib/helpers/faculty/facultyTasks";
 import type { Task } from "@/app/utils/taskPanel";
@@ -57,26 +57,7 @@ export default function FacultyDashRight() {
   const collegeSubjectId = activeSection?.collegeSubjectId ?? null;
   const collegeSectionId = isSingleSubject ? null : (activeSection?.collegeSectionsId ?? null);
 
-  const { data: tasks = [], isLoading: loading } = useQuery({
-    queryKey: ["facultyTasks", facultyId, collegeSubjectId, collegeSectionId],
-    queryFn: async () => {
-      if (!collegeSubjectId || !facultyId) return [];
-      const data = await fetchFacultyTasksForLoggedInFaculty(
-        facultyId,
-        collegeSubjectId,
-        collegeSectionId
-      );
-      return data.map((t: any) => ({
-        facultyTaskId: t.facultyTaskId,
-        title: t.taskTitle,
-        description: t.description,
-        time: t.time,
-        date: t.date,
-      }));
-    },
-    enabled: !!facultyId && !!collegeSubjectId,
-    staleTime: 5 * 60 * 1000,
-  });
+
 
   const { data: announcements = [], isLoading: isAnnouncementsLoading, refetch: refetchAnnouncements } = useQuery({
     queryKey: ["collegeAnnouncements", collegeId, userId, role, view],
@@ -111,6 +92,7 @@ export default function FacultyDashRight() {
     },
     enabled: !!collegeId && !!userId && !!role && !facultyLoading,
     staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 
   const saveTaskMutation = useMutation({
@@ -158,15 +140,18 @@ export default function FacultyDashRight() {
     await saveTaskMutation.mutateAsync({ data: payload, taskId });
   };
 
+  const isTasksLoading = facultyLoading || (!facultyId || !collegeSubjectId);
+  const isAnnouncementsLoadingFinal = facultyLoading || (!collegeId || !userId || !role) || isAnnouncementsLoading;
+
   return (
-    <div className="hidden h-full min-h-0 flex-col overflow-hidden p-2 md:flex md:w-[35%] lg:w-[32%]">
+    <div className="hidden h-full min-h-0 flex-col overflow-hidden p-2 pb-4 md:flex md:w-[35%] lg:w-[32%]">
       <CourseScheduleCard />
       <WorkWeekCalendar />
 
       <TaskPanel
         role="faculty"
-        facultyTasks={loading ? [] : tasks}
-        loading={loading}
+        enableInfiniteScroll={true}
+        loading={isTasksLoading}
         collegeSubjectId={collegeSubjectId ?? undefined}
         facultyId={facultyId ?? undefined}
         onAddTask={() => { }}
@@ -194,12 +179,12 @@ export default function FacultyDashRight() {
           }}
         />
       )}
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 mt-4">
         <AnnouncementsCard
-          announceCard={announcements}
-          height="100%"
+          className="h-full"
+          enableInfiniteScroll={true}
           currentView={view}
-          isLoading={isAnnouncementsLoading}
+          isLoading={isAnnouncementsLoadingFinal}
           onViewChange={(v) => setView(v as "my" | "others")}
           refreshAnnouncements={async () => { await refetchAnnouncements(); }}
         />

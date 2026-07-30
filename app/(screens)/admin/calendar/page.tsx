@@ -26,6 +26,19 @@ function PageContent() {
   const { collegeId } = useUser()
   const { collegeEducationId } = useAdmin()
 
+  const createQueryString = useCallback(
+    (name: string, value: string | null) => {
+      const params = new URLSearchParams(Array.from(searchParams.entries()))
+      if (value === null) {
+        params.delete(name)
+      } else {
+        params.set(name, value)
+      }
+      return params.toString()
+    },
+    [searchParams]
+  )
+
   const tabQuery = searchParams.get("tab");
   const activeTab = tabQuery === "Holidays" ? "Holidays" : "overview";
 
@@ -120,13 +133,13 @@ function PageContent() {
       {!selectedFaculty && (
         <div className="flex gap-3 mb-5">
           <button
-            onClick={() => router.push("/admin/calendar?tab=overview")}
+            onClick={() => router.push(`/admin/calendar?${createQueryString("tab", "overview")}`, { scroll: false })}
             className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${activeTab === "overview" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
           >
             Calendar Overview
           </button>
           <button
-            onClick={() => router.push("/admin/calendar?tab=Holidays")}
+            onClick={() => router.push(`/admin/calendar?${createQueryString("tab", "Holidays")}`, { scroll: false })}
             className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${activeTab === "Holidays" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
           >
             Holiday Calendar
@@ -150,10 +163,10 @@ function PageContent() {
         selectedFaculty ? (
           <CalendarView
             faculty={selectedFaculty}
-            onBack={() => router.push("/admin/calendar")}
+            onBack={() => router.push(`/admin/calendar?${createQueryString("facultyId", null)}`, { scroll: false })}
           />
         ) : (
-          <FacultyOverview onSelect={(faculty) => router.push(`/admin/calendar?facultyId=${encryptId(faculty.id)}`)} />
+          <FacultyOverview onSelect={(faculty) => router.push(`/admin/calendar?${createQueryString("facultyId", encryptId(faculty.id))}`, { scroll: false })} />
         )
       )}
     </div>

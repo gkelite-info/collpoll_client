@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import { fetchCalendarEvents } from "@/lib/helpers/calendar/calendarEventAPI";
 import {
   fetchBulkCalendarEvents,
@@ -37,20 +39,16 @@ export const useFacultyCalendarEvents = (
     const startStr = new Date(currentYear, currentMonth, -7).toISOString().split("T")[0];
     const endStr = new Date(currentYear, currentMonth + 1, 7).toISOString().split("T")[0];
 
-    const typesFilter = activeTab === "All" ? undefined : [activeTab];
-
     const [rows, bulkRows, hrData] = await Promise.all([
       fetchCalendarEvents({
         facultyId,
         startDate: startStr,
         endDate: endStr,
-        types: typesFilter,
       }),
       fetchBulkCalendarEvents({
         facultyId,
         startDate: startStr,
         endDate: endStr,
-        types: typesFilter,
       }),
       fetchHrCalendarEvents(collegeId),
     ]);
@@ -144,28 +142,34 @@ export const useFacultyCalendarEvents = (
       ])
     );
 
-    const sectionNameMap = new Map<number, string>(
-      allSections.map((s: any) => [s.collegeSectionsId, s.collegeSections])
-    );
-
-    const sectionMap = new Map<number, number[]>();
+    const sectionMap = new Map<number, { id: number; name: string; branch: string; year: string }[]>();
     if (rows.length > 0) {
       const eventIds = rows.map((r: any) => r.calendarEventId);
       const allSections = await fetchAllCalendarEventSections(eventIds);
       allSections.forEach((s: any) => {
         const sections = sectionMap.get(s.calendarEventId) || [];
-        sections.push(s.collegeSectionId);
+        sections.push({
+          id: s.collegeSectionId,
+          name: s.section?.collegeSections || "-",
+          branch: s.branch?.collegeBranchCode || "",
+          year: s.academic_year?.collegeAcademicYear || "",
+        });
         sectionMap.set(s.calendarEventId, sections);
       });
     }
 
-    const bulkSectionMap = new Map<number, number[]>();
+    const bulkSectionMap = new Map<number, { id: number; name: string; branch: string; year: string }[]>();
     if (bulkRows.length > 0) {
       const bulkEventIds = bulkRows.map((r: any) => r.bulkCalendarEventId);
       const allBulkSections = await fetchAllBulkCalendarEventSections(bulkEventIds);
       allBulkSections.forEach((s: any) => {
         const sections = bulkSectionMap.get(s.bulkCalendarEventId) || [];
-        sections.push(s.collegeSectionId);
+        sections.push({
+          id: s.collegeSectionId,
+          name: s.section?.collegeSections || "-",
+          branch: s.branch?.collegeBranchCode || "",
+          year: s.academic_year?.collegeAcademicYear || "",
+        });
         bulkSectionMap.set(s.bulkCalendarEventId, sections);
       });
     }
@@ -176,7 +180,7 @@ export const useFacultyCalendarEvents = (
       const startTime = `${row.date}T${row.fromTime}`;
       const endTime = `${row.date}T${row.toTime}`;
 
-      const sectionIds = sectionMap.get(row.calendarEventId) ?? [];
+      const sectionInfos = sectionMap.get(row.calendarEventId) ?? [];
 
       const safelyExtractedTopic =
         row.college_subject_unit_topics?.topicTitle ||
@@ -184,9 +188,9 @@ export const useFacultyCalendarEvents = (
           ? row.college_subject_unit_topics[0]?.topicTitle
           : null);
 
-      sectionIds.forEach((sectionId) => {
+      sectionInfos.forEach((secInfo) => {
         expandedEvents.push({
-          id: `${row.calendarEventId}-${sectionId}`,
+          id: `${row.calendarEventId}-${secInfo.id}`,
 
           title:
             row.type === "meeting"
@@ -204,13 +208,13 @@ export const useFacultyCalendarEvents = (
           startTime,
           endTime,
 
-          branch: branchMap.get(branchId) ?? "",
-          year: yearMap.get(academicYearId) ?? "",
-          section: sectionNameMap.get(sectionId) ?? "",
+          branch: secInfo.branch,
+          year: secInfo.year,
+          section: secInfo.name,
 
           calendarEventId: row.calendarEventId,
 
-          sectionId: sectionId,
+          sectionId: secInfo.id,
 
           rawFormData: {
             subjectId: row.subject,
@@ -229,7 +233,7 @@ export const useFacultyCalendarEvents = (
     bulkRows.forEach((row: any) => {
       const fromDateObj = new Date(row.fromDate);
       const toDateObj = new Date(row.toDate);
-      const sectionIds = bulkSectionMap.get(row.bulkCalendarEventId) ?? [];
+      const sectionInfos = bulkSectionMap.get(row.bulkCalendarEventId) ?? [];
 
       const units =
         row.bulk_calendar_event_units
@@ -248,9 +252,9 @@ export const useFacultyCalendarEvents = (
         const startTime = `${dateStr}T${row.fromTime}`;
         const endTime = `${dateStr}T${row.toTime}`;
 
-        sectionIds.forEach((sectionId) => {
+        sectionInfos.forEach((secInfo) => {
           expandedEvents.push({
-            id: `bulk-${row.bulkCalendarEventId}-${sectionId}-${dateStr}`,
+            id: `bulk-${row.bulkCalendarEventId}-${secInfo.id}-${dateStr}`,
 
             title: row.type === "meeting" ? row.meetingTitle || "Meeting" : units,
 
@@ -265,18 +269,18 @@ export const useFacultyCalendarEvents = (
             startTime,
             endTime,
 
-            branch: branchMap.get(branchId) ?? "",
-            year: yearMap.get(academicYearId) ?? "",
-            section: sectionNameMap.get(sectionId) ?? "",
+            branch: secInfo.branch,
+            year: secInfo.year,
+            section: secInfo.name,
 
             calendarEventId: row.bulkCalendarEventId,
 
-            sectionId: sectionId,
+            sectionId: secInfo.id,
 
             rawFormData: {
               subjectId: row.subject,
               topicId: null,
-              topicTitle: null,
+              topicTitle: units !== "-" ? units : null,
               roomNo: row.college_rooms?.roomNo ?? "",
               collegeRoomId: row.collegeRoomId,
               meetingLink: row.meetingLink,
@@ -293,13 +297,12 @@ export const useFacultyCalendarEvents = (
     return { events: expandedEvents, hrEvents: fetchedHrEvents };
   };
 
-  const { data: calendarData, isLoading } = useQuery({
+  const { data: calendarData, isLoading, isError, error } = useQuery({
     queryKey: [
       "facultyCalendarEvents",
       facultyId,
       currentMonth,
       currentYear,
-      activeTab,
     ],
     queryFn: fetchFacultyCalendarData,
     enabled: !!facultyId && !!collegeId,
@@ -307,9 +310,25 @@ export const useFacultyCalendarEvents = (
     gcTime: 30 * 60 * 1000,
   });
 
+  useEffect(() => {
+    if (isError) {
+      toast.error("Failed to load calendar events. Please try again.");
+      console.error("FACULTY LOAD EVENTS FAILED", error);
+    }
+  }, [isError, error]);
+
+  const allEvents = calendarData?.events || [];
+  const allHrEvents = calendarData?.hrEvents || [];
+
+  const filteredEvents =
+    activeTab === "All" ? allEvents : allEvents.filter((e) => e.type === activeTab);
+
+  const filteredHrEvents =
+    activeTab === "All" || activeTab === "meeting" ? allHrEvents : [];
+
   return {
-    events: calendarData?.events || [],
-    hrEvents: calendarData?.hrEvents || [],
+    events: filteredEvents,
+    hrEvents: filteredHrEvents,
     isLoading,
   };
 };

@@ -12,7 +12,10 @@ import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@/app/utils/context/UserContext";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useInView } from "react-intersection-observer";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
 
 type AnnounceCard = {
   collegeAnnouncementId?: number;
@@ -50,15 +53,17 @@ type CalendarAnnouncementRow = {
 };
 
 type AnnouncementsCardProps = {
-  announceCard: AnnounceCard[];
+  announceCard?: AnnounceCard[];
   height?: string;
   currentView?: "my" | "others";
+  enableInfiniteScroll?: boolean;
   isLoading?: boolean;
   onAddClick?: () => void;
   onViewChange?: (view: "my" | "others") => void;
   onEditAnnouncement?: (announcement: AnnounceCard) => void;
   refreshAnnouncements?: () => Promise<void>;
   readOnly?: boolean;
+  className?: string;
 };
 
 const AnnouncementListShimmer = () => (
@@ -113,17 +118,22 @@ const formatRole = (role: string, isSchool?: boolean) => {
 
 function ViewAnnouncementModal({
   basicData,
-  fullData,
-  isLoading,
   onClose,
   isSchool
 }: {
   basicData: AnnounceCard;
-  fullData: AnnouncementDetails | null;
-  isLoading: boolean;
   onClose: () => void;
   isSchool?: boolean;
 }) {
+  const { data: fullData, isLoading, isError } = useQuery({
+    queryKey: ["announcementDetails", basicData.collegeAnnouncementId],
+    queryFn: async () => {
+      if (!basicData.collegeAnnouncementId) throw new Error("No ID");
+      return await fetchAnnouncementDetails(basicData.collegeAnnouncementId);
+    },
+    enabled: !!basicData.collegeAnnouncementId,
+  });
+
   const t = useTranslations("Dashboard");
 
   const formattedType = basicData.type
@@ -162,15 +172,19 @@ function ViewAnnouncementModal({
               {basicData.title}
             </h2>
             <span className="text-xs font-bold text-[#43C17A] uppercase mt-1 tracking-wider">
-              {t(formattedType)}
+              {formattedType}
             </span>
           </div>
         </div>
 
-        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 min-h-[150px]">
+        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 min-h-[175px]">
           {isLoading ? (
             <AnnouncementDetailsShimmer />
-          ) : fullData ? (
+          ) : isError || !fullData ? (
+            <div className="text-center text-gray-400 py-8 text-sm">
+              {t("Failed to load details")}
+            </div>
+          ) : (
             <div className="flex flex-col gap-4 text-sm text-[#454545]">
               <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
                 <img
@@ -183,14 +197,14 @@ function ViewAnnouncementModal({
                     {fullData.creatorName}
                   </span>
                   <span className="font-semibold text-gray-500 text-xs">
-                    {t(formatRole(fullData.creatorRole, isSchool))}
+                    {formatRole(fullData.creatorRole, isSchool)}
                   </span>
                 </div>
               </div>
 
               <div className="flex justify-between items-center pb-2 border-b border-gray-200">
                 <span className="font-semibold text-gray-700 flex-shrink-0">
-                  {t("Date")}:
+                  Date:
                 </span>
                 <span className="font-medium text-right">
                   {fullData.formattedDate || fullData.date}
@@ -200,7 +214,7 @@ function ViewAnnouncementModal({
               {fullData.targetRoles && fullData.targetRoles.length > 0 && (
                 <div className="flex flex-col gap-2 pt-1">
                   <span className="font-semibold text-gray-700">
-                    {t("Targeted Roles")}:
+                    Targeted Roles:
                   </span>
                   <div className="flex flex-wrap gap-2">
                     {fullData.targetRoles.map((r: string) => (
@@ -208,16 +222,12 @@ function ViewAnnouncementModal({
                         key={r}
                         className="bg-white border border-gray-200 text-[#43C17A] px-2.5 py-1 rounded-md text-xs font-bold shadow-sm"
                       >
-                        {t(formatRole(r, isSchool))}
+                        {formatRole(r, isSchool)}
                       </span>
                     ))}
                   </div>
                 </div>
               )}
-            </div>
-          ) : (
-            <div className="text-center text-gray-400 py-8 text-sm">
-              {t("Failed to load details")}
             </div>
           )}
         </div>
@@ -227,15 +237,17 @@ function ViewAnnouncementModal({
 }
 
 export default function AnnouncementsCard({
-  announceCard,
+  announceCard = [],
   height,
   currentView,
+  enableInfiniteScroll = false,
   isLoading = false,
   onAddClick,
   onViewChange,
   onEditAnnouncement,
   refreshAnnouncements,
   readOnly,
+  className,
 }: AnnouncementsCardProps) {
   const pathname = usePathname();
   const t = useTranslations("Dashboard.student");
@@ -269,18 +281,78 @@ export default function AnnouncementsCard({
   const [openModal, setOpenModal] = useState(false);
   const [editData, setEditData] = useState<AnnounceCard | null>(null);
 
-  const [viewingAnnouncement, setViewingAnnouncement] =
-    useState<AnnounceCard | null>(null);
-  const [fullDetailsData, setFullDetailsData] =
-    useState<AnnouncementDetails | null>(null);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [viewingAnnouncement, setViewingAnnouncement] = useState<AnnounceCard | null>(null);
 
   const { userId, collegeId, role: userRole, collegeEducationType } = useUser();
   const isSchool = isSchoolEducation(collegeEducationType);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [calendarAnnouncements, setCalendarAnnouncements] = useState<AnnounceCard[]>([]);
-  const [isCalendarLoading, setIsCalendarLoading] = useState(false);
+  const [calendarAnnouncementsRaw, setCalendarAnnouncementsRaw] = useState<AnnounceCard[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const { ref: loadMoreRef, inView } = useInView();
+
+  const {
+    data: infiniteAnnouncementsData,
+    fetchNextPage: fetchNextAnnouncements,
+    hasNextPage: hasNextAnnouncements,
+    isFetchingNextPage: isFetchingNextAnnouncements,
+    isLoading: isInfiniteAnnouncementsLoading,
+  } = useInfiniteQuery({
+    queryKey: ["announcementsInfinite", collegeId, userId, userRole, activeView, selectedDate, refreshTrigger],
+    queryFn: async ({ pageParam = 1 }) => {
+      if (!collegeId || !userId || !userRole) return { data: [], totalPages: 0 };
+      
+      const res = await fetchCollegeAnnouncements({
+        collegeId,
+        userId,
+        role: userRole,
+        view: activeView,
+        selectedDate,
+        page: pageParam,
+        limit: 10,
+      });
+
+      const typeIcons: Record<string, string> = {
+        class: "/class.png", exam: "/exam.png", meeting: "/meeting.png",
+        holiday: "/calendar-3d.png", event: "/event.png", notice: "/clip.png",
+        result: "/result.jpg", timetable: "/timetable.png", placement: "/placement.png",
+        emergency: "/emergency.png", finance: "/finance.jpg", other: "/others.png",
+      };
+
+      const formatRole = (role: string, isSchool?: boolean) => {
+        let formatted = role?.replace(/([A-Z])/g, " $1").replace(/_/g, " ").trim().replace(/\b\w/g, (c) => c.toUpperCase());
+        if (isSchool) { formatted = formatted?.replace(/College/g, "School"); }
+        return formatted;
+      };
+
+      const formatted = res.data.map((item: any) => ({
+        collegeAnnouncementId: item.collegeAnnouncementId,
+        title: item.title,
+        date: item.date,
+        createdAt: item.createdAt,
+        type: item.type,
+        targetRoles: item.targetRoles,
+        image: typeIcons[item.type] || "/clip.png",
+        imgHeight: "h-10", cardBg: "#E8F8EF", imageBg: "#D3F1E0",
+        professor: activeView === "my"
+            ? `For ${item.targetRoles?.map((r: string) => formatRole(r, isSchool)).join(", ")}`
+            : `By ${formatRole(item.createdByRole, isSchool)}`,
+      }));
+
+      return { data: formatted, totalPages: res.totalPages };
+    },
+    getNextPageParam: (lastPage, allPages) => lastPage.totalPages > allPages.length ? allPages.length + 1 : undefined,
+    enabled: enableInfiniteScroll && !!collegeId && !!userId && !!userRole,
+    initialPageParam: 1,
+  });
+
+  useEffect(() => {
+    if (inView && hasNextAnnouncements && !isFetchingNextAnnouncements) {
+      fetchNextAnnouncements();
+    }
+  }, [inView, hasNextAnnouncements, isFetchingNextAnnouncements, fetchNextAnnouncements]);
+
+  const infiniteAnnouncements = infiniteAnnouncementsData?.pages.flatMap(p => p.data) || [];
 
   const getLocalDateRangeInUTC = (dateStr: string) => {
     const [year, month, day] = dateStr.split("-").map(Number);
@@ -294,134 +366,119 @@ export default function AnnouncementsCard({
     const parts = dateStr.split("-");
     if (parts.length !== 3) return dateStr;
     const [year, month, day] = parts;
-    return `${day}-${month}-${year}`;
+    return `${day}/${month}/${year}`;
   };
 
-  useEffect(() => {
-    if (!selectedDate || !collegeId || !userId || !userRole) {
-      setCalendarAnnouncements([]);
-      return;
-    }
-
-    const fetchAnnouncementsForDate = async () => {
-      setIsCalendarLoading(true);
-      try {
-        const { start, end } = getLocalDateRangeInUTC(selectedDate);
-        const numericUserId = Number(userId);
-
-        const roleRelation =
-          activeView === "others"
-            ? "college_announcements_roles!inner ( role, deletedAt )"
-            : "college_announcements_roles ( role, deletedAt )";
-
-        let query = supabase
-          .from("college_announcements")
-          .select(`
-            collegeAnnouncementId,
-            announcementTitle,
-            date,
-            type,
-            createdBy,
-            createdByRole,
-            createdAt,
-            ${roleRelation}
-          `)
-          .eq("collegeId", collegeId)
-          .is("is_deleted", false)
-          .gte("createdAt", start)
-          .lte("createdAt", end);
-
-        if (activeView === "my") {
-          query = query.eq("createdBy", numericUserId);
-        } else {
-          const targetRoleValues = [userRole.toLowerCase().replace(/[^a-z]/g, "")];
-          const canonicalRoles: Record<string, string> = {
-            admin: "Admin",
-            collegeadmin: "CollegeAdmin",
-            collegehr: "CollegeHr",
-            faculty: "Faculty",
-            finance: "Finance",
-            financemanager: "FinanceManager",
-            accountant: "Finance",
-            hr: "CollegeHr",
-            parent: "Parent",
-            placement: "PlacementOfficer",
-            placementofficer: "PlacementOfficer",
-            superadmin: "SuperAdmin",
-            student: "Student",
-            wellbeingexecutive: "WellbeingExecutive",
-            wellbeingmanager: "WellbeingManager",
-          };
-          const mappedRole = canonicalRoles[targetRoleValues[0]] || userRole;
-
-          query = query
-            .neq("createdBy", numericUserId)
-            .eq("college_announcements_roles.role", mappedRole)
-            .is("college_announcements_roles.deletedAt", null);
-        }
-
-        const { data, error } = await query.order("createdAt", { ascending: false });
-
-        if (error) throw error;
-
-        const typeIcons: Record<string, string> = {
-          class: "/class.png",
-          exam: "/exam.png",
-          meeting: "/meeting.png",
-          holiday: "/calendar-3d.png",
-          event: "/event.png",
-          notice: "/clip.png",
-          result: "/result.jpg",
-          timetable: "/timetable.png",
-          placement: "/placement.png",
-          emergency: "/emergency.png",
-          finance: "/finance.jpg",
-          other: "/others.png",
-        };
-
-        const formatted = ((data || []) as CalendarAnnouncementRow[]).map((item) => {
-          const creatorRoleFormatted = formatRole(item.createdByRole, isSchool);
-
-          return {
-            collegeAnnouncementId: item.collegeAnnouncementId,
-            title: item.announcementTitle,
-            date: item.date,
-            createdAt: item.createdAt,
-            type: item.type,
-            image: typeIcons[item.type] || "/clip.png",
-            imgHeight: "h-10",
-            cardBg: "#E8F8EF",
-            imageBg: "#D3F1E0",
-            professor: activeView === "my" ? "By You" : `By ${creatorRoleFormatted}`,
-          };
-        });
-
-        setCalendarAnnouncements(formatted);
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : err;
-        const errorDetails =
-          err && typeof err === "object" && "details" in err
-            ? err.details
-            : "";
-
-        console.error("Error fetching announcements for calendar date:", errorMessage, errorDetails || "", {
-          err,
-          collegeId,
-          userId,
-          userRole,
-          selectedDate,
-          activeView
-        });
-      } finally {
-        setIsCalendarLoading(false);
+  const { data: calendarAnnouncements = [], isLoading: isCalendarLoading, refetch: refetchCalendarAnnouncements } = useQuery({
+    queryKey: ["calendarAnnouncements", collegeId, userId, userRole, activeView, selectedDate, refreshTrigger],
+    queryFn: async () => {
+      if (!selectedDate || !collegeId || !userId || !userRole) {
+        return [];
       }
-    };
 
-    fetchAnnouncementsForDate();
-  }, [selectedDate, collegeId, userId, userRole, activeView, refreshTrigger]);
+      const { start, end } = getLocalDateRangeInUTC(selectedDate);
+      const numericUserId = Number(userId);
 
-  const announcementsToShow = selectedDate ? calendarAnnouncements : announceCard;
-  const isAnnouncementsLoading = isLoading || isCalendarLoading;
+      const roleRelation =
+        activeView === "others"
+          ? "college_announcements_roles!inner ( role, deletedAt )"
+          : "college_announcements_roles ( role, deletedAt )";
+
+      let query = supabase
+        .from("college_announcements")
+        .select(`
+          collegeAnnouncementId,
+          announcementTitle,
+          date,
+          type,
+          createdBy,
+          createdByRole,
+          createdAt,
+          ${roleRelation}
+        `)
+        .eq("collegeId", collegeId)
+        .is("is_deleted", false)
+        .gte("createdAt", start)
+        .lte("createdAt", end);
+
+      if (activeView === "my") {
+        query = query.eq("createdBy", numericUserId);
+      } else {
+        const targetRoleValues = [userRole.toLowerCase().replace(/[^a-z]/g, "")];
+        const canonicalRoles: Record<string, string> = {
+          admin: "Admin",
+          collegeadmin: "CollegeAdmin",
+          collegehr: "CollegeHr",
+          faculty: "Faculty",
+          finance: "Finance",
+          financemanager: "FinanceManager",
+          accountant: "Finance",
+          hr: "CollegeHr",
+          parent: "Parent",
+          placement: "PlacementOfficer",
+          placementofficer: "PlacementOfficer",
+          superadmin: "SuperAdmin",
+          student: "Student",
+          wellbeingexecutive: "WellbeingExecutive",
+          wellbeingmanager: "WellbeingManager",
+        };
+        const mappedRole = canonicalRoles[targetRoleValues[0]] || userRole;
+
+        query = query
+          .neq("createdBy", numericUserId)
+          .eq("college_announcements_roles.role", mappedRole)
+          .is("college_announcements_roles.deletedAt", null);
+      }
+
+      const { data, error } = await query.order("createdAt", { ascending: false });
+
+      if (error) throw error;
+
+      const typeIcons: Record<string, string> = {
+        class: "/class.png",
+        exam: "/exam.png",
+        meeting: "/meeting.png",
+        holiday: "/calendar-3d.png",
+        event: "/event.png",
+        notice: "/clip.png",
+        result: "/result.jpg",
+        timetable: "/timetable.png",
+        placement: "/placement.png",
+        emergency: "/emergency.png",
+        finance: "/finance.jpg",
+        other: "/others.png",
+      };
+
+      const formatted = ((data || []) as CalendarAnnouncementRow[]).map((item) => {
+        const creatorRoleFormatted = formatRole(item.createdByRole, isSchool);
+
+        return {
+          collegeAnnouncementId: item.collegeAnnouncementId,
+          title: item.announcementTitle,
+          date: item.date,
+          createdAt: item.createdAt,
+          type: item.type,
+          image: typeIcons[item.type] || "/clip.png",
+          imgHeight: "h-10",
+          cardBg: "#E8F8EF",
+          imageBg: "#D3F1E0",
+          professor: activeView === "my" ? "By You" : `By ${creatorRoleFormatted}`,
+        };
+      });
+
+      return formatted;
+    },
+    enabled: !!selectedDate && !!collegeId && !!userId && !!userRole,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const announcementsToShow = enableInfiniteScroll 
+    ? infiniteAnnouncements 
+    : (selectedDate ? calendarAnnouncements : announceCard);
+    
+  const isAnnouncementsLoading = enableInfiniteScroll 
+    ? isInfiniteAnnouncementsLoading 
+    : (isLoading || (selectedDate ? isCalendarLoading : false));
 
   const formatRelativeTime = (createdAt?: string) => {
     if (!createdAt) return "";
@@ -472,21 +529,8 @@ export default function AnnouncementsCard({
     onViewChange?.(v);
   };
 
-  const handleCardClick = async (card: AnnounceCard) => {
+  const handleCardClick = (card: AnnounceCard) => {
     setViewingAnnouncement(card);
-    setIsLoadingDetails(true);
-    try {
-      if (card.collegeAnnouncementId) {
-        const details = await fetchAnnouncementDetails(
-          card.collegeAnnouncementId,
-        );
-        setFullDetailsData(details);
-      }
-    } catch (error) {
-      toast.error(t("Failed to load details"));
-    } finally {
-      setIsLoadingDetails(false);
-    }
   };
 
   const handleDelete = (announcementId: number) => {
@@ -527,21 +571,16 @@ export default function AnnouncementsCard({
           </button>
         </div>
       </div>
-    ));
+    ), { id: `delete-ann-${announcementId}` });
   };
 
   return (
-    <div className="bg-white rounded-md flex flex-col mt-5 p-2 shadow-md h-full">
+    <div className={`bg-white rounded-md flex flex-col p-2 shadow-md ${className || "mt-5 h-full"}`}>
       {viewingAnnouncement && (
         <ViewAnnouncementModal
           basicData={viewingAnnouncement}
-          fullData={fullDetailsData}
-          isLoading={isLoadingDetails}
           isSchool={isSchool}
-          onClose={() => {
-            setViewingAnnouncement(null);
-            setFullDetailsData(null);
-          }}
+          onClose={() => setViewingAnnouncement(null)}
         />
       )}
 
@@ -578,7 +617,7 @@ export default function AnnouncementsCard({
             <div className="flex items-center gap-1 text-sm font-semibold mt-2 lg:mt-2">
               <button
                 onClick={() => handleTabChange("others")}
-                className={`px-3 py-1 text-sm rounded-sm transition-all duration-200 cursor-pointer ${activeView === "others"
+                className={`px-3 py-1 min-w-[80px] text-center text-sm rounded-sm transition-all duration-200 cursor-pointer ${activeView === "others"
                   ? "bg-[#43C17A] text-white shadow-sm"
                   : "text-gray-400 hover:text-[#16284F]"
                   }`}
@@ -590,7 +629,7 @@ export default function AnnouncementsCard({
 
               <button
                 onClick={() => handleTabChange("my")}
-                className={`px-3 py-1 text-sm rounded-sm transition-all duration-200 cursor-pointer ${activeView === "my"
+                className={`px-3 py-1 min-w-[80px] text-center text-sm rounded-sm transition-all duration-200 cursor-pointer ${activeView === "my"
                   ? "bg-[#43C17A] text-white shadow-sm"
                   : "text-gray-400 hover:text-[#16284F]"
                   }`}
@@ -603,22 +642,22 @@ export default function AnnouncementsCard({
       </div>
       {selectedDate && (
         <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-md py-1.5 px-3 mb-3 text-xs text-indigo-800 mx-1">
-          <span className="font-medium flex items-center gap-1.5 flex-row">
-            <CalendarIcon size={16} weight="fill" className="text-indigo-500" />
-            Showing announcements created on: <span className="font-bold">{formatDateToDMY(selectedDate)}</span>
+          <span className="font-medium flex items-center gap-1 flex-row flex-1 overflow-hidden">
+            <span className="truncate">Showing announcements for:</span> 
+            <span className="font-bold whitespace-nowrap">{formatDateToDMY(selectedDate)}</span>
           </span>
           <button
             onClick={() => setSelectedDate(null)}
-            className="text-red-500 hover:text-red-700 font-semibold cursor-pointer text-xs"
+            className="text-red-500 hover:text-red-700 font-semibold cursor-pointer shrink-0 ml-2 p-1"
             title="Clear Filter"
           >
-            <X size={12} weight="bold" />
+            <X size={14} weight="bold" />
           </button>
         </div>
       )}
 
       <div
-        className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto text-center"
+        className="flex min-h-[300px] flex-1 flex-col gap-2 overflow-y-auto text-center"
         style={height ? { maxHeight: height } : undefined}
       >
         {isAnnouncementsLoading ? (
@@ -712,6 +751,12 @@ export default function AnnouncementsCard({
             </div>
           ))
         )}
+        {enableInfiniteScroll && isFetchingNextAnnouncements && (
+          <div className="mt-2">
+            <AnnouncementListShimmer />
+          </div>
+        )}
+        {enableInfiniteScroll && <div ref={loadMoreRef} className="h-1" />}
       </div>
 
       <AddAnnouncementModal

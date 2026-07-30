@@ -182,14 +182,30 @@ export async function deactivateFacultyTask(facultyTaskId: number) {
 }
 
 
-export async function fetchFacultyTasksForLoggedInFaculty(
-  facultyId: number,
-  collegeSubjectId: number,
-  collegeSectionId?: number | null,
-) {
+export async function fetchFacultyTasksForLoggedInFaculty({
+  facultyId,
+  collegeSubjectId,
+  collegeSectionId,
+  selectedDate,
+  page = 1,
+  limit = 10,
+}: {
+  facultyId: number;
+  collegeSubjectId: number;
+  collegeSectionId?: number | null;
+  selectedDate?: string | null;
+  page?: number;
+  limit?: number;
+}): Promise<{ data: FacultyTaskRow[]; totalPages: number }> {
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const targetDate = selectedDate || new Date().toISOString().split("T")[0];
+
   let query = supabase
     .from("faculty_tasks")
-    .select(`
+    .select(
+      `
       facultyTaskId,
       taskTitle,
       description,
@@ -197,25 +213,31 @@ export async function fetchFacultyTasksForLoggedInFaculty(
       time,
       collegeAcademicYearId,
       collegeSectionsId
-    `)
+    `,
+      { count: "exact" }
+    )
     .eq("createdBy", facultyId)
     .eq("collegeSubjectId", collegeSubjectId)
     .eq("isActive", true)
     .is("deletedAt", null)
-    .order("date", { ascending: true });
+    .eq("date", targetDate)
+    .order("time", { ascending: true });
 
   if (collegeSectionId) {
     query = query.eq("collegeSectionsId", collegeSectionId);
   }
 
-  const { data: facultyTaskData, error: facultyTaskError } = await query;
+  const { data: facultyTaskData, error: facultyTaskError, count } = await query.range(from, to);
 
   if (facultyTaskError) {
     console.error("fetchFacultyTasksForLoggedInFaculty error:", facultyTaskError);
     throw facultyTaskError;
   }
 
-  return facultyTaskData ?? [];
+  return {
+    data: (facultyTaskData ?? []) as any,
+    totalPages: Math.ceil((count ?? 0) / limit),
+  };
 }
 
 

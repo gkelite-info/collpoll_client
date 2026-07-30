@@ -35,10 +35,10 @@ const CalendarHeader = ({
   const BASE_YEAR = 2026;
   const currentRealYear = new Date().getFullYear();
 
-  const endYear = currentRealYear + 3;
+  const endYear = currentRealYear + 1;
 
   const years = Array.from(
-    { length: endYear - BASE_YEAR + 1 },
+    { length: Math.max(1, endYear - BASE_YEAR + 1) },
     (_, i) => BASE_YEAR + i
   );
 

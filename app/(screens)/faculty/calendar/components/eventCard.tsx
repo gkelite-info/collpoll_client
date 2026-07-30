@@ -64,9 +64,11 @@ const EventCard = ({
   const timeStr = `${start.toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
+    hour12: true,
   })} - ${end.toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
+    hour12: true,
   })}`;
 
   return (
@@ -134,9 +136,17 @@ const EventCard = ({
           style={{ borderColor: style.text }}
         />
 
-        <div className="px-3 py-2 shrink-0">
-          <p className="text-sm font-medium" style={{ color: style.text }}>
-            {event.branch} - {event.year} - {event.section}
+        <div className="px-3 py-2 shrink-0 min-w-0">
+          <p className="text-sm font-medium truncate" style={{ color: style.text }} title={[
+              event.branch && event.branch !== "-" ? event.branch : null,
+              event.year,
+              event.section
+            ].filter(Boolean).join(" - ")}>
+            {[
+              event.branch && event.branch !== "-" ? event.branch : null,
+              event.year,
+              event.section
+            ].filter(Boolean).join(" - ")}
           </p>
         </div>
       </div>

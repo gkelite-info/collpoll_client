@@ -33,6 +33,7 @@ interface DateTimeRoomFieldsProps {
   isDateInputFocused: boolean;
   setIsDateInputFocused: (f: boolean) => void;
   INPUT_HEIGHT: string;
+  isSchool?: boolean;
 }
 
 const DateTimeRoomFields: React.FC<DateTimeRoomFieldsProps> = ({
@@ -53,6 +54,7 @@ const DateTimeRoomFields: React.FC<DateTimeRoomFieldsProps> = ({
   endPeriod, setEndPeriod,
   isDateInputFocused, setIsDateInputFocused,
   INPUT_HEIGHT,
+  isSchool = false,
 }) => {
   return (
     <>
@@ -75,7 +77,7 @@ const DateTimeRoomFields: React.FC<DateTimeRoomFieldsProps> = ({
                   onChange={(e) => setDate(e.target.value)}
                   onFocus={() => setIsDateInputFocused(true)}
                   onBlur={() => setIsDateInputFocused(false)}
-                  className={`w-full ${INPUT_HEIGHT} px-4 focus:outline-none bg-transparent cursor-pointer`}
+                  className={`w-full ${INPUT_HEIGHT} px-4 focus:outline-none bg-transparent cursor-pointer text-gray-700`}
                 />
               </div>
             </div>
@@ -88,7 +90,7 @@ const DateTimeRoomFields: React.FC<DateTimeRoomFieldsProps> = ({
                 value={roomNo}
                 onChange={(rNo, rId) => { setRoomNo(rNo); setCollegeRoomId(rId); }}
                 collegeId={collegeId || 0}
-                placeholder="Select Room No. / Room Name"
+                isSchool={isSchool}
               />
             </div>
           </div>
@@ -111,7 +113,7 @@ const DateTimeRoomFields: React.FC<DateTimeRoomFieldsProps> = ({
                     onChange={(e) => setFromDate(e.target.value)}
                     onFocus={() => setIsDateInputFocused(true)}
                     onBlur={() => setIsDateInputFocused(false)}
-                    className={`w-full ${INPUT_HEIGHT} px-4 focus:outline-none bg-transparent cursor-pointer`}
+                    className={`w-full ${INPUT_HEIGHT} px-4 focus:outline-none bg-transparent cursor-pointer text-gray-700`}
                   />
                 </div>
               </div>
@@ -125,7 +127,7 @@ const DateTimeRoomFields: React.FC<DateTimeRoomFieldsProps> = ({
                     value={toDate}
                     min={fromDate || TODAY}
                     onChange={(e) => setToDate(e.target.value)}
-                    className={`w-full ${INPUT_HEIGHT} px-4 focus:outline-none bg-transparent cursor-pointer`}
+                    className={`w-full ${INPUT_HEIGHT} px-4 focus:outline-none bg-transparent cursor-pointer text-gray-700`}
                   />
                 </div>
               </div>
@@ -140,7 +142,7 @@ const DateTimeRoomFields: React.FC<DateTimeRoomFieldsProps> = ({
                   value={roomNo}
                   onChange={(rNo, rId) => { setRoomNo(rNo); setCollegeRoomId(rId); }}
                   collegeId={collegeId || 0}
-                  placeholder="Select Room No. / Room Name"
+                  isSchool={isSchool}
                 />
               </div>
             </div>

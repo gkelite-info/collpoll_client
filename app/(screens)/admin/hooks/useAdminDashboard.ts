@@ -1,59 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getAdminDashboardSummary } from "@/lib/helpers/admin/dashboard";
 import { getDepartmentOverview } from "@/lib/helpers/admin/departments";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 
 export function useAdminDashboard() {
-  const [cards, setCards] = useState<any>(null);
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
   const { collegeId, collegeEducationId } = useAdmin();
 
-  const load = async () => {
-    if (!collegeId || !collegeEducationId) return;
+  const isEnabled = !!collegeId && !!collegeEducationId;
 
-    if (!cards) {
-      setLoading(true);
-    }
+  const { data: cardsData, isLoading: loadingCards, refetch: refetchCards } = useQuery({
+    queryKey: ["adminDashboardSummary", collegeId, collegeEducationId],
+    queryFn: () => getAdminDashboardSummary(collegeId!, collegeEducationId!),
+    enabled: isEnabled,
+    staleTime: 5 * 60 * 1000,
+  });
 
-    const [summaryResult, deptDataResult] = await Promise.allSettled([
-      getAdminDashboardSummary(collegeId, collegeEducationId),
-      getDepartmentOverview(collegeId, collegeEducationId),
-    ]);
+  const { data: departmentsData, isLoading: loadingDepts, refetch: refetchDepts } = useQuery({
+    queryKey: ["adminDepartmentOverview", collegeId, collegeEducationId],
+    queryFn: () => getDepartmentOverview(collegeId!, collegeEducationId!),
+    enabled: isEnabled,
+    staleTime: 5 * 60 * 1000,
+  });
 
-    if (summaryResult.status === "fulfilled") {
-      setCards(summaryResult.value);
-    } else {
-      console.error("Failed to load summary:", summaryResult.reason);
-      setCards({
-        totalUsers: 0,
-        pendingApprovals: 0,
-        systemHealth: "-",
-        automations: 0,
-      });
-    }
-
-    if (deptDataResult.status === "fulfilled") {
-      setDepartments(deptDataResult.value);
-    } else {
-      console.error("Failed to load departments:", deptDataResult.reason);
-      setDepartments([]);
-    }
-
-    setLoading(false);
+  const cards = cardsData || {
+    totalUsers: 0,
+    pendingApprovals: 0,
+    systemHealth: "-",
+    automations: 0,
   };
-
-  useEffect(() => {
-    load();
-  }, [collegeId, collegeEducationId]);
+  
+  const departments = departmentsData || [];
+  
+  const loading = !isEnabled || loadingCards || loadingDepts;
+  
+  const refresh = () => {
+    refetchCards();
+    refetchDepts();
+  };
 
   return {
     cards,
     departments,
     loading,
-    refresh: load,
+    refresh,
   };
 }

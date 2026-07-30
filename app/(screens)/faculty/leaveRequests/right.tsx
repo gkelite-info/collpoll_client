@@ -11,7 +11,6 @@ import {
 } from "@/lib/helpers/faculty/facultyTasks";
 import type { Task } from "@/app/utils/taskPanel";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import toast from "react-hot-toast";
 import TaskModal from "@/app/components/modals/taskModal";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
 
@@ -57,13 +56,13 @@ export default function FacultyDashRight() {
     if (!collegeSubjectId || !facultyId) return;
 
     try {
-      const data = await fetchFacultyTasksForLoggedInFaculty(
+      const res = await fetchFacultyTasksForLoggedInFaculty({
         facultyId,
         collegeSubjectId,
-      );
+      });
 
       setTasks(
-        data.map((t: any) => ({
+        res.data.map((t: any) => ({
           facultyTaskId: t.facultyTaskId,
           title: t.taskTitle,
           description: t.description,

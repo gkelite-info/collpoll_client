@@ -14,6 +14,7 @@ import SubjectTopicFields from "./AddEventFields/SubjectTopicFields";
 import MeetingFields from "./AddEventFields/MeetingFields";
 import DateTimeRoomFields from "./AddEventFields/DateTimeRoomFields";
 import SectionFields from "./AddEventFields/SectionFields";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 interface AddEventModalProps {
   isOpen: boolean;
@@ -52,6 +53,10 @@ const AddEventModalV2: React.FC<AddEventModalProps> = ({
   const modalContentRef = useRef<HTMLDivElement>(null);
   const isEditMode = mode === "edit";
   const TODAY = new Date().toISOString().split("T")[0];
+
+  const facultyEduType = (data.educations.find((e: any) => e.collegeEducationId === state.educationId)?.collegeEducationType || data.facultyCtx?.faculty_edu_type) ?? null;
+  const isSchool = isSchoolEducation(facultyEduType);
+  const isInter = facultyEduType === "Inter";
 
   // Auto-fill logic for dropdowns if there's only one option available (or single subject)
   useEffect(() => {
@@ -166,20 +171,8 @@ const AddEventModalV2: React.FC<AddEventModalProps> = ({
 
   const handleSave = async () => {
     // 1. Academic Fields Validation
-    if (!state.educationId) {
-      toast.error("Please provide an Education Type");
-      return;
-    }
-    if (state.faculty_edu_type !== "Inter" && !state.branchId) {
-      toast.error("Please provide a Branch");
-      return;
-    }
-    if (!state.academicYearId) {
-      toast.error("Please provide a Year");
-      return;
-    }
-    if (state.faculty_edu_type !== "Inter" && !state.semester) {
-      toast.error("Please select a Semester");
+    if (!state.educationId || (!isSchool && !state.branchId) || !state.academicYearId || (!isSchool && !isInter && !state.semester)) {
+      toast.error("Academic context is incomplete. Please select all required dropdowns.");
       return;
     }
 
@@ -414,7 +407,7 @@ const AddEventModalV2: React.FC<AddEventModalProps> = ({
                state.setUnitIds([]);
             }}
             semesters={data.semesters}
-            facultyEduType={data.educations.find((e: any) => e.collegeEducationId === state.educationId)?.collegeEducationType || data.facultyCtx?.faculty_edu_type}
+            facultyEduType={facultyEduType}
             INPUT_HEIGHT={INPUT_HEIGHT}
             isSingleSubject={data.isSingleSubject}
           />
@@ -469,6 +462,7 @@ const AddEventModalV2: React.FC<AddEventModalProps> = ({
             endPeriod={state.endPeriod} setEndPeriod={state.setEndPeriod}
             isDateInputFocused={false} setIsDateInputFocused={() => {}}
             INPUT_HEIGHT={INPUT_HEIGHT}
+            isSchool={isSchool}
           />
 
           <SectionFields

@@ -16,6 +16,8 @@ export interface UpcomingLesson {
   sessionStatus?: "Scheduled" | "Accepted" | "Cancel";
   degree: string;
   year: number | string;
+  subjectId?: number | null;
+  sectionId?: number | null;
 }
 
 function convertTo12HourFormat(time: string): string {
@@ -77,6 +79,8 @@ export async function getUpcomingClasses(
   userId: number,
   subjectId?: number | null,
   sectionId?: number | null,
+  page: number = 0,
+  limit: number = 5,
 ): Promise<UpcomingLesson[]> {
   const supabase = await createClient();
 
@@ -106,12 +110,12 @@ export async function getUpcomingClasses(
       collegeRoomId,
       college_rooms (roomNo),
       type,
+      subject,
 
       topicData:college_subject_unit_topics (topicTitle),
       subjectData:college_subjects (subjectName, subjectCode),
 
-      
-calendar_event_section!inner (
+      calendar_event_section (
   isActive,
   deletedAt,
   collegeSectionId,
@@ -124,15 +128,13 @@ calendar_event_section!inner (
     `,
     )
     .eq("facultyId", faculty.facultyId)
-    .eq("type", "class")
+    .in("type", ["class", "meeting"])
     .gte("date", today)
     .lte("date", endDateStr)
     .is("deletedAt", null)
     .order("date", { ascending: true })
     .order("fromTime", { ascending: true });
     
-  if (subjectId) eventsQuery = eventsQuery.eq("collegeSubjectId", subjectId);
-  if (sectionId) eventsQuery = eventsQuery.eq("calendar_event_section.collegeSectionId", sectionId);
 
   const { data: events, error: eventsError } = await eventsQuery;
 
@@ -153,10 +155,11 @@ calendar_event_section!inner (
       collegeRoomId,
       college_rooms (roomNo),
       type,
+      subject,
 
       subjectData:college_subjects (subjectName, subjectCode),
 
-      bulk_calendar_event_sections!inner (
+      bulk_calendar_event_sections (
         isActive,
         deletedAt,
         collegeSectionId,
@@ -173,14 +176,11 @@ calendar_event_section!inner (
     `
     )
     .eq("facultyId", faculty.facultyId)
-    .eq("type", "class")
+    .in("type", ["class", "meeting"])
     .lte("fromDate", endDateStr)
     .gte("toDate", today)
     .is("deletedAt", null)
     .or("is_deleted.eq.false,is_deleted.is.null");
-
-  if (subjectId) bulkQuery = bulkQuery.eq("collegeSubjectId", subjectId);
-  if (sectionId) bulkQuery = bulkQuery.eq("bulk_calendar_event_sections.collegeSectionId", sectionId);
 
   const { data: bulkEvents, error: bulkError } = await bulkQuery;
 
@@ -188,10 +188,11 @@ calendar_event_section!inner (
     console.error("GET_UPCOMING_BULK_CLASSES_ERROR", bulkError);
   }
 
-  const validEvents = events || [];
+  const validEvents = (events || []).map((e: any) => ({...e, isMatched: true})); // Keep all events
+
   // Skip bulk events on Sundays
   const isSunday = new Date(today).getDay() === 0;
-  const validBulkEvents = isSunday ? [] : (bulkEvents || []);
+  const validBulkEvents = isSunday ? [] : (bulkEvents || []).map((e: any) => ({...e, isMatched: true}));
 
   if (validEvents.length === 0 && validBulkEvents.length === 0) return [];
 
@@ -241,6 +242,26 @@ calendar_event_section!inner (
     const sessionStatus =
       sessionRecords.length > 0 ? sessionRecords[0].status : "Scheduled";
 
+    if (sectionsData.length === 0) {
+      return [{
+        id: `${event.calendarEventId}-no-section`,
+        title: event.type === "meeting" ? "Meeting" : (safeGet(event.subjectData, "subjectName") || "Event"),
+        description: safeGet(event.topicData, "topicTitle") || (event.type === "meeting" ? "Scheduled Meeting" : "Class"),
+        fromTime: convertTo12HourFormat(event.fromTime),
+        toTime: convertTo12HourFormat(event.toTime),
+        date: formatDate(event.date),
+        roomNo: safeGet(event.college_rooms, "roomNo"),
+        section: undefined,
+        semester: [],
+        department: [],
+        degree: "",
+        year: "",
+        sessionStatus: sessionStatus.charAt(0).toUpperCase() + sessionStatus.slice(1) as "Scheduled" | "Accepted" | "Cancel",
+        subjectId: event.subject,
+        sectionId: null,
+      }];
+    }
+
     return sectionsData.map((sectionRow: any, sectionIndex: number) => {
       const department = safeGet(
         sectionRow.branch,
@@ -279,7 +300,9 @@ calendar_event_section!inner (
         department: [{ name: department }],
         degree,
         year,
-        sessionStatus: sessionStatus.charAt(0).toUpperCase() + sessionStatus.slice(1), // <--- Accurately populated
+        sessionStatus: sessionStatus.charAt(0).toUpperCase() + sessionStatus.slice(1) as "Scheduled" | "Accepted" | "Cancel",
+        subjectId: event.subject,
+        sectionId: sectionRow.collegeSectionId,
       };
     });
   });
@@ -298,6 +321,44 @@ calendar_event_section!inner (
 
       const sessionStatus =
         sessionRecords.length > 0 ? sessionRecords[0].status : "scheduled";
+
+      if (sectionsData.length === 0) {
+        const occurrences = [];
+        const eventStart = new Date(Math.max(new Date(event.fromDate).getTime(), new Date(today).getTime()));
+        const eventEnd = new Date(Math.min(new Date(event.toDate).getTime(), new Date(endDateStr).getTime()));
+        
+        for (let d = new Date(eventStart); d <= eventEnd; d.setDate(d.getDate() + 1)) {
+          if (d.getDay() === 0) continue; // Skip Sunday
+
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+          const daySession = sessionRecords.find((rec: any) => {
+            const recDate = new Date(rec.createdAt);
+            const recDateStr = `${recDate.getFullYear()}-${String(recDate.getMonth() + 1).padStart(2, "0")}-${String(recDate.getDate()).padStart(2, "0")}`;
+            return recDateStr === dateStr;
+          });
+          const dayStatus = daySession ? daySession.status : "scheduled";
+
+          occurrences.push({
+            id: `bulk-${event.bulkCalendarEventId}_${dateStr.replace(/-/g, "_")}_no-section`,
+            title: event.type === "meeting" ? "Meeting" : (safeGet(event.subjectData, "subjectName") || "Event"),
+            description: event.type === "meeting" ? "Scheduled Meeting" : "Class",
+            fromTime: convertTo12HourFormat(event.fromTime),
+            toTime: convertTo12HourFormat(event.toTime),
+            date: formatDate(dateStr),
+            roomNo: safeGet(event.college_rooms, "roomNo"),
+            section: undefined,
+            semester: [],
+            department: [],
+            degree: "",
+            year: "",
+            sessionStatus: dayStatus.charAt(0).toUpperCase() + dayStatus.slice(1) as "Scheduled" | "Accepted" | "Cancel",
+            subjectId: event.subject,
+            sectionId: null,
+          });
+        }
+        return occurrences;
+      }
 
       return sectionsData.flatMap((sectionRow: any, sectionIndex: number) => {
           const department = safeGet(sectionRow.branch, "collegeBranchCode", "Unknown Branch");
@@ -346,6 +407,8 @@ calendar_event_section!inner (
               degree,
               year,
               sessionStatus: dayStatus.charAt(0).toUpperCase() + dayStatus.slice(1),
+              subjectId: event.subject,
+              sectionId: sectionRow.collegeSectionId,
             });
           }
           
@@ -356,13 +419,27 @@ calendar_event_section!inner (
 
   const flattenedBulk = bulkMapped.flat();
   const merged = [...singleMapped, ...flattenedBulk];
+  
   merged.sort((a, b) => {
+    // 1. Sort by selected subject/section (matched goes to top)
+    const aMatchesSub = subjectId ? a.subjectId === subjectId : true;
+    const aMatchesSec = sectionId ? a.sectionId === sectionId : true;
+    const aIsPriority = aMatchesSub && aMatchesSec;
+
+    const bMatchesSub = subjectId ? b.subjectId === subjectId : true;
+    const bMatchesSec = sectionId ? b.sectionId === sectionId : true;
+    const bIsPriority = bMatchesSub && bMatchesSec;
+
+    if (aIsPriority && !bIsPriority) return -1;
+    if (!aIsPriority && bIsPriority) return 1;
+
+    // 2. Sort chronologically
     const timeA = new Date(`2000-01-01 ${a.fromTime}`).getTime();
     const timeB = new Date(`2000-01-01 ${b.fromTime}`).getTime();
     return timeA - timeB;
   });
 
-  return merged;
+  return merged.slice(page * limit, (page + 1) * limit);
 }
 
 export async function getClassDetails(

@@ -8,7 +8,7 @@ interface ActionModalProps {
   isOpen: boolean;
   onClose: () => void;
   lesson: UpcomingLesson | null;
-  onAccept: (id: string) => void;
+  onAccept: (id: string) => Promise<boolean | void> | void;
   onCancelClass: (id: string, reason: string) => void;
 }
 
@@ -23,7 +23,8 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
     "initial" | "confirm_accept" | "cancel_reason"
   >("initial");
   const [reason, setReason] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessingAccept, setIsProcessingAccept] = useState(false);
+  const [isProcessingCancel, setIsProcessingCancel] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -181,19 +182,26 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
             <div className="px-5 py-4 flex gap-3">
               <button
                 onClick={async () => {
-                  setIsProcessing(true); // <-- TRIGGER LOADING
-                  await onAccept(lesson.id);
-                  // Intentionally not setting it back to false, let the page transition naturally
+                  setIsProcessingAccept(true);
+                  try {
+                    const success = await onAccept(lesson.id);
+                    if (success === false) {
+                      setIsProcessingAccept(false);
+                    }
+                    // If success is true, we intentionally leave it processing to prevent flicker before redirect
+                  } catch (error) {
+                    setIsProcessingAccept(false);
+                  }
                 }}
-                disabled={isProcessing}
-                className="flex-1 cursor-pointer bg-[#3FC27B] hover:bg-[#36a86a] text-white font-medium py-2.5 rounded-md text-sm transition-colors flex justify-center items-center"
+                disabled={isProcessingAccept}
+                className="flex-1 cursor-pointer bg-[#3FC27B] hover:bg-[#36a86a] text-white font-medium py-2.5 rounded-md text-sm transition-colors flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {isProcessing ? "Redirecting..." : "Yes, Accept"}
+                {isProcessingAccept ? "Accepting..." : "Yes, Accept"}
               </button>
               <button
                 onClick={() => setStep("initial")}
-                disabled={isProcessing}
-                className="flex-1 cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2.5 rounded-md text-sm transition-colors"
+                disabled={isProcessingAccept}
+                className="flex-1 cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2.5 rounded-md text-sm transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 Back
               </button>
@@ -218,18 +226,25 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
             </div>
             <div className="px-5 py-4 flex gap-3">
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!reason.trim())
                     return toast.error("Please enter a reason.");
-                  onCancelClass(lesson.id, reason);
+                  setIsProcessingCancel(true);
+                  try {
+                    await onCancelClass(lesson.id, reason);
+                  } finally {
+                    setIsProcessingCancel(false);
+                  }
                 }}
-                className="flex-1 cursor-pointer bg-[#FF3B3B] hover:bg-[#e63535] text-white font-medium py-2.5 rounded-md text-sm transition-colors"
+                disabled={isProcessingCancel}
+                className="flex-1 cursor-pointer bg-[#FF3B3B] hover:bg-[#e63535] text-white font-medium py-2.5 rounded-md text-sm transition-colors flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Confirm Cancel
+                {isProcessingCancel ? "Cancelling..." : "Confirm Cancel"}
               </button>
               <button
                 onClick={() => setStep("initial")}
-                className="flex-1 cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2.5 rounded-md text-sm transition-colors"
+                disabled={isProcessingCancel}
+                className="flex-1 cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2.5 rounded-md text-sm transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 Back
               </button>

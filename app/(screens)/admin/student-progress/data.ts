@@ -1,4 +1,9 @@
-import { StudentPerformance } from "../../faculty/utils/studentPerformanceCard";
+export interface StudentPerformance {
+  id: string;
+  name: string;
+  imageUrl: string;
+  percentage: number;
+}
 import { ScheduledLesson } from "../utils/scheduledLessonsStrip";
 import { TopPerformer } from "./components/topFivePerformers";
 
