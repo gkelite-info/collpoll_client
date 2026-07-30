@@ -271,13 +271,13 @@ export default function PlacementsPage() {
 
     try {
       setTasksLoading(true);
-      const data = await fetchFacultyTasksForLoggedInFaculty(
+      const res = await fetchFacultyTasksForLoggedInFaculty({
         facultyId,
         collegeSubjectId,
-      );
+      });
 
       setTasks(
-        data.map((task: FacultyTaskSummary) => ({
+        res.data.map((task: FacultyTaskSummary) => ({
           facultyTaskId: task.facultyTaskId,
           title: task.taskTitle,
           description: task.description,

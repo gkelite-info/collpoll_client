@@ -7,7 +7,7 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import {
-  fetchFacultyTasksForLoggedInFaculty,
+
   saveFacultyTask,
 } from "@/lib/helpers/faculty/facultyTasks";
 import type { Task } from "@/app/utils/taskPanel";
