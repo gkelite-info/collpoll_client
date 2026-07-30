@@ -8,6 +8,7 @@ export interface UniversalProfileData {
   email: string;
   mobile: string;
   role: string;
+  educationType?: string | null;
   department: string;
   gender: string;
   joiningDate: string | null;
@@ -70,7 +71,12 @@ export const fetchUniversalStaffProfile = async (
         .maybeSingle();
 
       if (!roleErr && roleData) {
-        tableId = (roleData as Record<string, any>)[roleConfig.idColumn];
+        const roleId = (roleData as Record<string, unknown>)[
+          roleConfig.idColumn
+        ];
+        if (typeof roleId === "number" || typeof roleId === "string") {
+          tableId = roleId;
+        }
       }
     }
 

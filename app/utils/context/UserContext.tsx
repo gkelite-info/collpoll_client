@@ -568,7 +568,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           (education) => getCollegeEducationType(education.college_education),
         ),
       );
-
       s.setCollegeEducationType(
         educationTypeFromMapping ||
         getCollegeEducationType(data.college_education),

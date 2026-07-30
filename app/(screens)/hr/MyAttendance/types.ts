@@ -1,5 +1,6 @@
 export interface FacultyProfile {
   name: string;
+  role?: string;
   image: string;
   id: string;
   department: string;
@@ -30,6 +31,7 @@ export interface AttendanceRecord {
 
 export interface AnalyticsFacultyProfile {
   name: string;
+  role?: string;
   department: string;
   employeeId: string;
   experience: string;

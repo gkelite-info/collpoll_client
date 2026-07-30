@@ -94,7 +94,9 @@ export default function CourseScheduleCard({
               {collegeEducationType ? `${collegeEducationType}` : "College HR"}
             </p>
           ) : (
-            <div className="h-3.5 w-20 rounded bg-white/30" />
+            <p className="text-[#EFEFEF] text-md font-medium text-center">
+              {collegeEducationType || displayEducation || "—"}
+            </p>
           )}
         </div>
       )}

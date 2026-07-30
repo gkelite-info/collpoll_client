@@ -26,7 +26,11 @@ interface SharedAttendanceProps {
 
 const MyAttendanceLeft = ({ userId: propUserId, onBack }: SharedAttendanceProps) => {
   const searchParams = useSearchParams();
-  const { userId: loggedInUserId, role: loggedInRole } = useUser();
+  const {
+    userId: loggedInUserId,
+    role: loggedInRole,
+    collegeEducationType,
+  } = useUser();
 
   const urlMainTab = (searchParams.get("main") as MainTab | null) || "payroll";
   const urlSubTab = (searchParams.get("sub") as PayrollSubTab | null) || "summary";
@@ -54,11 +58,22 @@ const MyAttendanceLeft = ({ userId: propUserId, onBack }: SharedAttendanceProps)
       const resolvedRole = searchParams.get("role") || loggedInRole;
 
       const data = await fetchUniversalStaffProfile(resolvedUserId, resolvedRole);
-      if (data) setProfile(data);
+      if (data) {
+        setProfile({
+          ...data,
+          educationType: data.educationType || collegeEducationType,
+          department: data.educationType || collegeEducationType || "-",
+        });
+      }
       setIsLoading(false);
     };
     loadProfile();
-  }, [resolvedUserId, searchParams.get("role"), loggedInRole]);
+  }, [
+    resolvedUserId,
+    searchParams.get("role"),
+    loggedInRole,
+    collegeEducationType,
+  ]);
 
   const mainTabs: { id: MainTab; label: string }[] = [
     { id: "attendance", label: "Attendance" },
