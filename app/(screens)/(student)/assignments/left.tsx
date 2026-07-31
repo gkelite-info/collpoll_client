@@ -1,12 +1,11 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import AssignmentCard from "./components/card";
 import { supabase } from "@/lib/supabaseClient";
 import { fetchAssignmentsForStudent } from "@/lib/helpers/student/assignments/assignmentsAPI";
 import { getSubmissionDetailsForAssignment } from "@/lib/helpers/student/assignments/insertAssignmentSubmission";
 import { Loader } from "../calendar/right/timetable";
-import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import AssignmentsRight from "./right";
 import QuizCard, { AttemptedQuizCard } from "./components/quizCard";
 import QuizViewAnswersScreen from "./components/quizViewAnswersScreen";
@@ -99,9 +98,6 @@ function AssignmentsLeftContent() {
   const rowsPerPage = 10;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
-  const [discussionUploads, setDiscussionUploads] = useState<
-    Record<string, any[]>
-  >({});
   const {
     collegeId,
     collegeEducationId,
@@ -116,7 +112,14 @@ function AssignmentsLeftContent() {
   const { studentId } = useStudent();
   const [ongoingQuizzes, setOngoingQuizzes] = useState<any[]>([]);
   const [attemptedQuizzes, setAttemptedQuizzes] = useState<any[]>([]);
-  const [quizzesLoading, setQuizzesLoading] = useState(false);
+  const [quizzesLoading, setQuizzesLoading] = useState(true);
+  const quizRequestIdRef = useRef(0);
+  const [loadedQuizQueryKey, setLoadedQuizQueryKey] = useState<string | null>(
+    null,
+  );
+  const [emptyQuizQueryKey, setEmptyQuizQueryKey] = useState<string | null>(
+    null,
+  );
   const [quizSubTabLoading, setQuizSubTabLoading] = useState(false);
   const [discussionSubTabLoading, setDiscussionSubTabLoading] = useState(false);
   const [assignmentSubTabLoading, setAssignmentSubTabLoading] = useState(false);
@@ -127,11 +130,19 @@ function AssignmentsLeftContent() {
   const [discussionCurrentPage, setDiscussionCurrentPage] = useState(1);
   const [labCurrentPage, setLabCurrentPage] = useState(1);
 
-  const QUIZ_PER_PAGE = 8;
+  const QUIZ_PER_PAGE = 10;
   const [quizTotalRecords, setQuizTotalRecords] = useState(0);
+  const quizQueryKey = [
+    collegeSectionsId,
+    studentId,
+    quizCurrentPage,
+    quizView,
+    selectedDate ?? "",
+    quizRefreshKey,
+  ].join(":");
 
-  const DISCUSSION_PER_PAGE = 8;
-  const LAB_PER_PAGE = 8;
+  const DISCUSSION_PER_PAGE = 10;
+  const LAB_PER_PAGE = 10;
   const [labs, setLabs] = useState<LabManual[]>([]);
   const [labsLoading, setLabsLoading] = useState(false);
   const [labTotalRecords, setLabTotalRecords] = useState(0);
@@ -198,6 +209,9 @@ function AssignmentsLeftContent() {
 
   async function loadQuizzes() {
     if (!collegeSectionsId || !studentId) return;
+    const requestId = ++quizRequestIdRef.current;
+    const requestQueryKey = quizQueryKey;
+
     try {
       setQuizzesLoading(true);
 
@@ -222,6 +236,7 @@ function AssignmentsLeftContent() {
           (q) => q.attemptsLeft > 0,
         );
 
+        if (requestId !== quizRequestIdRef.current) return;
         setOngoingQuizzes(filteredOngoing);
         setQuizTotalRecords(totalCount);
       } else {
@@ -231,13 +246,19 @@ function AssignmentsLeftContent() {
           QUIZ_PER_PAGE,
           selectedDate || undefined
         );
+        if (requestId !== quizRequestIdRef.current) return;
         setAttemptedQuizzes(data);
         setQuizTotalRecords(totalCount);
       }
     } catch (err) {
-      console.error("loadQuizzes error:", err);
+      if (requestId === quizRequestIdRef.current) {
+        console.error("loadQuizzes error:", err);
+      }
     } finally {
-      setQuizzesLoading(false);
+      if (requestId === quizRequestIdRef.current) {
+        setLoadedQuizQueryKey(requestQueryKey);
+        setQuizzesLoading(false);
+      }
     }
   }
 
@@ -253,6 +274,34 @@ function AssignmentsLeftContent() {
     quizCurrentPage,
     quizView,
     selectedDate,
+  ]);
+
+  useEffect(() => {
+    const quizzes =
+      quizView === "ongoing" ? ongoingQuizzes : attemptedQuizzes;
+
+    if (
+      activeTab !== "quiz" ||
+      quizzesLoading ||
+      loadedQuizQueryKey !== quizQueryKey ||
+      quizzes.length > 0
+    ) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setEmptyQuizQueryKey(quizQueryKey);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [
+    activeTab,
+    attemptedQuizzes,
+    loadedQuizQueryKey,
+    ongoingQuizzes,
+    quizQueryKey,
+    quizzesLoading,
+    quizView,
   ]);
 
   async function loadDiscussions() {
@@ -274,8 +323,31 @@ function AssignmentsLeftContent() {
         }),
       );
 
+      const completedWithUploads = await Promise.all(
+        completed.map(async (discussion: any) => {
+          const uploads = await fetchStudentDiscussionUploads(
+            studentId,
+            discussion.discussionId,
+          );
+          return { ...discussion, studentUploads: uploads };
+        }),
+      );
+
+      const submittedDiscussions = [
+        ...activeWithUploads,
+        ...completedWithUploads,
+      ].filter((discussion) => discussion.studentUploads.length > 0);
+      const uniqueSubmittedDiscussions = Array.from(
+        new Map(
+          submittedDiscussions.map((discussion) => [
+            discussion.discussionId,
+            discussion,
+          ]),
+        ).values(),
+      );
+
       setActiveDiscussions(activeWithUploads);
-      setCompletedDiscussions(completed);
+      setCompletedDiscussions(uniqueSubmittedDiscussions);
     } catch (err) {
       console.error("loadDiscussions error:", err);
     } finally {
@@ -287,7 +359,7 @@ function AssignmentsLeftContent() {
     if (activeTab === "discussion" && collegeSectionsId) {
       loadDiscussions();
     }
-  }, [activeTab, collegeSectionsId, selectedDate]);
+  }, [activeTab, collegeSectionsId, studentId, selectedDate]);
 
   async function loadLabs() {
     if (
@@ -640,12 +712,7 @@ function AssignmentsLeftContent() {
       {activeModal === "uploadDiscussion" && activeDiscussionData && (
         <StudentDiscussionUploadModal
           discussion={activeDiscussionData}
-          onUpload={(files) => {
-            setDiscussionUploads((prev) => ({
-              ...prev,
-              [activeDiscussionData.discussionId]: files,
-            }));
-          }}
+          onUpload={() => {}}
           onSuccess={loadDiscussions}
         />
       )}
@@ -910,7 +977,11 @@ function AssignmentsLeftContent() {
             <>
               {quizView === "ongoing" && (
                 <div className="flex flex-col h-full">
-                  {quizzesLoading || quizSubTabLoading ? (
+                  {quizzesLoading ||
+                  quizSubTabLoading ||
+                  loadedQuizQueryKey !== quizQueryKey ||
+                  (ongoingQuizzes.length === 0 &&
+                    emptyQuizQueryKey !== quizQueryKey) ? (
                     <QuizCardSkeletonGroup count={3} />
                   ) : ongoingQuizzes.length === 0 ? (
                     <div className="flex items-center justify-center h-1/3 mt-10">
@@ -950,7 +1021,11 @@ function AssignmentsLeftContent() {
 
               {quizView === "attempted" && (
                 <div className="flex flex-col h-full">
-                  {quizzesLoading || quizSubTabLoading ? (
+                  {quizzesLoading ||
+                  quizSubTabLoading ||
+                  loadedQuizQueryKey !== quizQueryKey ||
+                  (attemptedQuizzes.length === 0 &&
+                    emptyQuizQueryKey !== quizQueryKey) ? (
                     <QuizCardSkeletonGroup count={3} />
                   ) : attemptedQuizzes.length === 0 ? (
                     <div className="flex items-center justify-center h-1/3 mt-10">
@@ -1058,9 +1133,7 @@ function AssignmentsLeftContent() {
                             key={discussion.discussionId}
                             data={discussion}
                             isCompleted={true}
-                            uploadedFiles={
-                              discussionUploads[discussion.discussionId] || []
-                            }
+                            uploadedFiles={discussion.studentUploads || []}
                           />
                         ))
                     ))}
@@ -1100,16 +1173,17 @@ function AssignmentsLeftContent() {
 
         {activeTab === "quiz" &&
           (() => {
-            const quizTotalPages = Math.ceil(quizTotalRecords / QUIZ_PER_PAGE);
-            return quizTotalPages > 1 &&
-              !quizzesLoading &&
-              !quizSubTabLoading ? (
+            return quizTotalRecords > 0 &&
+              loadedQuizQueryKey === quizQueryKey &&
+              emptyQuizQueryKey !== quizQueryKey ? (
               <div className="flex justify-center items-center gap-2 mt-6 pb-6">
                 <Pagination
                   currentPage={quizCurrentPage}
                   totalItems={quizTotalRecords}
                   itemsPerPage={QUIZ_PER_PAGE}
                   onPageChange={setQuizCurrentPage}
+                  disabled={quizzesLoading || quizSubTabLoading}
+                  alwaysShow
                 />
               </div>
             ) : null;
@@ -1121,93 +1195,32 @@ function AssignmentsLeftContent() {
               discussionView === "active"
                 ? activeDiscussions
                 : completedDiscussions;
-            const discTotalPages = Math.ceil(list.length / DISCUSSION_PER_PAGE);
-            return discTotalPages > 1 &&
-              !discussionsLoading &&
-              !discussionSubTabLoading ? (
+            return list.length > 0 ? (
               <div className="flex justify-center items-center gap-2 mt-6 pb-6">
-                <button
-                  onClick={() =>
-                    setDiscussionCurrentPage((p) => Math.max(1, p - 1))
-                  }
-                  disabled={discussionCurrentPage === 1}
-                  className="p-2 rounded-lg border cursor-pointer bg-white disabled:opacity-30 hover:bg-gray-50 transition-all"
-                >
-                  <CaretLeft size={18} weight="bold" color="black" />
-                </button>
-                <div className="flex gap-1">
-                  {[...Array(discTotalPages)].map((_, i) => (
-                    <button
-                      key={i + 1}
-                      onClick={() => setDiscussionCurrentPage(i + 1)}
-                      className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${discussionCurrentPage === i + 1 ? "bg-[#16284F] text-white" : "bg-white text-gray-600 border hover:border-gray-300"}`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() =>
-                    setDiscussionCurrentPage((p) =>
-                      Math.min(discTotalPages, p + 1),
-                    )
-                  }
-                  disabled={discussionCurrentPage === discTotalPages}
-                  className="p-2 rounded-lg border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all cursor-pointer"
-                >
-                  <CaretRight size={18} weight="bold" color="black" />
-                </button>
+                <Pagination
+                  currentPage={discussionCurrentPage}
+                  totalItems={list.length}
+                  itemsPerPage={DISCUSSION_PER_PAGE}
+                  onPageChange={setDiscussionCurrentPage}
+                  disabled={discussionsLoading || discussionSubTabLoading}
+                  alwaysShow
+                />
               </div>
             ) : null;
           })()}
 
-        {activeTab === "lab" &&
-          (() => {
-            const labTotalPages = Math.ceil(labTotalRecords / LAB_PER_PAGE);
-            return labTotalPages > 1 && !labsLoading ? (
-              <div className="flex justify-center items-center gap-3 mt-6 mb-6">
-                <button
-                  onClick={() => setLabCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={labCurrentPage === 1}
-                  className={`w-10 h-10 flex items-center justify-center rounded-lg border ${
-                    labCurrentPage === 1
-                      ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                      : "border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer"
-                  }`}
-                >
-                  <CaretLeft size={18} weight="bold" />
-                </button>
-
-                {[...Array(labTotalPages)].map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setLabCurrentPage(i + 1)}
-                    className={`w-10 h-10 rounded-lg font-semibold cursor-pointer ${
-                      labCurrentPage === i + 1
-                        ? "bg-[#16284F] text-white"
-                        : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-
-                <button
-                  onClick={() =>
-                    setLabCurrentPage((p) => Math.min(labTotalPages, p + 1))
-                  }
-                  disabled={labCurrentPage === labTotalPages}
-                  className={`w-10 h-10 flex items-center justify-center rounded-lg border ${
-                    labCurrentPage === labTotalPages
-                      ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                      : "border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer"
-                  }`}
-                >
-                  <CaretRight size={18} weight="bold" />
-                </button>
-              </div>
-            ) : null;
-          })()}
+        {activeTab === "lab" && labTotalRecords > 0 && (
+          <div className="mt-6 mb-6">
+            <Pagination
+              currentPage={labCurrentPage}
+              totalItems={labTotalRecords}
+              itemsPerPage={LAB_PER_PAGE}
+              onPageChange={setLabCurrentPage}
+              disabled={labsLoading}
+              alwaysShow
+            />
+          </div>
+        )}
       </div>
     </div>
   );

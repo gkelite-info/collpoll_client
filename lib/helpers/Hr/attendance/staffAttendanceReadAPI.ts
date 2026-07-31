@@ -12,6 +12,24 @@ import {
   EXCLUDED_ROLES
 } from "./staffAttendanceTypes";
 
+const ROLE_FILTER_MAP: Record<string, string[]> = {
+  "College Admin": ["CollegeAdmin"],
+  Admin: ["Admin"],
+  Faculty: ["Faculty"],
+  "Finance Executive": ["Finance"],
+  "Finance Manager": ["FinanceManager"],
+  "HR Manager": ["CollegeHr"],
+  Placement: ["Placement", "PlacementOfficer"],
+  "Wellbeing Executive": ["WellbeingExecutive"],
+  "Wellbeing Manager": ["WellbeingManager"],
+  "Ground Staff": ["GroundStaff"],
+  "Super Admin": ["SuperAdmin"],
+};
+
+function getDatabaseRoles(role: string) {
+  return ROLE_FILTER_MAP[role] ?? [role];
+}
+
 export async function getAttendanceStaff(
   params: GetAttendanceStaffParams,
 ): Promise<GetAttendanceStaffResult> {
@@ -92,7 +110,7 @@ export async function getAttendanceStaff(
         .not("role", "in", `(${EXCLUDED_ROLES.join(",")})`);
       
       if (role) {
-        allUsersQ = allUsersQ.eq("role", role);
+        allUsersQ = allUsersQ.in("role", getDatabaseRoles(role));
       }
       
       const { data: allUsers } = await allUsersQ;
@@ -111,7 +129,7 @@ export async function getAttendanceStaff(
   }
 
   if (role) {
-    usersQuery = usersQuery.eq("role", role);
+    usersQuery = usersQuery.in("role", getDatabaseRoles(role));
   }
 
   const { data: usersData, error: usersError, count } = await usersQuery;
@@ -234,23 +252,7 @@ export async function getAttendanceStaffStats(
   }
 
   if (role) {
-    const reverseRoleMap: Record<string, string> = {
-      "College Admin": "CollegeAdmin",
-      Admin: "Admin",
-      Faculty: "Faculty",
-      "Finance Executive": "Finance",
-      "Finance Manager": "FinanceManager",
-      "HR Manager": "CollegeHr",
-      Placement: "PlacementOfficer",
-      "Wellbeing Executive": "WellbeingExecutive",
-      "Wellbeing Manager": "WellbeingManager",
-      "Ground Staff": "GroundStaff",
-      "Super Admin": "SuperAdmin",
-    };
-    const dbRole = reverseRoleMap[role] || role;
-    usersQuery = role === "Placement"
-      ? usersQuery.in("role", ["Placement", "PlacementOfficer"])
-      : usersQuery.eq("role", dbRole);
+    usersQuery = usersQuery.in("role", getDatabaseRoles(role));
   }
 
   const { data: users, error: usersError } = await usersQuery;

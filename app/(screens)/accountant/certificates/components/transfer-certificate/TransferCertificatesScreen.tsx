@@ -16,6 +16,7 @@ import { TransferCreateForm, type TransferCertificateData } from "./TransferCrea
 import { TransferPreviewScreen } from "./TransferPreviewScreen";
 import { TransferUploadHeaderScreen, type HeaderConfig } from "./TransferUploadHeaderScreen";
 import { useUser } from "@/app/utils/context/UserContext";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import {
@@ -92,6 +93,7 @@ export function TransferCertificatesScreen({
   onSelectBonafides: () => void;
 }) {
   const { collegeId, userId, loading: userLoading } = useUser();
+  const { isSchool } = useInstitutionTerminology();
   const [view, setView] = useState<"list" | "create" | "preview" | "upload-header">("list");
   const [certificates, setCertificates] = useState<TCCertificate[]>([]);
   const [totalCertificates, setTotalCertificates] = useState(0);
@@ -254,8 +256,9 @@ export function TransferCertificatesScreen({
         collegeId,
         studentId: currentCertData.studentId,
         collegeTcNo: currentCertData.tcNo,
-        issuedDate: currentCertData.date,
+        issuedDate: currentCertData.dateOfLeaving,
         classAtTimeOfLeaving: currentCertData.classAtLeaving,
+        classAtTimeOfJoining: currentCertData.classAtJoining,
         dateOfAdmission: currentCertData.dateOfAdmission,
         dateOfLeaving: currentCertData.dateOfLeaving,
         conductRemarks: currentCertData.conductRemarks,
@@ -339,6 +342,24 @@ export function TransferCertificatesScreen({
     ],
     [certificates],
   );
+  const distinctStatuses = useMemo(
+    () => [
+      "All",
+      ...Array.from(new Set(certificates.map((certificate) => certificate.status).filter(Boolean))),
+    ],
+    [certificates],
+  );
+  const availableDateRange = useMemo(() => {
+    const dates = certificates
+      .map((certificate) => certificate.dateOfLeaving)
+      .filter(Boolean)
+      .sort();
+
+    return {
+      start: dates[0] ?? "",
+      end: dates[dates.length - 1] ?? "",
+    };
+  }, [certificates]);
 
   if (view === "create") {
     return (
@@ -383,8 +404,9 @@ export function TransferCertificatesScreen({
               collegeId,
               studentId: currentCertData.studentId,
               collegeTcNo: currentCertData.tcNo,
-              issuedDate: currentCertData.date,
+              issuedDate: currentCertData.dateOfLeaving,
               classAtTimeOfLeaving: currentCertData.classAtLeaving,
+              classAtTimeOfJoining: currentCertData.classAtJoining,
               dateOfAdmission: currentCertData.dateOfAdmission,
               dateOfLeaving: currentCertData.dateOfLeaving,
               conductRemarks: currentCertData.conductRemarks,
@@ -502,7 +524,7 @@ export function TransferCertificatesScreen({
 
           {/* Course filter */}
           <label ref={courseDropdownRef} className="flex flex-col gap-2 relative">
-            <span className="text-[11px] font-semibold text-[#303642]">Course</span>
+            <span className="text-[11px] font-semibold text-[#303642]">{isSchool ? "Board" : "Course"}</span>
             <button
               type="button"
               onClick={() => {
@@ -512,7 +534,7 @@ export function TransferCertificatesScreen({
               }}
               className="flex h-10 cursor-pointer items-center justify-between rounded-md border border-[#C9D0D9] bg-[#F8FAFC] px-3 text-left text-[12px] font-medium text-[#303642] hover:bg-slate-50 transition-colors"
             >
-              {courseFilter === "All" ? "All Courses" : courseFilter}
+              {courseFilter === "All" ? (isSchool ? "All Boards" : "All Courses") : courseFilter}
               <CaretDown size={14} weight="bold" className="text-[#7B8AA3]" />
             </button>
 
@@ -528,7 +550,7 @@ export function TransferCertificatesScreen({
                     }}
                     className="w-full text-left px-3 py-2 text-[12px] font-medium hover:bg-slate-50 transition-colors cursor-pointer text-[#303642]"
                   >
-                    {c === "All" ? "All Courses" : c}
+                    {c === "All" ? (isSchool ? "All Boards" : "All Courses") : c}
                   </button>
                 ))}
               </div>
@@ -553,7 +575,7 @@ export function TransferCertificatesScreen({
 
             {statusDropdownOpen && (
               <div className="absolute top-16 left-0 w-full bg-white border border-[#E7ECF3] rounded-md shadow-lg z-20 overflow-hidden">
-                {["All", "Generated", "Saved", "Draft"].map((s) => (
+                {distinctStatuses.map((s) => (
                   <button
                     key={s}
                     type="button"
@@ -588,7 +610,7 @@ export function TransferCertificatesScreen({
               <span className="whitespace-nowrap">
                 {appliedDateRange.start || appliedDateRange.end
                   ? formatDateRangeLabel(appliedDateRange.start, appliedDateRange.end)
-                  : "01 Apr 2024 - 20 May 2025"}
+                  : formatDateRangeLabel(availableDateRange.start, availableDateRange.end)}
               </span>
             </button>
 
@@ -600,6 +622,8 @@ export function TransferCertificatesScreen({
                     <input
                       type="date"
                       value={dateRangeStart}
+                      min={availableDateRange.start || undefined}
+                      max={availableDateRange.end || undefined}
                       onChange={(e) => setDateRangeStart(e.target.value)}
                       className="h-10 rounded-md border border-[#C9D0D9] bg-[#F8FAFC] px-3 text-[12px] font-medium text-[#17213D] outline-none transition-colors focus:border-[#43C17A] focus:bg-white"
                     />
@@ -609,6 +633,8 @@ export function TransferCertificatesScreen({
                     <input
                       type="date"
                       value={dateRangeEnd}
+                      min={availableDateRange.start || undefined}
+                      max={availableDateRange.end || undefined}
                       onChange={(e) => setDateRangeEnd(e.target.value)}
                       className="h-10 rounded-md border border-[#C9D0D9] bg-[#F8FAFC] px-3 text-[12px] font-medium text-[#17213D] outline-none transition-colors focus:border-[#43C17A] focus:bg-white"
                     />

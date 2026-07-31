@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export type TransferCertificateStatus = "Generated" | "Draft" | "Saved";
 
@@ -18,6 +19,7 @@ export type TransferCertificateRecord = {
   batchCode: string;
   date: string;
   classAtLeaving: string;
+  classAtJoining: string;
   dateOfAdmission: string;
   dateOfLeaving: string;
   dateOfBirth: string;
@@ -65,6 +67,7 @@ export type SaveTransferCertificatePayload = {
   collegeTcNo: string;
   issuedDate: string;
   classAtTimeOfLeaving: string;
+  classAtTimeOfJoining?: string | null;
   dateOfAdmission: string;
   dateOfLeaving: string;
   conductRemarks: string;
@@ -104,6 +107,7 @@ type TransferRow = {
   collegeTcNo: string | null;
   issuedDate: string | null;
   classAtTimeOfLeaving: string | null;
+  classAtTimeOfJoining: string | null;
   dateOfAdmission: string | null;
   dateOfLeaving: string | null;
   conductRemarks: string | null;
@@ -125,6 +129,7 @@ const TRANSFER_SELECT = `
   collegeTcNo,
   issuedDate,
   classAtTimeOfLeaving,
+  classAtTimeOfJoining,
   dateOfAdmission,
   dateOfLeaving,
   conductRemarks,
@@ -320,11 +325,14 @@ function mapTransferRowWithAdmissionNo(
     motherName: parents.motherName,
     course: education?.collegeEducationType ?? "-",
     subCourse: branch?.collegeBranchCode ?? "-",
-    courseYear: getCourseYearLabel(academicHistory),
+    courseYear: isSchoolEducation(education?.collegeEducationType)
+      ? getCurrentAcademicYear(academicHistory)
+      : getCourseYearLabel(academicHistory),
     academicYear: getCurrentAcademicYear(academicHistory),
     batchCode: student?.batch ?? "-",
     date: row.issuedDate ?? "",
     classAtLeaving: row.classAtTimeOfLeaving ?? "-",
+    classAtJoining: row.classAtTimeOfJoining ?? "",
     dateOfAdmission: row.dateOfAdmission ?? "",
     dateOfLeaving: row.dateOfLeaving ?? "",
     dateOfBirth: "",
@@ -657,7 +665,11 @@ export async function fetchTransferStudentByRollNo({
     const academicHistoryRows = rawStudent.student_academic_history ?? [];
     const parents = getParentNames(rawStudent as any);
     
-    const computedCourseYear = getCourseYearLabel(academicHistoryRows);
+    const computedCourseYear = isSchoolEducation(
+      education?.collegeEducationType,
+    )
+      ? getCurrentAcademicYear(academicHistoryRows)
+      : getCourseYearLabel(academicHistoryRows);
 
     if (courseYear?.trim() && computedCourseYear !== courseYear.trim()) {
       continue;
@@ -710,6 +722,7 @@ export async function saveTransferCertificate(payload: SaveTransferCertificatePa
     collegeTcNo,
     issuedDate: payload.issuedDate,
     classAtTimeOfLeaving: payload.classAtTimeOfLeaving.trim(),
+    classAtTimeOfJoining: payload.classAtTimeOfJoining?.trim() || null,
     dateOfAdmission: payload.dateOfAdmission,
     dateOfLeaving: payload.dateOfLeaving,
     conductRemarks: payload.conductRemarks.trim(),

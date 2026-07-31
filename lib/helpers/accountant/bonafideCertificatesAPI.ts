@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export type BonafideCertificateStatus = "Issued" | "Draft";
 
@@ -20,6 +21,10 @@ export type BonafideCertificateRecord = {
   academicYear: string;
   studentType: string;
   conduct: string;
+  fromDate: string;
+  toData: string;
+  fromClass: string;
+  toClass: string;
   status: BonafideCertificateStatus;
 };
 
@@ -53,6 +58,10 @@ type BonafideRow = {
   purpose: string | null;
   studentType: string | null;
   conduct: string | null;
+  fromDate: string | null;
+  toData: string | null;
+  fromClass: string | null;
+  toClass: string | null;
   admissionNo: string | null;
   college_education?: Related<{ collegeEducationType?: string | null }>;
   students?: Related<BonafideStudentRelation>;
@@ -106,6 +115,10 @@ export type CreateBonafideCertificatePayload = {
   purpose: string;
   studentType: string;
   conduct: string;
+  fromDate?: string | null;
+  toData?: string | null;
+  fromClass?: string | null;
+  toClass?: string | null;
   issuedBy: number;
   isDraft?: boolean;
 };
@@ -127,6 +140,10 @@ const BONAFIDE_SELECT = `
   purpose,
   studentType,
   conduct,
+  fromDate,
+  toData,
+  fromClass,
+  toClass,
   college_education:collegeEducationId (
     collegeEducationType
   ),
@@ -241,6 +258,21 @@ function getCourseYearLabel(
   return getOrdinalYearLabel(sortedAcademicYears.indexOf(currentRow.academicYear) + 1);
 }
 
+function getCurrentAcademicLabel(
+  rows: BonafideStudentRelation["student_academic_history"] = [],
+) {
+  const currentRow =
+    (rows ?? []).find((row) => row.isCurrent) ??
+    [...(rows ?? [])].sort((a, b) =>
+      String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? "")),
+    )[0];
+
+  return (
+    getFirstRelated(currentRow?.college_academic_year)?.collegeAcademicYear ??
+    "-"
+  );
+}
+
 function getBonafideRowStudentId(row: BonafideRow) {
   return getFirstRelated(row.students)?.studentId ?? null;
 }
@@ -324,13 +356,19 @@ function mapBonafideRow(
     rollNo: pin?.pinNumber ?? "-",
     educationType: education?.collegeEducationType ?? "-",
     branch: branch?.collegeBranchCode ?? "-",
-    courseYear: getCourseYearLabel(student?.student_academic_history ?? []),
+    courseYear: isSchoolEducation(education?.collegeEducationType)
+      ? getCurrentAcademicLabel(student?.student_academic_history)
+      : getCourseYearLabel(student?.student_academic_history ?? []),
     purpose: row.purpose ?? "-",
     dateIssued: formatDate(row.dateIssued),
     dateIssuedIso: row.dateIssued ?? "",
     academicYear: row.academicYear ?? "-",
     studentType: row.studentType ?? "-",
     conduct: row.conduct ?? "-",
+    fromDate: row.fromDate ?? "",
+    toData: row.toData ?? "",
+    fromClass: row.fromClass ?? "",
+    toClass: row.toClass ?? "",
     status: isExplicitDraft || (!actualBonafideNo && !row.dateIssued) ? "Draft" : "Issued",
   };
 }
@@ -570,7 +608,15 @@ export async function fetchBonafideStudentByRollNo({
     );
     const parentUser = getFirstRelated(parent?.users);
     
-    const computedCourseYear = getCourseYearLabel(academicHistoryRows);
+    const currentAcademicLabel = getFirstRelated(
+      (academicHistoryRows.find((row) => row.isCurrent) ?? academicHistoryRows[0])
+        ?.college_academic_year,
+    )?.collegeAcademicYear ?? "-";
+    const computedCourseYear = isSchoolEducation(
+      education?.collegeEducationType,
+    )
+      ? currentAcademicLabel
+      : getCourseYearLabel(academicHistoryRows);
 
     if (courseYear?.trim() && computedCourseYear !== courseYear.trim()) {
       continue;
@@ -613,6 +659,10 @@ export async function createBonafideCertificate(
       purpose: payload.purpose.trim(),
       studentType: payload.studentType.trim(),
       conduct: payload.conduct.trim(),
+      fromDate: payload.fromDate || null,
+      toData: payload.toData || null,
+      fromClass: payload.fromClass?.trim() || null,
+      toClass: payload.toClass?.trim() || null,
       issuedBy: payload.issuedBy,
       is_deleted: false,
       createdAt: now,
@@ -644,6 +694,10 @@ export async function updateBonafideCertificate(
     purpose: string;
     studentType: string;
     conduct: string;
+    fromDate: string | null;
+    toData: string | null;
+    fromClass: string | null;
+    toClass: string | null;
     issuedBy: number;
     updatedAt: string;
   } = {
@@ -656,6 +710,10 @@ export async function updateBonafideCertificate(
     purpose: payload.purpose.trim(),
     studentType: payload.studentType.trim(),
     conduct: payload.conduct.trim(),
+    fromDate: payload.fromDate || null,
+    toData: payload.toData || null,
+    fromClass: payload.fromClass?.trim() || null,
+    toClass: payload.toClass?.trim() || null,
     issuedBy: payload.issuedBy,
     updatedAt: new Date().toISOString(),
   };

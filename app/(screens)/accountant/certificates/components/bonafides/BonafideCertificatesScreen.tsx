@@ -102,6 +102,7 @@ export function BonafideCertificatesScreen({
   const [selectedCertificate, setSelectedCertificate] =
     useState<BonafideCertificate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedSummary, setHasLoadedSummary] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -113,6 +114,7 @@ export function BonafideCertificatesScreen({
     async function loadBonafides() {
       if (!collegeId) {
         setCertificates([]);
+        setHasLoadedSummary(false);
         setSummary({
           total: 0,
           issuedThisMonth: 0,
@@ -141,6 +143,7 @@ export function BonafideCertificatesScreen({
 
         setCertificates(result.certificates);
         setSummary(result.summary);
+        setHasLoadedSummary(true);
         setAcademicYears(result.academicYears);
       } catch (err) {
         if (!isActive) return;
@@ -230,7 +233,11 @@ export function BonafideCertificatesScreen({
 
       <section className="flex flex-wrap gap-5">
         {summaryCards.map((item) => (
-          <BonafideSummaryCard key={item.label} item={item} isLoading={isLoading || userLoading} />
+          <BonafideSummaryCard
+            key={item.label}
+            item={item}
+            isLoading={userLoading || !hasLoadedSummary}
+          />
         ))}
       </section>
 

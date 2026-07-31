@@ -14,24 +14,6 @@ export type StudentTaskRow = {
 };
 
 export async function fetchStudentTasks(studentId: number) {
-
-    const today = new Date().toLocaleDateString("en-CA");
-
-    const { error: deactivateError } = await supabase
-        .from("student_tasks")
-        .update({
-            isActive: false,
-            is_deleted: true,
-            deletedAt: new Date().toISOString(),
-        })
-        .lt("date", today)
-        .eq("createdBy", studentId)
-        .eq("isActive", true);
-
-    if (deactivateError) {
-        console.error("auto deactivate student tasks error:", deactivateError);
-    }
-
     const { data, error } = await supabase
         .from("student_tasks")
         .select(`
@@ -47,9 +29,8 @@ export async function fetchStudentTasks(studentId: number) {
       deletedAt
     `)
         .eq("createdBy", studentId)
-        .eq("date", today)
-        .eq("isActive", true)
         .is("deletedAt", null)
+        .order("date", { ascending: false })
         .order("time", { ascending: true });
 
     if (error) {
@@ -106,6 +87,9 @@ export async function saveStudentTask(
                 description: payload.description.trim(),
                 date: payload.date,
                 time: payload.time,
+                isActive: true,
+                is_deleted: false,
+                deletedAt: null,
                 updatedAt: now,
             })
             .eq("studentTaskId", payload.studentTaskId)
@@ -130,6 +114,9 @@ export async function saveStudentTask(
             date: payload.date,
             time: payload.time,
             createdBy: studentId,
+            isActive: true,
+            is_deleted: false,
+            deletedAt: null,
             createdAt: now,
             updatedAt: now,
         })
@@ -175,9 +162,8 @@ export async function fetchStudentTasksForLoggedInStudent(
       time
     `)
         .eq("createdBy", studentId)
-        .eq("isActive", true)
         .is("deletedAt", null)
-        .order("date", { ascending: true });
+        .order("date", { ascending: false });
 
     if (error) {
         console.error("fetchStudentTasksForLoggedInStudent error:", error);

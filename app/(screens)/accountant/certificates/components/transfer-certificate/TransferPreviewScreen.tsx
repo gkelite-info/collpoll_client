@@ -349,7 +349,7 @@ async function generateTransferCertificatePdf({
     ["1. Name :", data.studentName],
     ["2. Father's Name :", data.fatherName],
     ["3. Date of Birth :", formatDate(data.dateOfBirth)],
-    ["4. Date of Admission & Class :", `${formatDate(data.dateOfAdmission)} and ${data.classAtLeaving}`],
+    ["4. Date of Admission & Class :", `${formatDate(data.dateOfAdmission)} and ${data.classAtJoining || "-"}`],
     ["5. Date of Leaving & Class :", `${formatDate(data.dateOfLeaving)} and ${data.classAtLeaving}`],
     ["6. Reason for Leaving & Class :", data.reasonForLeaving],
     ["7. Whether the Candidate belongs to SC / ST / BC :", data.belongsToScStBc],
@@ -536,7 +536,7 @@ export function TransferCertificateLayout({
         [351, "1.", "Name", data.studentName],
         [375, "2.", "Father's Name", data.fatherName],
         [399, "3.", "Date of Birth", formatDate(data.dateOfBirth)],
-        [423, "4.", "Date of Admission & Class", `${formatDate(data.dateOfAdmission)} and ${data.classAtLeaving}`],
+        [423, "4.", "Date of Admission & Class", `${formatDate(data.dateOfAdmission)} and ${data.classAtJoining || "-"}`],
         [447, "5.", "Date of Leaving & Class", `${formatDate(data.dateOfLeaving)} and ${data.classAtLeaving}`],
         [472, "6.", "Reason for Leaving & Class", data.reasonForLeaving],
         [505, "7.", "Whether the Candidate belongs to SC / ST / BC", data.belongsToScStBc],
@@ -706,7 +706,7 @@ export function TransferCertificateLayout({
               ["1. Name", data.studentName],
               ["2. Father's Name", data.fatherName],
               ["3. Date of Birth", formatDate(data.dateOfBirth)],
-              ["4. Date of Admission & Class", `${formatDate(data.dateOfAdmission)} and ${data.classAtLeaving}`],
+              ["4. Date of Admission & Class", `${formatDate(data.dateOfAdmission)} and ${data.classAtJoining || "-"}`],
               ["5. Date of Leaving & Class", `${formatDate(data.dateOfLeaving)} and ${data.classAtLeaving}`],
               ["6. Reason for Leaving & Class", data.reasonForLeaving],
               ["7. Whether the Candidate belongs to SC / ST / BC", data.belongsToScStBc],
@@ -902,7 +902,7 @@ export function TransferCertificateLayout({
 
           <div className="flex items-end border-b border-slate-200 pb-0.5 w-full">
             <span className="w-[300px] font-semibold text-slate-700">4. Date of Admission & Class :</span>
-            <span className="flex-1 font-bold text-slate-900 pl-4">{formatDate(data.dateOfAdmission)} and {data.classAtLeaving}</span>
+            <span className="flex-1 font-bold text-slate-900 pl-4">{formatDate(data.dateOfAdmission)} and {data.classAtJoining || "-"}</span>
           </div>
 
           <div className="flex items-end border-b border-slate-200 pb-0.5 w-full">
@@ -991,7 +991,7 @@ export function TransferPreviewScreen({
   onCancel: () => void;
   onGenerate: (saveStatus: "Draft" | "Saved" | "Generated") => void;
 }) {
-  const { academicBranchLabel } = useInstitutionTerminology();
+  const { isSchool, academicBranchLabel } = useInstitutionTerminology();
   const certificateRef = useRef<HTMLDivElement>(null);
   const downloadLockRef = useRef(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -1076,8 +1076,10 @@ export function TransferPreviewScreen({
               <DetailsRow label="Roll No." value={data.rollNo} />
               <DetailsRow label="Student Name" value={data.studentName} />
               <DetailsRow label="Course" value={data.course} />
-              <DetailsRow label={`${academicBranchLabel} / Sub Course`} value={data.subCourse} />
+              {!isSchool && <DetailsRow label={`${academicBranchLabel} / Sub Course`} value={data.subCourse} />}
               <DetailsRow label="Course Year" value={data.courseYear} />
+              <DetailsRow label="Class at Joining" value={data.classAtJoining || "-"} />
+              <DetailsRow label="Class at Leaving" value={data.classAtLeaving} />
               <DetailsRow label="Date of Admission" value={formatDate(data.dateOfAdmission)} />
               <DetailsRow label="Date of Leaving" value={formatDate(data.dateOfLeaving)} />
               <DetailsRow label="Reason for Leaving" value={data.reasonForLeaving} />

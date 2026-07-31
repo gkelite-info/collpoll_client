@@ -160,8 +160,30 @@ export async function fetchDiscussionUploads(
 export async function fetchStudentDiscussionUploads(
   studentId: number,
   discussionId: number,
+  discussionSectionId?: number,
 ) {
-  const { data, error } = await supabase
+  let sectionIds =
+    discussionSectionId !== undefined ? [discussionSectionId] : [];
+
+  if (sectionIds.length === 0) {
+    const { data: sections, error: sectionsError } = await supabase
+      .from("discussion_forum_sections")
+      .select("discussionSectionId")
+      .eq("discussionId", discussionId);
+
+    if (sectionsError) {
+      console.error(
+        "fetchStudentDiscussionUploads sections error:",
+        sectionsError,
+      );
+    } else {
+      sectionIds = (sections ?? []).map(
+        (section) => section.discussionSectionId,
+      );
+    }
+  }
+
+  let query = supabase
     .from("student_discussion_uploads")
     .select(
       `
@@ -173,9 +195,16 @@ export async function fetchStudentDiscussionUploads(
     `,
     )
     .eq("studentId", studentId)
-    .eq("discussionId", discussionId)
-    .eq("is_deleted", false)
-    .order("createdAt", { ascending: true });
+    .or("is_deleted.eq.false,is_deleted.is.null");
+
+  query =
+    sectionIds.length > 0
+      ? query.in("discussionSectionId", sectionIds)
+      : query.eq("discussionId", discussionId);
+
+  const { data, error } = await query.order("createdAt", {
+    ascending: true,
+  });
 
   if (error) {
     console.error("fetchStudentDiscussionUploads error:", error);
@@ -225,6 +254,9 @@ export async function saveStudentDiscussionUpload(payload: {
     discussionSectionId: payload.discussionSectionId,
     fileUrl: payload.fileUrl,
     submittedAt: payload.submittedAt ?? now,
+    isActive: true,
+    is_deleted: false,
+    deletedAt: null,
     updatedAt: now,
   };
 

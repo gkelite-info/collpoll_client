@@ -139,10 +139,26 @@ export default function AttendanceTable({
       return errs;
     }
 
-    if (isStatusOnly) return errs;
+    const requiresCheckIn =
+      status === "present" || status === "late" || status === "halfday";
+    if (requiresCheckIn && !item.rawCheckIn && !edit.checkIn.trim()) {
+      errs.checkIn = "Check-In is required before marking attendance";
+      return errs;
+    }
+
+    const isEditingExistingAttendance = Boolean(item.attendanceDailyId);
+
+    if (isStatusOnly) {
+      if (isEditingExistingAttendance && !edit.reason.trim()) {
+        errs.reason = "Reason is required when editing attendance";
+      }
+      return errs;
+    }
 
     if (status === "absent" || status === "leave") {
-      if (!edit.reason.trim()) errs.reason = "Reason is required";
+      if (isEditingExistingAttendance && !edit.reason.trim()) {
+        errs.reason = "Reason is required when editing attendance";
+      }
       return errs;
     }
 
@@ -170,7 +186,9 @@ export default function AttendanceTable({
       }
     }
 
-    if (!edit.reason.trim()) errs.reason = "Reason is required";
+    if (isEditingExistingAttendance && !edit.reason.trim()) {
+      errs.reason = "Reason is required when editing attendance";
+    }
     return errs;
   };
 

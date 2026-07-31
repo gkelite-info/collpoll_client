@@ -13,6 +13,7 @@ import {
   fetchAccountantEducationTypes,
   type AccountantEducationTypeOption,
 } from "@/lib/helpers/accountant/bonafideCertificatesAPI";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 export type TransferCertificateData = {
   collegeTcId?: number;
@@ -31,6 +32,7 @@ export type TransferCertificateData = {
   tcNo: string;
   date: string;
   classAtLeaving: string;
+  classAtJoining: string;
   dateOfAdmission: string;
   dateOfLeaving: string;
   dateOfBirth: string;
@@ -69,6 +71,12 @@ function getAcademicYearOptions(startYear = 2020) {
     const year = startYear + index;
     return `${year}-${year + 1}`;
   });
+}
+
+function getCurrentAcademicYear() {
+  const today = new Date();
+  const startYear = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+  return `${startYear}-${startYear + 1}`;
 }
 
 function TextField({
@@ -197,6 +205,7 @@ export function TransferCreateForm({
   onUploadHeader: (data: TransferCertificateData) => Promise<void> | void;
 }) {
   const { collegeId, loading: userLoading } = useUser();
+  const { isSchool } = useInstitutionTerminology();
   const [searchQuery, setSearchQuery] = useState(""); // Can be removed later
   const [isFetching, setIsFetching] = useState(false);
 
@@ -204,7 +213,7 @@ export function TransferCreateForm({
   const academicYearOptions = useMemo(() => getAcademicYearOptions(), []);
   const [educationTypes, setEducationTypes] = useState<AccountantEducationTypeOption[]>([]);
   const [selectedEducationId, setSelectedEducationId] = useState("");
-  const [searchAcademicYear, setSearchAcademicYear] = useState("");
+  const [searchAcademicYear, setSearchAcademicYear] = useState(getCurrentAcademicYear);
   const [searchStudentName, setSearchStudentName] = useState("");
   const [isLoadingEducationTypes, setIsLoadingEducationTypes] = useState(true);
 
@@ -265,8 +274,8 @@ export function TransferCreateForm({
 
   // TC Details State
   const [tcNo, setTcNo] = useState("");
-  const [date, setDate] = useState(getTodayIsoDate);
   const [classAtLeaving, setClassAtLeaving] = useState("");
+  const [classAtJoining, setClassAtJoining] = useState("");
   const [dateOfAdmission, setDateOfAdmission] = useState("");
   const [dateOfLeaving, setDateOfLeaving] = useState(getTodayIsoDate);
   const [dateOfBirth, setDateOfBirth] = useState("");
@@ -276,13 +285,17 @@ export function TransferCreateForm({
   const [receiptOfScholarship, setReceiptOfScholarship] = useState("Yes");
   const [otherRemarks, setOtherRemarks] = useState("");
   const classAtLeavingOptions = useMemo(() => {
+    if (isSchool && courseYear) {
+      return [{ label: courseYear, value: courseYear }];
+    }
+
     const yearLimit = getCourseYearLimit(course);
 
     return romanYearLabels.slice(0, yearLimit).map((yearLabel) => ({
       label: buildClassAtLeavingValue(yearLabel, course, subCourse),
       value: buildClassAtLeavingValue(yearLabel, course, subCourse),
     }));
-  }, [course, subCourse]);
+  }, [course, courseYear, isSchool, subCourse]);
 
   // Auto set classLeaving when course/subCourse/courseYear change
   useEffect(() => {
@@ -318,7 +331,6 @@ export function TransferCreateForm({
       setBatchCode(initialCertificate.batchCode ?? "");
 
       setTcNo(initialCertificate.tcNo ?? "");
-      if (initialCertificate.date) setDate(initialCertificate.date);
       setClassAtLeaving(
         initialCertificate.classAtLeaving
           ? buildClassAtLeavingValue(
@@ -328,6 +340,7 @@ export function TransferCreateForm({
             )
           : "",
       );
+      setClassAtJoining(initialCertificate.classAtJoining ?? "");
       if (initialCertificate.dateOfAdmission) setDateOfAdmission(initialCertificate.dateOfAdmission);
       if (initialCertificate.dateOfLeaving) setDateOfLeaving(initialCertificate.dateOfLeaving);
       if (initialCertificate.dateOfBirth) setDateOfBirth(initialCertificate.dateOfBirth);
@@ -383,11 +396,13 @@ export function TransferCreateForm({
       setBatchCode(student.batchCode);
       if (student.dateOfBirth) setDateOfBirth(student.dateOfBirth);
       setClassAtLeaving(
-        buildClassAtLeavingValue(
-          getRomanYearFromValue(student.courseYear) || "I Year",
-          student.course,
-          student.subCourse,
-        ),
+        isSchool
+          ? student.courseYear
+          : buildClassAtLeavingValue(
+              getRomanYearFromValue(student.courseYear) || "I Year",
+              student.course,
+              student.subCourse,
+            ),
       );
 
       toast.success("Student details fetched successfully!");
@@ -423,8 +438,8 @@ export function TransferCreateForm({
 
     if (
       !tcNo.trim() ||
-      !date ||
       !classAtLeaving ||
+      !classAtJoining ||
       !dateOfAdmission ||
       !dateOfLeaving ||
       !dateOfBirth ||
@@ -451,8 +466,9 @@ export function TransferCreateForm({
       academicYear,
       batchCode,
       tcNo,
-      date,
+      date: dateOfLeaving,
       classAtLeaving,
+      classAtJoining,
       dateOfAdmission,
       dateOfLeaving,
       dateOfBirth,
@@ -550,13 +566,13 @@ export function TransferCreateForm({
             />
             <SelectField
               label="Year"
-              value={academicYear}
+              value={searchAcademicYear}
               options={academicYearOptions.map((year) => ({
                 label: year,
                 value: year,
               }))}
               onChange={(value) => {
-                setAcademicYear(value);
+                setSearchAcademicYear(value);
               }}
               required
             />
@@ -575,15 +591,33 @@ export function TransferCreateForm({
 
           <div className="mt-5 grid items-end gap-5 md:grid-cols-2 lg:grid-cols-3">
             <SelectField
-              label="Academic Year"
+              label={isSchool ? "Class" : "Academic Year"}
               value={searchAcademicYear}
-              placeholder="Select Year"
-              options={[
-                { label: "1st Year", value: "1st Year" },
-                { label: "2nd Year", value: "2nd Year" },
-                { label: "3rd Year", value: "3rd Year" },
-                { label: "4th Year", value: "4th Year" },
-              ]}
+              placeholder={isSchool ? "Select Class" : "Select Year"}
+              options={
+                isSchool
+                  ? Array.from({ length: 12 }, (_, index) => {
+                      const number = index + 1;
+                      const suffix =
+                        number >= 11 && number <= 13
+                          ? "th"
+                          : number % 10 === 1
+                            ? "st"
+                            : number % 10 === 2
+                              ? "nd"
+                              : number % 10 === 3
+                                ? "rd"
+                                : "th";
+                      const label = `${number}${suffix} Class`;
+                      return { label, value: label };
+                    })
+                  : [
+                      { label: "1st Year", value: "1st Year" },
+                      { label: "2nd Year", value: "2nd Year" },
+                      { label: "3rd Year", value: "3rd Year" },
+                      { label: "4th Year", value: "4th Year" },
+                    ]
+              }
               onChange={(value) => {
                 setSearchAcademicYear(value);
                 setStudentId(null);
@@ -676,7 +710,7 @@ export function TransferCreateForm({
                 </label>
 
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-[#7B8AA3]">Course</span>
+                  <span className="text-[11px] font-semibold text-[#7B8AA3]">{isSchool ? "Board" : "Course"}</span>
                   <input
                     type="text"
                     value={course}
@@ -686,19 +720,21 @@ export function TransferCreateForm({
                   />
                 </label>
 
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-[#7B8AA3]">Sub Course</span>
-                  <input
-                    type="text"
-                    value={subCourse}
-                    placeholder="Enter Sub Course"
-                    onChange={(e) => setSubCourse(e.target.value)}
-                    className="h-10 rounded-md border border-[#E2E8F0] bg-[#F1F3F7] px-3 text-[13px] font-medium text-[#17213D] outline-none w-full focus:border-[#43C17A] focus:bg-white transition-colors"
-                  />
-                </label>
+                {!isSchool && (
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-[11px] font-semibold text-[#7B8AA3]">Sub Course</span>
+                    <input
+                      type="text"
+                      value={subCourse}
+                      placeholder="Enter Sub Course"
+                      onChange={(e) => setSubCourse(e.target.value)}
+                      className="h-10 rounded-md border border-[#E2E8F0] bg-[#F1F3F7] px-3 text-[13px] font-medium text-[#17213D] outline-none w-full focus:border-[#43C17A] focus:bg-white transition-colors"
+                    />
+                  </label>
+                )}
 
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-[#7B8AA3]">Course Year</span>
+                  <span className="text-[11px] font-semibold text-[#7B8AA3]">{isSchool ? "Class" : "Course Year"}</span>
                   <input
                     type="text"
                     value={courseYear}
@@ -708,16 +744,18 @@ export function TransferCreateForm({
                   />
                 </label>
 
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-[#7B8AA3]">Academic Year</span>
-                  <input
-                    type="text"
-                    value={academicYear}
-                    placeholder="Enter Academic Year"
-                    onChange={(e) => setAcademicYear(e.target.value)}
-                    className="h-10 rounded-md border border-[#E2E8F0] bg-[#F1F3F7] px-3 text-[13px] font-medium text-[#17213D] outline-none w-full focus:border-[#43C17A] focus:bg-white transition-colors"
-                  />
-                </label>
+                {!isSchool && (
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-[11px] font-semibold text-[#7B8AA3]">Academic Year</span>
+                    <input
+                      type="text"
+                      value={academicYear}
+                      placeholder="Enter Academic Year"
+                      onChange={(e) => setAcademicYear(e.target.value)}
+                      className="h-10 rounded-md border border-[#E2E8F0] bg-[#F1F3F7] px-3 text-[13px] font-medium text-[#17213D] outline-none w-full focus:border-[#43C17A] focus:bg-white transition-colors"
+                    />
+                  </label>
+                )}
 
                 <label className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-semibold text-[#7B8AA3]">Batch Code</span>
@@ -802,20 +840,6 @@ export function TransferCreateForm({
 
             {/* Column 2 */}
             <div className="flex flex-col gap-5">
-              {/* Date */}
-              <label className="flex flex-col gap-2">
-                <span className={fieldLabelClass}>Date <RequiredMark /></span>
-                <div className="relative flex items-center">
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className={`${inputClass} pr-10`}
-                  />
-                  <CalendarBlank size={16} className="absolute right-3 text-[#7B8AA3] pointer-events-none" />
-                </div>
-              </label>
-
               {/* Date of Birth */}
               <label className="flex flex-col gap-2">
                 <span className={fieldLabelClass}>Date of Birth <RequiredMark /></span>
@@ -869,6 +893,13 @@ export function TransferCreateForm({
 
             {/* Column 3 */}
             <div className="flex flex-col gap-5">
+              <TextField
+                label="Class at the Time of Joining"
+                value={classAtJoining}
+                placeholder="Enter joining class"
+                onChange={setClassAtJoining}
+                required
+              />
               {/* Class at the time of Leaving */}
               <label className="flex flex-col gap-2">
                 <span className={fieldLabelClass}>Class at the time of Leaving <RequiredMark /></span>
