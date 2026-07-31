@@ -6,18 +6,11 @@ import {
   useEffect,
   useState,
   useMemo,
-  useRef,
   useCallback,
 } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { getStudentId } from "@/lib/helpers/studentAPI";
-import { fetchStudentContext } from "./student/studentContextAPI";
-import { fetchFacultyContext } from "./faculty/facultyContextAPI";
-import { useQueryClient } from "@tanstack/react-query";
-import { getUserProfilePhoto } from "@/lib/helpers/profile/profileInfo";
-import { fetchAdminContext } from "./admin/adminContextAPI";
-import { fetchFinanceManagerContext } from "./financeManager/financeManagerContextAPI";
-import { getEmployeeEmpId, getStudentRollNo } from "@/lib/helpers/identifiers/upsertIdentifier";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchUserFullProfile } from "@/app/utils/context/userContextAPI";
 
 type UserContextType = {
   userId: number | null;
@@ -60,52 +53,7 @@ type UserContextType = {
   refreshUserContext: () => Promise<void>;
 };
 
-type RoleLoaderMap = Record<string, (userId: number, collegeId: number) => Promise<void>>;
-type FacultySectionContext = {
-  college_sections?: {
-    collegeSections?: string | null;
-  } | null;
-};
-type StudentPinContext =
-  | { pinNumber?: string | null }
-  | { pinNumber?: string | null }[];
-type WellbeingCollegeDetailContext = {
-  college_education?: { collegeEducationType?: string | null } | null;
-  college_branch?: { collegeBranchCode?: string | null } | null;
-  college_academic_year?: { collegeAcademicYear?: string | null } | null;
-  college_sections?: { collegeSections?: string | null } | null;
-};
-type WellbeingContextRow = {
-  wellBeingId: number;
-  registrationType?: string | null;
-};
-type WellbeingAssignedCategoryContext = {
-  wellBeingId: number;
-  categoryId: number;
-  wellbeing_categories?:
-    | { categoryName?: string | null }
-    | { categoryName?: string | null }[]
-    | null;
-};
-type CollegeEducationRelation =
-  | { collegeEducationType?: string | null }
-  | { collegeEducationType?: string | null }[]
-  | null
-  | undefined;
 
-const uniqueJoinedValues = (values: Array<string | null | undefined>) =>
-  Array.from(
-    new Set(
-      values
-        .map((value) => value?.trim())
-        .filter((value): value is string => Boolean(value)),
-    ),
-  ).join(", ") || null;
-
-const getCollegeEducationType = (relation: CollegeEducationRelation) =>
-  Array.isArray(relation)
-    ? relation[0]?.collegeEducationType ?? null
-    : relation?.collegeEducationType ?? null;
 
 const UserContext = createContext<UserContextType>({
   userId: null,
@@ -150,797 +98,145 @@ const UserContext = createContext<UserContextType>({
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
-  const [userId, setUserId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [fullName, setFullName] = useState<string | null>(null);
-  const [mobile, setMobile] = useState<string | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
-  const [gender, setGender] = useState<string | null>(null);
-  const [role, setRole] = useState<string | null>(null);
-  const [collegePublicId, setCollegePublicId] = useState<string | null>(null);
-  const [collegeId, setCollegeId] = useState<number | null>(null);
-  const [collegeCode, setCollegeCode] = useState<string | null>(null);
-  const [studentId, setStudentId] = useState<number | null>(null);
-  const [adminId, setAdminId] = useState<number | null>(null);
-  const [financeManagerId, setFinanceManagerId] = useState<number | null>(null);
-  const [accountantId, setAccountantId] = useState<number | null>(null);
-  const [facultyId, setFacultyId] = useState<number | null>(null);
-  const [collegeAdminId, setCollegeAdminId] = useState<number | null>(null);
-  const [parentId, setParentId] = useState<number | null>(null);
-  const [collegeHrId, setCollegeHrId] = useState<number | null>(null);
-  const [placementEmployeeId, setPlacementEmployeeId] = useState<number | null>(null);
-  const [wellBeingId, setWellBeingId] = useState<number | null>(null);
-  const [wellBeingIds, setWellBeingIds] = useState<number[]>([]);
-  const [wellBeingRegistrationTypes, setWellBeingRegistrationTypes] = useState<string[]>([]);
-  const [wellBeingCategoryId, setWellBeingCategoryId] = useState<number | null>(null);
-  const [wellBeingCategoryIds, setWellBeingCategoryIds] = useState<number[]>([]);
-  const [wellBeingCategoryName, setWellBeingCategoryName] = useState<string | null>(null);
-  const [wellBeingCategoryNames, setWellBeingCategoryNames] = useState<string[]>([]);
-  const [collegeEducationId, setCollegeEducationId] = useState<number | null>(null);
-  const [collegeEducationType, setCollegeEducationType] = useState<string | null>(null);
-  const [collegeBranchCode, setCollegeBranchCode] = useState<string | null>(null);
-  const [collegeAcademicYear, setCollegeAcademicYear] = useState<string | null>(null);
-  const [collegeSection, setCollegeSection] = useState<string | null>(null);
-  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
-  const [dateOfJoining, setDateOfJoining] = useState<string | null>(null);
-  const [professionalExperienceYears, setProfessionalExperienceYears] = useState<number | null>(null);
-  const [identifierId, setIdentifierId] = useState<string | null>(null);
 
-  const lastAuthUserId = useRef<string | null>(null);
-  const isContextLoaded = useRef(false);
-  const isLoadingRef = useRef(false);
-  const loadUserContextRef = useRef<() => Promise<void>>(async () => { });
-
-  const settersRef = useRef({
-    setUserId,
-    setFullName,
-    setMobile,
-    setEmail,
-    setGender,
-    setRole,
-    setCollegePublicId,
-    setCollegeId,
-    setCollegeCode,
-    setStudentId,
-    setAdminId,
-    setFinanceManagerId,
-    setAccountantId,
-    setFacultyId,
-    setCollegeAdminId,
-    setParentId,
-    setCollegeHrId,
-    setPlacementEmployeeId,
-    setWellBeingId,
-    setWellBeingIds,
-    setWellBeingRegistrationTypes,
-    setWellBeingCategoryId,
-    setWellBeingCategoryIds,
-    setWellBeingCategoryName,
-    setWellBeingCategoryNames,
-    setCollegeEducationId,
-    setCollegeEducationType,
-    setCollegeBranchCode,
-    setCollegeAcademicYear,
-    setCollegeSection,
-    setProfilePhoto,
-    setDateOfJoining,
-    setProfessionalExperienceYears,
-    setIdentifierId,
-    setLoading,
+  const { data: userData, isLoading: queryLoading, isError } = useQuery({
+    queryKey: ["userProfile"],
+    queryFn: () => fetchUserFullProfile(queryClient),
+    staleTime: Infinity,
+    retry: false,
   });
 
-  const resetStateRef = useRef(() => {
-    const s = settersRef.current;
-    s.setUserId(null);
-    s.setFullName(null);
-    s.setMobile(null);
-    s.setEmail(null);
-    s.setGender(null);
-    s.setRole(null);
-    s.setCollegePublicId(null);
-    s.setCollegeId(null);
-    s.setCollegeCode(null);
-    s.setStudentId(null);
-    s.setAdminId(null);
-    s.setFinanceManagerId(null);
-    s.setAccountantId(null);
-    s.setFacultyId(null);
-    s.setCollegeAdminId(null);
-    s.setParentId(null);
-    s.setCollegeHrId(null);
-    s.setPlacementEmployeeId(null);
-    s.setWellBeingId(null);
-    s.setWellBeingIds([]);
-    s.setWellBeingRegistrationTypes([]);
-    s.setWellBeingCategoryId(null);
-    s.setWellBeingCategoryIds([]);
-    s.setWellBeingCategoryName(null);
-    s.setWellBeingCategoryNames([]);
-    s.setCollegeEducationId(null);
-    s.setCollegeEducationType(null);
-    s.setCollegeBranchCode(null);
-    s.setCollegeAcademicYear(null);
-    s.setCollegeSection(null);
-    s.setProfilePhoto(null);
-    s.setDateOfJoining(null);
-    s.setProfessionalExperienceYears(null);
-    s.setIdentifierId(null);
-  });
+  const [localOverrides, setLocalOverrides] = useState<{
+    fullName?: string | null;
+    profilePhoto?: string | null;
+  }>({});
 
-  const loadWellbeingContext = async (
-    uid: number,
-    cid: number,
-    roleType: "wellbeingExecutive" | "wellbeingManager",
-  ) => {
-    const s = settersRef.current;
-    const [{ data }, empId, userRes] = await Promise.all([
-      supabase
-        .from("well_beings")
-        .select(`
-          wellBeingId,
-          registrationType
-        `)
-        .eq("userId", uid)
-        .eq("collegeId", cid)
-        .eq("roleType", roleType)
-        .eq("isActive", true)
-        .eq("is_deleted", false)
-        .is("deletedAt", null)
-        .order("wellBeingId", { ascending: true }),
-      getEmployeeEmpId(uid, cid),
-      supabase
-        .from("users")
-        .select("gender")
-        .eq("userId", uid)
-        .maybeSingle(),
-    ]);
+  const setFullName = useCallback((name: React.SetStateAction<string | null>) => {
+    setLocalOverrides(prev => {
+      const currentVal = prev.fullName !== undefined ? prev.fullName : (userData?.fullName ?? null);
+      const newVal = typeof name === 'function' ? name(currentVal) : name;
+      return { ...prev, fullName: newVal };
+    });
+  }, [userData]);
 
-    const rows = (data ?? []) as WellbeingContextRow[];
-    const wellBeingIdsForRole = rows.map((row) => row.wellBeingId);
-    s.setWellBeingId(rows[0]?.wellBeingId ?? null);
-    s.setWellBeingIds(wellBeingIdsForRole);
-    s.setWellBeingRegistrationTypes(
-      rows
-        .map((row) => row.registrationType)
-        .filter((type): type is string => Boolean(type)),
-    );
-    const { data: assignedCategoryRows } = wellBeingIdsForRole.length
-      ? await supabase
-        .from("wellbeing_assigned_categories")
-        .select(`
-          wellBeingId,
-          categoryId
-        `)
-        .in("wellBeingId", wellBeingIdsForRole)
-        .eq("isActive", true)
-        .eq("is_deleted", false)
-        .is("deletedAt", null)
-        .order("assignedCategoryId", { ascending: true })
-      : { data: [] };
-    const assignedCategories = (assignedCategoryRows ?? []) as WellbeingAssignedCategoryContext[];
-    const assignedCategoryIds = Array.from(
-      new Set(
-        assignedCategories
-          .map((category) => category.categoryId)
-          .filter((categoryId): categoryId is number => Boolean(categoryId)),
-      ),
-    );
-    const firstCategory = assignedCategories[0];
-    const { data: categoryRows } = assignedCategoryIds.length
-      ? await supabase
-        .from("wellbeing_categories")
-        .select("categoryId, categoryName")
-        .in("categoryId", assignedCategoryIds)
-      : { data: [] };
-    const categoryNameById = new Map(
-      ((categoryRows ?? []) as { categoryId: number; categoryName?: string | null }[]).map(
-        (category) => [category.categoryId, category.categoryName ?? null],
-      ),
-    );
-    s.setWellBeingCategoryId(firstCategory?.categoryId ?? null);
-    s.setWellBeingCategoryIds(assignedCategoryIds);
-    s.setWellBeingCategoryName(
-      firstCategory?.categoryId ? categoryNameById.get(firstCategory.categoryId) ?? null : null,
-    );
-    s.setWellBeingCategoryNames(
-      assignedCategoryIds
-        .map((categoryId) => categoryNameById.get(categoryId))
-        .filter((categoryName): categoryName is string => Boolean(categoryName)),
-    );
-    s.setGender(userRes.data?.gender ?? null);
-    s.setIdentifierId(empId ?? (rows[0]?.wellBeingId ? String(rows[0].wellBeingId) : null));
-
-    const collegeWellBeingIds = rows
-      .filter((row) => row.registrationType === "college")
-      .map((row) => row.wellBeingId);
-
-    if (!collegeWellBeingIds.length) {
-      s.setCollegeEducationType(null);
-      s.setCollegeBranchCode(null);
-      s.setCollegeAcademicYear(null);
-      s.setCollegeSection(null);
-      return;
-    }
-
-    const { data: collegeDetails } = await supabase
-      .from("wellbeing_college_details")
-      .select(`
-        college_education:collegeEducationId ( collegeEducationType ),
-        college_branch:collegeBranchId ( collegeBranchCode ),
-        college_academic_year:collegeAcademicYearId ( collegeAcademicYear ),
-        college_sections:collegeSectionsId ( collegeSections )
-      `)
-      .in("wellBeingId", collegeWellBeingIds);
-
-    const details = (collegeDetails ?? []) as WellbeingCollegeDetailContext[];
-    s.setCollegeEducationType(
-      uniqueJoinedValues(
-        details.map((detail) => detail.college_education?.collegeEducationType),
-      ),
-    );
-    s.setCollegeBranchCode(
-      uniqueJoinedValues(
-        details.map((detail) => detail.college_branch?.collegeBranchCode),
-      ),
-    );
-    s.setCollegeAcademicYear(
-      uniqueJoinedValues(
-        details.map((detail) => detail.college_academic_year?.collegeAcademicYear),
-      ),
-    );
-    s.setCollegeSection(
-      uniqueJoinedValues(
-        details.map((detail) => detail.college_sections?.collegeSections),
-      ),
-    );
-  };
-
-  const roleLoadersRef = useRef<RoleLoaderMap>({
-    Student: async (uid, cid) => {
-      const s = settersRef.current;
-      const [sid, studentCtx] = await Promise.all([
-        getStudentId(),
-        fetchStudentContext(uid),
-      ]);
-      s.setStudentId(sid);
-      s.setCollegeEducationType(studentCtx?.collegeEducationType ?? null);
-      s.setCollegeBranchCode(studentCtx?.collegeBranchCode ?? null);
-      s.setCollegeAcademicYear(studentCtx?.collegeAcademicYear ?? null);
-      s.setCollegeSection(studentCtx?.collegeSections ?? null);
-      if (sid) {
-        const rn = await getStudentRollNo(sid, cid);
-        s.setIdentifierId(rn);
-      } else {
-        s.setIdentifierId(null);
-      }
-    },
-
-    Admin: async (uid, cid) => {
-      const s = settersRef.current;
-      const [adminData, adminCtx, empId] = await Promise.all([
-        supabase
-          .from("admins")
-          .select("adminId")
-          .eq("userId", uid)
-          .is("deletedAt", null)
-          .maybeSingle(),
-        fetchAdminContext(uid),
-        getEmployeeEmpId(uid, cid),
-      ]);
-      s.setAdminId(adminData.data?.adminId ?? null);
-      s.setCollegeEducationId(adminCtx?.collegeEducationId ?? null);
-      s.setCollegeEducationType(adminCtx?.collegeEducationType ?? null);
-      s.setIdentifierId(empId ?? null);
-    },
-
-    Finance: async (uid, cid) => {
-      const s = settersRef.current;
-      const [financeData, financeCtx, empId] = await Promise.all([
-        supabase
-          .from("finance_manager")
-          .select("financeManagerId")
-          .eq("userId", uid)
-          .eq("is_deleted", false)
-          .maybeSingle(),
-        fetchFinanceManagerContext(uid),
-        getEmployeeEmpId(uid, cid),
-      ]);
-      s.setFinanceManagerId(financeData.data?.financeManagerId ?? null);
-      s.setIdentifierId(empId ?? null);
-
-      if (!financeData.data?.financeManagerId) {
-        s.setCollegeEducationType(financeCtx?.collegeEducationType ?? null);
-        return;
-      }
-
-      const { data: educationTypes } = await supabase
-        .from("finance_manager_education_types")
-        .select(`
-          collegeEducationId,
-          college_education:collegeEducationId (
-            collegeEducationType
-          )
-        `)
-        .eq("financeManagerId", financeData.data.financeManagerId)
-        .eq("isActive", true)
-        .eq("is_deleted", false)
-        .is("deletedAt", null);
-
-      const educationTypeFromMapping = uniqueJoinedValues(
-        (educationTypes ?? []).map(
-          (education) => getCollegeEducationType(education.college_education as any),
-        ),
-      );
-
-      s.setCollegeEducationType(
-        educationTypeFromMapping || financeCtx?.collegeEducationType || null
-      );
-    },
-
-    FinanceManager: async (uid, cid) => {
-      const s = settersRef.current;
-      const [financeData, financeCtx, empId] = await Promise.all([
-        supabase
-          .from("finance_manager")
-          .select("financeManagerId")
-          .eq("userId", uid)
-          .eq("is_deleted", false)
-          .maybeSingle(),
-        fetchFinanceManagerContext(uid),
-        getEmployeeEmpId(uid, cid),
-      ]);
-      s.setFinanceManagerId(financeData.data?.financeManagerId ?? null);
-      s.setIdentifierId(empId ?? null);
-
-      if (!financeData.data?.financeManagerId) {
-        s.setCollegeEducationType(financeCtx?.collegeEducationType ?? null);
-        return;
-      }
-
-      const { data: educationTypes } = await supabase
-        .from("finance_manager_education_types")
-        .select(`
-          collegeEducationId,
-          college_education:collegeEducationId (
-            collegeEducationType
-          )
-        `)
-        .eq("financeManagerId", financeData.data.financeManagerId)
-        .eq("isActive", true)
-        .eq("is_deleted", false)
-        .is("deletedAt", null);
-
-      const educationTypeFromMapping = uniqueJoinedValues(
-        (educationTypes ?? []).map(
-          (education) => getCollegeEducationType(education.college_education as any),
-        ),
-      );
-
-      s.setCollegeEducationType(
-        educationTypeFromMapping || financeCtx?.collegeEducationType || null
-      );
-    },
-
-    Accountant: async (uid, cid) => {
-      const s = settersRef.current;
-      const [{ data }, empId] = await Promise.all([
-        supabase
-          .from("accountants")
-          .select(`
-            accountantId,
-            collegeEducationId,
-            college_education:collegeEducationId (
-              collegeEducationType
-            )
-          `)
-          .eq("userId", uid)
-          .eq("collegeId", cid)
-          .eq("isActive", true)
-          .eq("is_deleted", false)
-          .is("deletedAt", null)
-          .maybeSingle(),
-        getEmployeeEmpId(uid, cid),
-      ]);
-
-      s.setAccountantId(data?.accountantId ?? null);
-      s.setIdentifierId(empId ?? (data?.accountantId ? String(data.accountantId) : null));
-
-      if (!data?.accountantId) {
-        s.setCollegeEducationType(null);
-        return;
-      }
-
-      const { data: educationTypes } = await supabase
-        .from("accountant_education_types")
-        .select(`
-          collegeEducationId,
-          college_education:collegeEducationId (
-            collegeEducationType
-          )
-        `)
-        .eq("accountantId", data.accountantId)
-        .eq("isActive", true)
-        .eq("is_deleted", false)
-        .is("deletedAt", null);
-
-      const educationTypeFromMapping = uniqueJoinedValues(
-        (educationTypes ?? []).map(
-          (education) => getCollegeEducationType(education.college_education),
-        ),
-      );
-      s.setCollegeEducationType(
-        educationTypeFromMapping ||
-        getCollegeEducationType(data.college_education),
-      );
-    },
-
-    Faculty: async (uid, cid) => {
-      const s = settersRef.current;
-      const [facultyCtx, empId] = await Promise.all([
-        queryClient.fetchQuery({
-          queryKey: ["facultyContext", uid],
-          queryFn: () => fetchFacultyContext(uid),
-          staleTime: 5 * 60 * 1000,
-        }),
-        getEmployeeEmpId(uid, cid),
-      ]);
-      s.setFacultyId(facultyCtx?.facultyId ?? null);
-      s.setCollegeEducationType(facultyCtx?.faculty_edu_type ?? null);
-      s.setCollegeBranchCode(facultyCtx?.college_branch ?? null);
-      s.setCollegeAcademicYear(facultyCtx?.collegeAcademicYear ?? null);
-      const sections =
-        facultyCtx?.sections
-          ?.map((sec: FacultySectionContext) => sec.college_sections?.collegeSections)
-          .filter(Boolean)
-          .join(", ") ?? null;
-      s.setCollegeSection(sections);
-      s.setIdentifierId(empId ?? null);
-    },
-
-    CollegeAdmin: async (uid, cid) => {
-      const s = settersRef.current;
-      const [{ data }, empId] = await Promise.all([
-        supabase
-          .from("college_admin")
-          .select("collegeAdminId")
-          .eq("userId", uid)
-          .eq("is_deleted", false)
-          .maybeSingle(),
-        getEmployeeEmpId(uid, cid),
-      ]);
-      s.setCollegeAdminId(data?.collegeAdminId ?? null);
-      s.setIdentifierId(empId ?? null);
-    },
-
-    Parent: async (uid) => {
-      const s = settersRef.current;
-
-      const { data: parentData } = await supabase
-        .from("parents")
-        .select("parentId, studentId")
-        .eq("userId", uid)
-        .eq("is_deleted", false)
-        .maybeSingle();
-
-      s.setParentId(parentData?.parentId ?? null);
-
-      if (parentData?.studentId) {
-        const [userRes, studentRes] = await Promise.all([
-          supabase
-            .from("users")
-            .select("gender")
-            .eq("userId", uid)
-            .maybeSingle(),
-          supabase
-            .from("students")
-            .select("student_pins(pinNumber)")
-            .eq("studentId", parentData.studentId)
-            .maybeSingle(),
-        ]);
-
-        const userData = userRes.data;
-        const studentData = studentRes.data;
-
-        if (userData?.gender && studentData?.student_pins) {
-          const genderInitial = userData.gender === "Male" ? "F" : "M";
-          const pins = studentData.student_pins as StudentPinContext;
-          const pinNumber = Array.isArray(pins)
-            ? pins[0]?.pinNumber
-            : pins?.pinNumber;
-          const formattedId = `${pinNumber}/${genderInitial}`;
-          s.setIdentifierId(formattedId);
-        } else {
-          s.setIdentifierId(null);
-        }
-      } else {
-        s.setIdentifierId(null);
-      }
-    },
-
-    CollegeHr: async (uid, cid) => {
-      const s = settersRef.current;
-      const [{ data }, empId] = await Promise.all([
-        supabase
-          .from("college_hr")
-          .select("collegeHrId")
-          .eq("userId", uid)
-          .eq("is_deleted", false)
-          .maybeSingle(),
-        getEmployeeEmpId(uid, cid),
-      ]);
-      s.setCollegeHrId(data?.collegeHrId ?? null);
-      s.setIdentifierId(empId ?? null);
-    },
-
-    PlacementOfficer: async (uid, cid) => {
-      const s = settersRef.current;
-      const [{ data }, empId] = await Promise.all([
-        supabase
-          .from("placement_employee")
-          .select("placementEmployeeId, createdBy")
-          .eq("userId", uid)
-          .eq("is_deleted", false)
-          .maybeSingle(),
-        getEmployeeEmpId(uid, cid),
-      ]);
-      s.setPlacementEmployeeId(data?.placementEmployeeId ?? null);
-      s.setIdentifierId(empId ?? null);
-
-      if (!data?.createdBy) {
-        s.setCollegeEducationType(null);
-        return;
-      }
-
-      const { data: adminEducationTypes } = await supabase
-        .from("admin_education_types")
-        .select(
-          `
-          collegeEducationId,
-          college_education:collegeEducationId (
-            collegeEducationType
-          )
-        `,
-        )
-        .eq("adminId", data.createdBy)
-        .eq("isActive", true)
-        .eq("is_deleted", false)
-        .is("deletedAt", null);
-
-      const educationTypeFromMapping = uniqueJoinedValues(
-        (adminEducationTypes ?? []).map(
-          (education) =>
-            getCollegeEducationType(education.college_education),
-        ),
-      );
-
-      if (educationTypeFromMapping) {
-        s.setCollegeEducationType(educationTypeFromMapping);
-        return;
-      }
-
-      const { data: admin } = await supabase
-        .from("admins")
-        .select(
-          `
-          college_education:collegeEducationId (
-            collegeEducationType
-          )
-        `,
-        )
-        .eq("adminId", data.createdBy)
-        .maybeSingle();
-
-      s.setCollegeEducationType(
-        getCollegeEducationType(admin?.college_education),
-      );
-    },
-
-    WellbeingExecutive: async (uid, cid) => {
-      await loadWellbeingContext(uid, cid, "wellbeingExecutive");
-    },
-
-    WellbeingManager: async (uid, cid) => {
-      await loadWellbeingContext(uid, cid, "wellbeingManager");
-    },
-
-  });
+  const setProfilePhoto = useCallback((photo: React.SetStateAction<string | null>) => {
+    setLocalOverrides(prev => {
+      const currentVal = prev.profilePhoto !== undefined ? prev.profilePhoto : (userData?.profilePhoto ?? null);
+      const newVal = typeof photo === 'function' ? photo(currentVal) : photo;
+      return { ...prev, profilePhoto: newVal };
+    });
+  }, [userData]);
 
   useEffect(() => {
-    const loadUserContext = async () => {
-      if (isLoadingRef.current) return;
-      isLoadingRef.current = true;
-
-      settersRef.current.setLoading(true);
-      try {
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
-        if (userError || !user) {
-          resetStateRef.current();
-          isContextLoaded.current = false;
-          lastAuthUserId.current = null;
-          return;
-        }
-        const authId = user.id;
-        if (isContextLoaded.current && lastAuthUserId.current === authId) {
-          return;
-        }
-        lastAuthUserId.current = authId;
-        const { data: userData, error } = await supabase
-          .from("users")
-          .select(
-            "userId, fullName, mobile, email, gender, role, collegePublicId, collegeId, dateOfJoining, professionalExperienceYears, colleges(collegeCode)"
-          )
-          .eq("auth_id", user.id)
-          .maybeSingle();
-        if (error || !userData) {
-          return;
-        }
-        const s = settersRef.current;
-        s.setUserId(userData.userId);
-        s.setFullName(userData.fullName);
-        s.setMobile(userData.mobile);
-        s.setEmail(userData.email);
-        s.setGender(userData.gender);
-        s.setRole(userData.role);
-        s.setCollegePublicId(userData.collegePublicId);
-        s.setCollegeId(userData.collegeId);
-        s.setCollegeCode((userData as any).colleges?.collegeCode ?? null);
-        s.setDateOfJoining(userData.dateOfJoining ?? null);
-        s.setProfessionalExperienceYears(userData.professionalExperienceYears ?? null);
-        try {
-          const photoData = await getUserProfilePhoto(userData.userId);
-          s.setProfilePhoto(photoData?.profileUrl ?? null);
-        } catch { }
-        const loader = roleLoadersRef.current[userData.role];
-        // if (loader) await loader(userData.userId, userData.collegeId);
-        const cid = Number(userData.collegeId);
-        if (loader && cid) {
-          await loader(userData.userId, cid);
-        }
-        isContextLoaded.current = true;
-      } catch {
-        console.error("Failed to load context");
-      } finally {
-        settersRef.current.setLoading(false);
-        isLoadingRef.current = false;
-      }
-    };
-
-    loadUserContextRef.current = loadUserContext;
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        loadUserContext();
-      } else {
-        resetStateRef.current();
-        isContextLoaded.current = false;
-        lastAuthUserId.current = null;
-        settersRef.current.setLoading(false);
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN") {
-        const incomingAuthId = session?.user?.id ?? null;
-
-
-        if (
-          isContextLoaded.current &&
-          lastAuthUserId.current === incomingAuthId
-        ) {
-          return;
-        }
-        isContextLoaded.current = false;
-        lastAuthUserId.current = null;
-        await loadUserContext();
+        queryClient.invalidateQueries({ queryKey: ["userProfile"] });
       }
       if (event === "SIGNED_OUT") {
-        resetStateRef.current();
-        isContextLoaded.current = false;
-        lastAuthUserId.current = null;
-        isLoadingRef.current = false;
-        settersRef.current.setLoading(false);
+        queryClient.setQueryData(["userProfile"], null);
+        queryClient.invalidateQueries({ queryKey: ["userProfile"] });
       }
     });
-
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [queryClient]);
 
   const refreshUserContext = useCallback(async () => {
-    isContextLoaded.current = false;
-    lastAuthUserId.current = null;
-    await loadUserContextRef.current();
-  }, []);
+    await queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+  }, [queryClient]);
 
-  const contextValue = useMemo<UserContextType>(
-    () => ({
-      userId,
-      loading,
-      fullName,
+  const contextValue = useMemo<UserContextType>(() => {
+    const loading = queryLoading || (!userData && !isError);
+    if (!userData) {
+      return {
+        loading,
+        userId: null,
+        fullName: null,
+        setFullName,
+        mobile: null,
+        email: null,
+        gender: null,
+        role: null,
+        collegePublicId: null,
+        collegeId: null,
+        collegeCode: null,
+        studentId: null,
+        adminId: null,
+        financeManagerId: null,
+        accountantId: null,
+        facultyId: null,
+        collegeAdminId: null,
+        parentId: null,
+        collegeHrId: null,
+        placementEmployeeId: null,
+        wellBeingId: null,
+        wellBeingIds: [],
+        wellBeingRegistrationTypes: [],
+        wellBeingCategoryId: null,
+        wellBeingCategoryIds: [],
+        wellBeingCategoryName: null,
+        wellBeingCategoryNames: [],
+        collegeEducationId: null,
+        collegeEducationType: null,
+        collegeBranchCode: null,
+        collegeAcademicYear: null,
+        collegeSection: null,
+        profilePhoto: null,
+        setProfilePhoto,
+        dateOfJoining: null,
+        professionalExperienceYears: null,
+        identifierId: null,
+        refreshUserContext,
+      };
+    }
+
+    return {
+      loading: false,
+      userId: userData.userId ?? null,
+      fullName: localOverrides.fullName !== undefined ? localOverrides.fullName : (userData.fullName ?? null),
       setFullName,
-      mobile,
-      email,
-      gender,
-      role,
-      collegePublicId,
-      collegeId,
-      collegeCode,
-      studentId,
-      adminId,
-      financeManagerId,
-      accountantId,
-      facultyId,
-      collegeAdminId,
-      parentId,
-      collegeHrId,
-      placementEmployeeId,
-      wellBeingId,
-      wellBeingIds,
-      wellBeingRegistrationTypes,
-      wellBeingCategoryId,
-      wellBeingCategoryIds,
-      wellBeingCategoryName,
-      wellBeingCategoryNames,
-      collegeEducationId,
-      collegeEducationType,
-      collegeBranchCode,
-      collegeAcademicYear,
-      collegeSection,
-      profilePhoto,
+      mobile: userData.mobile ?? null,
+      email: userData.email ?? null,
+      gender: userData.gender ?? null,
+      role: userData.role ?? null,
+      collegePublicId: userData.collegePublicId ?? null,
+      collegeId: userData.collegeId ?? null,
+      collegeCode: userData.collegeCode ?? null,
+      studentId: userData.studentId ?? null,
+      adminId: userData.adminId ?? null,
+      financeManagerId: userData.financeManagerId ?? null,
+      accountantId: userData.accountantId ?? null,
+      facultyId: userData.facultyId ?? null,
+      collegeAdminId: userData.collegeAdminId ?? null,
+      parentId: userData.parentId ?? null,
+      collegeHrId: userData.collegeHrId ?? null,
+      placementEmployeeId: userData.placementEmployeeId ?? null,
+      wellBeingId: userData.wellBeingId ?? null,
+      wellBeingIds: userData.wellBeingIds ?? [],
+      wellBeingRegistrationTypes: userData.wellBeingRegistrationTypes ?? [],
+      wellBeingCategoryId: userData.wellBeingCategoryId ?? null,
+      wellBeingCategoryIds: userData.wellBeingCategoryIds ?? [],
+      wellBeingCategoryName: userData.wellBeingCategoryName ?? null,
+      wellBeingCategoryNames: userData.wellBeingCategoryNames ?? [],
+      collegeEducationId: userData.collegeEducationId ?? null,
+      collegeEducationType: userData.collegeEducationType ?? null,
+      collegeBranchCode: userData.collegeBranchCode ?? null,
+      collegeAcademicYear: userData.collegeAcademicYear ?? null,
+      collegeSection: userData.collegeSection ?? null,
+      profilePhoto: localOverrides.profilePhoto !== undefined ? localOverrides.profilePhoto : (userData.profilePhoto ?? null),
       setProfilePhoto,
-      dateOfJoining,
-      professionalExperienceYears,
-      identifierId,
+      dateOfJoining: userData.dateOfJoining ?? null,
+      professionalExperienceYears: userData.professionalExperienceYears ?? null,
+      identifierId: userData.identifierId ?? null,
       refreshUserContext,
-    }),
-    [
-      userId,
-      loading,
-      fullName,
-      mobile,
-      email,
-      gender,
-      role,
-      collegePublicId,
-      collegeId,
-      collegeCode,
-      studentId,
-      adminId,
-      financeManagerId,
-      accountantId,
-      facultyId,
-      collegeAdminId,
-      parentId,
-      collegeHrId,
-      placementEmployeeId,
-      wellBeingId,
-      wellBeingIds,
-      wellBeingRegistrationTypes,
-      wellBeingCategoryId,
-      wellBeingCategoryIds,
-      wellBeingCategoryName,
-      wellBeingCategoryNames,
-      collegeEducationId,
-      collegeEducationType,
-      collegeBranchCode,
-      collegeAcademicYear,
-      collegeSection,
-      profilePhoto,
-      dateOfJoining,
-      professionalExperienceYears,
-      identifierId,
-      refreshUserContext,
-    ]
-  );
+    };
+  }, [userData, queryLoading, isError, localOverrides, setFullName, setProfilePhoto, refreshUserContext]);
 
   return (
-    <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>
+    <UserContext.Provider value={contextValue}>
+      {children}
+    </UserContext.Provider>
   );
 };
 

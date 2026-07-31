@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { CustomMultiSelect, CustomSingleSelect } from "../userModalComponents";
+import { CustomMultiSelect, CustomSingleSelect } from "@/app/(screens)/admin/(dashboard)/components/modal/userModalComponents";
 
 interface StudentRegistrationFieldsProps {
   dbData: any;

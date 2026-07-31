@@ -2,14 +2,14 @@
 // import { Geist, Geist_Mono } from "next/font/google";
 // import "./globals.css";
 // import ClientLayout from "./components/ClientLayout";
-// import { UserProvider } from "./utils/context/UserContext";
-// import { AdminProvider } from "./utils/context/admin/useAdmin";
-// import { FacultyProvider } from "./utils/context/faculty/useFaculty";
-// import { StudentProvider } from "./utils/context/student/useStudent";
-// import { FinanceManagerProvider } from "./utils/context/financeManager/useFinanceManager";
-// import { CollegeAdminProvider } from "./utils/context/college-admin/useCollegeAdmin";
-// import { ParentProvider } from "./utils/context/parent/useParent";
-// import { HrProvider } from "./utils/context/hr/useCollegeHr";
+// import { UserProvider } from "@/app/utils/context/UserContext";
+// import { AdminProvider } from "@/app/utils/context/admin/useAdmin";
+// import { FacultyProvider } from "@/app/utils/context/faculty/useFaculty";
+// import { StudentProvider } from "@/app/utils/context/student/useStudent";
+// import { FinanceManagerProvider } from "@/app/utils/context/financeManager/useFinanceManager";
+// import { CollegeAdminProvider } from "@/app/utils/context/college-admin/useCollegeAdmin";
+// import { ParentProvider } from "@/app/utils/context/parent/useParent";
+// import { HrProvider } from "@/app/utils/context/hr/useCollegeHr";
 // import { FontProvider } from "./utils/FontProvider";
 // import SessionRefresher from "./components/sessionRefresher";
 
@@ -66,19 +66,19 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "./components/ClientLayout";
-import { UserProvider } from "./utils/context/UserContext";
-import { AdminProvider } from "./utils/context/admin/useAdmin";
-import { FacultyProvider } from "./utils/context/faculty/useFaculty";
-import { StudentProvider } from "./utils/context/student/useStudent";
-import { FinanceManagerProvider } from "./utils/context/financeManager/useFinanceManager";
-import { CollegeAdminProvider } from "./utils/context/college-admin/useCollegeAdmin";
-import { ParentProvider } from "./utils/context/parent/useParent";
-import { HrProvider } from "./utils/context/hr/useCollegeHr";
+import { UserProvider } from "@/app/utils/context/UserContext";
+import { AdminProvider } from "@/app/utils/context/admin/useAdmin";
+import { FacultyProvider } from "@/app/utils/context/faculty/useFaculty";
+import { StudentProvider } from "@/app/utils/context/student/useStudent";
+import { FinanceManagerProvider } from "@/app/utils/context/financeManager/useFinanceManager";
+import { CollegeAdminProvider } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { ParentProvider } from "@/app/utils/context/parent/useParent";
+import { HrProvider } from "@/app/utils/context/hr/useCollegeHr";
 import { FontProvider } from "./utils/FontProvider";
 import SessionRefresher from "./components/sessionRefresher";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
-import { ReactQueryProvider } from "./components/providers/ReactQueryProvider";
+import { ReactQueryProvider } from "@/app/components/providers/ReactQueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

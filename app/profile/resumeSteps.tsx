@@ -4,7 +4,7 @@ import { useRef, useEffect, useState, useMemo } from "react";
 import { CheckCircle, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchResumePersonalDetails } from "@/lib/helpers/student/Resume/Resumepersonaldetailsapi";
-import { useUser } from "../utils/context/UserContext";
+import { useUser } from "@/app/utils/context/UserContext";
 
 type StepItem = {
     id: number;

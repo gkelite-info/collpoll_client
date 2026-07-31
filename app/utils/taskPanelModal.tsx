@@ -10,7 +10,7 @@ import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import TaskCardShimmer from "@/app/(screens)/faculty/shimmers/TaskCardShimmer";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
-import { useStudent } from "./context/student/useStudent";
+import { useStudent } from "@/app/utils/context/student/useStudent";
 
 export type Task = {
     facultyTaskId: number;

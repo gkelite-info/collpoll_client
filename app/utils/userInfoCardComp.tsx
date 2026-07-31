@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { useUser } from "./context/UserContext";
-import { useStudent } from "./context/student/useStudent";
+import { useUser } from "@/app/utils/context/UserContext";
+import { useStudent } from "@/app/utils/context/student/useStudent";
 import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
 

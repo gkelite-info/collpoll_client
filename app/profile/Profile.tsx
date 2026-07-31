@@ -20,7 +20,7 @@ import Employment from "./resume/Employment/Employment";
 import AcademicAchievements from "./resume/AcademicAchievements";
 
 import ResumeSteps from "./resumeSteps";
-import { useUser } from "../utils/context/UserContext";
+import { useUser } from "@/app/utils/context/UserContext";
 import { useEffect } from "react";
 import { canAccessResume } from "@/lib/helpers/profile/profileRouteConfig";
 import { Loader } from "../(screens)/(student)/calendar/right/timetable";

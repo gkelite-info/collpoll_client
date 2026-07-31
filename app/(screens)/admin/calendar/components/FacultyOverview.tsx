@@ -35,7 +35,9 @@ export default function FacultyOverview({ onSelect }: Props) {
     const pathname = usePathname();
 
     const rawEduId = searchParams.get("educationId");
-    const educationId = rawEduId === "all" ? null : (rawEduId ? Number(rawEduId) : null);
+    const { collegeId, collegeEducationId, collegeEducationType, loading: contextLoading } = useAdmin();
+    
+    const educationId = rawEduId === "all" ? null : (rawEduId ? Number(rawEduId) : (collegeEducationId || null));
     const branchId = searchParams.get("branchId") ? Number(searchParams.get("branchId")) : null;
     const academicYearId = searchParams.get("academicYearId") ? Number(searchParams.get("academicYearId")) : null;
     const semesterId = searchParams.get("semesterId") ? Number(searchParams.get("semesterId")) : null;
@@ -44,10 +46,8 @@ export default function FacultyOverview({ onSelect }: Props) {
 
     const itemsPerPage = 9;
 
-    const { collegeId, adminId, collegeEducationId, collegeEducationType, loading: contextLoading } = useAdmin();
-
     const [localParams, setLocalParams] = useState<Record<string, string | null>>({
-        educationId: searchParams.get("educationId"),
+        educationId: searchParams.get("educationId") || (collegeEducationId ? collegeEducationId.toString() : null),
         branchId: searchParams.get("branchId"),
         academicYearId: searchParams.get("academicYearId"),
         semesterId: searchParams.get("semesterId"),
@@ -56,13 +56,13 @@ export default function FacultyOverview({ onSelect }: Props) {
 
     useEffect(() => {
         setLocalParams({
-            educationId: searchParams.get("educationId"),
+            educationId: searchParams.get("educationId") || (collegeEducationId ? collegeEducationId.toString() : null),
             branchId: searchParams.get("branchId"),
             academicYearId: searchParams.get("academicYearId"),
             semesterId: searchParams.get("semesterId"),
             subjectId: searchParams.get("subjectId")
         });
-    }, [searchParams]);
+    }, [searchParams, collegeEducationId]);
 
     const updateQueryParams = useCallback((paramsToUpdate: Record<string, string | null>) => {
         setLocalParams(prev => ({ ...prev, ...paramsToUpdate }));

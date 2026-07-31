@@ -113,7 +113,7 @@ export async function saveFacultyTask(
       .single();
 
     if (error) {
-      console.error("saveFacultyTask error:", error);
+      console.error("saveFacultyTask error:", error?.message, error?.details, error);
       return { success: false, error };
     }
 
@@ -130,7 +130,7 @@ export async function saveFacultyTask(
     .eq("facultyTaskId", payload.facultyTaskId);
 
   if (error) {
-    console.error("saveFacultyTask error:", error);
+    console.error("saveFacultyTask error:", error?.message, error?.details, error);
     return { success: false, error };
   }
 

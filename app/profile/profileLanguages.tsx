@@ -9,7 +9,7 @@ import {
     upsertUserLanguages,
 } from "@/lib/helpers/profile/profileLanguages";
 import ProfileLanguagesShimmer from "./shimmers/ProfileLanguagesShimmer";
-import { useUser } from "../utils/context/UserContext";
+import { useUser } from "@/app/utils/context/UserContext";
 
 const ALL_LANGUAGES = [
     "English",

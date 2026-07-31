@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { useUser } from "../utils/context/UserContext";
+import { useUser } from "@/app/utils/context/UserContext";
 import { fetchCollegeCode, fetchPersonalDetails, savePersonalDetails, updateUserBasic } from "@/lib/helpers/profile/profilePersonalDetailsAPI";
 import PersonalDetailsSkeleton from "./shimmers/PersonalDetailsSkeleton";
 import { Lock } from "@phosphor-icons/react";

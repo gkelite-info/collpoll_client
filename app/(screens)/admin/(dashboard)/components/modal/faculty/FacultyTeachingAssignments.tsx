@@ -6,7 +6,7 @@ import { createEmptyAssignment, createEmptyRow, duplicateRow } from "@/lib/helpe
 import FacultyAssignmentRow from "./FacultyAssignmentRow";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
-import { CustomSingleSelect } from "../userModalComponents";
+import { CustomSingleSelect } from "@/app/(screens)/admin/(dashboard)/components/modal/userModalComponents";
 
 type FacultyTeachingAssignmentsProps = {
   assignments: TeachingAssignment[];

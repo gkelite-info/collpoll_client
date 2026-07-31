@@ -9,6 +9,7 @@ import {
   VideoConference,
 } from "@phosphor-icons/react";
 import { CalendarEvent, EventType } from "../types";
+import { useUser } from "@/app/utils/context/UserContext";
 
 const EVENT_STYLES: Record<
   EventType,
@@ -61,6 +62,14 @@ const EventCard = ({
   const start = new Date(event.startTime);
   const end = new Date(event.endTime);
 
+  const { role } = useUser();
+  const isFaculty = role === "Faculty";
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const eventDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const isPastEvent = eventDate < today;
+  const canEditOrDelete = !isFaculty || !isPastEvent;
+
   const timeStr = `${start.toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
@@ -77,26 +86,30 @@ const EventCard = ({
       className="relative inset-x-0.5 h-full rounded-xs transition-shadow hover:shadow-lg cursor-pointer overflow-hidden z-20 flex flex-col group"
     >
       {/* DELETE */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        className="absolute cursor-pointer top-2 right-2 hidden group-hover:flex bg-white rounded-full p-1 shadow hover:bg-red-50 z-50"
-      >
-        <Trash size={14} className="text-red-600" />
-      </button>
+      {canEditOrDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="absolute cursor-pointer top-2 right-2 hidden group-hover:flex bg-white rounded-full p-1 shadow hover:bg-red-50 z-50"
+        >
+          <Trash size={14} className="text-red-600" />
+        </button>
+      )}
 
       {/* EDIT */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onEdit();
-        }}
-        className="absolute cursor-pointer top-2 right-8 hidden group-hover:flex bg-white rounded-full p-1 shadow hover:bg-blue-50 z-50"
-      >
-        <PencilSimple size={14} className="text-blue-600" />
-      </button>
+      {canEditOrDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          className="absolute cursor-pointer top-2 right-8 hidden group-hover:flex bg-white rounded-full p-1 shadow hover:bg-blue-50 z-50"
+        >
+          <PencilSimple size={14} className="text-blue-600" />
+        </button>
+      )}
 
       {/* HEADER STRIP */}
       <div
