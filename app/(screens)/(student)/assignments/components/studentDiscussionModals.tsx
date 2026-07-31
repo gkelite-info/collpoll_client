@@ -19,6 +19,21 @@ import {
   uploadStudentDiscussionFiles,
 } from "@/lib/helpers/student/assignments/discussionForum/student_discussion_uploadsAPI";
 
+function useLockPageScroll() {
+  useEffect(() => {
+    const bodyOverflow = document.body.style.overflow;
+    const htmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = bodyOverflow;
+      document.documentElement.style.overflow = htmlOverflow;
+    };
+  }, []);
+}
+
 export function StudentDiscussionUploadModal({
   discussion,
   onUpload,
@@ -28,6 +43,7 @@ export function StudentDiscussionUploadModal({
   onUpload: (files: any[]) => void;
   onSuccess?: () => void;
 }) {
+  useLockPageScroll();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -37,6 +53,7 @@ export function StudentDiscussionUploadModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { studentId } = useStudent();
   const [loading, setLoading] = useState(false);
+  const existingUploads = discussion.studentUploads ?? [];
 
 
   const handleClose = () => {
@@ -117,8 +134,8 @@ export function StudentDiscussionUploadModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="absolute inset-0" onClick={handleClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col p-6">
-        <div className="flex justify-between items-start mb-6">
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg h-120 max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col p-6">
+        <div className="flex justify-between items-start mb-6 shrink-0">
           <div className="flex flex-col gap-1">
             <h2 className="text-xl font-bold text-[#43C17A]">
               {discussion.title}
@@ -133,7 +150,7 @@ export function StudentDiscussionUploadModal({
           </button>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 flex-1 min-h-0 overflow-hidden">
           <input
             type="file"
             multiple
@@ -152,7 +169,7 @@ export function StudentDiscussionUploadModal({
               setIsDragging(false);
             }}
             onDrop={onDrop}
-            className={`border-2 border-dashed rounded-2xl p-10 flex flex-col items-center justify-center gap-3 transition-colors ${isDragging ? "border-[#43C17A] bg-[#e2f6ea]" : "border-gray-300 bg-gray-50/50"}`}
+            className={`border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-3 transition-all shrink-0 ${files.length > 0 ? "p-6" : "p-10"} ${isDragging ? "border-[#43C17A] bg-[#e2f6ea]" : "border-gray-300 bg-gray-50/50"}`}
           >
             <CloudArrowUp size={48} className="text-gray-400" />
             <p className="text-base text-gray-600">
@@ -166,8 +183,31 @@ export function StudentDiscussionUploadModal({
             </button>
           </div>
 
-          {files.length > 0 && (
-            <div className="flex flex-col gap-3 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar">
+          {(existingUploads.length > 0 || files.length > 0) && (
+            <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-scroll pr-2 custom-scrollbar">
+              {existingUploads.map((file: any) => (
+                <a
+                  key={`existing-${file.studentDiscussionUploadId}`}
+                  href={file.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 border border-green-100 rounded-md p-3 bg-white shrink-0"
+                >
+                  <FilePdf
+                    size={24}
+                    weight="fill"
+                    className="text-red-500 flex-shrink-0"
+                  />
+                  <div className="flex flex-col overflow-hidden">
+                    <span className="text-sm font-medium text-[#282828] truncate">
+                      {file.fileUrl?.split("/").pop() ?? "Uploaded file"}
+                    </span>
+                    <span className="text-xs text-[#43C17A]">
+                      Uploaded
+                    </span>
+                  </div>
+                </a>
+              ))}
               {files.map((file, idx) => (
                 <div
                   key={idx}
@@ -202,7 +242,7 @@ export function StudentDiscussionUploadModal({
           )}
         </div>
 
-        <div className="flex justify-between items-center mt-8 gap-4">
+        <div className="flex justify-between items-center mt-4 gap-4 shrink-0">
           <button
             onClick={handleClose}
             className="w-full cursor-pointer py-3 rounded-md font-bold text-sm text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
@@ -240,6 +280,7 @@ export function StudentDiscussionDetailsModal({
 }: {
   discussion: any;
 }) {
+  useLockPageScroll();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

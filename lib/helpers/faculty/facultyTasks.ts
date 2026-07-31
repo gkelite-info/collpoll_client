@@ -17,24 +17,6 @@ export type FacultyTaskRow = {
 };
 
 export async function fetchFacultyTasks(collegeSubjectId: number) {
-
-  const today = new Date().toISOString().split("T")[0];
-
-  const { error: deactivateError } = await supabase
-    .from("faculty_tasks")
-    .update({
-      isActive: false,
-      is_deleted: true,
-      deletedAt: new Date().toISOString(),
-    })
-    .lt("date", today)
-    .eq("collegeSubjectId", collegeSubjectId)
-    .eq("isActive", true);
-
-  if (deactivateError) {
-    console.error("auto deactivate tasks error:", deactivateError);
-  }
-
   const { data, error } = await supabase
     .from("faculty_tasks")
     .select(`
@@ -53,9 +35,8 @@ export async function fetchFacultyTasks(collegeSubjectId: number) {
       collegeSectionsId
     `)
     .eq("collegeSubjectId", collegeSubjectId)
-    .eq("date", today)
-    .eq("isActive", true)
     .is("deletedAt", null)
+    .order("date", { ascending: false })
     .order("time", { ascending: true });
 
   if (error) {
@@ -106,18 +87,15 @@ export async function saveFacultyTask(
   facultyId: number,
 ) {
   const now = new Date().toISOString();
-  const today = new Date().toISOString().split("T")[0];
-  const taskDate = payload.date;
-  const shouldBeActive = taskDate >= today;
-
   const upsertPayload: any = {
     collegeSubjectId: payload.collegeSubjectId,
     taskTitle: payload.taskTitle.trim(),
     description: payload.description.trim(),
     date: payload.date,
     time: payload.time,
-    isActive: shouldBeActive,
-    is_deleted: !shouldBeActive,
+    isActive: true,
+    is_deleted: false,
+    deletedAt: null,
     updatedAt: now,
     collegeAcademicYearId: payload.collegeAcademicYearId ?? null,
     collegeSectionsId: payload.collegeSectionsId ?? null,
@@ -200,8 +178,6 @@ export async function fetchFacultyTasksForLoggedInFaculty({
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const targetDate = selectedDate || new Date().toISOString().split("T")[0];
-
   let query = supabase
     .from("faculty_tasks")
     .select(
@@ -218,10 +194,15 @@ export async function fetchFacultyTasksForLoggedInFaculty({
     )
     .eq("createdBy", facultyId)
     .eq("collegeSubjectId", collegeSubjectId)
-    .eq("isActive", true)
-    .is("deletedAt", null)
-    .eq("date", targetDate)
-    .order("time", { ascending: true });
+    .is("deletedAt", null);
+
+  if (selectedDate) {
+    query = query.eq("date", selectedDate);
+  } else {
+    query = query.order("date", { ascending: false });
+  }
+
+  query = query.order("time", { ascending: true });
 
   if (collegeSectionId) {
     query = query.eq("collegeSectionsId", collegeSectionId);
@@ -242,26 +223,12 @@ export async function fetchFacultyTasksForLoggedInFaculty({
 
 
 export const fetchFacultyTasksByFacultyId = async (facultyId: number) => {
-  const today = new Date().toISOString().split("T")[0];
-
-  await supabase
-    .from("faculty_tasks")
-    .update({
-      isActive: false,
-      is_deleted: true,
-      deletedAt: new Date().toISOString(),
-    })
-    .lt("date", today)
-    .eq("createdBy", facultyId)
-    .eq("isActive", true);
-
   const { data, error } = await supabase
     .from("faculty_tasks")
     .select(`*`)
     .eq("createdBy", facultyId)
-    .eq("isActive", true)
     .is("deletedAt", null)
-    .order("date", { ascending: true });
+    .order("date", { ascending: false });
 
   if (error) throw error;
   return data ?? [];
@@ -322,19 +289,4 @@ export async function countActiveFacultyTasks(facultyId: number) {
   }
 
   return count ?? 0;
-}
-
-export async function cleanupExpiredTasks(collegeSubjectId: number) {
-  const today = new Date().toISOString().split("T")[0];
-
-  await supabase
-    .from("faculty_tasks")
-    .update({
-      isActive: false,
-      is_deleted: true,
-      deletedAt: new Date().toISOString(),
-    })
-    .lt("date", today)
-    .eq("collegeSubjectId", collegeSubjectId)
-    .eq("isActive", true);
 }

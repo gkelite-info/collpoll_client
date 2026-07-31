@@ -158,8 +158,8 @@ export default function QuizCard({ data }: { data: any }) {
 
   return (
     <>
-      <div className="hidden md:flex items-stretch justify-between p-3.5 bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100">
-        <div className="flex items-stretch gap-5 h-full w-full">
+      <div className="hidden md:flex items-stretch justify-between p-3.5 bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100 overflow-hidden">
+        <div className="flex items-stretch gap-5 h-full w-full min-w-0">
           <div
             className={`rounded-lg flex items-center justify-center ${data.bgColor} overflow-hidden relative flex-shrink-0`}
           >
@@ -169,7 +169,7 @@ export default function QuizCard({ data }: { data: any }) {
               className="object-cover w-full h-full opacity-80"
             />
           </div>
-          <div className="flex flex-col justify-between h-full w-full">
+          <div className="flex flex-1 flex-col justify-between h-full min-w-0">
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">
                 <h3 className="text-lg font-bold text-[#282828]">
@@ -188,36 +188,37 @@ export default function QuizCard({ data }: { data: any }) {
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-2.5">
-              <div className="flex items-center gap-2 text-xs text-[#282828]">
-                <div className="bg-[#43C07A24] rounded-full p-1">
+            <div className="custom-scrollbar w-full min-w-0 overflow-x-scroll overflow-y-hidden pb-2">
+              <div className="grid min-w-[860px] grid-cols-2 gap-x-5 gap-y-2.5">
+              <div className="grid grid-cols-[28px_96px_minmax(0,1fr)] items-center gap-1.5 min-w-0 text-[#282828]">
+                <div className="bg-[#43C07A24] rounded-full p-1 shrink-0">
                   <UserCircle
                     size={16}
                     className="text-[#43C17A]"
                     weight="regular"
                   />
                 </div>
-                <span className="font-semibold text-[#282828] text-sm">
-                  {t("Faculty Name :")}
-                </span>{" "}
-                <span className="text-[#282828] text-sm truncate max-w-[150px]">
+                <span className="font-semibold text-xs whitespace-nowrap">
+                  {t("Faculty Name :").replace(/\s+:/, ":")}
+                </span>
+                <span className="text-xs truncate min-w-0">
                   {data.facultyName}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-[#282828]">
-                <div className="bg-[#43C07A24] rounded-full p-1">
+              <div className="grid grid-cols-[28px_96px_minmax(0,1fr)] items-center gap-1.5 min-w-0 text-[#282828]">
+                <div className="bg-[#43C07A24] rounded-full p-1 shrink-0">
                   <RepeatIcon
                     size={16}
                     className="text-[#43C17A]"
                     weight="regular"
                   />
                 </div>
-                <span className="font-semibold text-sm text-[#282828]">
-                  {t("Attempts Left :")}
-                </span>{" "}
-                <span className="text-[#282828]">{data.attemptsLeft}</span>
+                <span className="font-semibold text-xs whitespace-nowrap">
+                  {t("Attempts Left :").replace(/\s+:/, ":")}
+                </span>
+                <span className="text-xs whitespace-nowrap min-w-0">{data.attemptsLeft}</span>
               </div>
-              <div className="flex items-center gap-2 whitespace-nowrap">
+              <div className="grid grid-cols-[28px_96px_minmax(0,1fr)] items-center gap-1.5 min-w-0 text-[#282828]">
                 <div className="bg-[#43C07A24] rounded-full p-1 shrink-0">
                   <CalendarDotsIcon
                     size={16}
@@ -225,30 +226,29 @@ export default function QuizCard({ data }: { data: any }) {
                     weight="regular"
                   />
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-sm text-[#282828]">
-                    {t("Quiz Duration:")}
-                  </span>
-                  <span className="text-xs font-medium text-[#282828]">
-                    {data.quizDuration}
-                  </span>
-                </div>
+                <span className="font-semibold text-xs whitespace-nowrap">
+                  {t("Quiz Duration:")}
+                </span>
+                <span className="text-xs font-medium whitespace-nowrap min-w-0">
+                  {data.quizDuration}
+                </span>
               </div>
               {data.timeLimit && (
-                <div className="flex items-center gap-2 text-xs text-[#282828]">
-                  <div className="bg-[#43C07A24] rounded-full p-1">
+                <div className="grid grid-cols-[28px_96px_minmax(0,1fr)] items-center gap-1.5 min-w-0 text-[#282828]">
+                  <div className="bg-[#43C07A24] rounded-full p-1 shrink-0">
                     <ClockCountdownIcon
                       size={16}
                       className="text-[#43C17A]"
                       weight="regular"
                     />
                   </div>
-                  <span className="font-semibold text-sm text-[#282828]">
+                  <span className="font-semibold text-xs whitespace-nowrap">
                     Time Limit:
-                  </span>{" "}
-                  <span className="text-[#282828]">{data.timeLimit}</span>
+                  </span>
+                  <span className="text-xs whitespace-nowrap min-w-0">{data.timeLimit}</span>
                 </div>
               )}
+              </div>
             </div>
           </div>
         </div>
@@ -338,9 +338,9 @@ export function AttemptedQuizCard({ data }: { data: any }) {
       {/* 🖥️ DESKTOP VIEW */}
       <div
         onClick={handleOpenModal}
-        className="hidden md:flex items-stretch cursor-pointer justify-between p-3.5 bg-[#E7E7E7] hover:bg-[#dfdfdf] transition-colors rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100"
+        className="hidden md:flex items-stretch cursor-pointer justify-between p-3.5 bg-[#E7E7E7] hover:bg-[#dfdfdf] transition-colors rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100 overflow-hidden"
       >
-        <div className="flex items-stretch gap-5 h-full w-full">
+        <div className="flex items-stretch gap-5 h-full w-full min-w-0">
           <div
             className={`rounded-lg flex items-center justify-center ${data.bgColor} overflow-hidden relative flex-shrink-0`}
           >
@@ -350,7 +350,7 @@ export function AttemptedQuizCard({ data }: { data: any }) {
               className="object-cover w-full h-full opacity-80"
             />
           </div>
-          <div className="flex flex-col justify-between h-full w-full">
+          <div className="flex flex-1 flex-col justify-between h-full min-w-0">
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">
                 <h3 className="text-lg font-bold text-[#282828]">
@@ -366,60 +366,62 @@ export function AttemptedQuizCard({ data }: { data: any }) {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-2.5">
-              <div className="flex items-center gap-2 text-xs text-[#282828]">
-                <div className="bg-[#43C07A24] rounded-full p-1">
+            <div className="custom-scrollbar w-full min-w-0 overflow-x-scroll overflow-y-hidden pb-2">
+              <div className="grid min-w-[860px] grid-cols-2 gap-x-5 gap-y-2.5">
+              <div className="grid grid-cols-[28px_145px_minmax(0,1fr)] items-center gap-1.5 min-w-0 text-[#282828]">
+                <div className="bg-[#43C07A24] rounded-full p-1 shrink-0">
                   <UserCircle
                     size={16}
                     className="text-[#43C17A]"
                     weight="regular"
                   />
                 </div>
-                <span className="font-semibold text-[#282828] text-sm">
-                  {t("Faculty Name :")}
+                <span className="font-semibold text-xs whitespace-nowrap">
+                  {t("Faculty Name :").replace(/\s+:/, ":")}
                 </span>
-                <span className="text-[#282828]">{data.facultyName}</span>
+                <span className="text-xs truncate min-w-0">{data.facultyName}</span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-[#282828]">
-                <div className="bg-[#43C07A24] rounded-full p-1">
+              <div className="grid grid-cols-[28px_145px_minmax(0,1fr)] items-center gap-1.5 min-w-0 text-[#282828]">
+                <div className="bg-[#43C07A24] rounded-full p-1 shrink-0">
                   <CalendarDotsIcon
                     size={16}
                     className="text-[#43C17A]"
                     weight="regular"
                   />
                 </div>
-                <span className="font-semibold text-sm text-[#282828]">
-                  {t("Attempted On :")}
+                <span className="font-semibold text-xs whitespace-nowrap">
+                  {t("Attempted On :").replace(/\s+:/, ":")}
                 </span>
-                <span className="text-[#282828]">{data.attemptedOn}</span>
+                <span className="text-xs whitespace-nowrap min-w-0">{data.attemptedOn}</span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-[#282828]">
-                <div className="bg-[#43C07A24] rounded-full p-1">
+              <div className="grid grid-cols-[28px_145px_minmax(0,1fr)] items-center gap-1.5 min-w-0 text-[#282828]">
+                <div className="bg-[#43C07A24] rounded-full p-1 shrink-0">
                   <Question
                     size={16}
                     className="text-[#43C17A]"
                     weight="regular"
                   />
                 </div>
-                <span className="font-semibold text-sm text-[#282828]">
-                  {t("Questions Attempted :")}
+                <span className="font-semibold text-xs whitespace-nowrap">
+                  {t("Questions Attempted :").replace(/\s+:/, ":")}
                 </span>
-                <span className="text-[#282828]">
+                <span className="text-xs whitespace-nowrap min-w-0">
                   {data.questionsAttempted}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-[#282828]">
-                <div className="bg-[#43C07A24] rounded-full p-1">
+              <div className="grid grid-cols-[28px_145px_minmax(0,1fr)] items-center gap-1.5 min-w-0 text-[#282828]">
+                <div className="bg-[#43C07A24] rounded-full p-1 shrink-0">
                   <RepeatIcon
                     size={16}
                     className="text-[#43C17A]"
                     weight="regular"
                   />
                 </div>
-                <span className="font-semibold text-sm text-[#282828]">
-                  {t("Attempts Used :")}
+                <span className="font-semibold text-xs whitespace-nowrap">
+                  {t("Attempts Used :").replace(/\s+:/, ":")}
                 </span>
-                <span className="text-[#282828]">{data.attemptsUsed}</span>
+                <span className="text-xs whitespace-nowrap min-w-0">{data.attemptsUsed}</span>
+              </div>
               </div>
             </div>
           </div>

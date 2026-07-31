@@ -14,6 +14,15 @@ export async function saveAttendance(
 
   const checkInVal = params.checkIn || null;
   const checkOutVal = params.checkOut || null;
+  const normalizedStatus = params.status?.toUpperCase();
+
+  if (
+    normalizedStatus &&
+    ["PRESENT", "LATE", "HALFDAY"].includes(normalizedStatus) &&
+    !checkInVal
+  ) {
+    throw new Error("Check-In is required before marking Present or Late attendance.");
+  }
 
   // Fetch user's collegeId
   const { data: userData } = await supabase
@@ -207,7 +216,7 @@ export async function saveAttendance(
 }
 
 export async function saveStatusOnly(params: {
-  attendanceDailyId: number;
+  attendanceDailyId: number | null;
   userId: number;
   status: string;
   collegeHrId: number;
@@ -215,11 +224,33 @@ export async function saveStatusOnly(params: {
 }): Promise<void> {
   const today = params.date || todayDate();
   const now = new Date().toISOString();
+  const normalizedStatus = params.status.toUpperCase();
+  const requiresCheckIn = ["PRESENT", "LATE", "HALFDAY"].includes(normalizedStatus);
+
+  if (requiresCheckIn) {
+    let checkInQuery = supabase
+      .from("attendance_daily")
+      .select("checkIn")
+      .eq("userId", params.userId)
+      .eq("attendanceDate", today);
+
+    if (params.attendanceDailyId) {
+      checkInQuery = checkInQuery.eq("attendanceDailyId", params.attendanceDailyId);
+    }
+
+    const { data: existingAttendance, error: checkInError } =
+      await checkInQuery.maybeSingle();
+
+    if (checkInError) throw new Error(checkInError.message);
+    if (!existingAttendance?.checkIn) {
+      throw new Error("Check-In is required before marking Present or Late attendance.");
+    }
+  }
 
   if (params.attendanceDailyId !== null && params.attendanceDailyId > 0) {
     const { error } = await supabase
       .from("attendance_daily")
-      .update({ status: params.status.toUpperCase(), updatedAt: now })
+      .update({ status: normalizedStatus, updatedAt: now })
       .eq("attendanceDailyId", params.attendanceDailyId);
 
     if (error) throw new Error(error.message);
@@ -228,7 +259,7 @@ export async function saveStatusOnly(params: {
       {
         userId: params.userId,
         attendanceDate: today,
-        status: params.status.toUpperCase(),
+        status: normalizedStatus,
         isManual: true,
         markedBy: params.collegeHrId,
         lateByMinutes: 0,

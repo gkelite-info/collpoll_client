@@ -33,6 +33,10 @@ export type BonafideCertificate = {
   academicYear?: string;
   studentType?: string;
   conduct?: string;
+  fromDate?: string;
+  toData?: string;
+  fromClass?: string;
+  toClass?: string;
   status: "Issued" | "Draft";
 };
 
@@ -182,7 +186,7 @@ export function BonafideCertificatesTable({
           { title: "Bonafide No.", key: "bonafideNo" },
           { title: "Student Name", key: "studentName" },
           { title: "Education Type", key: "educationType" },
-          { title: academicBranchLabel, key: "branch" },
+          { title: isSchool ? "Class" : academicBranchLabel, key: "branch" },
           { title: "Purpose", key: "purpose" },
           { title: "Date Issued", key: "dateIssued" },
           { title: "Status", key: "status" },
@@ -198,7 +202,7 @@ export function BonafideCertificatesTable({
                 branchClasses[cert.branch] ?? "bg-[#F0F3F8] text-[#596579]"
               }`}
             >
-              {cert.branch}
+              {isSchool ? cert.courseYear || "-" : cert.branch}
             </span>
           ),
           purpose: <span className="font-medium">{cert.purpose}</span>,

@@ -14,6 +14,7 @@ import {
   updateBonafideCertificate,
 } from "@/lib/helpers/accountant/bonafideCertificatesAPI";
 import type { BonafideCertificate } from "./BonafideCertificatesTable";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 const inputClass =
   "h-10 rounded-md border border-[#D7DEE8] bg-white px-3 text-[13px] font-medium text-[#303642] outline-none placeholder:text-[#8A96A8]";
@@ -52,6 +53,21 @@ function getAcademicYearOptions(startYear = 2020) {
     const year = startYear + index;
     return `${year}-${year + 1}`;
   });
+}
+
+function getClassLabel(classNumber: number) {
+  const remainder100 = classNumber % 100;
+  const suffix =
+    remainder100 >= 11 && remainder100 <= 13
+      ? "th"
+      : classNumber % 10 === 1
+        ? "st"
+        : classNumber % 10 === 2
+          ? "nd"
+          : classNumber % 10 === 3
+            ? "rd"
+            : "th";
+  return `${classNumber}${suffix} Class`;
 }
 
 function TextField({
@@ -134,6 +150,7 @@ export function BonafideCreateForm({
   onSave: () => void | Promise<void>;
 }) {
   const { collegeId, loading: userLoading, userId } = useUser();
+  const { isSchool } = useInstitutionTerminology();
   const academicYearOptions = useMemo(() => getAcademicYearOptions(), []);
   const [educationTypes, setEducationTypes] = useState<AccountantEducationTypeOption[]>([]);
   const [selectedEducationId, setSelectedEducationId] = useState("");
@@ -151,6 +168,10 @@ export function BonafideCreateForm({
   const [purpose, setPurpose] = useState("");
   const [studentType, setStudentType] = useState("");
   const [conduct, setConduct] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toData, setToData] = useState("");
+  const [fromClass, setFromClass] = useState("");
+  const [toClass, setToClass] = useState("");
   const [isLoadingEducationTypes, setIsLoadingEducationTypes] = useState(true);
   const [isFetchingStudent, setIsFetchingStudent] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -232,6 +253,10 @@ export function BonafideCreateForm({
     setPurpose(initialCertificate.purpose);
     setStudentType(initialCertificate.studentType ?? "");
     setConduct(initialCertificate.conduct ?? "");
+    setFromDate(initialCertificate.fromDate ?? "");
+    setToData(initialCertificate.toData ?? "");
+    setFromClass(initialCertificate.fromClass ?? "");
+    setToClass(initialCertificate.toClass ?? "");
   }, [educationTypes, initialCertificate]);
 
   const handleGetDetails = async () => {
@@ -261,6 +286,8 @@ export function BonafideCreateForm({
         collegeId,
         collegeEducationId: Number(selectedEducationId),
         rollNo,
+        studentName: searchStudentName,
+        courseYear: searchAcademicYear,
       });
 
       if (!student) {
@@ -317,6 +344,10 @@ export function BonafideCreateForm({
         studentType,
         conduct,
         admissionNo,
+        fromDate,
+        toData,
+        fromClass,
+        toClass,
         issuedBy: userId,
         isDraft,
       };
@@ -413,15 +444,22 @@ export function BonafideCreateForm({
             required
           />
           <SelectField
-            label="Academic Year"
+            label={isSchool ? "Class" : "Academic Year"}
             value={searchAcademicYear}
-            placeholder="Select Year"
-            options={[
-              { label: "1st Year", value: "1st Year" },
-              { label: "2nd Year", value: "2nd Year" },
-              { label: "3rd Year", value: "3rd Year" },
-              { label: "4th Year", value: "4th Year" },
-            ]}
+            placeholder={isSchool ? "Select Class" : "Select Year"}
+            options={
+              isSchool
+                ? Array.from({ length: 12 }, (_, index) => ({
+                    label: getClassLabel(index + 1),
+                    value: getClassLabel(index + 1),
+                  }))
+                : [
+                    { label: "1st Year", value: "1st Year" },
+                    { label: "2nd Year", value: "2nd Year" },
+                    { label: "3rd Year", value: "3rd Year" },
+                    { label: "4th Year", value: "4th Year" },
+                  ]
+            }
             onChange={(value) => {
               setSearchAcademicYear(value);
               setStudentDetails(null);
@@ -486,19 +524,21 @@ export function BonafideCreateForm({
             readOnly
           />
           <TextField
-            label="Course"
+            label={isSchool ? "Board" : "Course"}
             value={studentDetails?.course || selectedEducationType}
             placeholder="Enter course"
             readOnly
           />
-          <TextField label="Sub Course" value={studentDetails?.subCourse ?? ""} placeholder="Enter sub course" readOnly />
+          {!isSchool && (
+            <TextField label="Sub Course" value={studentDetails?.subCourse ?? ""} placeholder="Enter sub course" readOnly />
+          )}
           <TextField
-            label="Academic Year"
+            label={isSchool ? "Class" : "Academic Year"}
             value={studentDetails?.courseYear ?? ""}
             placeholder="Enter academic year"
             readOnly
           />
-          <TextField label="Year" value={studentDetails ? academicYear : ""} placeholder="Enter year" readOnly />
+          <TextField label={isSchool ? "Academic Session" : "Year"} value={studentDetails ? academicYear : ""} placeholder={isSchool ? "Enter academic session" : "Enter year"} readOnly />
           <TextField label="Batch Code" value={studentDetails?.batchCode ?? ""} placeholder="Enter batch code" readOnly />
         </div>
       </section>
@@ -509,6 +549,13 @@ export function BonafideCreateForm({
         </h2>
 
         <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <TextField
+            label="Bonafide Number"
+            value={bonafideNo}
+            placeholder="Enter bonafide number"
+            onChange={setBonafideNo}
+            required
+          />
           <label className="flex flex-col gap-2">
             <span className={fieldLabelClass}>
               Date <RequiredMark />
@@ -547,6 +594,32 @@ export function BonafideCreateForm({
             onChange={setConduct}
             required
           />
+          <TextField label="From Class" value={fromClass} placeholder="Enter from class" onChange={setFromClass} />
+          <TextField label="To Class" value={toClass} placeholder="Enter to class" onChange={setToClass} />
+          <label className="flex flex-col gap-2">
+            <span className={fieldLabelClass}>From Date</span>
+            <input
+              type="date"
+              value={fromDate}
+              placeholder="Select from date"
+              aria-label="Select from date"
+              title="Select from date"
+              onChange={(event) => setFromDate(event.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <label className="flex flex-col gap-2">
+            <span className={fieldLabelClass}>To Date</span>
+            <input
+              type="date"
+              value={toData}
+              placeholder="Select to date"
+              aria-label="Select to date"
+              title="Select to date"
+              onChange={(event) => setToData(event.target.value)}
+              className={inputClass}
+            />
+          </label>
         </div>
       </section>
 

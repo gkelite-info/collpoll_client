@@ -1,5 +1,6 @@
 import { DownloadSimple, X } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
+import type { ReactNode } from "react";
 import toast from "react-hot-toast";
 
 import type { BonafideCertificate } from "./BonafideCertificatesTable";
@@ -57,8 +58,22 @@ export function BonafideCertificateLayout({
   details: BonafideCertificate;
   isSchool?: boolean;
 }) {
+  const FilledBlank = ({
+    children,
+    width = "min-w-[150px]",
+  }: {
+    children: ReactNode;
+    width?: string;
+  }) => (
+    <span
+      className={`mx-1 inline-flex ${width} items-end justify-center border-b-2 border-dotted border-[#242424] px-2 pb-0.5 align-baseline font-serif italic leading-none text-[#111827]`}
+    >
+      {children || "\u00A0"}
+    </span>
+  );
+
   return (
-    <div className="min-h-[530px] border-[3px] border-[#242424] p-8 pb-12 relative">
+    <div className="relative min-h-[530px] border-[3px] border-[#242424] p-8 pb-12">
       <div className="text-right text-[14px] font-bold mb-6">
         Date: <span className="inline-block min-w-[100px] border-b border-dashed border-[#242424] px-2 text-center font-normal italic">{details.dateIssued}</span>
       </div>
@@ -67,40 +82,42 @@ export function BonafideCertificateLayout({
         BONAFIDE CERTIFICATE
       </h2>
 
-      <div className="mt-12 text-[15px] leading-[2.5rem]">
-        <p className="text-justify">
-          This is to certify that Mr. /Ms.{" "}
-          <span className="inline-block min-w-[250px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]">
-            {details.studentName}
-          </span>{" "}
-          Son/Daughter of{" "}
-          <span className="inline-block min-w-[250px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]">
-            {details.fatherName ?? ""}
-          </span>{" "}
-          Bearing Roll No{" "}
-          <span className="inline-block min-w-[150px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]">
-            {details.rollNo ?? ""}
-          </span>{" "}
-          is a Bonafide student of this institution and is studying{" "}
-          <span className="inline-block min-w-[80px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]">
-            {details.courseYear ?? ""}
-          </span>{" "}
-          Year,{" "}
-          <span className="inline-block min-w-[80px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]"></span>{" "}
-          {!isSchool && "Sem. "}{details.educationType} {isSchool ? "Year" : "Branch"},{" "}
-          <span className="inline-block min-w-[100px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]">
-            {details.branch}
-          </span>{" "}
-          during the Academic Year <span className="font-bold">{details.academicYear ?? ""}</span> as per our records his/her Date of Birth is{" "}
-          <span className="inline-block min-w-[120px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]"></span>
-          . His/her Conduct and Character is{" "}
-          <span className="inline-block min-w-[150px] border-b-2 border-dotted border-[#242424] px-3 text-center italic text-[#111827]">
-            {details.conduct ?? ""}
-          </span>
+      <div className="mt-12 font-serif text-[16px] leading-[2.35] text-[#111827]">
+        <p>
+          This is to certify that Mr./Ms.
+          <FilledBlank width="min-w-[230px]">{details.studentName}</FilledBlank>
+        </p>
+        <p>
+          Son/Daughter of
+          <FilledBlank width="min-w-[220px]">{details.fatherName}</FilledBlank>,
+          bearing Roll No.
+          <FilledBlank width="min-w-[130px]">{details.rollNo}</FilledBlank>.
+        </p>
+        <p>
+          The student is a bonafide student of this institution and is studying
+          <FilledBlank width="min-w-[105px]">{details.courseYear}</FilledBlank>
+          {isSchool ? (
+            <>
+              in <FilledBlank width="min-w-[120px]">{details.educationType}</FilledBlank>
+            </>
+          ) : (
+            <>
+              in <FilledBlank width="min-w-[120px]">{details.educationType}</FilledBlank>,
+              Branch <FilledBlank width="min-w-[100px]">{details.branch}</FilledBlank>
+            </>
+          )}
           .
         </p>
+        <p>
+          This course is for the Academic Year
+          <FilledBlank width="min-w-[130px]">{details.academicYear}</FilledBlank>.
+        </p>
+        <p>
+          His/her Conduct and Character is
+          <FilledBlank width="min-w-[150px]">{details.conduct}</FilledBlank>.
+        </p>
 
-        <p className="mt-8 text-center text-[15px]">
+        <p className="mt-8 text-center font-sans text-[15px]">
           This Certificate is issued for the purpose of <span className="font-bold uppercase">({details.purpose})</span> only.
         </p>
       </div>
@@ -171,10 +188,10 @@ export function BonafidePreviewScreen({
     ["Admission No.", details.admissionNo ?? "-"],
     ["Student Name", details.studentName],
     ["Father Name", details.fatherName ?? "-"],
-    ["Course", details.educationType],
-    [academicBranchLabel, details.branch],
-    ["Course Year", details.courseYear ?? "-"],
-    ["Academic Year", details.academicYear ?? "-"],
+    [isSchool ? "Board" : "Course", details.educationType],
+    ...(!isSchool ? [[academicBranchLabel, details.branch]] : []),
+    [isSchool ? "Class" : "Course Year", details.courseYear ?? "-"],
+    [isSchool ? "Academic Session" : "Academic Year", details.academicYear ?? "-"],
   ];
   const bonafideDetails = [
     ["Bonafide No.", details.bonafideNo],
@@ -182,6 +199,10 @@ export function BonafidePreviewScreen({
     ["Purpose", details.purpose],
     ["Student Type", details.studentType ?? "-"],
     ["Conduct", details.conduct ?? "-"],
+    ["From Date", details.fromDate ?? "-"],
+    ["To Date", details.toData ?? "-"],
+    ["From Class", details.fromClass ?? "-"],
+    ["To Class", details.toClass ?? "-"],
   ];
 
   const handleDownloadPdf = async () => {

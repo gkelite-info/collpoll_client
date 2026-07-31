@@ -144,15 +144,15 @@ export default function TaskPanel({
           createdAt
         `)
         .eq("collegeAcademicYearId", ayId)
-        .eq("collegeSectionsId", secId)
-        .is("deletedAt", null);
+        .eq("collegeSectionsId", secId);
 
       if (dateStr) {
         const { start, end } = getLocalDateRangeInUTC(dateStr);
         query = query.gte("createdAt", start).lte("createdAt", end);
       } else {
-        const today = new Date().toLocaleDateString("en-CA");
-        query = query.eq("date", today).eq("isActive", true);
+        query = query
+          .is("deletedAt", null)
+          .order("date", { ascending: false });
       }
 
       const { data: tasksData, error: tasksError } = await query.order("time", { ascending: true });
@@ -216,7 +216,6 @@ export default function TaskPanel({
           .eq("collegeSubjectId", collegeSubjectId)
           .gte("createdAt", start)
           .lte("createdAt", end)
-          .is("deletedAt", null)
           .order("time", { ascending: true });
 
         if (!error && data) {
@@ -236,7 +235,6 @@ export default function TaskPanel({
             .eq("createdBy", studentId)
             .gte("createdAt", start)
             .lte("createdAt", end)
-            .is("deletedAt", null)
             .order("time", { ascending: true });
 
           if (!sError && sData) {
@@ -260,7 +258,6 @@ export default function TaskPanel({
             .eq("collegeSectionsId", secId)
             .gte("createdAt", start)
             .lte("createdAt", end)
-            .is("deletedAt", null)
             .order("time", { ascending: true });
 
           if (!fError && fData) {
