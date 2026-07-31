@@ -114,15 +114,15 @@ export default function FacultyDashRight() {
       );
 
       if (!res.success) {
-        throw new Error("Save failed");
+        throw new Error(res.error?.message || "Save failed");
       }
       return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["facultyTasks", facultyId, collegeSubjectId, collegeSectionId] });
     },
-    onError: (error) => {
-      console.error("HANDLE SAVE ERROR:", error);
+    onError: (error: any) => {
+      console.error("HANDLE SAVE ERROR:", error?.message || error);
     }
   });
 

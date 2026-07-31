@@ -7,7 +7,7 @@ import React from "react";
 import toast from "react-hot-toast";
 import { PaymentSuccessModal } from "../../modals/paymentSuccessModal";
 import { TableShimmer } from "../shimmer/TableShimmer";
-import { useRecordPayment } from "../useRecordPayment";
+import { useRecordPayment } from "@/app/(screens)/finance/(dashboard)/[studentId]/useRecordPayment";
 import { Avatar } from "@/app/utils/Avatar";
 
 interface RecordPaymentProps {

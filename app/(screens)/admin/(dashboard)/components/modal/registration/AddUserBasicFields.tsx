@@ -1,6 +1,6 @@
 import React from "react";
 import { Lock } from "@phosphor-icons/react";
-import { CustomSingleSelect } from "../userModalComponents";
+import { CustomSingleSelect } from "@/app/(screens)/admin/(dashboard)/components/modal/userModalComponents";
 
 interface AddUserBasicFieldsProps {
   basicData: any;

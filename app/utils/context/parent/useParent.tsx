@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { useUser } from "../UserContext";
+import { useUser } from "@/app/utils/context/UserContext";
 import { fetchParentContext } from "./parentContextAPI";
 import { getChildUserIdForParent } from "@/lib/helpers/parent/dashboard/parentDashboardActions";
 

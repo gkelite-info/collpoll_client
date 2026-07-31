@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useUser } from "./context/UserContext";
-import { extractAcademicYearNumber } from "./academicYear";
-import { useFaculty } from "./context/faculty/useFaculty";
+import { useUser } from "@/app/utils/context/UserContext";
+import { extractAcademicYearNumber } from "@/app/utils/academicYear";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
 type Props = {
   style?: string;

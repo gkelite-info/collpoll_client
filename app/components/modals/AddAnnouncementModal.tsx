@@ -12,6 +12,8 @@ import {
 } from "@/lib/helpers/announcements/announcementAPI";
 import { supabase } from "@/lib/supabaseClient";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
+import { CaretDown } from "@phosphor-icons/react";
 
 type AnnouncementEditData = {
   collegeAnnouncementId?: number;
@@ -434,18 +436,16 @@ export default function AddAnnouncementModal({
                   {t("Type")} <span className="text-red-500">*</span>
                 </label>
 
-                <select
+                <CustomDropdown
+                  label=""
                   value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F]"
-                >
-                  <option value="">{t("Select Type")}</option>
-                  {announcementTypes.map((tItem) => (
-                    <option key={tItem} value={tItem}>
-                      {t(tItem.charAt(0).toUpperCase() + tItem.slice(1))}
-                    </option>
-                  ))}
-                </select>
+                  options={announcementTypes.map((tItem) => ({
+                    value: tItem,
+                    label: t(tItem.charAt(0).toUpperCase() + tItem.slice(1)),
+                  }))}
+                  onChange={(val) => setType(String(val))}
+                  placeholder={t("Select Type")}
+                />
 
                 {type && typeIcons[type] && (
                   <div className="flex items-center gap-2 mt-3">
@@ -469,34 +469,31 @@ export default function AddAnnouncementModal({
                   {t("Select Roles")} <span className="text-red-500">*</span>
                 </label>
 
-                <div
+                <button
+                  type="button"
                   onClick={() => setShowRoleDropdown((prev) => !prev)}
-                  className="border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F] cursor-pointer flex justify-between items-center bg-white"
+                  className={`relative rounded-md pl-3 pr-9 py-2 flex items-center justify-between transition-colors duration-300 ease-in-out cursor-pointer select-none outline-none border w-full ${
+                    showRoleDropdown 
+                      ? "bg-[#43C17A15] border-[#43C17A]/40" 
+                      : "bg-white border-[#E4E4E4] hover:border-gray-400"
+                  }`}
                 >
-                  <span className="truncate">
+                  <span className={`text-[13px] font-medium truncate ${showRoleDropdown ? "text-[#43C17A] font-semibold" : "text-[#2F2F2F]"}`}>
                     {targetRoles.length > 0
                       ? targetRoles.map(r => formatRole(r, isSchool)).join(", ")
                       : t("Select Roles")}
                   </span>
-
-                  <svg
-                    className={`w-4 h-4 text-gray-500 transition-transform ${showRoleDropdown ? "rotate-180" : ""
-                      }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </div>
+                  <CaretDown
+                    size={14}
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-300 ease-in-out ${
+                      showRoleDropdown ? "rotate-180 text-[#43C17A]" : "text-gray-500"
+                    }`}
+                    weight="bold"
+                  />
+                </button>
 
                 {showRoleDropdown && (
-                  <div className="absolute bottom-[110%] left-0 w-full bg-white border border-[#E4E4E4] rounded-md shadow-lg z-[999] max-h-[110px] overflow-y-auto p-3">
+                  <div className="absolute bottom-[110%] left-0 w-full bg-white border border-[#E4E4E4] rounded-md shadow-lg z-[999] max-h-[240px] overflow-y-auto custom-scrollbar p-3">
                     <div className="flex justify-between items-center mb-2">
                       <button
                         onClick={handleSelectAll}
@@ -545,7 +542,10 @@ export default function AddAnnouncementModal({
         <div className="flex gap-4">
           <button
             onClick={onClose}
-            className="flex-1 border border-[#CBD5E1] rounded-md py-2 text-[14px] text-[#4B5563] cursor-pointer"
+            disabled={saving}
+            className={`flex-1 border border-[#CBD5E1] rounded-md py-2 text-[14px] text-[#4B5563] ${
+              saving ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray-50"
+            }`}
           >
             {t("Cancel")}
           </button>

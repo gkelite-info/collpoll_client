@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CalendarIcon, CheckCircle, PencilSimple, PlusCircleIcon, Trash, XIcon } from "@phosphor-icons/react";
 import TaskModal from "@/app/components/modals/taskModal";
 import { deactivateFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
@@ -11,7 +11,7 @@ import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
 import { useStudent } from "@/app/utils/context/student/useStudent";
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { fetchFacultyTasksForLoggedInFaculty } from "@/lib/helpers/faculty/facultyTasks";
 
@@ -21,6 +21,8 @@ export type Task = {
   description: string;
   time: string;
   date: string;
+  collegeAcademicYearId?: number | null;
+  collegeSectionsId?: number | null;
 };
 
 export type TaskPanelProps = {
@@ -73,6 +75,7 @@ export default function TaskPanel({
   const [taskToDeleteId, setTaskToDeleteId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const t = useTranslations("Dashboard.student");
+  const queryClient = useQueryClient();
 
   const studentContext = useStudent();
   const { subjects } = studentContext;
@@ -92,7 +95,7 @@ export default function TaskPanel({
     fetchNextPage: fetchNextFacultyTasks,
     hasNextPage: hasNextFacultyTasks,
     isFetchingNextPage: isFetchingNextFacultyTasks,
-    isLoading: isInfiniteFacultyLoading,
+    isPending: isInfiniteFacultyPending,
   } = useInfiniteQuery({
     queryKey: ["facultyTasksInfinite", facultyId, collegeSubjectId, selectedDate],
     queryFn: async ({ pageParam = 1 }) => {
@@ -122,6 +125,8 @@ export default function TaskPanel({
     description: t.description,
     time: t.time,
     date: t.date,
+    collegeAcademicYearId: t.collegeAcademicYearId,
+    collegeSectionsId: t.collegeSectionsId,
   }));
 
   const fetchStudentFacultyTasks = async (dateStr: string | null) => {
@@ -141,6 +146,8 @@ export default function TaskPanel({
           description,
           date,
           time,
+          collegeAcademicYearId,
+          collegeSectionsId,
           createdAt
         `)
         .eq("collegeAcademicYearId", ayId)
@@ -165,6 +172,8 @@ export default function TaskPanel({
         description: t.description,
         time: t.time,
         date: t.date || dateStr || new Date().toLocaleDateString("en-CA"),
+        collegeAcademicYearId: t.collegeAcademicYearId,
+        collegeSectionsId: t.collegeSectionsId,
       }));
     } catch (err) {
       console.error("Error fetching student faculty tasks:", err);
@@ -212,7 +221,7 @@ export default function TaskPanel({
       if (role === "faculty" && collegeSubjectId) {
         const { data, error } = await supabase
           .from("faculty_tasks")
-          .select(`facultyTaskId, taskTitle, description, date, time, createdAt`)
+          .select(`facultyTaskId, taskTitle, description, date, time, collegeAcademicYearId, collegeSectionsId, createdAt`)
           .eq("collegeSubjectId", collegeSubjectId)
           .gte("createdAt", start)
           .lte("createdAt", end)
@@ -225,6 +234,8 @@ export default function TaskPanel({
             description: t.description,
             time: t.time,
             date: t.date || selectedDate,
+            collegeAcademicYearId: t.collegeAcademicYearId,
+            collegeSectionsId: t.collegeSectionsId,
           }));
         }
       } else if (role === "student") {
@@ -253,7 +264,7 @@ export default function TaskPanel({
         if (ayId && secId) {
           const { data: fData, error: fError } = await supabase
             .from("faculty_tasks")
-            .select(`facultyTaskId, taskTitle, description, date, time, createdAt`)
+            .select(`facultyTaskId, taskTitle, description, date, time, collegeAcademicYearId, collegeSectionsId, createdAt`)
             .eq("collegeAcademicYearId", ayId)
             .eq("collegeSectionsId", secId)
             .gte("createdAt", start)
@@ -267,6 +278,8 @@ export default function TaskPanel({
               description: t.description,
               time: t.time,
               date: t.date || selectedDate,
+              collegeAcademicYearId: t.collegeAcademicYearId,
+              collegeSectionsId: t.collegeSectionsId,
             }));
           }
         }
@@ -303,6 +316,8 @@ export default function TaskPanel({
         await onDeleteTask?.(taskToDeleteId);
         toast.success("Task deleted successfully");
         setIsDeleteDialogOpen(false);
+        queryClient.invalidateQueries({ queryKey: ["facultyTasksInfinite"] });
+        queryClient.invalidateQueries({ queryKey: ["taskPanelCalendarTasks"] });
         if (selectedDate) {
           setRefreshTrigger((prev) => prev + 1);
         }
@@ -358,15 +373,19 @@ export default function TaskPanel({
                   {heading ?? t("My Tasks")}
                 </p>
                 {!onAddTask && (
-                  <div className="relative cursor-pointer w-6 h-6 flex items-center justify-center">
-                    <CalendarIcon size={22} weight="fill" className="text-indigo-500" />
+                  <button 
+                    type="button" 
+                    onClick={(e) => { try { e.currentTarget.querySelector('input')?.showPicker(); } catch(err) {} }} 
+                    className="relative cursor-pointer w-6 h-6 flex items-center justify-center bg-transparent border-none p-0 outline-none hover:opacity-80 transition-opacity"
+                  >
+                    <CalendarIcon size={22} weight="fill" className="text-indigo-500 cursor-pointer" />
                     <input
                       type="date"
-                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      className="absolute inset-0 opacity-0 pointer-events-none"
                       onChange={(e) => setSelectedDate(e.target.value || null)}
                       value={selectedDate || ""}
                     />
-                  </div>
+                  </button>
                 )}
               </div>
             )}
@@ -397,15 +416,19 @@ export default function TaskPanel({
                   </button>
                 </div>
                 {activeView === "faculty" && (
-                  <div className="relative w-6 h-6 flex items-center justify-center">
-                    <CalendarIcon size={22} weight="fill" className="text-indigo-500" />
+                  <button 
+                    type="button" 
+                    onClick={(e) => { try { e.currentTarget.querySelector('input')?.showPicker(); } catch(err) {} }} 
+                    className="relative cursor-pointer w-6 h-6 flex items-center justify-center bg-transparent border-none p-0 outline-none hover:opacity-80 transition-opacity"
+                  >
+                    <CalendarIcon size={22} weight="fill" className="text-indigo-500 cursor-pointer" />
                     <input
                       type="date"
-                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      className="absolute inset-0 opacity-0 pointer-events-none"
                       onChange={(e) => setSelectedDate(e.target.value || null)}
                       value={selectedDate || ""}
                     />
-                  </div>
+                  </button>
                 )}
               </div>
             )}
@@ -421,15 +444,19 @@ export default function TaskPanel({
                     onAddTask?.();
                   }}
                 />
-                <div className="relative cursor-pointer w-6 h-6 flex items-center justify-center">
-                  <CalendarIcon size={22} weight="fill" className="text-indigo-500" />
+                <button 
+                  type="button" 
+                  onClick={(e) => { try { e.currentTarget.querySelector('input')?.showPicker(); } catch(err) {} }} 
+                  className="relative cursor-pointer w-6 h-6 flex items-center justify-center bg-transparent border-none p-0 outline-none hover:opacity-80 transition-opacity"
+                >
+                  <CalendarIcon size={22} weight="fill" className="text-indigo-500 cursor-pointer" />
                   <input
                     type="date"
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    className="absolute inset-0 opacity-0 pointer-events-none"
                     onChange={(e) => setSelectedDate(e.target.value || null)}
                     value={selectedDate || ""}
                   />
-                </div>
+                </button>
               </div>
             )}
         </div>
@@ -448,8 +475,8 @@ export default function TaskPanel({
             </button>
           </div>
         )}
-        <div className="max-h-[240px] overflow-y-auto pr-1">
-          {(loading || isCalendarLoading || isDbFacultyLoading) && tasksToShow.length === 0 ? (
+        <div className="max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
+          {(loading || isCalendarLoading || isDbFacultyLoading || (enableInfiniteScroll && role === "faculty" && isInfiniteFacultyPending)) && tasksToShow.length === 0 ? (
             <>
               <TaskCardShimmer />
               <TaskCardShimmer />
@@ -465,14 +492,14 @@ export default function TaskPanel({
                 key={task.facultyTaskId}
                 className="bg-[#E8F8EF] rounded-md mt-3 p-2 flex justify-between"
               >
-                <div className="w-[80%]">
-                  <h5 className="text-sm font-semibold text-[#16284F]">
+                <div className="w-[75%] pr-2">
+                  <h5 className="text-sm font-semibold text-[#16284F] break-words">
                     {task.title}
                   </h5>
-                  <p className="text-xs text-[#454545]">{task.description}</p>
+                  <p className="text-xs text-[#454545] break-words whitespace-pre-wrap mt-0.5">{task.description}</p>
                 </div>
 
-                <div className="w-[20%] flex flex-col items-center justify-between">
+                <div className="w-[25%] flex flex-col items-end justify-start gap-2">
                   <p className="text-xs font-medium text-[#6B7280]">
                     {formatTime(task.time)}
                   </p>
@@ -534,6 +561,8 @@ export default function TaskPanel({
           }}
           onSave={async (payload, taskId) => {
             await onSaveTask(payload, taskId);
+            queryClient.invalidateQueries({ queryKey: ["facultyTasksInfinite"] });
+            queryClient.invalidateQueries({ queryKey: ["taskPanelCalendarTasks"] });
             if (selectedDate) {
               setRefreshTrigger((prev) => prev + 1);
             }

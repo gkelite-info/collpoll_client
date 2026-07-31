@@ -1,5 +1,5 @@
 import { Briefcase, Buildings, GraduationCap } from "@phosphor-icons/react";
-import { useFacultyExtras } from "./useFacultyExtras";
+import { useFacultyExtras } from "@/app/(screens)/admin/(dashboard)/utils/useFacultyExtras";
 import { FacultyCardShimmer } from "./FacultyCardShimmer";
 import { Avatar } from "@/app/utils/Avatar";
 

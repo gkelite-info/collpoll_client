@@ -154,6 +154,8 @@ export async function fetchCollegeAnnouncements({
 
   if (selectedDate) {
     query = query.eq("date", selectedDate);
+  } else {
+    query = query.lte("date", today);
   }
 
   if (view === "my") {
@@ -457,4 +459,120 @@ export async function fetchAnnouncementDetails(announcementId: number) {
     creatorImage,
     targetRoles,
   };
+}
+
+/* =====================================================
+   FETCH CALENDAR ANNOUNCEMENTS (NON-PAGINATED, SPECIFIC DATE)
+===================================================== */
+
+export async function fetchCalendarAnnouncements({
+  collegeId,
+  userId,
+  userRole,
+  activeView,
+  selectedDate,
+  isSchool,
+}: {
+  collegeId: number;
+  userId: number | string;
+  userRole: string;
+  activeView: string;
+  selectedDate: string;
+  isSchool?: boolean;
+}) {
+  const numericUserId = Number(userId);
+
+  const roleRelation =
+    activeView === "others"
+      ? "college_announcements_roles!inner ( role, deletedAt )"
+      : "college_announcements_roles ( role, deletedAt )";
+
+  let query = supabase
+    .from("college_announcements")
+    .select(`
+      collegeAnnouncementId,
+      announcementTitle,
+      date,
+      type,
+      createdBy,
+      createdByRole,
+      createdAt,
+      ${roleRelation}
+    `)
+    .eq("collegeId", collegeId)
+    .is("is_deleted", false)
+    .eq("date", selectedDate);
+
+  if (activeView === "my") {
+    query = query.eq("createdBy", numericUserId);
+  } else {
+    const targetRoleValues = [userRole.toLowerCase().replace(/[^a-z]/g, "")];
+    const canonicalRoles: Record<string, string> = {
+      admin: "Admin",
+      collegeadmin: "CollegeAdmin",
+      collegehr: "CollegeHr",
+      faculty: "Faculty",
+      finance: "Finance",
+      financemanager: "FinanceManager",
+      accountant: "Finance",
+      hr: "CollegeHr",
+      parent: "Parent",
+      placement: "PlacementOfficer",
+      placementofficer: "PlacementOfficer",
+      superadmin: "SuperAdmin",
+      student: "Student",
+      wellbeingexecutive: "WellbeingExecutive",
+      wellbeingmanager: "WellbeingManager",
+    };
+    const mappedRole = canonicalRoles[targetRoleValues[0]] || userRole;
+
+    query = query
+      .neq("createdBy", numericUserId)
+      .eq("college_announcements_roles.role", mappedRole)
+      .is("college_announcements_roles.deletedAt", null);
+  }
+
+  const { data, error } = await query.order("createdAt", { ascending: false });
+
+  if (error) throw error;
+
+  const typeIcons: Record<string, string> = {
+    class: "/class.png",
+    exam: "/exam.png",
+    meeting: "/meeting.png",
+    holiday: "/calendar-3d.png",
+    event: "/event.png",
+    notice: "/clip.png",
+    result: "/result.jpg",
+    timetable: "/timetable.png",
+    placement: "/placement.png",
+    emergency: "/emergency.png",
+    finance: "/finance.jpg",
+    other: "/others.png",
+  };
+
+  const formatRole = (role: string, isSchoolFlag?: boolean) => {
+    let formatted = role?.replace(/([A-Z])/g, " $1").replace(/_/g, " ").trim().replace(/\b\w/g, (c) => c.toUpperCase());
+    if (isSchoolFlag) { formatted = formatted?.replace(/College/g, "School"); }
+    return formatted;
+  };
+
+  const formatted = (data || []).map((item: any) => {
+    const creatorRoleFormatted = formatRole(item.createdByRole, isSchool);
+
+    return {
+      collegeAnnouncementId: item.collegeAnnouncementId,
+      title: item.announcementTitle,
+      date: item.date,
+      createdAt: item.createdAt,
+      type: item.type,
+      image: typeIcons[item.type] || "/clip.png",
+      imgHeight: "h-10",
+      cardBg: "#E8F8EF",
+      imageBg: "#D3F1E0",
+      professor: activeView === "my" ? "By You" : `By ${creatorRoleFormatted}`,
+    };
+  });
+
+  return formatted;
 }

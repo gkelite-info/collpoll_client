@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
-import { useUser } from "../utils/context/UserContext";
+import { useUser } from "@/app/utils/context/UserContext";
 import { Image as ImageIcon } from "@phosphor-icons/react";
 import { deleteUserProfilePhoto, getUserProfilePhoto, upsertUserProfilePhoto } from "@/lib/helpers/profile/profileInfo";
 import { ProfileShimmer } from "./shimmers/ProfileShimmer";

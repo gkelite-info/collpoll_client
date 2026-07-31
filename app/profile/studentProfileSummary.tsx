@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { useUser } from "../utils/context/UserContext";
+import { useUser } from "@/app/utils/context/UserContext";
 import {
   getUserProfileSummary,
   createProfileSummary,

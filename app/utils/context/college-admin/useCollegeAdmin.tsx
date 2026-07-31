@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { useUser } from "../UserContext";
+import { useUser } from "@/app/utils/context/UserContext";
 import { fetchCollegeAdminContext } from "./collegeAdminContextAPI";
 
 export type CollegeAdminContextType = {

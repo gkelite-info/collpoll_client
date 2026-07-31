@@ -1,8 +1,8 @@
 "use client";
 
-import { CalendarIcon, PencilSimple, Plus, Trash, X } from "@phosphor-icons/react";
+import { CalendarIcon, PencilSimple, Plus, PlusCircleIcon, Trash, X } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AddAnnouncementModal from "../components/modals/AddAnnouncementModal";
 import {
   deactivateCollegeAnnouncement,
@@ -10,12 +10,12 @@ import {
 } from "@/lib/helpers/announcements/announcementAPI";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
-import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@/app/utils/context/UserContext";
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
-import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
+import { fetchCollegeAnnouncements, fetchCalendarAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
 type AnnounceCard = {
   collegeAnnouncementId?: number;
@@ -71,10 +71,10 @@ const AnnouncementListShimmer = () => (
     {[1, 2, 3, 4].map((i) => (
       <div
         key={i}
-        className="h-[70.5px] bg-gray-50 rounded-lg flex items-center p-2 gap-2 border border-gray-100"
+        className="lg:h-[70.5px] bg-gray-50 border border-gray-100 rounded-lg flex items-center p-2 gap-1"
       >
         <div className="h-[58px] w-[58px] bg-gray-200 rounded-md animate-pulse flex-shrink-0" />
-        <div className="flex-1 space-y-2 px-1">
+        <div className="h-full w-[78%] rounded-md flex flex-col flex-1 min-w-0 justify-center space-y-2 px-1">
           <div className="h-3.5 bg-gray-200 rounded w-3/4 animate-pulse" />
           <div className="flex justify-between">
             <div className="h-2.5 bg-gray-200 rounded w-1/3 animate-pulse" />
@@ -249,6 +249,7 @@ export default function AnnouncementsCard({
   readOnly,
   className,
 }: AnnouncementsCardProps) {
+  const queryClient = useQueryClient();
   const pathname = usePathname();
   const t = useTranslations("Dashboard.student");
   const isFinanceDashboard = pathname.startsWith("/finance");
@@ -282,6 +283,8 @@ export default function AnnouncementsCard({
   const [editData, setEditData] = useState<AnnounceCard | null>(null);
 
   const [viewingAnnouncement, setViewingAnnouncement] = useState<AnnounceCard | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { userId, collegeId, role: userRole, collegeEducationType } = useUser();
   const isSchool = isSchoolEducation(collegeEducationType);
@@ -296,7 +299,7 @@ export default function AnnouncementsCard({
     fetchNextPage: fetchNextAnnouncements,
     hasNextPage: hasNextAnnouncements,
     isFetchingNextPage: isFetchingNextAnnouncements,
-    isLoading: isInfiniteAnnouncementsLoading,
+    isPending: isInfiniteAnnouncementsPending,
   } = useInfiniteQuery({
     queryKey: ["announcementsInfinite", collegeId, userId, userRole, activeView, selectedDate, refreshTrigger],
     queryFn: async ({ pageParam = 1 }) => {
@@ -354,13 +357,6 @@ export default function AnnouncementsCard({
 
   const infiniteAnnouncements = infiniteAnnouncementsData?.pages.flatMap(p => p.data) || [];
 
-  const getLocalDateRangeInUTC = (dateStr: string) => {
-    const [year, month, day] = dateStr.split("-").map(Number);
-    const start = new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
-    const end = new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
-    return { start, end };
-  };
-
   const formatDateToDMY = (dateStr: string) => {
     if (!dateStr) return "";
     const parts = dateStr.split("-");
@@ -376,109 +372,26 @@ export default function AnnouncementsCard({
         return [];
       }
 
-      const { start, end } = getLocalDateRangeInUTC(selectedDate);
-      const numericUserId = Number(userId);
-
-      const roleRelation =
-        activeView === "others"
-          ? "college_announcements_roles!inner ( role, deletedAt )"
-          : "college_announcements_roles ( role, deletedAt )";
-
-      let query = supabase
-        .from("college_announcements")
-        .select(`
-          collegeAnnouncementId,
-          announcementTitle,
-          date,
-          type,
-          createdBy,
-          createdByRole,
-          createdAt,
-          ${roleRelation}
-        `)
-        .eq("collegeId", collegeId)
-        .is("is_deleted", false)
-        .gte("createdAt", start)
-        .lte("createdAt", end);
-
-      if (activeView === "my") {
-        query = query.eq("createdBy", numericUserId);
-      } else {
-        const targetRoleValues = [userRole.toLowerCase().replace(/[^a-z]/g, "")];
-        const canonicalRoles: Record<string, string> = {
-          admin: "Admin",
-          collegeadmin: "CollegeAdmin",
-          collegehr: "CollegeHr",
-          faculty: "Faculty",
-          finance: "Finance",
-          financemanager: "FinanceManager",
-          accountant: "Finance",
-          hr: "CollegeHr",
-          parent: "Parent",
-          placement: "PlacementOfficer",
-          placementofficer: "PlacementOfficer",
-          superadmin: "SuperAdmin",
-          student: "Student",
-          wellbeingexecutive: "WellbeingExecutive",
-          wellbeingmanager: "WellbeingManager",
-        };
-        const mappedRole = canonicalRoles[targetRoleValues[0]] || userRole;
-
-        query = query
-          .neq("createdBy", numericUserId)
-          .eq("college_announcements_roles.role", mappedRole)
-          .is("college_announcements_roles.deletedAt", null);
-      }
-
-      const { data, error } = await query.order("createdAt", { ascending: false });
-
-      if (error) throw error;
-
-      const typeIcons: Record<string, string> = {
-        class: "/class.png",
-        exam: "/exam.png",
-        meeting: "/meeting.png",
-        holiday: "/calendar-3d.png",
-        event: "/event.png",
-        notice: "/clip.png",
-        result: "/result.jpg",
-        timetable: "/timetable.png",
-        placement: "/placement.png",
-        emergency: "/emergency.png",
-        finance: "/finance.jpg",
-        other: "/others.png",
-      };
-
-      const formatted = ((data || []) as CalendarAnnouncementRow[]).map((item) => {
-        const creatorRoleFormatted = formatRole(item.createdByRole, isSchool);
-
-        return {
-          collegeAnnouncementId: item.collegeAnnouncementId,
-          title: item.announcementTitle,
-          date: item.date,
-          createdAt: item.createdAt,
-          type: item.type,
-          image: typeIcons[item.type] || "/clip.png",
-          imgHeight: "h-10",
-          cardBg: "#E8F8EF",
-          imageBg: "#D3F1E0",
-          professor: activeView === "my" ? "By You" : `By ${creatorRoleFormatted}`,
-        };
+      return fetchCalendarAnnouncements({
+        collegeId,
+        userId,
+        userRole,
+        activeView,
+        selectedDate,
+        isSchool,
       });
-
-      return formatted;
     },
     enabled: !!selectedDate && !!collegeId && !!userId && !!userRole,
     staleTime: 5 * 60 * 1000,
   });
 
-  const announcementsToShow = enableInfiniteScroll 
+  const announcementsToShow: AnnounceCard[] = enableInfiniteScroll 
     ? infiniteAnnouncements 
     : (selectedDate ? calendarAnnouncements : announceCard);
     
-  const isAnnouncementsLoading = enableInfiniteScroll 
-    ? isInfiniteAnnouncementsLoading 
-    : (isLoading || (selectedDate ? isCalendarLoading : false));
+  const isAnnouncementsLoading = isLoading || (enableInfiniteScroll 
+    ? isInfiniteAnnouncementsPending 
+    : (selectedDate ? isCalendarLoading : false));
 
   const formatRelativeTime = (createdAt?: string) => {
     if (!createdAt) return "";
@@ -534,44 +447,32 @@ export default function AnnouncementsCard({
   };
 
   const handleDelete = (announcementId: number) => {
-    toast((toastItem) => (
-      <div className="flex flex-col gap-3">
-        <span className="text-sm font-medium">
-          {t("Are you sure you want to delete this announcement?")}
-        </span>
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={() => toast.dismiss(toastItem.id)}
-            className="px-3 py-1 text-sm rounded-md bg-gray-200 hover:bg-gray-300"
-          >
-            {t("Cancel")}
-          </button>
-          <button
-            onClick={async () => {
-              toast.dismiss(toastItem.id);
-              try {
-                const res = await deactivateCollegeAnnouncement(announcementId);
-                if (!res.success) {
-                  toast.error(t("Failed to delete announcement"));
-                  return;
-                }
-                toast.success(t("Announcement deleted successfully"));
-                await refreshAnnouncements?.();
-                if (selectedDate) {
-                  setRefreshTrigger((prev) => prev + 1);
-                }
-              } catch (error) {
-                console.error("Delete error:", error);
-                toast.error(t("Something went wrong"));
-              }
-            }}
-            className="px-3 py-1 text-sm rounded-md bg-red-500 text-white hover:bg-red-600"
-          >
-            {t("Delete")}
-          </button>
-        </div>
-      </div>
-    ), { id: `delete-ann-${announcementId}` });
+    setDeleteId(announcementId);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
+    try {
+      const res = await deactivateCollegeAnnouncement(deleteId);
+      if (!res.success) {
+        toast.error(t("Failed to delete announcement"));
+        return;
+      }
+      toast.success(t("Announcement deleted successfully"));
+      setDeleteId(null);
+      await refreshAnnouncements?.();
+      queryClient.invalidateQueries({ queryKey: ["announcementsInfinite"] });
+      queryClient.invalidateQueries({ queryKey: ["calendarAnnouncements"] });
+      if (selectedDate) {
+        setRefreshTrigger((prev) => prev + 1);
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error(t("Something went wrong"));
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -590,25 +491,29 @@ export default function AnnouncementsCard({
 
           <div className="flex items-center gap-2">
             {!isReadOnlyUser && canManageAnnouncements && activeView === "my" && (
-              <button
+              <PlusCircleIcon 
+                size={22} 
+                weight="fill"
+                className="text-[#43C17A] cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => {
                   setEditData(null);
                   setOpenModal(true);
                 }}
-                className="bg-[#43C17A] text-white w-7 h-7 flex items-center justify-center rounded-full cursor-pointer hover:bg-[#34a362] transition-colors"
-              >
-                <Plus size={14} weight="bold" />
-              </button>
+              />
             )}
-            <div className="relative w-6 h-6 flex items-center justify-center cursor-pointer">
-              <CalendarIcon size={22} weight="fill" className="text-indigo-500" />
+            <button 
+              type="button" 
+              onClick={(e) => { try { e.currentTarget.querySelector('input')?.showPicker(); } catch(err) {} }} 
+              className="relative cursor-pointer w-6 h-6 flex items-center justify-center bg-transparent border-none p-0 outline-none hover:opacity-80 transition-opacity"
+            >
+              <CalendarIcon size={22} weight="fill" className="text-indigo-500 cursor-pointer" />
               <input
                 type="date"
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                className="absolute inset-0 opacity-0 pointer-events-none"
                 onChange={(e) => setSelectedDate(e.target.value || null)}
                 value={selectedDate || ""}
               />
-            </div>
+            </button>
           </div>
         </div>
 
@@ -657,7 +562,7 @@ export default function AnnouncementsCard({
       )}
 
       <div
-        className="flex min-h-[300px] flex-1 flex-col gap-2 overflow-y-auto text-center"
+        className="flex min-h-[300px] flex-1 flex-col gap-2 overflow-y-auto text-center custom-scrollbar pr-1"
         style={height ? { maxHeight: height } : undefined}
       >
         {isAnnouncementsLoading ? (
@@ -682,7 +587,7 @@ export default function AnnouncementsCard({
             </div>
           )
         ) : (
-          announcementsToShow.map((card, index) => (
+          announcementsToShow.map((card: AnnounceCard, index: number) => (
             <div
               key={index}
               onClick={() => handleCardClick(card)}
@@ -767,10 +672,22 @@ export default function AnnouncementsCard({
           setOpenModal(false);
           setEditData(null);
           await refreshAnnouncements?.();
+          queryClient.invalidateQueries({ queryKey: ["announcementsInfinite"] });
+          queryClient.invalidateQueries({ queryKey: ["calendarAnnouncements"] });
           if (selectedDate) {
             setRefreshTrigger((prev) => prev + 1);
           }
         }}
+      />
+
+      <ConfirmDeleteModal
+        open={!!deleteId}
+        onCancel={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+        title="Delete"
+        name="announcement"
+        customDescription={t("Are you sure you want to delete this announcement?")}
+        isDeleting={isDeleting}
       />
     </div>
   );

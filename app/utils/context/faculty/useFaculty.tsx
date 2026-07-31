@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
-import { useUser } from "../UserContext";
+import { useMemo, useState, createContext, useContext } from "react";
+import { useUser } from "@/app/utils/context/UserContext";
 import { fetchFacultyContext } from "./facultyContextAPI";
 import { useQuery } from "@tanstack/react-query";
 
@@ -61,41 +61,11 @@ export type FacultyContextType = {
     setSelectedSectionIndex: (index: number) => void;
 };
 
-
 const FacultyContext = createContext<FacultyContextType | null>(null);
 
 export const FacultyProvider = ({ children }: { children: React.ReactNode }) => {
     const { userId, role, loading: userLoading } = useUser();
-
-    const [state, setState] = useState<FacultyContextType>({
-        loading: true,
-        facultyId: null,
-        userId: null,
-        fullName: null,
-        email: null,
-        mobile: null,
-        role: null,
-        gender: null,
-        collegeId: null,
-        collegeEducationId: null,
-        faculty_edu_type: null,
-        collegeBranchId: null,
-        college_branch: null,
-        isActive: null,
-        sections: [],
-        sectionIds: [],
-        subjectIds: [],
-        academicYearIds: [],
-        faculty_subject: [],
-        collegeAcademicYears: [],
-        collegeAcademicYear: null,
-        selectedSectionIndex: 0,
-        setSelectedSectionIndex: () => {},
-    });
-
-    const setSelectedSectionIndex = (index: number) => {
-        setState(s => ({ ...s, selectedSectionIndex: index }));
-    };
+    const [selectedSectionIndex, setSelectedSectionIndex] = useState(0);
 
     const { data: facultyData, isLoading: queryLoading, error } = useQuery({
         queryKey: ["facultyContext", userId],
@@ -104,50 +74,66 @@ export const FacultyProvider = ({ children }: { children: React.ReactNode }) => 
         staleTime: 5 * 60 * 1000,
     });
 
-    useEffect(() => {
-        if (userLoading || (!userId || role !== "Faculty")) {
-            if (!userLoading && (!userId || role !== "Faculty")) {
-                setState((s) => ({ ...s, loading: false }));
-            }
-            return;
+    const isLoading = userLoading || queryLoading || (!!userId && role === "Faculty" && !facultyData && !error);
+
+    const value = useMemo<FacultyContextType>(() => {
+        if (!facultyData) {
+            return {
+                loading: isLoading,
+                facultyId: null,
+                userId: null,
+                fullName: null,
+                email: null,
+                mobile: null,
+                role: null,
+                gender: null,
+                collegeId: null,
+                collegeEducationId: null,
+                faculty_edu_type: null,
+                collegeBranchId: null,
+                college_branch: null,
+                isActive: null,
+                sections: [],
+                sectionIds: [],
+                subjectIds: [],
+                academicYearIds: [],
+                faculty_subject: [],
+                collegeAcademicYears: [],
+                collegeAcademicYear: null,
+                selectedSectionIndex,
+                setSelectedSectionIndex,
+            };
         }
 
-        if (facultyData) {
-            setState(s => ({
-                ...s,
-                loading: false,
-                facultyId: facultyData.facultyId,
-                userId: facultyData.userId,
-                fullName: facultyData.fullName,
-                email: facultyData.email,
-                mobile: facultyData.mobile,
-                role: facultyData.role,
-                gender: facultyData.gender,
-                collegeId: facultyData.collegeId,
-                collegeEducationId: facultyData.collegeEducationId,
-                collegeBranchId: facultyData.collegeBranchId,
-                college_branch: facultyData.college_branch,
-                faculty_edu_type: facultyData.faculty_edu_type,
-                isActive: facultyData.isActive,
-                sections: facultyData.sections,
-                sectionIds: facultyData.sectionIds,
-                subjectIds: facultyData.subjectIds,
-                academicYearIds: facultyData.academicYearIds,
-                faculty_subject: facultyData.faculty_subject,
-                collegeAcademicYears: facultyData.collegeAcademicYears,
-                collegeAcademicYear: facultyData.collegeAcademicYear,
-                setSelectedSectionIndex,
-            }));
-        } else if (error) {
-            console.error("Failed to load faculty context", error);
-            setState((s) => ({ ...s, loading: false }));
-        } else if (queryLoading) {
-            setState((s) => ({ ...s, loading: true }));
-        }
-    }, [facultyData, queryLoading, error, userLoading, userId, role]);
+        return {
+            loading: isLoading,
+            facultyId: facultyData.facultyId ?? null,
+            userId: facultyData.userId ?? null,
+            fullName: facultyData.fullName ?? null,
+            email: facultyData.email ?? null,
+            mobile: facultyData.mobile ?? null,
+            role: facultyData.role ?? null,
+            gender: facultyData.gender ?? null,
+            collegeId: facultyData.collegeId ?? null,
+            collegeEducationId: facultyData.collegeEducationId ?? null,
+            collegeBranchId: facultyData.collegeBranchId ?? null,
+            college_branch: facultyData.college_branch ?? null,
+            faculty_edu_type: facultyData.faculty_edu_type ?? null,
+            isActive: facultyData.isActive ?? null,
+            sections: facultyData.sections ?? [],
+            sectionIds: facultyData.sectionIds ?? [],
+            subjectIds: facultyData.subjectIds ?? [],
+            academicYearIds: facultyData.academicYearIds ?? [],
+            faculty_subject: facultyData.faculty_subject ?? [],
+            collegeAcademicYears: facultyData.collegeAcademicYears ?? [],
+            collegeAcademicYear: facultyData.collegeAcademicYear ?? null,
+            selectedSectionIndex,
+            setSelectedSectionIndex,
+        };
+    }, [facultyData, isLoading, selectedSectionIndex]);
 
     return (
-        <FacultyContext.Provider value={state}>
+        <FacultyContext.Provider value={value}>
             {children}
         </FacultyContext.Provider>
     );

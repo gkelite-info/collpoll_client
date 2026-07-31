@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabaseClient";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 
 export type TaskPayload = {
   title: string;
@@ -218,8 +219,12 @@ export default function TaskModal({
       );
 
       handleCancel();
-    } catch {
-      toast.error("Failed to save task");
+    } catch (err: any) {
+      let errorMessage = err?.message || "Failed to save task";
+      if (errorMessage.includes("value too long for type character varying")) {
+        errorMessage = "Your text is too long! Please shorten it.";
+      }
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -233,7 +238,7 @@ export default function TaskModal({
             {defaultValues ? "Edit Task" : "Add Task"}
           </h2>
 
-          <button onClick={onClose}>
+          <button onClick={onClose} className="p-1 rounded-md hover:bg-gray-100 transition-colors">
             <X
               size={24}
               weight="bold"
@@ -274,39 +279,27 @@ export default function TaskModal({
 
         {role === "faculty" && (
           <div className="flex gap-3 mb-5">
-            <div className="flex flex-col w-1/2 text-left">
-              <label className="text-sm font-medium mb-1 text-[#282828]">
-                Academic Year <span className="text-red-500">*</span>
-              </label>
-              <select
+            <div className="flex flex-col w-1/2 text-left z-[100]">
+              <CustomDropdown
+                label="Academic Year *"
                 value={selectedYearId}
-                onChange={(e) => {
-                  setSelectedYearId(e.target.value);
+                options={academicYears.map((year) => ({
+                  value: year.id.toString(),
+                  label: year.name,
+                }))}
+                onChange={(val) => {
+                  setSelectedYearId(String(val));
                   setSelectedSectionId("");
                 }}
-                className="border rounded-md px-3 py-2 text-sm outline-none text-[#282828] bg-white cursor-pointer"
-              >
-                <option value="">Select Year</option>
-                {academicYears.map((year) => (
-                  <option key={year.id} value={year.id}>
-                    {year.name}
-                  </option>
-                ))}
-              </select>
+                placeholder="Select Year"
+              />
             </div>
 
-            <div className="flex flex-col w-1/2 text-left">
-              <label className="text-sm font-medium mb-1 text-[#282828]">
-                Section <span className="text-red-500">*</span>
-              </label>
-              <select
+            <div className="flex flex-col w-1/2 text-left z-[90]">
+              <CustomDropdown
+                label="Section *"
                 value={selectedSectionId}
-                onChange={(e) => setSelectedSectionId(e.target.value)}
-                disabled={!selectedYearId}
-                className="border rounded-md px-3 py-2 text-sm outline-none text-[#282828] bg-white cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                <option value="">Select Section</option>
-                {Array.from(
+                options={Array.from(
                   new Map(
                     allSections
                       .filter((item) => String(item.collegeAcademicYearId) === selectedYearId)
@@ -322,13 +315,15 @@ export default function TaskModal({
                   const secName = Array.isArray(item.college_sections)
                     ? item.college_sections[0]?.collegeSections
                     : item.college_sections?.collegeSections;
-                  return (
-                    <option key={secId} value={secId}>
-                      {secName}
-                    </option>
-                  );
+                  return {
+                    value: String(secId),
+                    label: secName,
+                  };
                 })}
-              </select>
+                onChange={(val) => setSelectedSectionId(String(val))}
+                disabled={!selectedYearId}
+                placeholder="Select Section"
+              />
             </div>
           </div>
         )}
@@ -375,8 +370,11 @@ export default function TaskModal({
           </button>
 
           <button
-            className="w-1/2 border py-2 rounded-md text-sm text-[#282828] cursor-pointer"
+            className={`w-1/2 border py-2 rounded-md text-sm text-[#282828] ${
+              saving ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-gray-50"
+            }`}
             onClick={handleCancel}
+            disabled={saving}
           >
             Cancel
           </button>

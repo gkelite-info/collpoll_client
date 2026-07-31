@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { Trash, Copy, CaretDown, CheckCircle } from "@phosphor-icons/react";
 import { AssignmentRow } from "./facultyAssignmentTypes";
-import { CustomMultiSelect, CustomSingleSelect } from "../userModalComponents";
+import { CustomMultiSelect, CustomSingleSelect } from "@/app/(screens)/admin/(dashboard)/components/modal/userModalComponents";
 
 type FacultyAssignmentRowProps = {
   row: AssignmentRow;

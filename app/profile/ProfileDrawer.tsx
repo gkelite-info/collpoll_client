@@ -12,13 +12,13 @@ import {
 } from "@phosphor-icons/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { useUser } from "../utils/context/UserContext";
+import { useUser } from "@/app/utils/context/UserContext";
 import ConfirmLogoutModal from "../components/modals/logoutModal";
 import { logoutUser } from "@/lib/helpers/logoutUser";
 import toast from "react-hot-toast";
 import { extractAcademicYearNumber } from "../utils/academicYear";
-import { useFaculty } from "../utils/context/faculty/useFaculty";
-import { useCollegeAdmin } from "../utils/context/college-admin/useCollegeAdmin";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type Props = {
