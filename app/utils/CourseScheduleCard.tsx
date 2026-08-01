@@ -11,12 +11,17 @@ type Props = {
   degree?: string;
   year?: string;
   fullWidth?: boolean;
+  isLoading?: boolean;
 };
 
 export default function CourseScheduleCard({
   style = "",
   isVisibile = true,
   fullWidth = false,
+  department,
+  degree,
+  year,
+  isLoading = false,
 }: Props) {
   const [time, setTime] = useState("");
   const [day, setDay] = useState("");
@@ -32,16 +37,24 @@ export default function CourseScheduleCard({
   const academicYearNumber = extractAcademicYearNumber(collegeAcademicYear);
   const { college_branch, faculty_edu_type, sections, selectedSectionIndex, loading: facultyLoading } = useFaculty();
 
-  const loading = userLoading || facultyLoading;
+  const loading = isLoading || userLoading || facultyLoading;
 
   let displayEducation = collegeEducationType;
   let displayBranch = collegeBranchCode || college_branch;
 
-  if (role === "Faculty" && sections && sections.length > 0) {
-    const activeSection = sections[selectedSectionIndex];
-    if (activeSection) {
-      displayBranch = activeSection.college_branch?.collegeBranchCode || college_branch || "";
-      displayEducation = activeSection.faculty_edu_type?.collegeEducationType || faculty_edu_type || "";
+  if (role === "Faculty") {
+    if (department || degree || year) {
+      if (degree && degree.toLowerCase().includes("school")) {
+        displayBranch = year ? `Class ${year}` : (displayEducation || "");
+      } else {
+        displayBranch = department || degree || displayEducation || "";
+      }
+    } else if (sections && sections.length > 0) {
+      const activeSection = sections[selectedSectionIndex];
+      if (activeSection) {
+        displayBranch = activeSection.college_branch?.collegeBranchCode || college_branch || "";
+        displayEducation = activeSection.faculty_edu_type?.collegeEducationType || faculty_edu_type || "";
+      }
     }
   }
 

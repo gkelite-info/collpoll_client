@@ -15,8 +15,10 @@ import {
   User,
   XCircle,
 } from "@phosphor-icons/react";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 
 interface Props {
   students: UIStudent[];
@@ -34,6 +36,15 @@ interface Props {
   onFilterChange?: (type: "class" | "section" | "calendarType", value: string) => void;
   loadingFilters?: boolean;
   calendarType?: "Single" | "Bulk";
+  page?: number;
+  itemsPerPage?: number;
+  totalItems?: number;
+  onPageChange?: (page: number) => void;
+  onItemsPerPageChange?: (items: number) => void;
+  loadingData?: boolean;
+  isCurrentDate?: boolean;
+  sortStatus?: string;
+  onSortChange?: (val: string) => void;
 }
 
 // 🟢 CUSTOM DROPDOWN COMPONENT for Production-Grade UX
@@ -196,14 +207,21 @@ export default function StuAttendanceTable({
   onFilterChange,
   loadingFilters = false,
   calendarType = "Single",
+  page = 1,
+  itemsPerPage = 20,
+  totalItems = 0,
+  onPageChange,
+  onItemsPerPageChange,
+  loadingData = false,
+  isCurrentDate = true,
+  sortStatus = "All",
+  onSortChange,
 }: Props) {
   const router = useRouter();
-  const [sort, setSort] = useState<string>("All");
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const filtered = students.filter(
-    (s) => sort === "All" || s.attendance === sort,
-  );
+  const filtered = students; // Filtering handled by parent via server-side + URL params
 
   const updateAttendance = (id: string, value: UIStudent["attendance"]) => {
     if (!isEditing) return;
@@ -267,77 +285,52 @@ export default function StuAttendanceTable({
         }
       `}</style>
 
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {!isTopicMode && onFilterChange && (
             <>
               {/* Calendar Type Dropdown */}
-              <div className="relative">
-                <select
+              <div className="w-[120px]">
+                <CustomDropdown theme="always-green" hideCheckmark
+                  options={[{ label: "Single", value: "Single" }, { label: "Bulk", value: "Bulk" }]}
                   value={calendarType}
-                  onChange={(e) => onFilterChange("calendarType", e.target.value)}
-                  className="appearance-none rounded-full bg-[#43C17A1C] pl-4 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm min-w-[100px]"
-                  disabled={loadingFilters}
-                >
-                  <option value="Single">Single</option>
-                  <option value="Bulk">Bulk</option>
-                </select>
-                <CaretDown
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
-                  size={12}
-                  weight="bold"
+                  onChange={(val) => onFilterChange("calendarType", String(val))}
+                  disabled={loadingFilters || loadingData}
+                  className="!rounded-full !py-1.5 min-h-[32px]"
                 />
               </div>
 
               {/* Class Dropdown */}
-              <div className="relative">
-                <select
+              <div className="min-w-[220px]">
+                <CustomDropdown theme="always-green" hideCheckmark
+                  options={
+                    classes.filter(c => (calendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-"))).length > 0
+                      ? classes.filter(c => (calendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-"))).map((c) => ({ label: c.label, value: c.id }))
+                      : [{ label: "No Classes Found", value: "" }]
+                  }
                   value={selectedClass}
-                  onChange={(e) => onFilterChange("class", e.target.value)}
-                  className="appearance-none rounded-full bg-[#43C17A1C] pl-4 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm min-w-[180px]"
-                  disabled={loadingFilters || !selectedClass}
-                >
-                  {classes.filter(c => (calendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-"))).length > 0 ? (
-                    classes.filter(c => (calendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-"))).map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.label}
-                      </option>
-                    ))
-                  ) : (
-                    <option value="">No Classes Found</option>
-                  )}
-                </select>
-                <CaretDown
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
-                  size={12}
-                  weight="bold"
+                  onChange={(val) => onFilterChange("class", String(val))}
+                  disabled={loadingFilters || loadingData || !selectedClass}
+                  placeholder="Select Class"
+                  className="!rounded-full !py-1.5 min-h-[32px]"
                 />
               </div>
             </>
           )}
 
-          {!isTopicMode && onFilterChange && (
-            <div className="relative">
-              <select
+                    {!isTopicMode && onFilterChange && (
+            <div className="min-w-[150px]">
+              <CustomDropdown theme="always-green" hideCheckmark
+                options={
+                  sections.length > 0
+                    ? sections.map((s) => ({ label: `Section ${s.name}`, value: s.id }))
+                    : [{ label: "All Sections", value: "" }]
+                }
                 value={selectedSection}
-                onChange={(e) => onFilterChange("section", e.target.value)}
-                className="appearance-none rounded-full bg-[#43C17A1C] pl-4 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm"
+                onChange={(val) => onFilterChange("section", String(val))}
                 disabled={loadingFilters || !selectedClass}
-              >
-                {sections.length > 0 ? (
-                  sections.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      Section {s.name}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">All Sections</option>
-                )}
-              </select>
-              <CaretDown
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
-                size={12}
-                weight="bold"
+                placeholder="Select Section"
+                className="!rounded-full !py-1.5 min-h-[32px]"
               />
             </div>
           )}
@@ -347,24 +340,23 @@ export default function StuAttendanceTable({
               Sort:
             </span>
             <div className="relative">
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                className="appearance-none rounded-full bg-[#43C17A1C] pl-3 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm"
-              >
-                <option value="All">All Students</option>
-                <option value="Present">Present</option>
-                <option value="Absent">Absent</option>
-                <option value="Leave">Leave</option>
-                <option value="Class Cancel">Class Cancelled</option>
-              </select>
-              <CaretDown
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
-                size={12}
-                weight="bold"
+              <CustomDropdown theme="always-green" hideCheckmark
+                options={[
+                  { label: "All Students", value: "All" },
+                  { label: "Present", value: "Present" },
+                  { label: "Absent", value: "Absent" },
+                  { label: "Leave", value: "Leave" },
+                  { label: "Class Cancelled", value: "Class Cancel" }
+                ]}
+                value={sortStatus}
+                onChange={(val) => onSortChange?.(String(val))}
+                disabled={isEditing || loadingFilters || loadingData || students.length === 0}
+                className="!rounded-full !py-1.5 min-h-[32px]"
               />
             </div>
           </div>
+
+
         </div>
 
         <div className="flex items-center gap-3 w-full lg:w-auto justify-between lg:justify-end">
@@ -374,12 +366,18 @@ export default function StuAttendanceTable({
               disabled={
                 (!isTopicMode && !selectedClass) ||
                 students.length === 0 ||
-                loadingFilters
+                loadingFilters ||
+                !isCurrentDate
               }
-              className="flex items-center gap-2 bg-[#43C17A] hover:bg-[#36a86a] text-sm cursor-pointer text-white px-4 py-2 rounded-lg shadow-sm transition-transform active:scale-95 disabled:opacity-50 font-medium"
+              className={`flex items-center gap-2 text-sm px-4 py-2 rounded-lg shadow-sm whitespace-nowrap font-medium shrink-0 ${
+                !isCurrentDate 
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-80"
+                  : "bg-[#43C17A] hover:bg-[#36a86a] text-white cursor-pointer transition-transform active:scale-95 disabled:opacity-50"
+              }`}
+              title={!isCurrentDate ? "Attendance can only be marked for today's classes" : ""}
             >
-              <PencilSimple size={18} weight="bold" />
-              Edit Attendance
+              {!isCurrentDate ? <Clock size={18} weight="bold" /> : <PencilSimple size={18} weight="bold" />}
+              {isCurrentDate ? "Edit Attendance" : "View Only"}
             </button>
           ) : (
             <button
@@ -468,7 +466,7 @@ export default function StuAttendanceTable({
             </thead>
 
             <tbody className="divide-y divide-gray-50">
-              {loadingFilters ? (
+              {loadingData || loadingFilters ? (
                 [...Array(5)].map((_, i) => <TableRowSkeleton key={i} />)
               ) : filtered.length > 0 ? (
                 filtered.map((s, index) => (
@@ -597,6 +595,20 @@ export default function StuAttendanceTable({
             </tbody>
           </table>
         </div>
+
+        {onPageChange && (
+          <Pagination
+            currentPage={page}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={onPageChange}
+            itemsPerPageOptions={[10, 20, 50, 100]}
+            onItemsPerPageChange={onItemsPerPageChange}
+            disabled={isEditing || loadingFilters}
+            roundedBottom="rounded-b-xl"
+            alwaysShow={true}
+          />
+        )}
       </div>
     </div>
   );

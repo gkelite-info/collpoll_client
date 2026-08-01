@@ -155,7 +155,7 @@ export async function fetchCollegeAnnouncements({
   if (selectedDate) {
     query = query.eq("date", selectedDate);
   } else {
-    query = query.lte("date", today);
+    query = query.eq("date", today);
   }
 
   if (view === "my") {
