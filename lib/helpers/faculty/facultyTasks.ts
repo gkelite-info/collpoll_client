@@ -199,7 +199,8 @@ export async function fetchFacultyTasksForLoggedInFaculty({
   if (selectedDate) {
     query = query.eq("date", selectedDate);
   } else {
-    query = query.order("date", { ascending: false });
+    const today = new Date().toISOString().split("T")[0];
+    query = query.eq("date", today);
   }
 
   query = query.order("time", { ascending: true });

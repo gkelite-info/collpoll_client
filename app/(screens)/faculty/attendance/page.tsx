@@ -1,6 +1,9 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import { useQuery, keepPreviousData, useQueryClient } from "@tanstack/react-query";
+import { CardsSkeleton } from "./shimmer/cardsSkeleton";
+
 import { useRouter, useSearchParams } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
@@ -39,24 +42,36 @@ function AttendanceContent() {
   const urlClassId = searchParams.get("classId");
   const router = useRouter();
   const { facultyId, loading: contextLoading } = useFaculty();
+  const queryClient = useQueryClient();
 
-  const [classData, setClassData] = useState<UpcomingLesson | null>(null);
-  const [initialized, setInitialized] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [tableLoading, setTableLoading] = useState(false);
-  const [studentsList, setStudentsList] = useState<UIStudent[]>([]);
-  const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
 
-  const [classOptions, setClassOptions] = useState<ClassOption[]>([]);
-  const [sectionOptions, setSectionOptions] = useState<SectionOption[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState<string>("");
-  const [selectedSectionId, setSelectedSectionId] = useState<string>("");
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(new Date());
-  const [selectedCalendarType, setSelectedCalendarType] = useState<"Single" | "Bulk">("Single");
+  const urlDate = searchParams.get("date");
+  const urlType = searchParams.get("type") as "Single" | "Bulk" | null;
+  const urlCId = searchParams.get("cId");
+  const urlSId = searchParams.get("sId");
+  const urlSort = searchParams.get("sort");
 
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(urlDate ? new Date(urlDate) : new Date());
+  const [selectedCalendarType, setSelectedCalendarType] = useState<"Single" | "Bulk">(urlType || "Single");
+  const [selectedClassId, setSelectedClassId] = useState<string>(urlCId || "");
+  const [selectedSectionId, setSelectedSectionId] = useState<string>(urlSId || "");
+  
+  // Update state when URL changes (for Back button navigation)
+  useEffect(() => {
+    if (urlDate) setSelectedCalendarDate(new Date(urlDate));
+    if (urlType) setSelectedCalendarType(urlType);
+    if (urlCId !== null) setSelectedClassId(urlCId);
+    if (urlSId !== null) setSelectedSectionId(urlSId);
+  }, [urlDate, urlType, urlCId, urlSId]);
+
+  const [draftEdits, setDraftEdits] = useState<Record<string, { attendance: string, reason: string }>>({});
+  
   const [isEditing, setIsEditing] = useState(false);
   const [isCancellingMode, setIsCancellingMode] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const activeClassId = urlClassId || selectedClassId;
   const isTopicMode = !!urlClassId;
@@ -64,6 +79,82 @@ function AttendanceContent() {
   const isBulk = activeClassId ? activeClassId.startsWith("bulk-") : false;
   const eventId = activeClassId ? parseInt(isBulk ? activeClassId.split("-")[1] : activeClassId.split("-")[0]) : null;
 
+  const today = new Date();
+  const isCurrentDate = 
+    selectedCalendarDate.getDate() === today.getDate() &&
+    selectedCalendarDate.getMonth() === today.getMonth() &&
+    selectedCalendarDate.getFullYear() === today.getFullYear();
+
+  // Query for classes
+  const dateStr = `${selectedCalendarDate.getFullYear()}-${String(selectedCalendarDate.getMonth() + 1).padStart(2, "0")}-${String(selectedCalendarDate.getDate()).padStart(2, "0")}`;
+  
+  const { data: classOptionsRaw = [], isLoading: classesLoading, isFetching: classesFetching } = useQuery({
+    queryKey: ["facultyClasses", facultyId, dateStr],
+    queryFn: () => getFacultyClasses(facultyId!, dateStr),
+    enabled: !!facultyId && !urlClassId,
+    placeholderData: keepPreviousData,
+  });
+
+  const classOptions = classOptionsRaw.filter(c => selectedCalendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-"));
+
+  // Query for sections
+  const { data: sectionOptions = [], isLoading: sectionsLoading, isFetching: sectionsFetching } = useQuery({
+    queryKey: ["classSections", activeClassId],
+    queryFn: () => getClassSections(activeClassId),
+    enabled: !!activeClassId && !urlClassId,
+    placeholderData: keepPreviousData,
+  });
+
+  // Query for class details
+  const { data: classData, isFetching: classDataFetching } = useQuery({
+    queryKey: ["classDetails", activeClassId],
+    queryFn: () => getClassDetails(activeClassId),
+    enabled: !!activeClassId,
+    placeholderData: keepPreviousData,
+  });
+
+  // Query for students list (server handles sorting, we paginate client-side)
+  const sortFilter = urlSort || "All";
+  const { data: allStudentsRaw = [], isLoading: studentsLoading, isFetching: studentsFetching } = useQuery({
+    queryKey: ["studentsForClass", activeClassId, selectedSectionId, sortFilter],
+    queryFn: () => getStudentsForClass(activeClassId, selectedSectionId, sortFilter),
+    enabled: !!activeClassId && (!!selectedSectionId || sectionOptions.length === 0 || !!urlClassId),
+    placeholderData: keepPreviousData,
+  });
+
+  // Client-side pagination
+  const totalItems = allStudentsRaw.length;
+  const paginatedStudents = allStudentsRaw.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+  // Handle auto-selecting class and section
+  useEffect(() => {
+    if (urlClassId) {
+      setSelectedClassId(urlClassId);
+      setIsEditing(true);
+      return;
+    }
+    
+
+
+    if (classOptions.length > 0 && !classOptions.some(c => c.id === selectedClassId)) {
+      setSelectedClassId(classOptions[0].id);
+      setPage(1);
+      setDraftEdits({});
+    } else if (classOptions.length === 0) {
+      setSelectedClassId("");
+    }
+  }, [classOptions, classOptionsRaw, selectedClassId, urlClassId, selectedCalendarType]);
+
+  useEffect(() => {
+    if (urlClassId) return;
+    if (sectionOptions.length > 0 && !sectionOptions.some(s => s.id === selectedSectionId)) {
+      setSelectedSectionId(sectionOptions[0].id);
+      setPage(1);
+      setDraftEdits({});
+    }
+  }, [sectionOptions, selectedSectionId, urlClassId]);
+
+  // Handle Realtime Updates
   useAttendanceRealtime(
     eventId,
     isBulk,
@@ -73,43 +164,24 @@ function AttendanceContent() {
         let matchedStudentName = "";
         let status = "Not Marked";
 
-        setStudentsList((prev) => {
-          return prev.map((s) => {
-            if (s.id === String(newRecord.studentId)) {
-              const upperStatus = newRecord.status?.toUpperCase();
-              if (upperStatus === "PRESENT") status = "Present";
-              else if (upperStatus === "LATE") status = "Late";
-              else if (upperStatus === "ABSENT") status = "Absent";
+        setDraftEdits((prev) => {
+          const newDrafts = { ...prev };
+          const sId = String(newRecord.studentId);
+          
+          const upperStatus = newRecord.status?.toUpperCase();
+          if (upperStatus === "PRESENT") status = "Present";
+          else if (upperStatus === "LATE") status = "Late";
+          else if (upperStatus === "ABSENT") status = "Absent";
 
-              if (s.attendance !== status) {
-                matchedStudentName = s.name;
-              }
-
-              let newPercentage = s.percentage;
-              let newStats = s.stats;
-              if (s.stats) {
-                const recalc = recalculateAttendancePercentage(
-                  s.attendance,
-                  newRecord.status,
-                  s.stats
-                );
-                newPercentage = recalc.newPercentage;
-                newStats = recalc.newStats;
-              }
-
-              return {
-                ...s,
-                attendance: status as any,
-                reason: newRecord.reason || "",
-                percentage: newPercentage,
-                stats: newStats,
-              };
-            }
-            return s;
-          });
+          if (!prev[sId] || prev[sId].attendance !== status) {
+            newDrafts[sId] = { ...prev[sId], attendance: status, reason: newRecord.reason || "" };
+            // Optional: Find name for toast
+            const student = allStudentsRaw?.find(s => s.id === sId);
+            if (student) matchedStudentName = student.name;
+          }
+          return newDrafts;
         });
 
-        // Trigger toast asynchronously to prevent React render-phase side-effect warning
         if (matchedStudentName) {
           setTimeout(() => {
             toast.success(`${matchedStudentName} was marked ${status}!`, { id: `bio-${newRecord.studentId}` });
@@ -119,136 +191,112 @@ function AttendanceContent() {
     }
   );
 
+  // Derived students list merging query data with drafts (using paginated slice)
+  const studentsList = !activeClassId ? [] : paginatedStudents.map((s) => {
+    const draft = draftEdits[s.id];
+    return draft ? { ...s, attendance: draft.attendance as any, reason: draft.reason } : s;
+  });
+
+  const handleSetStudents = (updater: UIStudent[] | ((prev: UIStudent[]) => UIStudent[])) => {
+    setDraftEdits((prevDrafts) => {
+      const currentList = studentsList;
+      const nextList = typeof updater === "function" ? updater(currentList) : updater;
+      
+      const newDrafts = { ...prevDrafts };
+      nextList.forEach((s) => {
+        newDrafts[s.id] = { attendance: s.attendance, reason: s.reason };
+      });
+      return newDrafts;
+    });
+  };
+
   const confirmClassCancel = () => {
     if (!cancelReason.trim()) {
       toast.error("Enter a reason");
       return;
     }
-    const updatedList = studentsList.map((s) => ({
-      ...s,
-      attendance: "Class Cancel" as const,
-      reason: cancelReason,
-    }));
-    setStudentsList(updatedList);
+    handleSetStudents((prev) => 
+      prev.map((s) => ({
+        ...s,
+        attendance: "Class Cancel" as any,
+        reason: cancelReason,
+      }))
+    );
     setIsCancellingMode(false);
     toast("Marked as Cancelled. Click Save.", { icon: "⚠️" });
   };
 
-  const loadStudents = async (cId: string, sId?: string) => {
-    setTableLoading(true);
-
-    try {
-      const students = await getStudentsForClass(cId, sId);
-
-      if (!students || students.length === 0) {
-        setStudentsList([]);
-      } else {
-        setStudentsList(students);
-      }
-
-      const cData = await getClassDetails(cId);
-      setClassData(cData);
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to load students");
-      setStudentsList([]);
-    } finally {
-      setTableLoading(false);
-    }
+  const updateUrlParams = (updates: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    });
+    router.replace(`?${params.toString()}`, { scroll: false });
   };
 
-  useEffect(() => {
-    if (urlClassId) {
-      setSelectedClassId(urlClassId);
-      loadStudents(urlClassId).finally(() => setInitialized(true));
-      setIsEditing(true);
-    }
-  }, [urlClassId]);
-
-  useEffect(() => {
-    if (urlClassId) return;
-    if (contextLoading || !facultyId) return;
-
-    async function loadClassesForDate() {
-      try {
-        setLoading(true);
-        const dateStr = `${selectedCalendarDate.getFullYear()}-${String(selectedCalendarDate.getMonth() + 1).padStart(2, "0")}-${String(selectedCalendarDate.getDate()).padStart(2, "0")}`;
-        const classes = await getFacultyClasses(facultyId!, dateStr);
-        setClassOptions(classes);
-
-        const filteredClasses = classes.filter(c => selectedCalendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-"));
-
-        if (filteredClasses.length === 0) {
-          setStudentsList([]);
-          setSelectedClassId("");
-          setSelectedSectionId("");
-          setSectionOptions([]);
-          setClassData(null);
-          return;
-        }
-
-        const firstClass = filteredClasses[0];
-        setSelectedClassId(firstClass.id);
-
-        const sections = await getClassSections(firstClass.id);
-        setSectionOptions(sections);
-
-        const firstSec = sections.length > 0 ? sections[0].id : "";
-        setSelectedSectionId(firstSec);
-
-        await loadStudents(firstClass.id, firstSec);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-        setInitialized(true);
-      }
-    }
-
-    loadClassesForDate();
-  }, [selectedCalendarDate, facultyId, contextLoading, urlClassId, selectedCalendarType]);
-
-  const handleFilterChange = async (
-    type: "class" | "section" | "calendarType",
+  const handleFilterChange = (
+    type: "class" | "section" | "calendarType" | "sort",
     value: string,
   ) => {
     if (type === "calendarType") {
       setSelectedCalendarType(value as "Single" | "Bulk");
+      setSelectedClassId("");
+      setSelectedSectionId("");
+      updateUrlParams({ type: value, cId: "", sId: "" });
     } else if (type === "class") {
       setSelectedClassId(value);
-      const sections = await getClassSections(value);
-      setSectionOptions(sections);
-      const firstSec = sections.length > 0 ? sections[0].id : "";
-      setSelectedSectionId(firstSec);
-      loadStudents(value, firstSec);
-    } else {
+      setSelectedSectionId("");
+      updateUrlParams({ cId: value, sId: "" });
+    } else if (type === "section") {
       setSelectedSectionId(value);
-      loadStudents(selectedClassId, value);
+      updateUrlParams({ sId: value });
+    } else if (type === "sort") {
+      setPage(1);
+      updateUrlParams({ sort: value });
+      return;
     }
+    setPage(1);
+    setDraftEdits({});
     setIsEditing(false);
   };
 
   const handleSaveAttendance = async () => {
     if (!activeClassId) return;
+    
+    // Validate current page unmarked students
     const unmarked = studentsList.filter((s) => s.attendance === "Not Marked");
     if (unmarked.length > 0) {
-      toast.error(`Mark ${unmarked.length} students first.`);
+      toast.error(`Mark ${unmarked.length} students on this page first.`);
       return;
     }
+    
     setSaving(true);
     try {
-      const payload = studentsList.map((s) => ({
-        studentId: s.id,
+      // We only need to save the edited students, or we can save all students from the current page.
+      // Saving all known drafts ensures everything is synced.
+      const payload = Object.entries(draftEdits).map(([id, draft]) => ({
+        studentId: id,
         facultyId: facultyId!,
-        status: s.attendance,
-        reason: s.reason,
+        status: draft.attendance,
+        reason: draft.reason,
       }));
+
+      // If user hasn't made any edits, just return
+      if (payload.length === 0) {
+        toast.success("No changes to save!");
+        setIsEditing(false);
+        return;
+      }
+
       const result = await saveAttendance(activeClassId, payload);
       if (!result.success) throw new Error(result.error);
+      
+      queryClient.invalidateQueries({ queryKey: ["studentsForClass"] });
+      
       toast.success("Saved!");
       setIsEditing(false);
-
-      await loadStudents(activeClassId, selectedSectionId);
+      setDraftEdits({}); // Clear drafts after saving
 
       if (urlClassId) setTimeout(() => router.push("/faculty"), 2000);
     } catch (error: any) {
@@ -269,9 +317,11 @@ function AttendanceContent() {
   const handleCancel = () => router.push("/faculty");
 
   const topicName = classData?.description || "Select a Class";
-  const classTime = classData
+
+  const classTime = activeClassId && classData && classData.fromTime && classData.toTime
     ? `${classData.fromTime} - ${classData.toTime}`
     : "-- : --";
+    
   const attendanceStats = studentsList.reduce(
     (acc, s) => {
       if (s.attendance === "Present") acc.present++;
@@ -317,7 +367,12 @@ function AttendanceContent() {
     },
   ];
 
-  if (!initialized || loading || contextLoading) {
+  // Initial Full Page Shimmer
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isInitialLoad = contextLoading || !mounted;
+  
+  if (isInitialLoad) {
     return <AttendanceSkeleton />;
   }
 
@@ -348,33 +403,57 @@ function AttendanceContent() {
             </div>
           </div>
         </div>
-        {classData && (
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto shrink-0">
-            <div className="bg-[#1E2952] text-white px-4 py-3 sm:py-4 rounded-lg shadow-sm text-sm font-medium whitespace-nowrap">
-              Class Time : <span className="text-gray-200">{classTime}</span>
+            <div className="bg-[#1E2952] text-white px-4 py-3 sm:py-4 rounded-lg shadow-sm text-sm font-medium whitespace-nowrap flex items-center min-h-[48px] sm:min-h-[54px]">
+              {!activeClassId ? (
+                <span>No Classes Found</span>
+              ) : (
+                <>
+                  Class Time : 
+                  {classDataFetching ? (
+                    <div className="ml-2 h-4 w-28 bg-white/20 animate-pulse rounded"></div>
+                  ) : (
+                    <span className="text-gray-200 ml-1">{classTime}</span>
+                  )}
+                </>
+              )}
             </div>
             <CourseScheduleCard
               style="w-full sm:w-[320px] max-md:hidden shrink-0"
-              department={`${classData.department?.map((item: any) => item.name).join(", ") || ""}`}
-              year={String(classData.year)}
-              degree={classData.degree}
+              department={`${activeClassId ? classData?.department?.map((item: any) => item.name).join(", ") || "" : ""}`}
+              year={String(activeClassId ? classData?.year || "" : "")}
+              degree={activeClassId ? classData?.degree || "" : ""}
+              isLoading={classDataFetching}
             />
           </div>
-        )}
       </section>
 
       <section className="flex flex-col lg:flex-row items-stretch gap-4 w-full max-md:mb-[-15px]">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:flex-[2.5] gap-3 sm:gap-4 w-full min-w-0">
-          {baseCardData.map((item, index) => (
-            <div key={index} className="flex-1 min-w-0">
-              <CardComponent {...item} />
-            </div>
-          ))}
-        </div>
+        {(classesFetching || studentsFetching) && !studentsLoading && !classesLoading ? (
+          <div className="lg:flex-[2.5] w-full min-w-0">
+            <CardsSkeleton />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:flex-[2.5] gap-3 sm:gap-4 w-full min-w-0">
+            {baseCardData.map((item, index) => (
+              <div key={index} className="flex-1 min-w-0">
+                <CardComponent {...item} />
+              </div>
+            ))}
+          </div>
+        )}
         <div className="hidden lg:block lg:flex-[1] shrink-0 min-w-0">
           <WorkWeekCalendar
             activeDate={selectedCalendarDate}
-            onDateSelect={(date) => setSelectedCalendarDate(date)}
+            onDateSelect={(date) => {
+              setSelectedCalendarDate(date);
+              setPage(1);
+              setDraftEdits({});
+              
+              const localDate = new Date(date);
+              localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
+              updateUrlParams({ date: localDate.toISOString().split("T")[0], cId: "", sId: "" });
+            }}
             style="h-full bg-white rounded-xl shadow-sm"
           />
         </div>
@@ -430,13 +509,11 @@ function AttendanceContent() {
       </section>
 
       <section className="w-full min-w-0">
-        {tableLoading ||
-          urlClassId ||
-          classOptions.length > 0 ||
-          sectionOptions.length > 0 ? (
+        {classesLoading || urlClassId || classOptionsRaw.length > 0 || sectionOptions.length > 0 ? (
           <StuAttendanceTable
+            loadingData={classesLoading || classesFetching || sectionsFetching || studentsFetching}
             students={studentsList}
-            setStudents={setStudentsList}
+            setStudents={handleSetStudents}
             handleSaveAttendance={handleSaveAttendance}
             saving={saving}
             isTopicMode={isTopicMode}
@@ -445,10 +522,18 @@ function AttendanceContent() {
             selectedClass={selectedClassId}
             selectedSection={selectedSectionId}
             onFilterChange={urlClassId ? undefined : handleFilterChange}
-            loadingFilters={tableLoading}
+            loadingFilters={studentsFetching || sectionsLoading}
             isEditing={isEditing}
             onEditClick={() => setIsEditing(true)}
+            isCurrentDate={isCurrentDate}
+            sortStatus={urlSort || "All"}
+            onSortChange={(val) => handleFilterChange("sort", val)}
             calendarType={selectedCalendarType}
+            page={page}
+            itemsPerPage={itemsPerPage}
+            totalItems={totalItems}
+            onPageChange={setPage}
+            onItemsPerPageChange={setItemsPerPage}
           />
         ) : (
           <div className="flex justify-center items-center py-16 text-gray-500 font-medium">
@@ -459,7 +544,6 @@ function AttendanceContent() {
     </main>
   );
 }
-
 export default function Page() {
   return (
     <Suspense

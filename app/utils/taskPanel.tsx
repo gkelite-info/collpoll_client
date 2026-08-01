@@ -154,12 +154,12 @@ export default function TaskPanel({
         .eq("collegeSectionsId", secId);
 
       if (dateStr) {
-        const { start, end } = getLocalDateRangeInUTC(dateStr);
-        query = query.gte("createdAt", start).lte("createdAt", end);
+        query = query.eq("date", dateStr).is("deletedAt", null);
       } else {
+        const today = new Date().toLocaleDateString("en-CA");
         query = query
-          .is("deletedAt", null)
-          .order("date", { ascending: false });
+          .eq("date", today)
+          .is("deletedAt", null);
       }
 
       const { data: tasksData, error: tasksError } = await query.order("time", { ascending: true });
@@ -203,18 +203,10 @@ export default function TaskPanel({
     refreshTrigger
   ]);
 
-  const getLocalDateRangeInUTC = (dateStr: string) => {
-    const [year, month, day] = dateStr.split("-").map(Number);
-    const start = new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
-    const end = new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
-    return { start, end };
-  };
-
   const { data: calendarData, isLoading: isCalendarQueryLoading } = useQuery({
     queryKey: ["taskPanelCalendarTasks", role, selectedDate, collegeSubjectId, studentId, studentContext.collegeAcademicYearId, studentContext.collegeSectionsId, refreshTrigger],
     queryFn: async () => {
       if (!selectedDate) return { facultyTasks: [], studentTasks: [] };
-      const { start, end } = getLocalDateRangeInUTC(selectedDate);
       let newFacultyTasks: any[] = [];
       let newStudentTasks: any[] = [];
 
@@ -223,8 +215,8 @@ export default function TaskPanel({
           .from("faculty_tasks")
           .select(`facultyTaskId, taskTitle, description, date, time, collegeAcademicYearId, collegeSectionsId, createdAt`)
           .eq("collegeSubjectId", collegeSubjectId)
-          .gte("createdAt", start)
-          .lte("createdAt", end)
+          .eq("date", selectedDate)
+          .is("deletedAt", null)
           .order("time", { ascending: true });
 
         if (!error && data) {
@@ -244,8 +236,8 @@ export default function TaskPanel({
             .from("student_tasks")
             .select(`studentTaskId, taskTitle, description, date, time, createdAt`)
             .eq("createdBy", studentId)
-            .gte("createdAt", start)
-            .lte("createdAt", end)
+            .eq("date", selectedDate)
+            .is("deletedAt", null)
             .order("time", { ascending: true });
 
           if (!sError && sData) {
@@ -267,8 +259,8 @@ export default function TaskPanel({
             .select(`facultyTaskId, taskTitle, description, date, time, collegeAcademicYearId, collegeSectionsId, createdAt`)
             .eq("collegeAcademicYearId", ayId)
             .eq("collegeSectionsId", secId)
-            .gte("createdAt", start)
-            .lte("createdAt", end)
+            .eq("date", selectedDate)
+            .is("deletedAt", null)
             .order("time", { ascending: true });
 
           if (!fError && fData) {
@@ -464,7 +456,7 @@ export default function TaskPanel({
           <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-md py-1.5 px-3 mb-3 text-xs text-indigo-800">
             <span className="font-medium flex items-center gap-1.5 flex-row">
               <CalendarIcon size={16} weight="fill" className="text-indigo-500" />
-              Showing tasks created on: <span className="font-bold">{formatDateToDMY(selectedDate)}</span>
+              Showing tasks for: <span className="font-bold">{formatDateToDMY(selectedDate)}</span>
             </span>
             <button
               onClick={() => setSelectedDate(null)}

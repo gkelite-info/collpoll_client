@@ -19,6 +19,9 @@ interface CustomDropdownProps {
   placeholder?: string;
   widthClassName?: string;
   includeAll?: boolean;
+  className?: string;
+  theme?: "green" | "always-green" | "default";
+  hideCheckmark?: boolean;
 }
 
 export const CustomDropdown = ({
@@ -30,6 +33,9 @@ export const CustomDropdown = ({
   placeholder = "Select...",
   widthClassName = "w-full",
   includeAll = false,
+  className = "",
+  theme = "default",
+  hideCheckmark = false,
 }: CustomDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -112,12 +118,12 @@ export const CustomDropdown = ({
                 }}
                 className={`px-3 py-2.5 text-[13px] cursor-pointer transition-colors duration-200 flex items-center justify-between ${
                   isSelected
-                    ? "bg-[#43C17A15] text-[#43C17A] font-bold"
+                    ? (theme === "green" || theme === "always-green") ? "bg-[#43C17A15] text-[#43C17A] font-bold" : "bg-blue-50 text-blue-600 font-bold"
                     : "text-[#282828] hover:bg-gray-50 font-medium"
                 }`}
               >
-                <span className="truncate pr-2">{opt.label}</span>
-                {isSelected && <Check size={14} weight="bold" className="shrink-0" />}
+                <span className="pr-2">{opt.label}</span>
+                {isSelected && !hideCheckmark && <Check size={14} weight="bold" className="shrink-0" />}
               </div>
             );
           })}
@@ -143,21 +149,23 @@ export const CustomDropdown = ({
             if (!isOpen) updateRect();
             setIsOpen(!isOpen);
           }}
-          className={`relative rounded-md pl-3 pr-9 py-2 flex items-center justify-between transition-colors duration-300 ease-in-out cursor-pointer select-none outline-none border w-full ${
+          className={`relative rounded-md pl-3 pr-9 py-2 flex items-center justify-between transition-colors duration-300 ease-in-out cursor-pointer select-none outline-none border w-full ${className} ${
             disabled
-              ? "bg-gray-100 opacity-50 cursor-not-allowed border-gray-300"
-              : isOpen 
-                ? "bg-[#43C17A15] border-[#43C17A]/40" 
-                : "bg-white border-gray-300 hover:border-gray-400"
+              ? theme === "always-green" ? "bg-[#43C17A15] opacity-50 cursor-not-allowed border-[#43C17A]/40" : "bg-gray-100 opacity-50 cursor-not-allowed border-gray-300"
+              : theme === "always-green" 
+                ? "bg-[#43C17A15] border-[#43C17A]/40 hover:bg-[#43C17A20]"
+                : isOpen 
+                  ? theme === "green" ? "bg-[#43C17A15] border-[#43C17A]/40" : "bg-blue-50 border-blue-200" 
+                  : "bg-white border-gray-300 hover:border-gray-400"
           }`}
         >
-          <span className={`text-[13px] font-medium truncate ${disabled ? "text-gray-400" : isOpen ? "text-[#43C17A] font-semibold" : "text-gray-700"}`}>
+          <span className={`text-[13px] font-medium truncate ${disabled ? (theme === "always-green" ? "text-[#43C17A]" : "text-gray-400") : theme === "always-green" ? "text-[#43C17A] font-semibold" : isOpen ? (theme === "green" ? "text-[#43C17A] font-semibold" : "text-blue-600 font-semibold") : "text-gray-700"}`}>
             {selectedLabel || placeholder}
           </span>
           <CaretDown
             size={14}
             className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-300 ease-in-out ${
-              isOpen ? "rotate-180 text-[#43C17A]" : "text-gray-500"
+              isOpen ? (theme === "green" || theme === "always-green" ? "rotate-180 text-[#43C17A]" : "rotate-180 text-blue-500") : theme === "always-green" ? "text-[#43C17A]" : "text-gray-500"
             }`}
             weight="bold"
           />

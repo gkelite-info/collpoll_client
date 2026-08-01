@@ -8,6 +8,8 @@ import { motion } from "framer-motion";
 interface Props {
   name: string;
   department: string;
+  degree?: string;
+  year?: string;
   studentId: string;
   phone: string;
   email: string;
