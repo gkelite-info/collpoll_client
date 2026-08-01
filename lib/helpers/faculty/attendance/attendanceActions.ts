@@ -215,6 +215,7 @@ export async function getClassSections(
 export async function getStudentsForClass(
   classId: string,
   sectionFilterId?: string,
+  sortStatus: string = "All"
 ): Promise<UIStudent[]> {
   const supabase = await createClient();
 
@@ -325,7 +326,7 @@ export async function getStudentsForClass(
 
   if (error) return [];
 
-  return students!.map((s: any) => {
+  let mappedData = students!.map((s: any) => {
     const record = s.attendance_record?.[0];
     let status = "Not Marked";
     let reason = "";
@@ -377,6 +378,12 @@ export async function getStudentsForClass(
       stats: { present: stats.present, total: stats.total },
     };
   });
+
+  if (sortStatus !== "All") {
+    mappedData = mappedData.filter(s => s.attendance === sortStatus);
+  }
+
+  return mappedData;
 }
 
 export async function saveAttendance(classId: string, payload: any[]) {

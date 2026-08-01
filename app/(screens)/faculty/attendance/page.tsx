@@ -113,21 +113,18 @@ function AttendanceContent() {
     placeholderData: keepPreviousData,
   });
 
-  // Query for students list (server returns full array, we paginate + filter client-side)
+  // Query for students list (server handles sorting, we paginate client-side)
+  const sortFilter = urlSort || "All";
   const { data: allStudentsRaw = [], isLoading: studentsLoading, isFetching: studentsFetching } = useQuery({
-    queryKey: ["studentsForClass", activeClassId, selectedSectionId],
-    queryFn: () => getStudentsForClass(activeClassId, selectedSectionId),
+    queryKey: ["studentsForClass", activeClassId, selectedSectionId, sortFilter],
+    queryFn: () => getStudentsForClass(activeClassId, selectedSectionId, sortFilter),
     enabled: !!activeClassId && (!!selectedSectionId || sectionOptions.length === 0 || !!urlClassId),
     placeholderData: keepPreviousData,
   });
 
-  // Client-side sort filtering
-  const sortFilter = urlSort || "All";
-  const filteredStudents = sortFilter === "All" ? allStudentsRaw : allStudentsRaw.filter(s => s.attendance === sortFilter);
-
   // Client-side pagination
-  const totalItems = filteredStudents.length;
-  const paginatedStudents = filteredStudents.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+  const totalItems = allStudentsRaw.length;
+  const paginatedStudents = allStudentsRaw.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   // Handle auto-selecting class and section
   useEffect(() => {

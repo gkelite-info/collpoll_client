@@ -339,7 +339,7 @@ export default function StuAttendanceTable({
             <span className="text-gray-500 font-medium hidden sm:inline">
               Sort:
             </span>
-            <div className="relative">
+            <div className="relative min-w-[150px]">
               <CustomDropdown theme="always-green" hideCheckmark
                 options={[
                   { label: "All Students", value: "All" },
@@ -350,7 +350,7 @@ export default function StuAttendanceTable({
                 ]}
                 value={sortStatus}
                 onChange={(val) => onSortChange?.(String(val))}
-                disabled={isEditing || loadingFilters || loadingData || students.length === 0}
+                disabled={isEditing || loadingFilters || loadingData || (!isTopicMode && !selectedClass)}
                 className="!rounded-full !py-1.5 min-h-[32px]"
               />
             </div>
