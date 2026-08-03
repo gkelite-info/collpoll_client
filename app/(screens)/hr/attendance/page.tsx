@@ -638,6 +638,7 @@ function FacultyAttendanceDashboard() {
                   fullStaffList={staffList}
                   selectedRows={selectedRows}
                   selectAll={selectAll}
+                  collegeId={collegeId ?? 0}
                   collegeHrId={collegeHrId ?? 0}
                   markedUserIds={markedUserIds}
                   filterDate={filterDate}

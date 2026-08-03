@@ -7,6 +7,7 @@ import { X, MagnifyingGlass } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 const UserShimmer = () => (
   <div className="flex items-center justify-between p-1 -mx-1 rounded-md animate-pulse mb-3">
@@ -39,6 +40,7 @@ export default function SelectFacultyModal({
   educationTypeId?: number;
 }) {
   const { collegeId } = useCollegeHr();
+  const { isSchool } = useInstitutionTerminology();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -66,6 +68,7 @@ export default function SelectFacultyModal({
           collegeId,
           educationTypeId,
           debouncedSearchQuery,
+          isSchool,
         );
         setFacultyList(data);
       } catch (err) {
@@ -76,7 +79,7 @@ export default function SelectFacultyModal({
     };
 
     if (isOpen) loadUsers();
-  }, [collegeId, roleName, educationTypeId, isOpen, debouncedSearchQuery]);
+  }, [collegeId, roleName, educationTypeId, isOpen, debouncedSearchQuery, isSchool]);
 
   useEffect(() => {
     if (isOpen) {

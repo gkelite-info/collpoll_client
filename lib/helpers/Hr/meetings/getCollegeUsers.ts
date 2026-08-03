@@ -13,11 +13,28 @@ export async function getCollegeUsers(
   collegeId: number,
   educationTypeId?: number,
   searchQuery?: string,
+  isSchool = false,
 ): Promise<SelectUser[]> {
   if (!collegeId) return [];
 
   // ================= ADMIN =================
   if (role === "Admin") {
+    let assignedSchoolAdminIds: number[] | null = null;
+    if (isSchool && educationTypeId) {
+      const { data: assignments, error: assignmentError } = await supabase
+        .from("admin_education_types")
+        .select("adminId")
+        .eq("collegeEducationId", educationTypeId)
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .is("deletedAt", null);
+
+      if (assignmentError) throw assignmentError;
+      assignedSchoolAdminIds = [
+        ...new Set((assignments ?? []).map((assignment) => Number(assignment.adminId))),
+      ];
+    }
+
     let query = supabase
       .from("admins")
       .select(
@@ -34,8 +51,15 @@ export async function getCollegeUsers(
       .eq("collegeId", collegeId)
       .eq("is_deleted", false);
 
-    if (educationTypeId)
+    if (assignedSchoolAdminIds?.length) {
+      query = query.or(
+        `collegeEducationId.eq.${educationTypeId},adminId.in.(${assignedSchoolAdminIds.join(",")})`,
+      );
+    } else if (assignedSchoolAdminIds) {
+      query = query.eq("collegeEducationId", educationTypeId!);
+    } else if (educationTypeId) {
       query = query.eq("collegeEducationId", educationTypeId);
+    }
     if (searchQuery) query = query.ilike("fullName", `%${searchQuery}%`);
 
     const { data, error } = await query;
@@ -108,7 +132,8 @@ export async function getCollegeUsers(
         collegeEducation:collegeEducationId(collegeEducationType),
         collegeBranch:collegeBranchId(collegeBranchCode),
         faculty_sections(
-          collegeSections:collegeSectionsId(collegeSections)
+          collegeSections:collegeSectionsId(collegeSections),
+          collegeAcademicYear:collegeAcademicYearId(collegeAcademicYear)
         ),
         users:userId(
           user_profile(profileUrl)
@@ -130,6 +155,21 @@ export async function getCollegeUsers(
         f.faculty_sections
           ?.map((s: any) => s.collegeSections?.collegeSections)
           .filter(Boolean) || [];
+      const schoolClasses = [
+        ...new Set<string>(
+          f.faculty_sections
+            ?.map((s: any) => {
+              const academicYear = Array.isArray(s.collegeAcademicYear)
+                ? s.collegeAcademicYear[0]?.collegeAcademicYear
+                : s.collegeAcademicYear?.collegeAcademicYear;
+              const section = Array.isArray(s.collegeSections)
+                ? s.collegeSections[0]?.collegeSections
+                : s.collegeSections?.collegeSections;
+              return [academicYear, section].filter(Boolean).join(" - ");
+            })
+            .filter(Boolean) || [],
+        ),
+      ];
       const profile = f.users?.user_profile;
       const profileUrl = Array.isArray(profile)
         ? profile[0]?.profileUrl
@@ -139,7 +179,9 @@ export async function getCollegeUsers(
         id: f.facultyId,
         userId: f.userId,
         name: f.fullName,
-        subLabel: `${f.collegeEducation?.collegeEducationType ?? ""} - ${f.collegeBranch?.collegeBranchCode ?? ""} - ${sections.join(", ")}`,
+        subLabel: isSchool
+          ? schoolClasses.join(", ")
+          : `${f.collegeEducation?.collegeEducationType ?? ""} - ${f.collegeBranch?.collegeBranchCode ?? ""} - ${sections.join(", ")}`,
         avatar: profileUrl || null,
       };
     });

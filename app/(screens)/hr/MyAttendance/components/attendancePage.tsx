@@ -71,7 +71,7 @@ const AttendancePage = ({ userId, profile }: Props) => {
     role: profile.role,
     image: profile.image || "",
     id: String(profile.identifierId || profile.id || profile.userId || userId),
-    department: profile.department || "N/A",
+    department: profile.educationType || profile.department || "N/A",
     mobile: profile.mobile || "N/A",
     email: profile.email || "N/A",
     joiningDate: profile.joiningDate || "N/A",

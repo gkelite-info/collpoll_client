@@ -180,8 +180,14 @@ export async function getAdminSubjectsList(
       });
 
       const percentage =
-        subjectTotalTopics > 0
-          ? Math.round((subjectCompletedTopics / subjectTotalTopics) * 100)
+        units.length > 0
+          ? Math.round(
+              units.reduce(
+                (sum: number, unit: { completionPercentage?: number | null }) =>
+                  sum + (unit.completionPercentage ?? 0),
+                0,
+              ) / units.length,
+            )
           : 0;
 
       const profileData = faculty?.users?.user_profile;

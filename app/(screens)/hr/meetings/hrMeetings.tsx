@@ -15,6 +15,7 @@ import {
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import ConfirmDeleteModal from "../../admin/calendar/components/ConfirmDeleteModal";
 import MeetingCardShimmer from "@/app/utils/shimmers/MeetingCardShimmer";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 type MeetingType = "upcoming" | "previous";
 type MeetingCategory = "Hr";
@@ -72,6 +73,7 @@ export default function MeetingsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { collegeHrId, collegeId } = useCollegeHr();
+  const { isSchool } = useInstitutionTerminology();
   const itemsPerPage = 10;
 
   const openCreateModal = () => {
@@ -194,7 +196,7 @@ export default function MeetingsPage() {
           <div>
             <h1 className="text-2xl font-bold text-[#282828]">Meetings</h1>
             <p className="text-[#282828] text-sm mt-1">
-              View and join meetings scheduled by the Tekton Campus team
+              View and join meetings scheduled by the {isSchool ? "school" : "Tekton Campus"} team
             </p>
           </div>
           <div className="w-[320px]">

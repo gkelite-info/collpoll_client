@@ -17,6 +17,8 @@ import { supabase } from "@/lib/supabaseClient";
 import ConflictErrorModal from "./ConflictErrorModal";
 import { fetchEducationTypes } from "@/lib/helpers/Hr/meetings/educationAPI";
 import { scheduleMeetingReminder } from "@/lib/helpers/Hr/meetings/scheduleMeetingReminder";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 const convertTo24Hour = (hour: string, minute: string, period: "AM" | "PM") => {
   let h = parseInt(hour);
@@ -108,6 +110,7 @@ export default function CreateMeetingModal({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { userId } = useUser();
+  const { isSchool } = useInstitutionTerminology();
   const { collegeHrId, collegeId } = useCollegeHr();
   const [selectedRole, setSelectedRole] = useState("Select Role");
   const [title, setTitle] = useState("");
@@ -156,7 +159,16 @@ export default function CreateMeetingModal({
     };
 
     loadEducationTypes();
-  }, [collegeId]);
+  }, [collegeId, isSchool]);
+
+  useEffect(() => {
+    if (isOpen && isSchool && educationTypes.length > 0 && !selectedEducationType) {
+      const schoolEducation = educationTypes.find((education) =>
+        isSchoolEducation(education.collegeEducationType),
+      ) ?? educationTypes[0];
+      setSelectedEducationType(String(schoolEducation.collegeEducationId));
+    }
+  }, [educationTypes, isOpen, isSchool, selectedEducationType]);
 
   const resetForm = () => {
     setTitle("");
@@ -207,7 +219,7 @@ export default function CreateMeetingModal({
   const getDynamicSelectionText = () => {
     switch (selectedRole) {
       case "Admin":
-        return "Select Admins";
+        return isSchool ? "Select School Admins" : "Select Admins";
       case "Faculty":
         return "Select Faculties";
       case "Placement":
@@ -223,7 +235,7 @@ export default function CreateMeetingModal({
   const getModalTitleFromUrl = () => {
     switch (selectModalRoleParam) {
       case "Admin":
-        return "Select Admins";
+        return isSchool ? "Select School Admins" : "Select Admins";
       case "Faculty":
         return "Select Faculties";
       case "Placement":
@@ -866,7 +878,7 @@ export default function CreateMeetingModal({
                         <option disabled value="Select Role">
                           Select Role
                         </option>
-                        <option value="Admin">Admin</option>
+                        <option value="Admin">{isSchool ? "School Admin" : "Admin"}</option>
                         <option value="Faculty">Faculty</option>
                         <option value="Placement">Placement</option>
                         <option value="Finance">Finance</option>
@@ -878,7 +890,7 @@ export default function CreateMeetingModal({
                     </div>
                   </div>
 
-                  <div>
+                  {!isSchool && <div>
                     <label className="block text-base font-semibold text-[#282828] mb-1.5">
                       Education Type<span className="text-red-500">*</span>
                     </label>
@@ -908,7 +920,7 @@ export default function CreateMeetingModal({
                         className="absolute right-3 top-3.5 text-[#555555] pointer-events-none"
                       />
                     </div>
-                  </div>
+                  </div>}
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                   <div>

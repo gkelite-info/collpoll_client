@@ -2,6 +2,16 @@ import { supabase } from "@/lib/supabaseClient";
 
 const BUCKET = "college-drive";
 
+export function normalizeDriveFileType(fileName: string, fileType?: string | null) {
+    const extension = fileName.trim().split(".").pop()?.toLowerCase();
+    if (extension && extension !== fileName.toLowerCase() && extension.length <= 20) {
+        return extension;
+    }
+
+    const subtype = fileType?.split("/").pop()?.split(/[;+]/)[0]?.trim().toLowerCase();
+    return subtype && subtype.length <= 20 ? subtype : "file";
+}
+
 export type DriveFileRow = {
     driveFileId: number;
     driveFolderId: number;
@@ -173,11 +183,21 @@ export async function saveDriveFile(
         fileUrl = urlData.publicUrl;
     }
 
-    const upsertPayload: any = {
+    const upsertPayload: {
+        driveFolderId: number;
+        collegeId: number;
+        fileName: string;
+        fileType: string;
+        fileSize: number | null;
+        fileUrl: string;
+        updatedAt: string;
+        uploadedBy?: number;
+        createdAt?: string;
+    } = {
         driveFolderId: payload.driveFolderId,
         collegeId: payload.collegeId,
         fileName: payload.fileName.trim(),
-        fileType: payload.fileType,
+        fileType: normalizeDriveFileType(payload.fileName, payload.fileType),
         fileSize: payload.fileSize ?? null,
         fileUrl,
         updatedAt: now,
@@ -218,7 +238,18 @@ export async function saveDriveFile(
             .single();
 
         if (error) {
-            console.error("saveDriveFile (create) error:", error);
+            console.error("saveDriveFile (create) error:", {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code,
+                payload: {
+                    driveFolderId: payload.driveFolderId,
+                    collegeId: payload.collegeId,
+                    fileName: payload.fileName.trim(),
+                    uploadedBy: userId,
+                },
+            });
             return { success: false, error };
         }
 

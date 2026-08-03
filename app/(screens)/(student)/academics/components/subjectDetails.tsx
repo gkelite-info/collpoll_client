@@ -42,9 +42,13 @@ const colorMap = {
 
 type FilterBannerProps = {
   filterBannerDetails: CardProps;
+  shouldShowSemester: boolean;
 };
 
-function FilterBanner({ filterBannerDetails }: FilterBannerProps) {
+function FilterBanner({
+  filterBannerDetails,
+  shouldShowSemester,
+}: FilterBannerProps) {
   const t = useTranslations("Academics.student");
   return (
     <div className="flex flex-col gap-4 max-md:gap-2">
@@ -58,16 +62,18 @@ function FilterBanner({ filterBannerDetails }: FilterBannerProps) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 max-md:gap-1">
-          <p className="text-[#525252] text-sm whitespace-nowrap max-md:text-[13px]">
-            {t("Semester :")}
-          </p>
-          <p className="px-3 py-1 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium whitespace-nowrap max-md:px-3 max-md:py-0.5 max-md:text-[12px]">
-            {filterBannerDetails.semester
-              ? `${t("Sem")} ${filterBannerDetails.semester}`
-              : "N/A"}
-          </p>
-        </div>
+        {shouldShowSemester && (
+          <div className="flex items-center gap-2 max-md:gap-1">
+            <p className="text-[#525252] text-sm whitespace-nowrap max-md:text-[13px]">
+              {t("Semester :")}
+            </p>
+            <p className="px-3 py-1 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium whitespace-nowrap max-md:px-3 max-md:py-0.5 max-md:text-[12px]">
+              {filterBannerDetails.semester
+                ? `${t("Sem")} ${filterBannerDetails.semester}`
+                : "N/A"}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -280,9 +286,11 @@ function UnitCard({ unit, onOpenTopicPdf }: UnitCardProps) {
 export function SubjectDetailsCard({
   details,
   onBack,
+  shouldShowSemester,
 }: {
   details: CardProps;
   onBack: () => void;
+  shouldShowSemester: boolean;
 }) {
   const t = useTranslations("Academics.student");
   const dynamicUnits = details.unitsData || [];
@@ -304,7 +312,10 @@ export function SubjectDetailsCard({
       </button>
 
       <div className="flex flex-wrap items-start justify-between gap-4 mb-5 max-md:mb-3 max-md:gap-2">
-        <FilterBanner filterBannerDetails={details} />
+        <FilterBanner
+          filterBannerDetails={details}
+          shouldShowSemester={shouldShowSemester}
+        />
 
         <div className="flex items-center gap-2 bg-[#E8ECF3] max-md:bg-transparent max-md:px-0 px-3 py-1 rounded-full w-fit whitespace-nowrap shrink-0">
           <div className="bg-[#122A5E] max-md:bg-transparent max-md:p-0 p-1.5 rounded-full flex items-center justify-center">

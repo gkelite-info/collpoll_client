@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import TableComponent from "@/app/utils/table/table";
 import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabaseClient";
 
 import { ExtendedColumn } from "./types";
 import { getStatusBadge } from "./statusBadge";
@@ -11,6 +12,7 @@ import {
   AttendanceStaffRow,
   formatMinutes,
   buildTimeString,
+  timeToMinutes,
 } from "@/lib/helpers/Hr/attendance/staffAttendanceTypes";
 import {
   saveAttendance,
@@ -25,6 +27,7 @@ type Props = {
   fullStaffList?: AttendanceStaffRow[];
   selectedRows: Set<number>;
   selectAll: boolean;
+  collegeId: number;
   collegeHrId: number;
   markedUserIds: Set<number>;
   filterDate?: string | null;
@@ -64,6 +67,14 @@ const parseToMinutes = (timeStr: string) => {
   return h * 60 + m;
 };
 
+const formatMinutesAsTime = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  const meridiem = hours >= 12 ? "PM" : "AM";
+  const displayHour = hours % 12 || 12;
+  return `${String(displayHour).padStart(2, "0")}:${String(mins).padStart(2, "0")} ${meridiem}`;
+};
+
 export default function AttendanceTable({
   isEditMode,
   isFetching,
@@ -72,6 +83,7 @@ export default function AttendanceTable({
   fullStaffList: fullStaffListProp,
   selectedRows,
   selectAll,
+  collegeId,
   collegeHrId,
   markedUserIds,
   filterDate,
@@ -91,6 +103,58 @@ export default function AttendanceTable({
   const [validationErrs, setValidationErrs] = useState<
     Record<number, RowValidation>
   >({});
+  const [attendanceWindow, setAttendanceWindow] = useState({
+    startMinutes: 540,
+    endMinutes: 1020,
+  });
+
+  useEffect(() => {
+    if (!collegeId || !isEditMode) return;
+
+    let isCurrent = true;
+    const attendanceDate =
+      filterDate ||
+      new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    const dayNames = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ];
+    const dayOfWeek =
+      dayNames[new Date(`${attendanceDate}T00:00:00`).getDay()];
+
+    const loadAttendanceWindow = async () => {
+      const { data } = await supabase
+        .from("college_timings")
+        .select("isOpen, openAt, closeAt")
+        .eq("collegeId", collegeId)
+        .eq("dayOfWeek", dayOfWeek)
+        .eq("is_deleted", false)
+        .maybeSingle();
+
+      if (!isCurrent) return;
+
+      const startMinutes =
+        data?.isOpen && data.openAt ? timeToMinutes(data.openAt) : null;
+      const endMinutes =
+        data?.isOpen && data.closeAt ? timeToMinutes(data.closeAt) : null;
+
+      setAttendanceWindow({
+        startMinutes: startMinutes ?? 540,
+        endMinutes: endMinutes ?? 1020,
+      });
+    };
+
+    loadAttendanceWindow();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [collegeId, filterDate, isEditMode]);
 
   const resetAll = () => {
     setRowEdits({});
@@ -172,9 +236,11 @@ export default function AttendanceTable({
     } else if (edit.checkIn.trim() && checkInMins === null) {
       errs.checkIn = "Incomplete format";
     } else if (checkInMins !== null) {
-      // 8 AM (480) to 3 PM (900) check
-      if (checkInMins < 480 || checkInMins > 900) {
-        errs.checkIn = "Must be 08:00 AM - 03:00 PM";
+      if (
+        checkInMins < attendanceWindow.startMinutes ||
+        checkInMins > attendanceWindow.endMinutes
+      ) {
+        errs.checkIn = `Must be ${formatMinutesAsTime(attendanceWindow.startMinutes)} - ${formatMinutesAsTime(attendanceWindow.endMinutes)}`;
       }
     }
 

@@ -62,6 +62,7 @@ export const fetchUniversalStaffProfile = async (
 
     let tableId: number | string = user.userId;
     let identifierId: string | null = null;
+    let educationType: string | null = null;
 
     if (roleConfig) {
       const { data: roleData, error: roleErr } = await supabase
@@ -111,6 +112,28 @@ export const fetchUniversalStaffProfile = async (
       identifierId = empRow?.employeeId ?? null;
     }
 
+    if (normalizedRole === "collegehr" && user.collegeId) {
+      const { data: educationRows, error: educationError } = await supabase
+        .from("college_education")
+        .select("collegeEducationType")
+        .eq("collegeId", user.collegeId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .order("collegeEducationType", { ascending: true });
+
+      if (educationError) {
+        console.error("Unable to resolve HR education types:", educationError);
+      } else {
+        educationType = [
+          ...new Set(
+            (educationRows ?? [])
+              .map((education) => education.collegeEducationType?.trim())
+              .filter((value): value is string => Boolean(value)),
+          ),
+        ].join(", ") || null;
+      }
+    }
+
     return {
       id: identifierId ?? tableId,
       identifierId,
@@ -119,6 +142,7 @@ export const fetchUniversalStaffProfile = async (
       email: user.email || "N/A",
       mobile: user.mobile || "N/A",
       role: user.role || "Staff",
+      educationType,
       department: user.collegeBranchCode || user.department || user.collegeCode || "-",
       gender: user.gender || "N/A",
       joiningDate: user.dateOfJoining

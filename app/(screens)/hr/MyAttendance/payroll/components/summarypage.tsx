@@ -4,6 +4,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { fetchStaffOnboardingSummary } from "@/lib/helpers/staffOnBoarding/onboardingSummaryAPI";
 import { useEffect, useState } from "react";
 import { Avatar } from "@/app/utils/Avatar";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 interface UniversalSummaryPageProps {
   profile?: any;
@@ -62,6 +63,7 @@ export default function SummaryPage({ profile }: { profile?: any }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const { role } = useUser();
+  const { isSchool } = useInstitutionTerminology();
 
   useEffect(() => {
     const loadData = async () => {
@@ -90,6 +92,10 @@ export default function SummaryPage({ profile }: { profile?: any }) {
   };
 
   const systemId = profile.identifierId || String(profile.id || "Not Provided");
+  const normalizedProfileRole = String(profile.role || role || "").replace(/\s/g, "").toLowerCase();
+  const displayRole = normalizedProfileRole === "collegehr"
+    ? isSchool ? "School HR" : "College HR"
+    : profile.role || role || "Staff";
 
   return (
     <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-4 text-left">
@@ -102,15 +108,15 @@ export default function SummaryPage({ profile }: { profile?: any }) {
             {profile.name}
           </h2>
           <span className="text-xs font-semibold text-[#43C17A] bg-[#43C17A]/10 px-2 py-0.5 rounded mt-1">
-            {profile.role}
+            {displayRole}
           </span>
         </div>
         <div className="flex flex-col items-center justify-center space-y-0.5">
-          <InfoRow label={`${profile.role || role} ID`} value={systemId} />
+          <InfoRow label={`${displayRole} ID`} value={systemId} />
 
           <InfoRow
             label="Education Type"
-            value={profile.educationType || "N/A"}
+            value={profile.educationType || (isSchool ? "School" : "College")}
           />
 
           <InfoRow label="Mobile" value={profile.mobile} />

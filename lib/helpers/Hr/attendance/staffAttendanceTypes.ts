@@ -151,8 +151,10 @@ export function calcDerivedFields(
   const expectedInMins = timeToMinutes(shiftStartStr) || 540; // fallback 09:00
   const expectedOutMins = timeToMinutes(shiftEndStr) || 1020; // fallback 17:00
 
+  const minutesAfterStart =
+    checkInMins !== null ? Math.max(0, checkInMins - expectedInMins) : 0;
   const lateByMinutes =
-    checkInMins !== null ? Math.max(0, checkInMins - expectedInMins - graceMinutes) : 0;
+    minutesAfterStart > graceMinutes ? minutesAfterStart : 0;
 
   const earlyOutMinutes =
     checkOutMins !== null ? Math.max(0, expectedOutMins - checkOutMins) : 0;

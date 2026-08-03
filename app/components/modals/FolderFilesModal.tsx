@@ -15,6 +15,7 @@ import { ArrowLeft } from "lucide-react";
 import {
   fetchDriveFilesByFolder,
   saveDriveFile,
+  normalizeDriveFileType,
   deleteDriveFile,
   DriveFileRow,
 } from "@/lib/helpers/drive/driveFilesAPI";
@@ -239,6 +240,7 @@ export default function FolderFilesModal({
     }));
     setUploadItems(items);
     setUploading(true);
+    let failedUploads = 0;
 
     for (let i = 0; i < selected.length; i++) {
       const file = selected[i];
@@ -271,6 +273,7 @@ export default function FolderFilesModal({
 
               xhr.onload = async () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
+                  const storagePath = `${collegeId}/${driveFolderId}/${file.name.trim()}`;
                   const { data: existingDeleted } = await supabase
                     .from("drive_files")
                     .select("driveFileId")
@@ -280,30 +283,49 @@ export default function FolderFilesModal({
                     .maybeSingle();
 
                   if (existingDeleted) {
-                    await supabase
+                    const { error: restoreError } = await supabase
                       .from("drive_files")
                       .update({
                         is_deleted: false,
                         deletedAt: null,
                         fileSize: file.size,
-                        fileType:
-                          file.type || file.name.split(".").pop() || "unknown",
+                        fileType: normalizeDriveFileType(file.name, file.type),
                         createdAt: new Date().toISOString(),
                       })
                       .eq("driveFileId", existingDeleted.driveFileId);
+                    if (restoreError) {
+                      reject(new Error(restoreError.message || "Unable to restore the file record."));
+                      return;
+                    }
                   } else {
-                    await saveDriveFile(
+                    const { data: publicUrlData } = supabase.storage
+                      .from("college-drive")
+                      .getPublicUrl(storagePath);
+                    const saveResult = await saveDriveFile(
                       {
                         driveFolderId,
                         collegeId,
                         fileName: file.name,
-                        fileType:
-                          file.type || file.name.split(".").pop() || "unknown",
+                        fileType: normalizeDriveFileType(file.name, file.type),
                         fileSize: file.size,
-                        file,
+                        fileUrl: publicUrlData.publicUrl,
                       },
                       userId,
                     );
+                    if (!saveResult.success) {
+                      await supabase.storage.from("college-drive").remove([storagePath]);
+                      const saveError = saveResult.error as
+                        | { message?: string; details?: string; hint?: string; code?: string }
+                        | undefined;
+                      reject(
+                        new Error(
+                          saveError?.message ||
+                            saveError?.details ||
+                            "File uploaded, but its database record could not be created.",
+                        ),
+                      );
+                      return;
+                    }
                   }
 
                   const updated = await fetchDriveFilesByFolder(driveFolderId);
@@ -331,7 +353,9 @@ export default function FolderFilesModal({
               xhr.send(file);
             });
         });
-      } catch {
+      } catch (error) {
+        failedUploads += 1;
+        console.error("Drive file upload failed:", error);
         setUploadItems((prev) =>
           prev.map((item, idx) =>
             idx === i ? { ...item, status: "error" } : item,
@@ -340,12 +364,18 @@ export default function FolderFilesModal({
       }
     }
 
-    showToast(
-      selected.length > 1
-        ? `${selected.length} files uploaded successfully`
-        : "File uploaded successfully",
-      "success",
-    );
+    if (failedUploads === selected.length) {
+      showToast("Unable to upload the selected file(s)", "error");
+    } else if (failedUploads > 0) {
+      showToast(`${selected.length - failedUploads} uploaded, ${failedUploads} failed`, "error");
+    } else {
+      showToast(
+        selected.length > 1
+          ? `${selected.length} files uploaded successfully`
+          : "File uploaded successfully",
+        "success",
+      );
+    }
     setUploading(false);
     setTimeout(() => setUploadItems([]), 2000);
   };

@@ -29,8 +29,7 @@ import { getSearchRoutesByRole } from "@/lib/config/searchRoutes";
 import { Avatar } from "@/app/utils/Avatar";
 import { countActiveFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
-import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 type Props = {
   onMenuClick?: () => void;
@@ -82,7 +81,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
     loading,
   } = useUser();
   const { facultyId: activeFacultyId } = useFaculty();
-  const { collegeEducationType: adminCollegeEduType } = useCollegeAdmin();
+  const { isSchool } = useInstitutionTerminology();
 
 
   const searchParams = useSearchParams();
@@ -120,15 +119,11 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
       userId,
     ],
   );
-  const isSchoolStr = typeof document !== 'undefined'
-    ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
-    : null;
-  const isSchool = isSchoolStr === "true" || isSchoolEducation(collegeEducationType || adminCollegeEduType);
   const displayRoleMap: Record<string, string> = {
     FinanceManager: "Finance Manager",
     Accountant: "Accountant",
     CollegeAdmin: isSchool ? "School Admin" : "College Admin",
-    CollegeHr: "College HR",
+    CollegeHr: isSchool ? "School HR" : "College HR",
     PlacementOfficer: "Placement Officer",
     WellbeingExecutive: "Wellbeing Executive",
     WellbeingManager: "Wellbeing Manager",
@@ -946,7 +941,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                   )}
                   {role === "CollegeHr" && (
                     <>
-                      <p className="truncate">{role}</p>
+                      <p className="truncate">{displayRole}</p>
                       <p className="whitespace-nowrap shrink-0">
                         ID - <span>{identifierId}</span>
                       </p>
