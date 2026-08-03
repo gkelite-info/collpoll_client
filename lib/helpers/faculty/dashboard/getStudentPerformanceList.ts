@@ -1,3 +1,5 @@
+"use server";
+
 import { getFacultyStudentProgressSummary } from "@/lib/helpers/faculty/studentProgress/getFacultyStudentProgressSummary";
 
 export type GetStudentPerformanceListParams = {

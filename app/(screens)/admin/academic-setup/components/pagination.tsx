@@ -57,7 +57,7 @@ export function Pagination({
       <div className="flex flex-col gap-4 w-full md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 md:gap-6 w-full md:w-auto shrink-0">
           {itemsPerPageOptions && onItemsPerPageChange && (
-            <div className="flex items-center gap-2 relative z-50">
+            <div className="flex items-center gap-2 relative z-10">
               <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Items per page:</span>
               <div className="relative w-20">
                 <Listbox value={itemsPerPage} onChange={onItemsPerPageChange} disabled={disabled}>
@@ -80,7 +80,7 @@ export function Pagination({
                         leaveFrom="opacity-100"
                         leaveTo="opacity-0"
                       >
-                        <Listbox.Options className="absolute bottom-full mb-1 max-h-60 w-full overflow-auto rounded-lg bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-[100]">
+                        <Listbox.Options className="absolute bottom-full mb-1 max-h-60 w-full overflow-auto rounded-lg bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-20">
                           {itemsPerPageOptions.map((option) => (
                             <Listbox.Option
                               key={option}

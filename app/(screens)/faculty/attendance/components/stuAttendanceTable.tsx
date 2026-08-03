@@ -14,6 +14,7 @@ import {
   PencilSimple,
   User,
   XCircle,
+  WarningCircle,
 } from "@phosphor-icons/react";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useRouter } from "next/navigation";
@@ -366,18 +367,13 @@ export default function StuAttendanceTable({
               disabled={
                 (!isTopicMode && !selectedClass) ||
                 students.length === 0 ||
-                loadingFilters ||
-                !isCurrentDate
+                loadingFilters
               }
-              className={`flex items-center gap-2 text-sm px-4 py-2 rounded-lg shadow-sm whitespace-nowrap font-medium shrink-0 ${
-                !isCurrentDate 
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-80"
-                  : "bg-[#43C17A] hover:bg-[#36a86a] text-white cursor-pointer transition-transform active:scale-95 disabled:opacity-50"
-              }`}
-              title={!isCurrentDate ? "Attendance can only be marked for today's classes" : ""}
+              className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg shadow-sm whitespace-nowrap font-medium shrink-0 bg-[#43C17A] hover:bg-[#36a86a] text-white cursor-pointer transition-transform active:scale-95 disabled:opacity-50"
+              title=""
             >
-              {!isCurrentDate ? <Clock size={18} weight="bold" /> : <PencilSimple size={18} weight="bold" />}
-              {isCurrentDate ? "Edit Attendance" : "View Only"}
+              <PencilSimple size={18} weight="bold" />
+              Edit Attendance
             </button>
           ) : (
             <button
@@ -416,6 +412,15 @@ export default function StuAttendanceTable({
             >
               <User weight="fill" /> Leave
             </button>
+          </div>
+        )}
+
+        {selectedIds.length > 0 && selectedIds.length === filtered.length && totalItems > filtered.length && (
+          <div className="mb-3 px-2 mt-2">
+            <p className="text-orange-500 text-xs sm:text-sm font-bold flex items-center gap-1.5">
+               <WarningCircle size={18} weight="bold" className="shrink-0" />
+               * Only current page students are selected for marking/saving. You need to do the same for the next page.
+            </p>
           </div>
         )}
 

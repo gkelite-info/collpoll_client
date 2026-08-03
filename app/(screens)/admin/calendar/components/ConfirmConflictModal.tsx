@@ -33,8 +33,8 @@ export default function ConfirmConflictModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-xl">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 backdrop-blur-sm ignore-click-outside">
+      <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-xl ignore-click-outside">
 
         <h3 className="text-lg font-semibold text-[#1F2937] mb-2">
           Schedule Conflict

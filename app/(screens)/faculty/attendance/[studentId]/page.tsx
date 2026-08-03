@@ -1,18 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import SubjectWiseAttendance from "../components/subjectWiseTable";
 import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/getStudentAttendanceDetails";
-import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { CaretLeft } from "@phosphor-icons/react";
 import StudentProfileCard from "../components/stuProfileCard";
 import AiBotCard from "../components/aiBotCard";
-
-type StudentAttendanceDetails = NonNullable<
-  Awaited<ReturnType<typeof getStudentAttendanceDetails>>
->;
+import { useQuery } from "@tanstack/react-query";
+import StudentDetailsSkeleton from "./shimmer/studentDetailsSkeleton";
 
 export default function StudentAttendanceDetailsPage() {
   const router = useRouter();
@@ -22,32 +18,14 @@ export default function StudentAttendanceDetailsPage() {
     ? params.studentId[0]
     : params?.studentId;
 
-  const [student, setStudent] = useState<StudentAttendanceDetails | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: student, isLoading } = useQuery({
+    queryKey: ["studentAttendanceDetails", studentId],
+    queryFn: () => getStudentAttendanceDetails(studentId!),
+    enabled: !!studentId,
+  });
 
-  useEffect(() => {
-    async function fetchData() {
-      if (!studentId) return;
-      try {
-        const data = await getStudentAttendanceDetails(studentId);
-        setStudent(data);
-      } catch {
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [studentId]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        <div className="flex items-center justify-center gap-5">
-          <Loader />
-          <p>Loading Student Profile</p>
-        </div>
-      </div>
-    );
+  if (isLoading) {
+    return <StudentDetailsSkeleton />;
   }
 
   if (!student) {

@@ -588,7 +588,7 @@ async function resolveFacultyStudentProgressScope(
     for (const section of event.calendar_event_section ?? []) {
       if (
         section.collegeEducationId !== scope.collegeEducationId ||
-        section.collegeBranchId !== scope.collegeBranchId ||
+        (scope.collegeBranchId > 0 && section.collegeBranchId !== scope.collegeBranchId) ||
         section.isActive === false ||
         section.deletedAt
       ) {
@@ -615,14 +615,19 @@ async function resolveFacultyStudentProgressScope(
     return calendarScope;
   }
 
-  const { data: studentRows, error: studentError } = await supabase
+  let studentQuery1 = supabase
     .from("students")
     .select("studentId")
     .eq("collegeId", scope.collegeId)
     .eq("collegeEducationId", scope.collegeEducationId)
-    .eq("collegeBranchId", scope.collegeBranchId)
     .eq("isActive", true)
     .is("deletedAt", null);
+
+  if (scope.collegeBranchId > 0) {
+    studentQuery1 = studentQuery1.eq("collegeBranchId", scope.collegeBranchId);
+  }
+
+  const { data: studentRows, error: studentError } = await studentQuery1;
 
   if (studentError) throw studentError;
 
@@ -754,15 +759,20 @@ export async function getFacultyStudentProgressSummary(
     return buildEmptySummary(scope, historyLabels);
   }
 
-  const { data: studentRows, error: studentError } = await supabase
+  let studentQuery2 = supabase
     .from("students")
     .select("studentId, userId")
     .in("studentId", candidateStudentIds)
     .eq("collegeId", scope.collegeId)
     .eq("collegeEducationId", scope.collegeEducationId)
-    .eq("collegeBranchId", scope.collegeBranchId)
     .eq("isActive", true)
     .is("deletedAt", null);
+
+  if (scope.collegeBranchId > 0) {
+    studentQuery2 = studentQuery2.eq("collegeBranchId", scope.collegeBranchId);
+  }
+
+  const { data: studentRows, error: studentError } = await studentQuery2;
 
   if (studentError) throw studentError;
 
@@ -825,6 +835,46 @@ export async function getFacultyStudentProgressSummary(
 
   if (allAttendanceError) throw allAttendanceError;
 
+  let assignmentsQuery = supabase
+    .from("assignments")
+    .select("assignmentId, collegeSectionsId, collegeAcademicYearId, submissionDeadlineInt")
+    .eq("createdBy", scope.facultyId)
+    .in("subjectId", scope.subjectIds)
+    .in("collegeAcademicYearId", scope.academicYearIds)
+    .in("collegeSectionsId", scope.sectionIds)
+    .eq("is_deleted", false)
+    .neq("status", "Cancelled");
+
+  if (scope.collegeBranchId > 0) {
+    assignmentsQuery = assignmentsQuery.eq("collegeBranchId", scope.collegeBranchId);
+  }
+
+  let weightageConfigsQuery = supabase
+    .from("faculty_weightage_configs")
+    .select(
+      `
+      facultyWeightageConfigId,
+      collegeSubjectId,
+      collegeSectionsId,
+      collegeSemesterId,
+      totalPercentage,
+      faculty_weightage_items (
+        label,
+        percentage
+      )
+    `,
+    )
+    .eq("facultyId", scope.facultyId)
+    .eq("collegeId", scope.collegeId)
+    .eq("collegeEducationId", scope.collegeEducationId)
+    .in("collegeSubjectId", scope.subjectIds)
+    .in("collegeSectionsId", scope.sectionIds)
+    .is("deletedAt", null);
+
+  if (scope.collegeBranchId > 0) {
+    weightageConfigsQuery = weightageConfigsQuery.eq("collegeBranchId", scope.collegeBranchId);
+  }
+
   const [
     usersResult,
     profilesResult,
@@ -853,16 +903,7 @@ export async function getFacultyStudentProgressSummary(
           .eq("isActive", true)
           .is("deletedAt", null)
       : Promise.resolve({ data: [], error: null }),
-    supabase
-      .from("assignments")
-      .select("assignmentId, collegeSectionsId, collegeAcademicYearId, submissionDeadlineInt")
-      .eq("createdBy", scope.facultyId)
-      .eq("collegeBranchId", scope.collegeBranchId)
-      .in("subjectId", scope.subjectIds)
-      .in("collegeAcademicYearId", scope.academicYearIds)
-      .in("collegeSectionsId", scope.sectionIds)
-      .eq("is_deleted", false)
-      .neq("status", "Cancelled"),
+    assignmentsQuery,
     supabase
       .from("discussion_forum")
       .select("discussionId, deadline")
@@ -878,28 +919,7 @@ export async function getFacultyStudentProgressSummary(
       .in("collegeSectionsId", scope.sectionIds)
       .eq("isActive", true)
       .is("deletedAt", null),
-    supabase
-      .from("faculty_weightage_configs")
-      .select(
-        `
-        facultyWeightageConfigId,
-        collegeSubjectId,
-        collegeSectionsId,
-        collegeSemesterId,
-        totalPercentage,
-        faculty_weightage_items (
-          label,
-          percentage
-        )
-      `,
-      )
-      .eq("facultyId", scope.facultyId)
-      .eq("collegeId", scope.collegeId)
-      .eq("collegeEducationId", scope.collegeEducationId)
-      .eq("collegeBranchId", scope.collegeBranchId)
-      .in("collegeSubjectId", scope.subjectIds)
-      .in("collegeSectionsId", scope.sectionIds)
-      .is("deletedAt", null),
+    weightageConfigsQuery,
   ]);
 
   if (usersResult.error) throw usersResult.error;

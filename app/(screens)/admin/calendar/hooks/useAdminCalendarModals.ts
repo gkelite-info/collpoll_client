@@ -86,7 +86,7 @@ export const useAdminCalendarModals = (
       if (conflict) {
         setPendingEvent(data);
         setShowConflictModal(true);
-        return;
+        return { success: false };
       }
 
       if (data.calendarMode === "bulk") {
@@ -108,7 +108,7 @@ export const useAdminCalendarModals = (
 
         if (!eventRes.success) {
           toast.error("Failed to save bulk event");
-          return;
+          return { success: false };
         }
 
         const bulkCalendarEventId = eventRes.bulkCalendarEventId!;
@@ -129,7 +129,7 @@ export const useAdminCalendarModals = (
         setEventForm(null);
         setFormMode("create");
         await loadEvents();
-        return;
+        return { success: true };
       }
 
       const eventRes = await saveCalendarEvent({
@@ -154,7 +154,7 @@ export const useAdminCalendarModals = (
 
       if (!eventRes.success) {
         toast.error("Failed to save event");
-        return;
+        return { success: false };
       }
 
       const calendarEventId = eventRes.calendarEventId;
@@ -192,9 +192,11 @@ export const useAdminCalendarModals = (
       setFormMode("create");
 
       await loadEvents();
+      return { success: true };
     } catch (err) {
       console.error("ADMIN SAVE EVENT FAILED", err);
       toast.error("Failed to save event");
+      return { success: false };
     } finally {
       setIsSaving(false);
     }

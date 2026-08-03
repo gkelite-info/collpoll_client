@@ -64,72 +64,55 @@ export async function getSubjectAttendanceDetails(
 
   const subjectName = subjectData?.subjectName || "Unknown Subject";
 
-  const { data: singleEvents } = await supabase
-    .from("calendar_event")
-    .select("calendarEventId")
-    .eq("subject", subjectId);
-  const singleIds = singleEvents?.map(e => e.calendarEventId) || [];
+  const [singleRes, bulkRes] = await Promise.all([
+    supabase
+      .from("attendance_record")
+      .select(`
+        attendanceRecordId,
+        status,
+        markedAt,
+        reason,
+        calendarEventId,
+        bulkCalendarEventId,
+        event:calendar_event!inner (
+          date,
+          fromTime,
+          toTime,
+          subject,
+          faculty:faculty ( users (fullName) ) 
+        )
+      `)
+      .eq("studentId", studentId)
+      .eq("event.subject", subjectId),
+    supabase
+      .from("attendance_record")
+      .select(`
+        attendanceRecordId,
+        status,
+        markedAt,
+        reason,
+        calendarEventId,
+        bulkCalendarEventId,
+        bulk_event:bulk_calendar_events!inner (
+          fromDate,
+          fromTime,
+          toTime,
+          subject,
+          faculty:faculty ( users (fullName) )
+        )
+      `)
+      .eq("studentId", studentId)
+      .eq("bulk_event.subject", subjectId)
+  ]);
 
-  const { data: bulkEvents } = await supabase
-    .from("bulk_calendar_events")
-    .select("bulkCalendarEventId")
-    .eq("subject", subjectId);
-  const bulkIds = bulkEvents?.map(e => e.bulkCalendarEventId) || [];
-
-  if (singleIds.length === 0 && bulkIds.length === 0) {
-      return {
-        subjectName: subjectName,
-        facultyName: "Unknown Faculty",
-        summary: {
-          totalClasses: 0,
-          attended: 0,
-          absent: 0,
-          leave: 0,
-          percentage: "0%",
-        },
-        records: [],
-        totalCount: 0
-      };
-  }
-
-  let query = supabase
-    .from("attendance_record")
-    .select(
-      `
-      attendanceRecordId,
-      status,
-      markedAt,
-      reason,
-      calendarEventId,
-      bulkCalendarEventId,
-      event:calendar_event (
-        date,
-        fromTime,
-        toTime,
-        subject,
-        faculty:faculty ( user:users (fullName) ) 
-      ),
-      bulk_event:bulk_calendar_events (
-        fromDate,
-        fromTime,
-        toTime,
-        subject,
-        faculty:faculty ( user:users (fullName) )
-      )
-    `,
-    )
-    .eq("studentId", studentId)
-    .order("markedAt", { ascending: false });
-
-  if (singleIds.length > 0 && bulkIds.length > 0) {
-    query = query.or(`calendarEventId.in.(${singleIds.join(",")}),bulkCalendarEventId.in.(${bulkIds.join(",")})`);
-  } else if (singleIds.length > 0) {
-    query = query.in("calendarEventId", singleIds);
-  } else if (bulkIds.length > 0) {
-    query = query.in("bulkCalendarEventId", bulkIds);
-  }
-
-  const { data: records, error: attendanceError } = await query;
+  const attendanceError = singleRes.error || bulkRes.error;
+  const records = [...(singleRes.data || []), ...(bulkRes.data || [])];
+  
+  records.sort((a: any, b: any) => {
+    const dateA = a.markedAt || a.event?.date || a.bulk_event?.fromDate || "";
+    const dateB = b.markedAt || b.event?.date || b.bulk_event?.fromDate || "";
+    return dateB.localeCompare(dateA); // Descending
+  });
 
   if (attendanceError) {
     console.error("Subject Attendance Error:", attendanceError);
@@ -157,7 +140,8 @@ export async function getSubjectAttendanceDetails(
       if (r.status === "LEAVE") leave++;
     }
 
-    const eventObj = r.calendarEventId ? r.event : r.bulk_event;
+    const rAny = r as any;
+    const eventObj = r.calendarEventId ? rAny.event : rAny.bulk_event;
 
     let uiStatus: UiAttendanceStatus = "Present";
     switch (r.status) {
@@ -187,7 +171,7 @@ export async function getSubjectAttendanceDetails(
     const toTime = e?.toTime || "";
 
     const fac = safeGet(e?.faculty);
-    const user = safeGet((fac as any)?.user);
+    const user = safeGet((fac as any)?.users);
     const fname = user?.fullName || "Unknown Faculty";
     facultyNames.set(fname, (facultyNames.get(fname) || 0) + 1);
 

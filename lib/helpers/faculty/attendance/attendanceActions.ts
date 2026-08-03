@@ -171,7 +171,16 @@ export async function getFacultyClasses(
       : e.subject?.subjectName || "No Subject";
     const topicObj = Array.isArray(e.topic) ? e.topic[0] : e.topic;
     const topic = topicObj?.topicTitle || "General Session";
-    const time = e.fromTime ? e.fromTime.slice(0, 5) : "";
+    let time = "";
+    if (e.fromTime) {
+      const parts = e.fromTime.split(":");
+      let hour = parseInt(parts[0], 10);
+      const minute = parts[1];
+      const ampm = hour >= 12 ? "PM" : "AM";
+      hour = hour % 12;
+      hour = hour ? hour : 12; // hour 0 is 12
+      time = `${hour.toString().padStart(2, "0")}:${minute} ${ampm}`;
+    }
 
     const idStr = e.isBulk ? `bulk-${e.bulkCalendarEventId}_${targetDate.replace(/-/g, "_")}` : String(e.calendarEventId);
     const labelStr = e.isBulk ? `${time} • ${subj}` : `${time} • ${subj} • ${topic}`;
@@ -215,8 +224,10 @@ export async function getClassSections(
 export async function getStudentsForClass(
   classId: string,
   sectionFilterId?: string,
-  sortStatus: string = "All"
-): Promise<UIStudent[]> {
+  sortStatus: string = "All",
+  page: number = 1,
+  limit: number = 20
+): Promise<{ data: UIStudent[]; total: number }> {
   const supabase = await createClient();
 
   const isBulk = classId.startsWith("bulk-");
@@ -273,7 +284,7 @@ export async function getStudentsForClass(
     }
   }
 
-  if (targetSectionIds.length === 0) return [];
+  if (targetSectionIds.length === 0) return { data: [], total: 0 };
 
   const { data: history } = await supabase
     .from("student_academic_history")
@@ -282,7 +293,7 @@ export async function getStudentsForClass(
     .eq("isCurrent", true);
 
   const ids = history?.map((h) => h.studentId) || [];
-  if (ids.length === 0) return [];
+  if (ids.length === 0) return { data: [], total: 0 };
 
   const { data: eventData } = await supabase
     .from(isBulk ? "bulk_calendar_events" : "calendar_event")
@@ -290,22 +301,39 @@ export async function getStudentsForClass(
     .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId)
     .single();
 
-  const eventDate = isBulk 
+  let eventDate = isBulk 
     ? new Date().toLocaleDateString("en-CA") // "YYYY-MM-DD" local timezone format
     : (eventData as any)?.date;
+
+  if (isBulk) {
+    const parts = classId.split("-");
+    const subparts = parts[1].split("_");
+    if (subparts.length >= 4) {
+      eventDate = `${subparts[1]}-${subparts[2]}-${subparts[3]}`;
+    }
+  }
 
   const subjectId = eventData?.subject;
   const statsMap = new Map<number, { present: number; total: number }>();
 
   if (subjectId) {
-    const { data: allRecords } = await supabase
-      .from("attendance_record")
-      .select(`studentId, status, event:calendar_event(subject), bulk_event:bulk_calendar_events(subject)`)
-      .in("studentId", ids);
+    const [singleRes, bulkRes] = await Promise.all([
+      supabase
+        .from("attendance_record")
+        .select(`studentId, status, event:calendar_event!inner(subject)`)
+        .in("studentId", ids)
+        .eq("event.subject", subjectId),
+      supabase
+        .from("attendance_record")
+        .select(`studentId, status, bulk_event:bulk_calendar_events!inner(subject)`)
+        .in("studentId", ids)
+        .eq("bulk_event.subject", subjectId)
+    ]);
+
+    const allRecords = [...(singleRes.data || []), ...(bulkRes.data || [])];
       
-    allRecords?.forEach((r: any) => {
-      const recSubjectId = r.event?.subject || r.bulk_event?.subject;
-      if (recSubjectId === subjectId && ["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
+    allRecords.forEach((r: any) => {
+      if (["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
         const s = statsMap.get(r.studentId) || { present: 0, total: 0 };
         s.total++;
         if (r.status === "PRESENT" || r.status === "LATE") s.present++;
@@ -314,17 +342,56 @@ export async function getStudentsForClass(
     });
   }
 
+  let filteredIds = ids;
+
+  if (sortStatus !== "All") {
+    // If filtering by status, we must rely on attendance_record
+    // Wait, the statsMap and allRecords have the info for these ids. But allRecords ONLY fetches for subjectId if subjectId exists.
+    // Actually, we must do a pre-fetch of attendance records for the specific event to filter by sortStatus.
+    const { data: eventRecords } = await supabase
+      .from("attendance_record")
+      .select("studentId, status")
+      .in("studentId", ids)
+      .eq(isBulk ? "bulkCalendarEventId" : "calendarEventId", eventId)
+      .eq("markedAt", eventDate);
+
+    const statusMap = new Map<number, string>();
+    eventRecords?.forEach((r) => {
+      let status = "Not Marked";
+      switch (r.status) {
+        case "PRESENT": status = "Present"; break;
+        case "ABSENT": status = "Absent"; break;
+        case "LEAVE": status = "Leave"; break;
+        case "LATE": status = "Late"; break;
+        case "CLASS_CANCEL":
+        case "CANCELLED":
+        case "CANCEL_CLASS": status = "Class Cancel"; break;
+      }
+      statusMap.set(r.studentId, status);
+    });
+
+    filteredIds = ids.filter((id) => {
+      const status = statusMap.get(id) || "Not Marked";
+      return status === sortStatus;
+    });
+  }
+
+  const total = filteredIds.length;
+  const paginatedIds = filteredIds.slice((page - 1) * limit, page * limit);
+
+  if (paginatedIds.length === 0) return { data: [], total };
+
   const { data: students, error } = await supabase
     .from("students")
     .select(
       `studentId, user:users (fullName, gender, user_profile(profileUrl)), student_pins(pinNumber), attendance_record (status, reason, calendarEventId, bulkCalendarEventId)`,
     )
-    .in("studentId", ids)
+    .in("studentId", paginatedIds)
     .eq(isBulk ? "attendance_record.bulkCalendarEventId" : "attendance_record.calendarEventId", eventId)
     .eq("attendance_record.markedAt", eventDate)
     .order("studentId");
 
-  if (error) return [];
+  if (error) return { data: [], total };
 
   let mappedData = students!.map((s: any) => {
     const record = s.attendance_record?.[0];
@@ -366,7 +433,6 @@ export async function getStudentsForClass(
       ? s.student_pins[0]?.pinNumber
       : s.student_pins?.pinNumber;
 
-
     return {
       id: String(s.studentId),
       name: s.user?.fullName || `Student ${s.studentId}`,
@@ -379,11 +445,10 @@ export async function getStudentsForClass(
     };
   });
 
-  if (sortStatus !== "All") {
-    mappedData = mappedData.filter(s => s.attendance === sortStatus);
-  }
+  // Re-sort mappedData to maintain the original ID order (which is sorted by section roll/id)
+  mappedData.sort((a, b) => paginatedIds.indexOf(parseInt(a.id)) - paginatedIds.indexOf(parseInt(b.id)));
 
-  return mappedData;
+  return { data: mappedData, total };
 }
 
 export async function saveAttendance(classId: string, payload: any[]) {

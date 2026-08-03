@@ -31,7 +31,6 @@ export const useFacultyStudentPerformance = (
         !params.facultyId ||
         !params.collegeId ||
         !params.collegeEducationId ||
-        !params.collegeBranchId ||
         !params.subjectIds.length
       ) {
         return { students: [], hasNextPage: false, totalCount: 0 };
@@ -41,7 +40,7 @@ export const useFacultyStudentPerformance = (
         facultyId: params.facultyId,
         collegeId: params.collegeId,
         collegeEducationId: params.collegeEducationId,
-        collegeBranchId: params.collegeBranchId,
+        collegeBranchId: params.collegeBranchId ?? 0,
         academicYearIds: params.academicYearIds,
         sectionIds: params.sectionIds,
         subjectIds: params.subjectIds,
@@ -61,7 +60,6 @@ export const useFacultyStudentPerformance = (
       !!params.facultyId &&
       !!params.collegeId &&
       !!params.collegeEducationId &&
-      !!params.collegeBranchId &&
       params.subjectIds.length > 0,
     staleTime: 10 * 60 * 1000, // 10 minutes (computationally expensive)
     gcTime: 15 * 60 * 1000, // 15 minutes

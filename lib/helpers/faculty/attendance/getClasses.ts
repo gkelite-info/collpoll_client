@@ -22,12 +22,13 @@ export interface UpcomingLesson {
 
 function convertTo12HourFormat(time: string): string {
   if (!time) return "";
-  const [hour, minute] = time.split(":").map(Number);
-  const date = new Date(2000, 0, 1, hour, minute);
-  const hours12 = date.getHours() % 12 || 12;
-  const ampm = date.getHours() >= 12 ? "PM" : "AM";
-  const minutes = date.getMinutes().toString().padStart(2, "0");
-  return `${hours12}:${minutes} ${ampm}`;
+  const parts = time.split(":");
+  let hour = parseInt(parts[0], 10);
+  const minute = parts[1];
+  const ampm = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12;
+  hour = hour ? hour : 12;
+  return `${hour.toString().padStart(2, "0")}:${minute} ${ampm}`;
 }
 
 function formatDate(dateString: string): string {

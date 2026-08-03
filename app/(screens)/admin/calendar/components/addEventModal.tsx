@@ -20,7 +20,7 @@ interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   value: any | null;
-  onSave: (eventData: any) => void;
+  onSave: (eventData: any) => Promise<{ success: boolean }>;
   degreeOptions?: any[];
   isSaving?: boolean;
   mode: "create" | "edit";
@@ -289,8 +289,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
     try {
       state.setIsSubmitting(true);
-      await onSave(newEvent);
-      onClose();
+      const result = await onSave(newEvent);
+      if (result?.success !== false) {
+        onClose();
+      }
     } catch (error) {
       toast.error("Failed to save event. Please try again.");
     } finally {
@@ -304,7 +306,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (disableOutsideClick) return;
       const target = event.target as Element;
-      if (target?.closest && target.closest('.modal-dropdown-menu')) {
+      if (target?.closest && (target.closest('.modal-dropdown-menu') || target.closest('.ignore-click-outside'))) {
         return;
       }
       

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
 import { supabase } from "@/lib/supabaseClient";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export const useAddEventModalData = (
   userId: number | null | undefined,
@@ -99,12 +100,13 @@ export const useAddEventModalData = (
       let validSubjectIds = facultyCtx.subjectIds;
       if (!isSingleSubject) {
         const eduType = educations.find(e => e.collegeEducationId === educationId)?.collegeEducationType || facultyCtx.faculty_edu_type;
-        const isCollege = eduType !== "Inter";
+        const isSchool = isSchoolEducation(eduType);
+        const isCollege = !isSchool && eduType !== "Inter";
         
         // Force selecting upstream fields before showing subjects
         if (!educationId || !academicYearId) return [];
         if (isCollege && !semester) return [];
-        if (isCollege && branches.length > 0 && !branchId) return [];
+        if (!isSchool && branches.length > 0 && !branchId) return [];
 
         validSubjectIds = facultyCtx.sections
           .filter(s => 
@@ -143,7 +145,8 @@ export const useAddEventModalData = (
       if (!collegeId || !educationId || !academicYearId) return [];
       
       const eduType = educations.find(e => e.collegeEducationId === educationId)?.collegeEducationType || facultyCtx.faculty_edu_type;
-      if (eduType === "Inter") return []; // Schools don't have semesters
+      const isSchool = isSchoolEducation(eduType);
+      if (isSchool || eduType === "Inter") return []; // Schools and Inter don't have semesters
 
       return (await fetchAcademicDropdowns({
         type: "semester",

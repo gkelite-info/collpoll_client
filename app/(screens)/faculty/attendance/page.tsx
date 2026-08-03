@@ -113,18 +113,18 @@ function AttendanceContent() {
     placeholderData: keepPreviousData,
   });
 
-  // Query for students list (server handles sorting, we paginate client-side)
+  // Query for students list (server handles sorting and pagination)
   const sortFilter = urlSort || "All";
-  const { data: allStudentsRaw = [], isLoading: studentsLoading, isFetching: studentsFetching } = useQuery({
-    queryKey: ["studentsForClass", activeClassId, selectedSectionId, sortFilter],
-    queryFn: () => getStudentsForClass(activeClassId, selectedSectionId, sortFilter),
+  const { data: allStudentsRaw = { data: [], total: 0 }, isLoading: studentsLoading, isFetching: studentsFetching } = useQuery({
+    queryKey: ["studentsForClass", activeClassId, selectedSectionId, sortFilter, page, itemsPerPage],
+    queryFn: () => getStudentsForClass(activeClassId, selectedSectionId, sortFilter, page, itemsPerPage),
     enabled: !!activeClassId && (!!selectedSectionId || sectionOptions.length === 0 || !!urlClassId),
     placeholderData: keepPreviousData,
   });
 
-  // Client-side pagination
-  const totalItems = allStudentsRaw.length;
-  const paginatedStudents = allStudentsRaw.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+  // Server-side pagination mapping
+  const totalItems = allStudentsRaw.total;
+  const paginatedStudents = allStudentsRaw.data;
 
   // Handle auto-selecting class and section
   useEffect(() => {
@@ -176,7 +176,7 @@ function AttendanceContent() {
           if (!prev[sId] || prev[sId].attendance !== status) {
             newDrafts[sId] = { ...prev[sId], attendance: status, reason: newRecord.reason || "" };
             // Optional: Find name for toast
-            const student = allStudentsRaw?.find(s => s.id === sId);
+            const student = allStudentsRaw?.data?.find((s: any) => s.id === sId);
             if (student) matchedStudentName = student.name;
           }
           return newDrafts;
