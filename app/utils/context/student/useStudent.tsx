@@ -3,6 +3,7 @@
 import { supabase } from "@/lib/supabaseClient";
 import { createContext, useContext, useEffect, useState } from "react";
 import { fetchStudentContext } from "./studentContextAPI";
+import { useUser } from "../UserContext";
 
 type StudentContextType = {
     loading: boolean;
@@ -47,6 +48,7 @@ const StudentContext = createContext<StudentContextType>({
 });
 
 export const StudentProvider = ({ children }: { children: React.ReactNode }) => {
+    const { userId, role, loading: userLoading } = useUser();
     const [subjects, setSubjects] = useState<any[]>([]);
     const [state, setState] = useState<StudentContextType>({
         ...useContext(StudentContext),
@@ -54,25 +56,28 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
     });
 
     useEffect(() => {
+        let cancelled = false;
+
         const loadStudent = async () => {
+            if (userLoading) return;
+
+            if (!userId || role !== "Student") {
+                setSubjects([]);
+                setState(prev => ({
+                    ...prev,
+                    loading: false,
+                    userId: null,
+                    studentId: null,
+                }));
+                return;
+            }
+
+            setState(prev => ({ ...prev, loading: true }));
+
             try {
-                const { data: auth } = await supabase.auth.getUser();
-                if (!auth.user) {
-                    setState(prev => ({ ...prev, loading: false }));
-                    return;
-                }
-
-                const { data: user } = await supabase
-                    .from("users")
-                    .select("userId, role")
-                    .eq("auth_id", auth.user.id)
-                    .single();
-
-                if (!user || user.role !== "Student") return;
-
-                const student = await fetchStudentContext(user.userId);
+                const student = await fetchStudentContext(userId);
                 if (!student) {
-                    setState(prev => ({ ...prev, loading: false }));
+                    if (!cancelled) setState(prev => ({ ...prev, loading: false }));
                     return;
                 }
 
@@ -101,11 +106,13 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
                     console.error("Subjects fetch error:", subjectsError);
                 }
 
+                if (cancelled) return;
+
                 setSubjects(subjectsData ?? []);
 
                 setState({
                     loading: false,
-                    userId: user.userId,
+                    userId,
                     studentId: student.studentId,
                     collegeId: student.collegeId,
                     collegeEducationId: student.collegeEducationId,
@@ -125,12 +132,16 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
                 });
             } catch (err) {
                 console.error("Student context error:", err);
-                setState(prev => ({ ...prev, loading: false }));
+                if (!cancelled) setState(prev => ({ ...prev, loading: false }));
             }
         };
 
         loadStudent();
-    }, []);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [role, userId, userLoading]);
 
     return (
         <StudentContext.Provider value={{ ...state, subjects }}>

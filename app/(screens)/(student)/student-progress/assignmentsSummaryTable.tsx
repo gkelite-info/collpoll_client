@@ -1,8 +1,9 @@
 "use client";
 
-import { useUser } from "@/app/utils/context/UserContext";
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 export type SubjectProgressRow = {
   subject: string;
@@ -17,6 +18,7 @@ export type SubjectProgressRow = {
 type SubjectProgressTableProps = {
   rows: SubjectProgressRow[];
   semesterLabel: string;
+  showSemester: boolean;
 };
 
 function ProgressRing({ value }: { value: number }) {
@@ -41,9 +43,17 @@ function ProgressRing({ value }: { value: number }) {
 export function AssignmentsSummaryTable({
   rows,
   semesterLabel,
+  showSemester,
 }: SubjectProgressTableProps) {
   const t = useTranslations("Progress.student");
-  const { collegeEducationType } = useUser();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const totalPages = Math.max(1, Math.ceil(rows.length / itemsPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedRows = rows.slice(
+    (safeCurrentPage - 1) * itemsPerPage,
+    safeCurrentPage * itemsPerPage,
+  );
 
   return (
     <div className="w-full rounded-2xl bg-white p-6 shadow-sm max-md:p-0 max-md:bg-transparent max-md:shadow-none max-md:rounded-none">
@@ -51,7 +61,7 @@ export function AssignmentsSummaryTable({
         <h2 className="text-lg font-bold text-[#282828] max-md:text-[14.5px] max-md:font-bold max-md:tracking-tight max-md:text-gray-800">
           {t("Class Progress Overview")}
         </h2>
-        {!(collegeEducationType === "Inter") &&
+        {showSemester &&
           <div className="flex justify-end">
             <button
               type="button"
@@ -99,7 +109,7 @@ export function AssignmentsSummaryTable({
                 </td>
               </tr>
             ) : (
-              rows.map((row, index) => (
+              paginatedRows.map((row, index) => (
                 <tr
                   key={`${row.subject}-${index}`}
                   className="hover:bg-gray-50 transition-colors"
@@ -135,7 +145,7 @@ export function AssignmentsSummaryTable({
             {t("No subject progress data available for this semester")}
           </div>
         ) : (
-          rows.map((row, index) => (
+          paginatedRows.map((row, index) => (
             <div
               key={`${row.subject}-${index}`}
               className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 relative"
@@ -179,6 +189,22 @@ export function AssignmentsSummaryTable({
           ))
         )}
       </div>
+      {rows.length > 0 && (
+        <div className="mt-3 overflow-hidden rounded-xl border border-gray-100">
+          <Pagination
+            currentPage={safeCurrentPage}
+            totalItems={rows.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            itemsPerPageOptions={[5, 10, 20]}
+            onItemsPerPageChange={(items) => {
+              setItemsPerPage(items);
+              setCurrentPage(1);
+            }}
+            alwaysShow
+          />
+        </div>
+      )}
     </div>
   );
 }
