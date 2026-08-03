@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 
 export type ProfileCardProps = {
   name: string;
-  department: string;
+  department: string | null;
   studentId: string;
   avatarUrl: string | null;
   attendancePercentage: number;
@@ -41,9 +41,11 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             {name}
           </h1>
 
-          <span className="bg-green-100 text-green-600 text-sm font-semibold px-3 py-1 rounded-full max-md:px-2 max-md:py-0.5 max-md:text-[9px]">
-            {department}
-          </span>
+          {department && (
+            <span className="bg-green-100 text-green-600 text-sm font-semibold px-3 py-1 rounded-full max-md:px-2 max-md:py-0.5 max-md:text-[9px]">
+              {department}
+            </span>
+          )}
 
           <span className="bg-green-100 text-green-600 text-sm font-semibold px-3 py-1 rounded-full md:ml-auto max-md:px-2 max-md:py-0.5 max-md:text-[9px]">
             {studentId}

@@ -6,12 +6,13 @@ import { ProfileCard } from "./profileCard";
 import { AssignmentsSummaryTable } from "./assignmentsSummaryTable";
 import { AttendanceList } from "./attendanceBySubjectCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { List, X, CaretRight, User, ArrowLeft, SpinnerGap } from "@phosphor-icons/react";
-import { useEffect, useState, useMemo, useRef } from "react";
+import { List, X, CaretRight, User, ArrowLeft } from "@phosphor-icons/react";
+import { Suspense, useEffect, useState, useMemo, useRef } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { getStudentProgressData } from "@/lib/helpers/student/studentProgress/getStudentProgressData";
 import { StudentProgressSkeleton } from "./shimmer/studentProgressSkeleton";
+import { ResultsSkeleton } from "./shimmer/resultsSkeleton";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import MidExams from "../stu_dashboard/midExams";
@@ -20,6 +21,18 @@ import autoTable from "jspdf-autotable";
 import html2canvas from "html2canvas-pro";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabaseClient";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { useRouter, useSearchParams } from "next/navigation";
+
+type ProgressTab = "progress" | "exams" | "results";
+
+const isProgressTab = (value: string | null): value is ProgressTab =>
+  value === "progress" || value === "exams" || value === "results";
+
+const getActiveTab = (value: string | null): ProgressTab => {
+  if (value === "exam-enrollment" || value === "hall-ticket") return "exams";
+  return isProgressTab(value) ? value : "progress";
+};
 
 const getGradePoints = (grade: string): number => {
   const g = grade.toUpperCase().trim();
@@ -33,15 +46,18 @@ const getGradePoints = (grade: string): number => {
   }
 };
 
-const Page = () => {
+const StudentProgressPage = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const [progressLoading, setProgressLoading] = useState(true);
   const { studentId } = useStudent();
   const [progressData, setProgressData] = useState<Awaited<
     ReturnType<typeof getStudentProgressData>
   > | null>(null);
-  const [activeTab, setActiveTab] = useState<"progress" | "exams" | "results">("progress");
-  const [selectedScheduleId, setSelectedScheduleId] = useState<number | null>(null);
+  const requestedTab = searchParams.get("tab");
+  const activeTab = getActiveTab(requestedTab);
+  const selectedScheduleId = Number(searchParams.get("resultScheduleId")) || null;
   const [studentResults, setStudentResults] = useState<any[]>([]);
   const [resultsLoading, setResultsLoading] = useState(true);
   const [collegeName, setCollegeName] = useState("St. Xavier's College of Excellence");
@@ -91,6 +107,24 @@ const Page = () => {
     { id: "exams", label: "Exam Enrollment" },
     { id: "results", label: "Results" },
   ];
+  const setActiveTab = (tab: ProgressTab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    params.delete("scheduleId");
+    params.delete("view");
+    params.delete("resultScheduleId");
+    router.push(`/student-progress?${params.toString()}`, { scroll: false });
+  };
+  const routeToResultSchedule = (scheduleId: number | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", "results");
+    if (scheduleId === null) {
+      params.delete("resultScheduleId");
+    } else {
+      params.set("resultScheduleId", String(scheduleId));
+    }
+    router.push(`/student-progress?${params.toString()}`, { scroll: false });
+  };
   const {
     userId,
     fullName,
@@ -110,9 +144,24 @@ const Page = () => {
     collegeBranchType
   } = useStudent();
 
+  const normalizedEducationType = collegeEducationType?.trim().toLowerCase() ?? "";
+  const usesBranchAndSemester = Boolean(collegeEducationType) &&
+    !isSchoolEducation(collegeEducationType) &&
+    !normalizedEducationType.includes("inter") &&
+    !normalizedEducationType.includes("10th") &&
+    !normalizedEducationType.includes("class 10");
+
   const semesterLabel = collegeSemester
     ? `Semester ${collegeSemester}`
     : "Semester N/A";
+  const academicPerformanceData = useMemo(
+    () => progressData?.subjectProgressRows.map((row) => ({
+      subject: row.subjectKey || row.subject,
+      value: row.progressPercent,
+      full: 100,
+    })),
+    [progressData],
+  );
   const isLoading = userLoading || studentLoading || progressLoading;
 
   useEffect(() => {
@@ -408,19 +457,15 @@ const Page = () => {
     };
   }, [userId, userLoading, studentLoading]);
 
-  if (isLoading) {
-    return <StudentProgressSkeleton />;
-  }
-
   return (
     <>
       <main className="p-3 max-md:p-2 max-md:pb-7 max-md:bg-[#f4f5f6] relative overflow-hidden min-h-screen">
         <div className="flex mx-auto mb-5 justify-center">
-          <div className="relative flex items-center bg-gray-100 p-1.5 rounded-full shadow-sm">
+          <div className="relative flex items-center bg-gray-100 p-1.5 rounded-full shadow-[0_-3px_10px_rgba(0,0,0,0.08),0_3px_10px_rgba(0,0,0,0.08)]">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as ProgressTab)}
                 className={`relative cursor-pointer px-6 py-2 text-sm font-semibold z-10 transition-colors duration-200 ${activeTab === tab.id
                   ? "text-white"
                   : "text-gray-500 hover:text-gray-700"
@@ -430,7 +475,7 @@ const Page = () => {
                 {activeTab === tab.id && (
                   <motion.div
                     layoutId="student-progress-tab-pill"
-                    className="absolute shadow-[0_2px_8px_rgba(16,185,129,0.4)] inset-0 rounded-full -z-10"
+                    className="absolute inset-0 rounded-full -z-10 shadow-[0_-3px_8px_rgba(16,185,129,0.28),0_3px_8px_rgba(16,185,129,0.28)]"
                     style={{
                       background:
                         "linear-gradient(180deg, #34D399 0%, #10B981 100%)",
@@ -443,21 +488,22 @@ const Page = () => {
           </div>
         </div>
 
-        {activeTab === "progress" && (
+        {activeTab === "progress" && (isLoading ? (
+          <StudentProgressSkeleton />
+        ) : (
           <>
             <section className="mb-3 max-md:mb-2">
               <div className="flex p-2 gap-3 justify-between items-center max-md:p-1 max-md:gap-2 w-full ">
                 <div className="flex-1 max-w-5xl rounded-xl min-w-0 max-md:mr-2">
                   <div className="flex gap-3 max-md:gap-2 max-md:items-center max-md:overflow-x-auto scrollbar-hide max-md:pb-1">
-                    <div className="max-md:shrink-0">
+                    {usesBranchAndSemester && <div className="max-md:shrink-0">
                       <span className="text-gray-600 text-lg font-medium max-md:text-[13px]">
-                        {collegeEducationType === "Inter" ? "Group" : "Branch"}{" "}
-                        :
+                        Branch :
                       </span>
                       <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide lg:ml-1 max-md:px-2 max-md:py-0.5 max-md:text-[11px] max-md:ml-1">
                         {collegeBranchCode ?? "N/A"}
                       </span>
-                    </div>
+                    </div>}
 
                     <div className="flex items-center gap-1 max-md:gap-1 max-md:shrink-0">
                       <span className="text-gray-600 text-lg font-medium max-md:text-[13px] max-md:ml-1">
@@ -476,7 +522,7 @@ const Page = () => {
                         {college_sections ?? "N/A"}
                       </span>
                     </div>
-                    {!(collegeEducationType === "Inter") && (
+                    {usesBranchAndSemester && (
                       <div className="flex items-center gap-1 max-md:shrink-0">
                         <span className="text-gray-600 text-lg font-medium max-md:text-[13px] max-md:ml-1">
                           Semester:
@@ -511,7 +557,7 @@ const Page = () => {
                 <section className="bg-white rounded-2xl shadow-sm lg:col-span-6">
                   <ProfileCard
                     name={fullName ?? "Student"}
-                    department={collegeBranchCode ?? "N/A"}
+                    department={usesBranchAndSemester ? collegeBranchCode : null}
                     studentId={identifierId ?? "N/A"}
                     avatarUrl={
                       profilePhoto
@@ -534,6 +580,7 @@ const Page = () => {
                 <section className="bg-white rounded-2xl lg:col-span-6">
                   <AcademicPerformance
                     studentId={studentId}
+                    data={academicPerformanceData}
                   />
                 </section>
 
@@ -546,6 +593,7 @@ const Page = () => {
                 <AssignmentsSummaryTable
                   rows={progressData?.subjectProgressRows ?? []}
                   semesterLabel={semesterLabel}
+                  showSemester={usesBranchAndSemester}
                 />
               </section>
             </section>
@@ -580,7 +628,7 @@ const Page = () => {
               </div>
             )}
           </>
-        )}
+        ))}
 
         {activeTab === "exams" && (
           <div className="max-w-5xl mx-auto w-full">
@@ -588,12 +636,14 @@ const Page = () => {
           </div>
         )}
 
-        {activeTab === "results" && (
+        {activeTab === "results" && (userLoading || studentLoading || resultsLoading ? (
+          <ResultsSkeleton />
+        ) : (
           selectedScheduleId !== null ? (
             <div className="max-w-4xl mx-auto w-full flex flex-col pb-10">
               <div className="flex items-center justify-between mb-4 w-full px-2">
                 <button
-                  onClick={() => setSelectedScheduleId(null)}
+                  onClick={() => routeToResultSchedule(null)}
                   className="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-semibold cursor-pointer transition-colors"
                 >
                   <ArrowLeft size={20} weight="bold" />
@@ -1017,12 +1067,7 @@ const Page = () => {
                   <div className="text-right pr-4 sm:pr-8">ACTION</div>
                 </div>
 
-                {resultsLoading ? (
-                  <div className="flex flex-col items-center justify-center gap-2 text-gray-500 py-10">
-                    <SpinnerGap size={24} className="animate-spin text-[#007a4b]" />
-                    <p className="text-xs font-semibold">Loading results...</p>
-                  </div>
-                ) : schedulesWithResults.length > 0 ? (
+                {schedulesWithResults.length > 0 ? (
                   schedulesWithResults.map((row, idx) => (
                     <div
                       key={idx}
@@ -1048,7 +1093,7 @@ const Page = () => {
                       </div>
                       <div className="text-right pr-4 sm:pr-8">
                         <button
-                          onClick={() => setSelectedScheduleId(row.scheduleId)}
+                          onClick={() => routeToResultSchedule(row.scheduleId)}
                           className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-[#007a4b] hover:text-[#005f3a] transition-colors cursor-pointer"
                         >
                           <span>View Marks Memo</span>
@@ -1097,10 +1142,16 @@ const Page = () => {
               </div>
             </div>
           )
-        )}
+        ))}
       </main>
     </>
   );
 };
+
+const Page = () => (
+  <Suspense fallback={<StudentProgressSkeleton />}>
+    <StudentProgressPage />
+  </Suspense>
+);
 
 export default Page;

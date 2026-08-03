@@ -4,7 +4,7 @@ import Skeleton from "@/app/utils/skeleton";
 
 export function StudentProgressSkeleton() {
   return (
-    <main className="p-3 relative overflow-hidden">
+    <div className="p-3 relative overflow-hidden">
       <section className="mb-3">
         <div className="flex p-2 gap-3 justify-between items-center">
           <div className="w-full max-w-5xl rounded-xl">
@@ -107,6 +107,6 @@ export function StudentProgressSkeleton() {
           </div>
         </section>
       </section>
-    </main>
+    </div>
   );
 }

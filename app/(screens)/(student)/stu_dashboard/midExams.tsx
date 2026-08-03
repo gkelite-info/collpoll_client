@@ -12,6 +12,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { getStudentProgressData } from "@/lib/helpers/student/studentProgress/getStudentProgressData";
 import toast from "react-hot-toast";
 import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 type MidExamsProps = {
   onBack: () => void;
@@ -41,7 +43,25 @@ type ExamSubject = {
   status: string;
 };
 
+const normalizeSubjectName = (value: string | null | undefined) =>
+  (value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+const formatExamDate = (value: string | null | undefined) => {
+  if (!value) return "Not scheduled";
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
 export default function MidExams({ onBack }: MidExamsProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const routedScheduleId = Number(searchParams.get("scheduleId")) || null;
+  const routedTab = searchParams.get("tab");
   const t = useTranslations("Dashboard.student");
   const { identifierId, fullName, profilePhoto } = useUser();
   const {
@@ -62,7 +82,12 @@ export default function MidExams({ onBack }: MidExamsProps) {
 
   const [loading, setLoading] = useState(true);
   const [schedules, setSchedules] = useState<ExamSchedule[]>([]);
-  const [selectedSchedule, setSelectedSchedule] = useState<ExamSchedule | null>(null);
+  const selectedSchedule = useMemo(
+    () => routedScheduleId
+      ? schedules.find((schedule) => schedule.collegeExamScheduleId === routedScheduleId) ?? null
+      : null,
+    [routedScheduleId, schedules],
+  );
   const [scheduleSubjects, setScheduleSubjects] = useState<ExamSubject[]>([]);
   const [collegeSubjectsList, setCollegeSubjectsList] = useState<any[]>([]);
   const [attendanceMap, setAttendanceMap] = useState<Record<string, number>>({});
@@ -70,7 +95,11 @@ export default function MidExams({ onBack }: MidExamsProps) {
   const [enrolledSubjects, setEnrolledSubjects] = useState<string[]>([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<any | null>(null);
-  const [viewingHallTicket, setViewingHallTicket] = useState(false);
+  const viewingHallTicket = Boolean(selectedSchedule && routedTab === "hall-ticket");
+  const [schedulePage, setSchedulePage] = useState(1);
+  const [scheduleItemsPerPage, setScheduleItemsPerPage] = useState(4);
+  const [subjectPage, setSubjectPage] = useState(1);
+  const [subjectItemsPerPage, setSubjectItemsPerPage] = useState(5);
 
   const [scale, setScale] = useState(1);
   const [collegeName, setCollegeName] = useState("St. Xavier's College of Excellence");
@@ -80,6 +109,19 @@ export default function MidExams({ onBack }: MidExamsProps) {
   const [mediaLoading, setMediaLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
+
+  const routeToExamView = (schedule: ExamSchedule | null, view?: "enrollment" | "hall-ticket") => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (schedule) {
+      params.set("tab", view === "hall-ticket" ? "hall-ticket" : "exam-enrollment");
+      params.set("scheduleId", String(schedule.collegeExamScheduleId));
+    } else {
+      params.set("tab", "exams");
+      params.delete("scheduleId");
+    }
+    params.delete("view");
+    router.push(`/student-progress?${params.toString()}`, { scroll: false });
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -395,13 +437,25 @@ export default function MidExams({ onBack }: MidExamsProps) {
       ),
     };
   });
+  const subjectTotalPages = Math.max(1, Math.ceil(tableData.length / subjectItemsPerPage));
+  const safeSubjectPage = Math.min(subjectPage, subjectTotalPages);
+  const paginatedTableData = tableData.slice(
+    (safeSubjectPage - 1) * subjectItemsPerPage,
+    safeSubjectPage * subjectItemsPerPage,
+  );
+  const scheduleTotalPages = Math.max(1, Math.ceil(schedules.length / scheduleItemsPerPage));
+  const safeSchedulePage = Math.min(schedulePage, scheduleTotalPages);
+  const paginatedSchedules = schedules.slice(
+    (safeSchedulePage - 1) * scheduleItemsPerPage,
+    safeSchedulePage * scheduleItemsPerPage,
+  );
 
   if (viewingHallTicket && selectedSchedule) {
     return (
       <div className="max-w-4xl mx-auto w-full flex flex-col pb-10">
         <div className="flex flex-row justify-between items-center mb-6">
           <button
-            onClick={() => setViewingHallTicket(false)}
+            onClick={() => routeToExamView(selectedSchedule, "enrollment")}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-800 font-semibold cursor-pointer transition-colors"
           >
             <CaretLeftIcon size={20} weight="bold" />
@@ -728,8 +782,18 @@ export default function MidExams({ onBack }: MidExamsProps) {
                           return keyA.localeCompare(keyB);
                         })
                         .map((row, idx) => {
-                          const matchingScheduleSubject = scheduleSubjects.find(
-                            (s) => s.subjectName.trim().toLowerCase() === row.subjectName.trim().toLowerCase()
+                          const normalizedRowName = normalizeSubjectName(row.subjectName);
+                          const matchingScheduleSubject = scheduleSubjects.find((subject) => {
+                            const normalizedScheduledName = normalizeSubjectName(subject.subjectName);
+                            return Boolean(normalizedScheduledName && normalizedRowName) && (
+                              normalizedScheduledName === normalizedRowName ||
+                              normalizedScheduledName.includes(normalizedRowName) ||
+                              normalizedRowName.includes(normalizedScheduledName)
+                            );
+                          }) ?? (
+                            scheduleSubjects.length === collegeSubjectsList.length
+                              ? scheduleSubjects[idx]
+                              : undefined
                           );
                           const isEnrolled = enrolledSubjects.includes(row.subjectName.trim().toLowerCase());
 
@@ -752,10 +816,12 @@ export default function MidExams({ onBack }: MidExamsProps) {
                                 {row.subjectName}
                               </td>
                               <td style={{ padding: "10px 12px", borderRight: "1px solid #d1d5db", textAlign: "center", fontFamily: "monospace", color: "#374151" }} className="py-2.5 px-4 border-r border-gray-300 text-center font-mono text-gray-700">
-                                {isEnrolled && matchingScheduleSubject ? matchingScheduleSubject.examDate : "-"}
+                                {formatExamDate(
+                                  matchingScheduleSubject?.examDate || selectedSchedule.fromDate,
+                                )}
                               </td>
                               <td style={{ padding: "10px 12px", textAlign: "center", fontFamily: "monospace", color: "#374151" }} className="py-2.5 px-4 text-center font-mono text-gray-700">
-                                {isEnrolled && matchingScheduleSubject ? matchingScheduleSubject.time : "-"}
+                                {matchingScheduleSubject?.time || "Not scheduled"}
                               </td>
                             </tr>
                           );
@@ -827,7 +893,7 @@ export default function MidExams({ onBack }: MidExamsProps) {
           <CaretLeftIcon
             size={22}
             weight="bold"
-            onClick={() => setSelectedSchedule(null)}
+            onClick={() => routeToExamView(null)}
             className="text-[#282828] cursor-pointer"
           />
           <h3 className="text-[#282828] text-lg font-semibold">
@@ -876,14 +942,28 @@ export default function MidExams({ onBack }: MidExamsProps) {
               {t("Select Subjects to Enroll")}
             </h5>
             <button
-              onClick={() => setViewingHallTicket(true)}
+              onClick={() => routeToExamView(selectedSchedule, "hall-ticket")}
               className="rounded-lg bg-[#E5F6EC] hover:bg-[#d4f2df] px-3 py-1.5 text-[#43C17A] font-medium cursor-pointer transition-colors text-sm"
             >
               {t("Hall Ticket")}
             </button>
           </div>
 
-          <TableComponent columns={columns} tableData={tableData} />
+          <TableComponent columns={columns} tableData={paginatedTableData} />
+          {tableData.length > 0 && (
+            <Pagination
+              currentPage={safeSubjectPage}
+              totalItems={tableData.length}
+              itemsPerPage={subjectItemsPerPage}
+              onPageChange={setSubjectPage}
+              itemsPerPageOptions={[5, 10, 20]}
+              onItemsPerPageChange={(items) => {
+                setSubjectItemsPerPage(items);
+                setSubjectPage(1);
+              }}
+              alwaysShow
+            />
+          )}
         </div>
 
         {showConfirmModal && selectedSubject && (
@@ -999,7 +1079,7 @@ export default function MidExams({ onBack }: MidExamsProps) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-          {schedules.map((sch) => {
+          {paginatedSchedules.map((sch) => {
             const formattedFrom = sch.fromDate
               ? new Date(sch.fromDate).toLocaleDateString("en-US", {
                 day: "numeric",
@@ -1036,7 +1116,7 @@ export default function MidExams({ onBack }: MidExamsProps) {
 
                 <div className="flex justify-end mt-4">
                   <button
-                    onClick={() => setSelectedSchedule(sch)}
+                    onClick={() => routeToExamView(sch, "enrollment")}
                     className="bg-[#43C17A] hover:bg-[#35a868] text-white text-sm font-bold px-5 py-2 rounded-xl transition-colors cursor-pointer"
                   >
                     Enroll / View
@@ -1046,6 +1126,20 @@ export default function MidExams({ onBack }: MidExamsProps) {
             );
           })}
         </div>
+      )}
+      {!loading && schedules.length > 0 && (
+        <Pagination
+          currentPage={safeSchedulePage}
+          totalItems={schedules.length}
+          itemsPerPage={scheduleItemsPerPage}
+          onPageChange={setSchedulePage}
+          itemsPerPageOptions={[4, 8, 12]}
+          onItemsPerPageChange={(items) => {
+            setScheduleItemsPerPage(items);
+            setSchedulePage(1);
+          }}
+          alwaysShow
+        />
       )}
     </div>
   );
