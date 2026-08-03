@@ -322,8 +322,14 @@ async function processStaffAttendance(
   } else {
     // Standard Working Day Calculations
     if (firstCheckInStr) {
-      lateBy = Math.max(0, timeToMinutes(firstCheckInStr) - timeToMinutes(shiftStartStr) - policy.graceMinutes);
-      if (lateBy > 0) status = "Late";
+      const minutesAfterStart = Math.max(
+        0,
+        timeToMinutes(firstCheckInStr) - timeToMinutes(shiftStartStr),
+      );
+      if (minutesAfterStart > policy.graceMinutes) {
+        lateBy = minutesAfterStart;
+        status = "Late";
+      }
     }
 
     if (lastCheckOutStr) {
@@ -350,6 +356,7 @@ async function processStaffAttendance(
         checkIn: firstCheckInStr,
         checkOut: lastCheckOutStr,
         totalMinutes,
+        status,
         lateByMinutes: lateBy,
         earlyOutMinutes: earlyOut,
         updatedAt: now,

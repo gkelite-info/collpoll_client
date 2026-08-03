@@ -1,20 +1,15 @@
 import React from "react";
 import { AnalyticsFacultyProfile } from "../types";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 interface Props {
   profile: AnalyticsFacultyProfile;
 }
 
 const AnalyticsFacultyInfo: React.FC<Props> = ({ profile }) => {
-  const isSchoolStr =
-    typeof document !== "undefined"
-      ? document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("isSchool="))
-          ?.split("=")[1]
-      : null;
-  const isSchool = isSchoolStr === "true";
-  const isAccountant = profile.role?.toLowerCase() === "accountant";
+  const { isSchool } = useInstitutionTerminology();
+  const normalizedRole = profile.role?.replace(/\s/g, "").toLowerCase();
+  const usesEducationType = normalizedRole === "accountant" || normalizedRole === "collegehr";
 
   return (
     <div className="w-full mb-5 px-4 text-[14px]">
@@ -29,7 +24,7 @@ const AnalyticsFacultyInfo: React.FC<Props> = ({ profile }) => {
         </div>
         <div>
           <span className="font-semibold text-[#282828]">
-            {isAccountant ? "Education Type" : isSchool ? "Year" : "Branch"} :{" "}
+            {usesEducationType ? "Education Type" : isSchool ? "Year" : "Branch"} :{" "}
           </span>
           <span className="text-[#525252]">{profile.department}</span>
         </div>

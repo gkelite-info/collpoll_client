@@ -1,17 +1,16 @@
 import React from "react";
 import { FacultyProfile } from "../types";
 import { Avatar } from "@/app/utils/Avatar";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 interface Props {
   profile: FacultyProfile;
 }
 
 const FacultyInfoCard: React.FC<Props> = ({ profile }) => {
-  const isSchoolStr = typeof document !== 'undefined'
-    ? document.cookie.split("; ").find((row) => row.startsWith("isSchool="))?.split("=")[1]
-    : null;
-  const isSchool = isSchoolStr === "true";
-  const isAccountant = profile.role?.toLowerCase() === "accountant";
+  const { isSchool } = useInstitutionTerminology();
+  const normalizedRole = profile.role?.replace(/\s/g, "").toLowerCase();
+  const usesEducationType = normalizedRole === "accountant" || normalizedRole === "collegehr";
 
   return (
     <div className="flex bg-white rounded-xl p-4 w-[70%] shadow-sm items-center gap-8 border border-gray-100/50">
@@ -28,7 +27,7 @@ const FacultyInfoCard: React.FC<Props> = ({ profile }) => {
         <div className="text-gray-500">{profile.id}</div>
 
         <div className="text-[#282828] font-semibold">
-          {isAccountant ? "Education Type" : isSchool ? "Year" : "Branch"}
+          {usesEducationType ? "Education Type" : isSchool ? "Year" : "Branch"}
         </div>
         <div className="text-gray-500">{profile.department}</div>
 

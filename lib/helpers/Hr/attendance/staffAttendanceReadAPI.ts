@@ -6,6 +6,7 @@ import {
   AttendanceStatsResult,
   formatTime,
   formatMinutes,
+  timeToMinutes,
   todayDate,
   capitalise,
   ROLE_DISPLAY_MAP,
@@ -162,6 +163,39 @@ export async function getAttendanceStaff(
     .eq("attendanceDate", today);
   if (dailyError) throw new Error(dailyError.message);
 
+  const dayNames = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
+  const dayOfWeek = dayNames[new Date(`${today}T00:00:00`).getDay()];
+  const [{ data: timingData }, { data: policyData }] = await Promise.all([
+    supabase
+      .from("college_timings")
+      .select("isOpen, openAt")
+      .eq("collegeId", collegeId)
+      .eq("dayOfWeek", dayOfWeek)
+      .eq("is_deleted", false)
+      .maybeSingle(),
+    supabase
+      .from("staff_attendance_policies")
+      .select("graceMinutes")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .eq("is_deleted", false)
+      .maybeSingle(),
+  ]);
+  const shiftStartMinutes =
+    timingData?.isOpen && timingData.openAt
+      ? (timeToMinutes(timingData.openAt) ?? 540)
+      : 540;
+  const isClosedDay = timingData ? !timingData.isOpen : false;
+  const graceMinutes = policyData?.graceMinutes ?? 15;
+
   const attDailyIds = (dailyData ?? [])
     .map((r: any) => r.attendanceDailyId)
     .filter(Boolean);
@@ -186,6 +220,15 @@ export async function getAttendanceStaff(
     const r = attMap.get(u.userId);
     const identifierId = empMap.get(u.userId) || null;
     const mappedRole = ROLE_DISPLAY_MAP[u.role] || u.role || "Unknown";
+    const checkInMinutes = timeToMinutes(r?.checkIn ?? null);
+    const minutesAfterStart =
+      checkInMinutes !== null
+        ? Math.max(0, checkInMinutes - shiftStartMinutes)
+        : 0;
+    const lateByMinutes =
+      !isClosedDay && minutesAfterStart > graceMinutes
+        ? minutesAfterStart
+        : 0;
 
     return {
       userId: u.userId,
@@ -200,7 +243,7 @@ export async function getAttendanceStaff(
       rawCheckOut: r?.checkOut || null,
       totalHours: formatMinutes(r?.totalMinutes),
       status: capitalise(r?.status) || "Absent",
-      lateByMinutes: r?.lateByMinutes || 0,
+      lateByMinutes,
       earlyOutMinutes: r?.earlyOutMinutes || 0,
       classesTaken: r?.classesTaken || null,
       hasAdjustment: r?.isManual || adjSet.has(r?.attendanceDailyId) || false,

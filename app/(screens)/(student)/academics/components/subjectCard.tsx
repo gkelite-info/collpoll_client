@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/app/utils/Avatar";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export type UnitTopic = {
   topicId: number;
@@ -49,6 +50,13 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
   const searchParams = useSearchParams();
   const { collegeEducationType } = useStudent();
   const t = useTranslations("Academics.student");
+  const normalizedEducationType = collegeEducationType?.trim().toLowerCase();
+  const shouldShowSemester =
+    Boolean(collegeEducationType) &&
+    !isSchoolEducation(collegeEducationType) &&
+    normalizedEducationType !== "school" &&
+    normalizedEducationType !== "inter" &&
+    normalizedEducationType !== "intermediate";
 
   const [selectedSubject, setSelectedSubject] = useState<string>("All");
   const ballSize = "10px";
@@ -88,7 +96,11 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
   if (activeSubjectData) {
     return (
       <div className="w-full">
-        <SubjectDetailsCard details={activeSubjectData} onBack={handleBack} />
+        <SubjectDetailsCard
+          details={activeSubjectData}
+          onBack={handleBack}
+          shouldShowSemester={shouldShowSemester}
+        />
       </div>
     );
   }
@@ -120,7 +132,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
             </div>
           </div>
 
-          {!(collegeEducationType === "Inter") && (
+          {shouldShowSemester && (
             <div className="flex items-center gap-1 md:gap-2 shrink-0">
               <p className="text-[#525252] text-[12px] md:text-sm whitespace-nowrap">
                 {t("Semester :")}

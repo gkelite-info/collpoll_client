@@ -8,6 +8,7 @@ import { fetchMeetingParticipants } from "@/lib/helpers/Hr/meetings/meetingParti
 import toast from "react-hot-toast";
 import MeetingCardSkeleton from "./MeetingCardSkeleton";
 import { Avatar } from "@/app/utils/Avatar";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 type MeetingType = "upcoming" | "previous";
 type MeetingCategory = "Hr";
@@ -64,6 +65,7 @@ export default function NewMeetingCard({
   category?: string | null;
   onEdit?: (meetingId: number, sectionId: number | null) => void;
 }) {
+  const { isSchool } = useInstitutionTerminology();
   const [fromTime, toTime] = data.timeRange.split(" - ");
   const formattedTimeRange = `${formatToAMPM(fromTime)} - ${formatToAMPM(toTime)}`;
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -148,9 +150,9 @@ export default function NewMeetingCard({
                 {data.title}
               </h2>
             </div>
-            {data.branch && (
+            {(isSchool ? data.year : data.branch) && (
               <span className="bg-[#43C17A] text-white px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
-                {data.branch}{" "}
+                {isSchool ? data.year : data.branch}{" "}
                 {data.section && data.section !== "N/A"
                   ? `- ${data.section}`
                   : ""}

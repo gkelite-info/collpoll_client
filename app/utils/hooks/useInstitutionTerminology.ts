@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 import { useUser } from "@/app/utils/context/UserContext";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
@@ -9,17 +9,25 @@ const hasSchoolCookie = () =>
   typeof document !== "undefined" &&
   document.cookie.split("; ").some((cookie) => cookie === "isSchool=true");
 
+const subscribeToCookieSnapshot = () => () => undefined;
+const getServerSchoolSnapshot = () => false;
+
 export function useInstitutionTerminology() {
   const { collegeEducationType } = useUser();
+  const schoolCookie = useSyncExternalStore(
+    subscribeToCookieSnapshot,
+    hasSchoolCookie,
+    getServerSchoolSnapshot,
+  );
 
   const isSchool = useMemo(
     () =>
-      hasSchoolCookie() ||
+      schoolCookie ||
       (collegeEducationType
         ?.split(",")
         .some((type) => isSchoolEducation(type.trim())) ??
         false),
-    [collegeEducationType],
+    [collegeEducationType, schoolCookie],
   );
 
   return {

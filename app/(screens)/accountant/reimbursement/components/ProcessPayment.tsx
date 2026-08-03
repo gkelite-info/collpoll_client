@@ -13,6 +13,7 @@ import {
   FileText,
   Info,
   Loader2,
+  X,
   XCircle,
 } from "lucide-react";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -67,6 +68,7 @@ export default function ProcessPayment({ request }: { request: HRReimbursementRe
   const [paymentDate, setPaymentDate] = useState(new Date().toLocaleDateString("en-CA"));
   const [remarks, setRemarks] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPaymentConfirmation, setShowPaymentConfirmation] = useState(false);
   const [paymentApproval, setPaymentApproval] = useState(request.paymentApproval ?? null);
   const paymentCompleted = paymentApproval?.status === "approved" || request.status?.toLowerCase() === "paid";
   const paymentRejected = paymentApproval?.status === "rejected" || request.status?.toLowerCase() === "payment_rejected";
@@ -80,11 +82,15 @@ export default function ProcessPayment({ request }: { request: HRReimbursementRe
     setTransactionId("");
   };
 
-  const handleMarkAsPaid = async () => {
+  const openPaymentConfirmation = () => {
     if (!userId || !collegeId) return toast.error("User context missing");
     if (!transactionId.trim()) return toast.error(`Enter the ${methodFields.referenceLabel.toLowerCase()}`);
     if (!paymentDate) return toast.error("Select the payment date");
+    setShowPaymentConfirmation(true);
+  };
 
+  const handleMarkAsPaid = async () => {
+    if (!userId || !collegeId) return toast.error("User context missing");
     try {
       setSubmitting(true);
       const approval = await markReimbursementAsPaid({
@@ -96,6 +102,7 @@ export default function ProcessPayment({ request }: { request: HRReimbursementRe
       });
       setPaymentApproval(approval);
       setEditingPayment(false);
+      setShowPaymentConfirmation(false);
       toast.success(`Payment marked as paid via ${paymentMethod}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to mark payment as paid");
@@ -276,7 +283,8 @@ export default function ProcessPayment({ request }: { request: HRReimbursementRe
           Reject Request
         </button>
         <button
-          onClick={handleMarkAsPaid}
+          type="button"
+          onClick={openPaymentConfirmation}
           disabled={submitting || (paymentDecided && !editingPayment)}
           className="flex cursor-pointer items-center gap-2 rounded-lg bg-[#1769e0] px-6 py-2.5 text-xs font-semibold text-white shadow-md disabled:cursor-not-allowed disabled:opacity-60"
         >
@@ -284,6 +292,84 @@ export default function ProcessPayment({ request }: { request: HRReimbursementRe
           {paymentCompleted ? "Paid" : submitting ? "Saving..." : "Mark as Paid"}
         </button>
       </footer>
+
+      {showPaymentConfirmation && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-reimbursement-payment-title"
+        >
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3
+                  id="confirm-reimbursement-payment-title"
+                  className="font-bold text-[#142038]"
+                >
+                  Confirm reimbursement payment
+                </h3>
+                <p className="mt-2 text-xs leading-5 text-[#667386]">
+                  Are you sure you want to mark this reimbursement as paid?
+                </p>
+                <p className="mt-1 text-xs font-semibold text-[#b45309]">
+                  After confirmation, this payment cannot be edited.
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close confirmation"
+                disabled={submitting}
+                onClick={() => setShowPaymentConfirmation(false)}
+                className="cursor-pointer rounded-lg p-1 text-[#7c8798] hover:bg-[#f4f4f5] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <X size={19} />
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-xl bg-[#f7f9fc] p-4 text-xs text-[#526177]">
+              <div className="flex justify-between gap-4">
+                <span>Employee</span>
+                <strong className="text-right text-[#142038]">
+                  {request.employeeName}
+                </strong>
+              </div>
+              <div className="mt-2 flex justify-between gap-4">
+                <span>Amount</span>
+                <strong className="text-right text-[#142038]">
+                  {formatMoney(request.amountSpent)}
+                </strong>
+              </div>
+              <div className="mt-2 flex justify-between gap-4">
+                <span>Payment method</span>
+                <strong className="text-right text-[#142038]">
+                  {paymentMethod}
+                </strong>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => setShowPaymentConfirmation(false)}
+                className="h-10 cursor-pointer rounded-lg border border-[#d7dde5] px-4 text-xs font-semibold text-[#526177] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={handleMarkAsPaid}
+                className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-[#1769e0] px-4 text-xs font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+              >
+                {submitting && <Loader2 className="animate-spin" size={15} />}
+                {submitting ? "Marking as paid..." : "Confirm payment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
