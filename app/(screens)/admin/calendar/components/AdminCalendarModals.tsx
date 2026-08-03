@@ -21,7 +21,7 @@ type AdminCalendarModalsProps = {
 
   // Hook Handlers
   closeAddEventModal: () => void;
-  handleSaveEvent: (payload: any) => Promise<void>;
+  handleSaveEvent: (payload: any) => Promise<{ success: boolean; }>;
   confirmAddEvent: () => void;
   handleConflictCancel: () => void;
   handleDeleteEvent: (event: any) => Promise<boolean>;

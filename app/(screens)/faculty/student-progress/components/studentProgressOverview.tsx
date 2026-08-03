@@ -104,7 +104,7 @@ export default function StudentProgressOverview() {
   useEffect(() => {
     if (facultyLoading) return;
 
-    if (!collegeId || !facultyId || !collegeEducationId || !collegeBranchId) {
+    if (!collegeId || !facultyId || !collegeEducationId || collegeBranchId === undefined) {
       setSummary(defaultSummary);
       setSummaryLoading(false);
       return;
@@ -120,7 +120,7 @@ export default function StudentProgressOverview() {
           facultyId,
           collegeId,
           collegeEducationId,
-          collegeBranchId,
+          collegeBranchId: collegeBranchId ?? 0,
           academicYearIds: selectedYearId ? [selectedYearId] : academicYearIds,
           sectionIds: selectedSectionId ? [selectedSectionId] : sectionIds,
           subjectIds,

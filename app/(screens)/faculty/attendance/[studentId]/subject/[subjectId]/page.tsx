@@ -1,14 +1,16 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import SubjectAttendanceTable from "../../../components/subjectAttendanceTable";
 import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/getStudentAttendanceDetails";
 import { getSubjectAttendanceDetails } from "@/lib/helpers/faculty/attendance/getSubjectAttendanceDetails";
-import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { CaretLeft } from "@phosphor-icons/react";
 import StudentProfileCard from "../../../components/stuProfileCard";
 import AiBotCard from "../../../components/aiBotCard";
+import { useQuery } from "@tanstack/react-query";
+import SubjectDetailsSkeleton from "../../shimmer/subjectDetailsSkeleton";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 type SubjectAttendanceDetails = NonNullable<
   Awaited<ReturnType<typeof getSubjectAttendanceDetails>>
@@ -28,61 +30,26 @@ export default function SubjectDetailPage() {
     ? params.subjectId[0]
     : params?.subjectId;
 
-  const [filter, setFilter] = useState<"ALL" | "Present" | "Absent" | "Leave">(
-    "ALL",
-  );
-  const [data, setData] = useState<SubjectAttendanceDetails | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [student, setStudent] = useState<StudentAttendanceDetails | null>(null);
+  const [filter, setFilter] = useState<"ALL" | "Present" | "Absent" | "Leave">("ALL");
+  const [page, setPage] = useState(1);
+  const limit = 10;
 
-  useEffect(() => {
-    if (!studentId || !subjectId) return;
+  const { data, isLoading: dataLoading } = useQuery({
+    queryKey: ["subjectAttendanceDetails", studentId, subjectId, filter, page, limit],
+    queryFn: () => getSubjectAttendanceDetails(studentId as string, subjectId as string, filter, page, limit),
+    enabled: !!studentId && !!subjectId,
+  });
 
-    let isMounted = true;
-    const fetchData = async () => {
-      setLoading(true);
+  const { data: student, isLoading: studentLoading } = useQuery({
+    queryKey: ["studentAttendanceDetails", studentId],
+    queryFn: () => getStudentAttendanceDetails(studentId as string),
+    enabled: !!studentId,
+  });
 
-      const [attendanceRes, studentRes] = await Promise.allSettled([
-        getSubjectAttendanceDetails(studentId, subjectId),
-        getStudentAttendanceDetails(studentId),
-      ]);
-
-      if (!isMounted) return;
-
-      if (attendanceRes.status === "fulfilled") {
-        setData(attendanceRes.value);
-      } else {
-        console.error(
-          "Error fetching subject attendance:",
-          attendanceRes.reason,
-        );
-      }
-
-      if (studentRes.status === "fulfilled") {
-        setStudent(studentRes.value);
-      } else {
-        console.error("Error fetching student details:", studentRes.reason);
-      }
-
-      setLoading(false);
-    };
-
-    fetchData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [studentId, subjectId]);
+  const loading = dataLoading || studentLoading;
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        <div className="flex items-center justify-center gap-5">
-          <Loader />
-          <p>Loading Records</p>
-        </div>
-      </div>
-    );
+    return <SubjectDetailsSkeleton />;
   }
 
   if (!data || !student) {
@@ -100,10 +67,7 @@ export default function SubjectDetailPage() {
     leave: data.summary.leave,
   };
 
-  const filteredRecords =
-    filter === "ALL"
-      ? data.records
-      : data.records.filter((r) => r.status === filter);
+  const filteredRecords = data.records;
 
   return (
     <main className="px-3 md:px-4 py-4 min-h-screen space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
@@ -143,7 +107,10 @@ export default function SubjectDetailPage() {
             isSubjectMode={true}
             subjectSummary={subjectSummary}
             activeFilter={filter}
-            onFilterChange={setFilter}
+            onFilterChange={(newFilter) => {
+              setFilter(newFilter);
+              setPage(1);
+            }}
             attendanceDays={0}
             absentDays={0}
             leaveDays={0}
@@ -208,7 +175,23 @@ export default function SubjectDetailPage() {
       </section>
 
       <section className="w-full min-w-0">
-        <SubjectAttendanceTable records={filteredRecords} />
+        {filteredRecords.length > 0 ? (
+          <SubjectAttendanceTable records={filteredRecords} />
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-500 font-medium">
+            No attendance records found for the selected filter.
+          </div>
+        )}
+        
+        <div className="mt-6 flex justify-center mb-6">
+          <Pagination
+            currentPage={page}
+            totalItems={data.totalCount}
+            itemsPerPage={limit}
+            onPageChange={setPage}
+            alwaysShow={true}
+          />
+        </div>
       </section>
     </main>
   );

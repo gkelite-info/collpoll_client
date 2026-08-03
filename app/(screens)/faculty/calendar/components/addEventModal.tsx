@@ -309,8 +309,8 @@ const AddEventModalV2: React.FC<AddEventModalProps> = ({
 
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
-      // Ignore clicks on floating portals (dropdowns)
-      if (target?.closest && target.closest('.modal-dropdown-menu')) {
+      // Ignore clicks on floating portals (dropdowns) and other modals
+      if (target?.closest && (target.closest('.modal-dropdown-menu') || target.closest('.ignore-click-outside'))) {
         return;
       }
       
