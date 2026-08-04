@@ -319,12 +319,20 @@ export async function fetchUserFullProfile(queryClient: QueryClient) {
         }
       }
   } else if (role === "CollegeHr") {
-      const [{ data }, empId] = await Promise.all([
+      const [{ data }, empId, { data: educationTypes }] = await Promise.all([
         supabase.from("college_hr").select("collegeHrId").eq("userId", uid).eq("is_deleted", false).maybeSingle(),
         getEmployeeEmpId(uid, cid),
+        supabase
+          .from("college_education")
+          .select("collegeEducationType")
+          .eq("collegeId", cid)
+          .eq("isActive", true),
       ]);
       result.collegeHrId = data?.collegeHrId ?? null;
       result.identifierId = empId ?? null;
+      result.collegeEducationType = uniqueJoinedValues(
+        (educationTypes ?? []).map((education) => education.collegeEducationType),
+      );
   } else if (role === "PlacementOfficer") {
       const [{ data }, empId] = await Promise.all([
         supabase.from("placement_employee").select("placementEmployeeId, createdBy").eq("userId", uid).eq("is_deleted", false).maybeSingle(),

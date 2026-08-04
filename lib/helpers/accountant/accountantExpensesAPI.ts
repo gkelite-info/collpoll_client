@@ -72,6 +72,7 @@ export type FetchAccountantExpensesInput = {
   fromDate?: string;
   toDate?: string;
   collegeEducationIds?: number[];
+  createdBy?: number;
 };
 
 export type AccountantExpenseSummary = {
@@ -79,6 +80,8 @@ export type AccountantExpenseSummary = {
   transactionCount: number;
   topCategory: string;
   monthlyExpenses: number[];
+  monthlyTransactionCounts?: number[];
+  todayTransactionCount?: number;
   categoryBreakdown: Array<{ category: string; amount: number; count: number }>;
 };
 
@@ -344,6 +347,7 @@ export async function fetchAccountantExpenses({
   fromDate,
   toDate,
   collegeEducationIds,
+  createdBy,
 }: FetchAccountantExpensesInput) {
   const safePage = Math.max(1, Math.trunc(page));
   const safeItemsPerPage = Math.min(100, Math.max(1, Math.trunc(itemsPerPage)));
@@ -380,9 +384,7 @@ export async function fetchAccountantExpenses({
   }
   if (fromDate) query = query.gte("expenseDate", fromDate);
   if (toDate) query = query.lte("expenseDate", toDate);
-  if (collegeEducationIds?.length) {
-    query = query.in("collegeEducationId", collegeEducationIds);
-  }
+  if (createdBy) query = query.eq("createdBy", createdBy);
 
   const { data, error, count } = await query
     .order("expenseDate", { ascending: false })
@@ -427,6 +429,7 @@ export async function fetchAccountantExpenseSummary(
   collegeId: number | null | undefined,
   collegeEducationIds: number[],
   year = new Date().getFullYear(),
+  createdBy?: number,
 ): Promise<AccountantExpenseSummary> {
   if (!collegeId || collegeEducationIds.length === 0) {
     return {
@@ -434,6 +437,8 @@ export async function fetchAccountantExpenseSummary(
       transactionCount: 0,
       topCategory: "-",
       monthlyExpenses: Array<number>(12).fill(0),
+      monthlyTransactionCounts: Array<number>(12).fill(0),
+      todayTransactionCount: 0,
       categoryBreakdown: [],
     };
   }
@@ -443,9 +448,12 @@ export async function fetchAccountantExpenseSummary(
   let totalExpenses = 0;
   let transactionCount = 0;
   const monthlyExpenses = Array<number>(12).fill(0);
+  const monthlyTransactionCounts = Array<number>(12).fill(0);
+  let todayTransactionCount = 0;
+  const today = new Date().toLocaleDateString("en-CA");
   const categories = new Map<string, { label: string; amount: number; count: number }>();
   while (true) {
-    const { data, error } = await supabase
+    let query = supabase
       .from("accountant_expenses")
       .select(
         "expenseName, amount, category, expenseDate, paymentMethod, createdBy",
@@ -454,14 +462,16 @@ export async function fetchAccountantExpenseSummary(
       .in("collegeEducationId", collegeEducationIds)
       .eq("isActive", true)
       .eq("is_deleted", false)
-      .is("deletedAt", null)
-      .range(from, from + pageSize - 1);
+      .is("deletedAt", null);
+    if (createdBy) query = query.eq("createdBy", createdBy);
+    const { data, error } = await query.range(from, from + pageSize - 1);
 
     if (error) throw error;
     const rows = data ?? [];
 
     rows.forEach((row) => {
       transactionCount += 1;
+      if (row.expenseDate === today) todayTransactionCount += 1;
       const amount = Number(row.amount) || 0;
       const label = row.category?.trim() || "Uncategorized";
       const key = label.toLocaleLowerCase("en-IN");
@@ -477,6 +487,7 @@ export async function fetchAccountantExpenseSummary(
         expenseMonth <= 12
       ) {
         monthlyExpenses[expenseMonth - 1] += amount;
+        monthlyTransactionCounts[expenseMonth - 1] += 1;
       }
       categories.set(key, {
         label: current?.label ?? label,
@@ -502,6 +513,8 @@ export async function fetchAccountantExpenseSummary(
     transactionCount,
     topCategory: topCategory?.label ?? "-",
     monthlyExpenses,
+    monthlyTransactionCounts,
+    todayTransactionCount,
     categoryBreakdown: Array.from(categories.values())
       .map((category) => ({
         category: category.label,
