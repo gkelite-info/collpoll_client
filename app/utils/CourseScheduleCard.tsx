@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { extractAcademicYearNumber } from "@/app/utils/academicYear";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type Props = {
   style?: string;
@@ -12,6 +13,24 @@ type Props = {
   year?: string;
   fullWidth?: boolean;
   isLoading?: boolean;
+};
+
+const formatSchoolClass = (year?: string) => {
+  if (!year) return "";
+  const num = Number(year);
+  if (isNaN(num)) return year; 
+  const j = num % 10,
+        k = num % 100;
+  if (j === 1 && k !== 11) {
+      return num + "st Class";
+  }
+  if (j === 2 && k !== 12) {
+      return num + "nd Class";
+  }
+  if (j === 3 && k !== 13) {
+      return num + "rd Class";
+  }
+  return num + "th Class";
 };
 
 export default function CourseScheduleCard({
@@ -41,11 +60,12 @@ export default function CourseScheduleCard({
 
   let displayEducation = collegeEducationType;
   let displayBranch = collegeBranchCode || college_branch;
+  const isSchool = isSchoolEducation(collegeEducationType);
 
   if (role === "Faculty") {
     if (department || degree || year) {
-      if (degree && degree.toLowerCase().includes("school")) {
-        displayBranch = year ? `Class ${year}` : (displayEducation || "");
+      if (isSchool || (degree && degree.toLowerCase().includes("school"))) {
+        displayBranch = year ? formatSchoolClass(year) : (displayEducation || "");
       } else {
         displayBranch = department || degree || displayEducation || "";
       }

@@ -8,6 +8,7 @@ import FacultyAttendanceCard, {
   Department,
 } from "./components/facultyAttendanceCard";
 
+import { useQuery } from "@tanstack/react-query";
 import { User } from "@phosphor-icons/react";
 import CardComponent from "./components/cards";
 import { useSearchParams } from "next/navigation";
@@ -85,14 +86,11 @@ const getDynamicBranchStyle = (branchCode: string) => {
   return COLOR_PALETTE[index];
 };
 
+const cardsPerPage = 9;
+
 const AttendancePage = () => {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [cards, setCards] = useState<AcademicCard[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [realtimeTrigger, setRealtimeTrigger] = useState(0);
-  const [statsLoading, setStatsLoading] = useState(true);
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const { userId } = useUser();
@@ -102,13 +100,6 @@ const AttendancePage = () => {
     collegeEducationType: defaultEduType,
     loading: adminLoading,
   } = useAdmin();
-
-  const [stats, setStats] = useState({
-    totalDepartments: 0,
-    totalStudents: 0,
-    studentsBelow75: 0,
-    pendingCorrections: 0,
-  });
 
   const {
     educations,
@@ -158,6 +149,10 @@ const AttendancePage = () => {
   }, [search]);
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, apiFiltersStr]);
+
+  useEffect(() => {
     if (defaultEduId && educations.length > 0 && !education) {
       const assignedEdu = educations.find(
         (e) => Number(e.collegeEducationId) === Number(defaultEduId)
@@ -168,83 +163,45 @@ const AttendancePage = () => {
     }
   }, [defaultEduId, educations, education, selectEducation]);
 
-  useEffect(() => {
-    if (!collegeId || !currentEducationId) return;
-
-    let isMounted = true;
-
-    const loadStats = async () => {
-      try {
-        if (realtimeTrigger === 0) setStatsLoading(true);
-
-        const data = await fetchAttendanceStats({
-          collegeId,
-          collegeEducationId: currentEducationId,
-        });
-
-        if (isMounted) {
-          setStats(data);
-        }
-      } catch (err) {
-        console.error("Failed to load attendance stats", err);
-      } finally {
-        if (isMounted) setStatsLoading(false);
-      }
-    };
-
-    loadStats();
-    return () => {
-      isMounted = false;
-    };
-  }, [collegeId, currentEducationId, realtimeTrigger]);
-
-  useAdminAttendanceRealtime(() => {
-    setRealtimeTrigger((prev) => prev + 1);
+  const { data: statsData, isLoading: isStatsLoading, refetch: refetchStats } = useQuery({
+    queryKey: ["adminAttendanceStats", collegeId, currentEducationId],
+    queryFn: () => fetchAttendanceStats({
+      collegeId: collegeId!,
+      collegeEducationId: currentEducationId!,
+    }),
+    enabled: !!collegeId && !!currentEducationId,
   });
 
-  useEffect(() => {
-    if (!collegeId || adminLoading) return;
-    const timer = setTimeout(() => {
-      loadCardsOnly();
-    }, 150);
+  const stats = statsData || {
+    totalDepartments: 0,
+    totalStudents: 0,
+    studentsBelow75: 0,
+    pendingCorrections: 0,
+  };
 
-    return () => clearTimeout(timer);
-  }, [collegeId, adminLoading, currentPage, debouncedSearch, apiFiltersStr]);
-
-  useEffect(() => {
-    if (realtimeTrigger > 0 && collegeId) {
-      const timer = setTimeout(() => {
-        loadCardsOnly(false);
-      }, 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [realtimeTrigger, collegeId]);
-
-  const loadCardsOnly = async (showLoader = true) => {
-    if (!collegeId) return;
-    try {
-      if (showLoader) setLoading(true);
-
+  const { data: cardsQueryData, isLoading: isCardsLoading, isFetching: isCardsFetching, refetch: refetchCards } = useQuery({
+    queryKey: ["adminAttendanceCards", collegeId, currentPage, cardsPerPage, debouncedSearch, apiFiltersStr],
+    queryFn: async () => {
       const { data, totalCount } = await getAdminAcademicsCards(
-        collegeId,
+        collegeId!,
         currentPage,
         cardsPerPage,
         debouncedSearch,
         JSON.parse(apiFiltersStr)
       );
+      return { mappedCards: mapAcademicCards(data), totalCount };
+    },
+    enabled: !!collegeId && !adminLoading,
+  });
 
-      const mappedCards = mapAcademicCards(data);
+  const cards = cardsQueryData?.mappedCards || [];
+  const totalRecords = cardsQueryData?.totalCount || 0;
+  const loading = isCardsLoading;
 
-      setCards(mappedCards);
-      setTotalRecords(totalCount);
-    } catch (error: any) {
-      toast.error(error?.message || "Unable to load records.");
-      setCards([]);
-      setTotalRecords(0);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useAdminAttendanceRealtime(() => {
+    refetchStats();
+    refetchCards();
+  });
 
   const cardData = [
     {
@@ -281,7 +238,6 @@ const AttendancePage = () => {
     },
   ];
 
-  const cardsPerPage = 9;
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
   const router = useRouter();
@@ -307,7 +263,7 @@ const AttendancePage = () => {
     return <SubjectWiseAttendance onBack={handleBack} />;
   }
 
-  const showStatsLoader = adminLoading || statsLoading;
+  const showStatsLoader = adminLoading || isStatsLoading;
 
   return (
     <div className="flex flex-col m-4">
@@ -353,8 +309,8 @@ const AttendancePage = () => {
         </div>
       </div>
 
-      <div className="mt-0 mb-4 flex flex-col md:flex-row items-center gap-4">
-        <div className="relative w-full md:w-[32%] shrink-0">
+      <div className="mt-0 mb-4 flex flex-col lg:flex-row items-center gap-4">
+        <div className="relative w-full lg:w-[32%] shrink-0">
           <input
             type="text"
             placeholder="Search here..."
@@ -369,9 +325,10 @@ const AttendancePage = () => {
           />
         </div>
 
-        <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap flex-1 gap-2 border border-gray-100">
+        <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap lg:flex-nowrap w-full lg:flex-1 gap-2 border border-gray-100">
           <FilterDropdown
             label="Education"
+            widthClassName="flex-1 min-w-0 md:min-w-[110px]"
             value={education?.collegeEducationId?.toString() ?? "All"}
             placeholder="Select Education"
             options={["All", ...educations.map((e) => e.collegeEducationId.toString())]}
@@ -395,6 +352,7 @@ const AttendancePage = () => {
           {!isSchool && (
             <FilterDropdown
               label={education?.collegeEducationType === "Inter" ? "Group" : "Branch"}
+              widthClassName="flex-1 min-w-0 md:min-w-[110px]"
               value={branch?.collegeBranchId?.toString() ?? "All"}
               disabled={!education}
               placeholder={education?.collegeEducationType === "Inter" ? "Select Group" : "Select Branch"}
@@ -421,6 +379,7 @@ const AttendancePage = () => {
 
           <FilterDropdown
             label="Year"
+            widthClassName="flex-1 min-w-0 md:min-w-[110px]"
             value={year?.collegeAcademicYearId?.toString() ?? "All"}
             disabled={isSchool ? !education : !branch}
             placeholder="Select Year"
@@ -447,6 +406,7 @@ const AttendancePage = () => {
 
           <FilterDropdown
             label="Section"
+            widthClassName="flex-1 min-w-0 md:min-w-[110px]"
             value={section?.collegeSectionsId?.toString() ?? "All"}
             disabled={!year}
             placeholder="Select Section"
@@ -473,6 +433,7 @@ const AttendancePage = () => {
 
           <FilterDropdown
             label="Subject"
+            widthClassName="flex-1 min-w-0 md:min-w-[110px]"
             value={subject?.collegeSubjectId?.toString() ?? "All"}
             disabled={!section}
             placeholder="Select Subject"
@@ -498,7 +459,7 @@ const AttendancePage = () => {
         </div>
       </div>
 
-      <div className="flex flex-col justify-between min-h-[calc(100vh-420px)] bg-[#F3F6F9] rounded-xl p-4">
+      <div className="flex flex-col justify-between min-h-[calc(100vh-420px)] rounded-xl p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-[1200px] mx-auto">
           {loading || adminLoading || !collegeId ? (
             [...Array(9)].map((_, i) => <AcademicSectionsSkeleton key={i} />)
@@ -539,7 +500,7 @@ const AttendancePage = () => {
             })
           )}
         </div>
-        <div className="flex justify-center items-center mt-2 mb-2 w-full max-w-[1200px] mx-auto rounded-lg shadow-sm">
+        <div className="flex justify-center items-center mt-auto pt-8 mb-2 w-full max-w-[1200px] mx-auto rounded-lg">
           <Pagination
             currentPage={currentPage}
             totalItems={totalRecords}

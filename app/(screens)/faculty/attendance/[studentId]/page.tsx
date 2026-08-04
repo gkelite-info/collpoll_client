@@ -6,6 +6,9 @@ import SubjectWiseAttendance from "../components/subjectWiseTable";
 import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/getStudentAttendanceDetails";
 import { CaretLeft } from "@phosphor-icons/react";
 import StudentProfileCard from "../components/stuProfileCard";
+import { useEffect } from "react";
+import { useUser } from "@/app/utils/context/UserContext";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import AiBotCard from "../components/aiBotCard";
 import { useQuery } from "@tanstack/react-query";
 import StudentDetailsSkeleton from "./shimmer/studentDetailsSkeleton";
@@ -18,27 +21,43 @@ export default function StudentAttendanceDetailsPage() {
     ? params.studentId[0]
     : params?.studentId;
 
+  const { collegeEducationType } = useUser();
+  const isSchool = isSchoolEducation(collegeEducationType);
+
   const { data: student, isLoading } = useQuery({
     queryKey: ["studentAttendanceDetails", studentId],
     queryFn: () => getStudentAttendanceDetails(studentId!),
     enabled: !!studentId,
   });
 
-  if (isLoading) {
-    return <StudentDetailsSkeleton />;
-  }
+  useEffect(() => {
+    // Scroll to top immediately on mount
+    const scrollContainer = document.querySelector('.overflow-y-auto');
+    if (scrollContainer) {
+      scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, []);
 
-  if (!student) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Student not found.
-      </div>
-    );
-  }
+  // Also scroll when loading finishes to be absolutely sure
+  useEffect(() => {
+    if (!isLoading) {
+      setTimeout(() => {
+        const topElement = document.getElementById("student-attendance-top");
+        if (topElement) {
+          topElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 50);
+    }
+  }, [isLoading]);
 
   return (
-    <main className="p-3 md:p-4 space-y-4 md:space-y-6 min-h-screen w-full max-w-full overflow-x-hidden">
-      <section className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <main className="p-3 md:p-4 space-y-4 md:space-y-6 min-h-screen w-full max-w-full overflow-x-hidden relative">
+      <div id="student-attendance-top" className="absolute top-0 left-0 w-full h-0 pointer-events-none" />
+      
+      {/* ALWAYS render the header to prevent layout jump and show it immediately */}
+      <section className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
         <div className="flex text-black items-start md:items-center gap-2">
           <button
             onClick={() => router.back()}
@@ -62,18 +81,28 @@ export default function StudentAttendanceDetailsPage() {
 
         <CourseScheduleCard
           style="w-full md:w-[320px] max-md:hidden shrink-0"
-          department={student.department}
-          degree={student.degree}
-          year={String(student.year)}
+          department={student?.department}
+          degree={student?.degree}
+          year={student?.year ? String(student.year) : undefined}
+          isLoading={isLoading}
         />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-stretch w-full min-w-0">
-        <div className="lg:col-span-2 min-w-0">
-          <StudentProfileCard
-            name={student.fullName}
-            department={student.department}
-            studentId={student.studentsId.toString()}
+      {/* Conditional rendering for body */}
+      {isLoading ? (
+        <StudentDetailsSkeleton isBodyOnly={true} />
+      ) : !student ? (
+        <div className="min-h-[50vh] flex items-center justify-center text-gray-500">
+          Student not found.
+        </div>
+      ) : (
+        <>
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-stretch w-full min-w-0">
+            <div className="lg:col-span-2 min-w-0">
+              <StudentProfileCard
+                name={student.fullName}
+                department={student.department}
+                studentId={student.studentsId.toString()}
             phone={student.mobile}
             email={student.email}
             address={student.address}
@@ -82,6 +111,7 @@ export default function StudentAttendanceDetailsPage() {
             absentDays={student.absentDays}
             leaveDays={student.leaveDays}
             attendancePercentage={student.attendancePercentage}
+            isSchool={isSchool}
           />
         </div>
         <div className="lg:col-span-1 min-w-0">
@@ -100,6 +130,8 @@ export default function StudentAttendanceDetailsPage() {
           data={student.subjectAttendance}
         />
       </section>
+        </>
+      )}
     </main>
   );
 }

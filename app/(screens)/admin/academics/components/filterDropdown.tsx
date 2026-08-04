@@ -117,7 +117,7 @@ export const FilterDropdown = ({
   );
 
   return (
-    <div className="flex flex-col gap-1 min-w-[120px] overflow-visible">
+    <div className={`flex flex-col gap-1 overflow-visible ${widthClassName}`}>
       <label className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold px-1">
         {label}
       </label>

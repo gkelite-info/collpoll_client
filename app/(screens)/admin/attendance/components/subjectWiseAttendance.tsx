@@ -324,7 +324,7 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
                 className="text-[#2D3748] cursor-pointer hover:-translate-x-1 transition-transform"
               />
               <h1 className="text-xl font-bold text-[#282828]">
-                {isSchool ? `${year || 'Class'} — Subject-wise Attendance` : `${branch} Branch — Subject-wise Attendance`}
+                {isSchool ? `${year || 'Class'} — Subject-wise Attendance` : `${branch} ${collegeEducationType === "Inter" ? "Group" : "Branch"} — Subject-wise Attendance`}
               </h1>
             </div>
           </div>
@@ -350,7 +350,7 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
         </svg>
 
         <span className="text-slate-800 text-sm font-medium">
-          {isSchool ? `${year || 'Class'}` : `${branch} Branch`}
+          {isSchool ? `${year || 'Class'}` : `${branch} ${collegeEducationType === "Inter" ? "Group" : "Branch"}`}
         </span>
       </div>
 

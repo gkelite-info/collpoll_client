@@ -11,6 +11,10 @@ import AiBotCard from "../../../components/aiBotCard";
 import { useQuery } from "@tanstack/react-query";
 import SubjectDetailsSkeleton from "../../shimmer/subjectDetailsSkeleton";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { useUser } from "@/app/utils/context/UserContext";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import { useEffect } from "react";
 
 type SubjectAttendanceDetails = NonNullable<
   Awaited<ReturnType<typeof getSubjectAttendanceDetails>>
@@ -46,36 +50,53 @@ export default function SubjectDetailPage() {
     enabled: !!studentId,
   });
 
+  const { collegeEducationType } = useUser();
+  const isSchool = isSchoolEducation(collegeEducationType);
+
   const loading = dataLoading || studentLoading;
 
-  if (loading) {
-    return <SubjectDetailsSkeleton />;
-  }
+  useEffect(() => {
+    // Scroll to top immediately on mount
+    const scrollContainer = document.querySelector('.overflow-y-auto');
+    if (scrollContainer) {
+      scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, []);
 
-  if (!data || !student) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500 font-medium">
-        Subject records not found.
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!loading) {
+      setTimeout(() => {
+        const topElement = document.getElementById("subject-attendance-top");
+        if (topElement) {
+          topElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 50);
+    }
+  }, [loading]);
 
-  const subjectSummary = {
+
+
+  const subjectSummary = data ? {
     total: data.summary.totalClasses,
     present: data.summary.attended,
     absent: data.summary.absent,
     leave: data.summary.leave,
-  };
+  } : undefined;
 
-  const filteredRecords = data.records;
+  const filteredRecords = data ? data.records : [];
 
   return (
-    <main className="px-3 md:px-4 py-4 min-h-screen space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
-      <section className="flex items-center justify-between">
-        <div className="flex text-black items-start gap-2">
+    <main className="px-3 md:px-4 py-4 min-h-screen space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden relative">
+      <div id="subject-attendance-top" className="absolute top-0 left-0 w-full h-0 pointer-events-none" />
+      
+      {/* ALWAYS render the header to prevent layout jump and show it immediately */}
+      <section className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+        <div className="flex text-black items-start md:items-center gap-2">
           <button
             onClick={() => router.back()}
-            className="mt-1 md:mt-0.5 text-gray-600 cursor-pointer hover:text-black shrink-0"
+            className="mt-1 md:mt-0 text-gray-600 cursor-pointer hover:text-black shrink-0"
           >
             <CaretLeft
               size={24}
@@ -92,11 +113,28 @@ export default function SubjectDetailPage() {
             </p>
           </div>
         </div>
+
+        <CourseScheduleCard
+          style="w-full md:w-[320px] max-md:hidden shrink-0"
+          department={student?.department}
+          degree={student?.degree}
+          year={student?.year ? String(student.year) : undefined}
+          isLoading={loading}
+        />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-stretch w-full min-w-0">
-        <div className="lg:col-span-2 min-w-0">
-          <StudentProfileCard
+      {/* Conditional rendering for body */}
+      {loading ? (
+        <SubjectDetailsSkeleton isBodyOnly={true} />
+      ) : !data || !student ? (
+        <div className="min-h-[50vh] flex items-center justify-center text-gray-500 font-medium">
+          Subject records not found.
+        </div>
+      ) : (
+        <>
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-stretch w-full min-w-0">
+            <div className="lg:col-span-2 min-w-0">
+              <StudentProfileCard
             name={student.fullName}
             department={student.department}
             studentId={student.studentsId.toString()}
@@ -114,6 +152,7 @@ export default function SubjectDetailPage() {
             attendanceDays={0}
             absentDays={0}
             leaveDays={0}
+            isSchool={isSchool}
           />
         </div>
         <div className="lg:col-span-1 min-w-0">
@@ -193,6 +232,8 @@ export default function SubjectDetailPage() {
           />
         </div>
       </section>
+        </>
+      )}
     </main>
   );
 }

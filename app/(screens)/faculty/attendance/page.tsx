@@ -405,7 +405,9 @@ function AttendanceContent() {
         </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto shrink-0">
             <div className="bg-[#1E2952] text-white px-4 py-3 sm:py-4 rounded-lg shadow-sm text-sm font-medium whitespace-nowrap flex items-center min-h-[48px] sm:min-h-[54px]">
-              {!activeClassId ? (
+              {!activeClassId && (classesLoading || classesFetching) ? (
+                <div className="h-4 w-32 bg-white/20 animate-pulse rounded"></div>
+              ) : !activeClassId ? (
                 <span>No Classes Found</span>
               ) : (
                 <>
@@ -423,7 +425,7 @@ function AttendanceContent() {
               department={`${activeClassId ? classData?.department?.map((item: any) => item.name).join(", ") || "" : ""}`}
               year={String(activeClassId ? classData?.year || "" : "")}
               degree={activeClassId ? classData?.degree || "" : ""}
-              isLoading={classDataFetching}
+              isLoading={classesLoading || classesFetching || classDataFetching}
             />
           </div>
       </section>
