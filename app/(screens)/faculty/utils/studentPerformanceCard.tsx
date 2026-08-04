@@ -42,9 +42,9 @@ const StudentRow: React.FC<{ student: FacultyStudentProgressRow }> = ({ student 
         </h4>
         <span
           className="text-[10px] md:text-[11px] text-gray-500 font-medium truncate"
-          title={student.rollNo}
+          title={student.sectionName ? `${student.rollNo} | ${student.sectionName}` : student.rollNo}
         >
-          {student.rollNo}
+          {student.sectionName ? `${student.rollNo} | Section - ${student.sectionName}` : student.rollNo}
         </span>
         <div className="flex items-center gap-3 w-full mt-1.5">
           <div className="h-1.5 md:h-2 w-full bg-[#16284F] rounded-full overflow-hidden relative">

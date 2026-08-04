@@ -3,29 +3,13 @@
 import { CaretLeft } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 
-export default function SubjectDetailsSkeleton() {
+export default function SubjectDetailsSkeleton({ isBodyOnly }: { isBodyOnly?: boolean }) {
   const router = useRouter();
 
-  return (
-    <main className="px-3 md:px-4 py-4 min-h-screen space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden bg-[#FAFAFA]">
-      <section className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex text-black items-start gap-2">
-          <button
-            onClick={() => router.back()}
-            className="mt-1 md:mt-0.5 text-gray-600 cursor-pointer hover:text-black shrink-0"
-          >
-            <CaretLeft size={24} className="md:w-[25px] md:h-[25px]" weight="bold" />
-          </button>
-          <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">Attendance</h1>
-            <p className="text-xs md:text-sm text-gray-500 mt-0.5 md:mt-1 truncate">
-              Track, Verify and Manage Attendance Records.
-            </p>
-          </div>
-        </div>
-      </section>
-
+  const bodyContent = (
+    <>
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-stretch w-full min-w-0">
+      {/* Header handled externally when isBodyOnly is true */}
         <div className="lg:col-span-2 min-w-0 h-full rounded-[20px] bg-white shadow-sm p-5 relative overflow-hidden">
             <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-gray-100/50 to-transparent z-10" />
             <div className="flex items-center gap-4">
@@ -119,6 +103,33 @@ export default function SubjectDetailsSkeleton() {
           </div>
         </div>
       </section>
+    </>
+  );
+
+  if (isBodyOnly) {
+    return bodyContent;
+  }
+
+  return (
+    <main className="px-3 md:px-4 py-4 min-h-screen space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
+      <section className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex text-black items-start gap-2">
+          <button
+            onClick={() => router.back()}
+            className="mt-1 md:mt-0.5 text-gray-600 cursor-pointer hover:text-black shrink-0"
+          >
+            <CaretLeft size={24} className="md:w-[25px] md:h-[25px]" weight="bold" />
+          </button>
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">Attendance</h1>
+            <p className="text-xs md:text-sm text-gray-500 mt-0.5 md:mt-1 truncate">
+              Track, Verify and Manage Attendance Records.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {bodyContent}
     </main>
   );
 }

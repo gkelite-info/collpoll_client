@@ -214,6 +214,7 @@ export type FacultyStudentProgressRow = {
   discussionForumMarksObtained: number;
   totalDiscussionForumMarks: number;
   progressPercent: number;
+  sectionName: string | null;
 };
 
 export type FacultyStudentProgressTrendPoint = {
@@ -1279,6 +1280,7 @@ export async function getFacultyStudentProgressSummary(
         discussionForumMarksObtained,
         totalDiscussionForumMarks,
         progressPercent,
+        sectionName: history.college_sections?.collegeSections ?? null,
       };
     })
     .filter((row): row is FacultyStudentProgressRow => row !== null)
