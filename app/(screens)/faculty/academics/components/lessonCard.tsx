@@ -1,5 +1,13 @@
 import { CheckCircle, FilePdf } from "@phosphor-icons/react";
-import { LessonData } from "./subjectDetails";
+export interface LessonData {
+  lessonNumber: number;
+  lessonTitle: string;
+  topics: {
+    title: string;
+    isCompleted: boolean;
+    date: string;
+  }[];
+}
 
 interface LessonCardProps {
   lesson: LessonData;
