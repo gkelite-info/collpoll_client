@@ -355,6 +355,7 @@ export default function AllClubsGrid() {
             totalItems={totalItems}
             itemsPerPage={ITEMS_PER_PAGE}
             onPageChange={(page) => setCurrentPage(page)}
+            alwaysShow
           />
         </div>
       )}

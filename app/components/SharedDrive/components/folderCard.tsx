@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DotsThreeOutlineVertical, Folder } from "@phosphor-icons/react";
 import { useTranslations } from "next-intl";
 import { FolderItemProps } from "../DriveClient";
@@ -21,12 +21,26 @@ export function FolderCard({
   onClick,
 }: Props) {
   const [openMenu, setOpenMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const t = useTranslations("Drive.student");
+
+  useEffect(() => {
+    if (!openMenu) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setOpenMenu(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, [openMenu]);
 
   return (
     <div
       style={{ backgroundColor: `${color}26` }}
-      className="relative flex min-w-[200px] flex-col rounded-md p-2 cursor-pointer max-md:min-w-0 max-md:rounded-xl max-md:h-[110px]"
+      className="relative flex min-w-[200px] shrink-0 flex-col rounded-md p-2 cursor-pointer max-md:min-w-[160px] max-md:rounded-xl max-md:h-[110px]"
       onClick={onClick}
     >
       <div className="flex items-start justify-between">
@@ -39,7 +53,7 @@ export function FolderCard({
           </div>
         </div>
 
-        <div className="relative mt-1">
+        <div ref={menuRef} className="relative mt-1">
           <button
             type="button"
             className="text-[#94A3B8] cursor-pointer hover:text-[#64748B] p-1"

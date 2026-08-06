@@ -18,7 +18,11 @@ export type DriveFolderRow = {
 export async function fetchRootDriveFolders(
   collegeId: number,
   userId?: number,
+  page: number = 1,
+  limit: number = 5,
 ) {
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
   const query = supabase
     .from("drive_folders")
     .select(
@@ -34,13 +38,15 @@ export async function fetchRootDriveFolders(
       updatedAt,
       deletedAt
     `,
+      { count: "exact" },
     )
     .eq("collegeId", collegeId)
     .is("parentFolderId", null)
     .is("deletedAt", null)
-    .order("folderName", { ascending: true });
+    .order("folderName", { ascending: true })
+    .range(from, to);
 
-  const { data, error } = await (userId
+  const { data, error, count } = await (userId
     ? query.eq("createdBy", userId)
     : query);
 
@@ -49,7 +55,7 @@ export async function fetchRootDriveFolders(
     throw error;
   }
 
-  return data ?? [];
+  return { data: data ?? [], totalCount: count ?? 0 };
 }
 
 export async function fetchSubDriveFolders(

@@ -21,6 +21,7 @@ import {
 } from "@/lib/helpers/drive/driveFilesAPI";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
 type FolderFilesModalProps = {
   open: boolean;
@@ -84,78 +85,6 @@ function ShimmerRow() {
           <div className="h-4 w-4 rounded bg-gray-200" />
           <div className="h-4 w-4 rounded bg-gray-200 hidden md:block" />
           <div className="h-4 w-4 rounded bg-gray-200 hidden md:block" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface ConfirmDeleteModalProps {
-  open: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-  isDeleting?: boolean;
-  name?: string;
-}
-
-function ConfirmDeleteModal({
-  open,
-  onConfirm,
-  onCancel,
-  isDeleting = false,
-  name = "file",
-}: ConfirmDeleteModalProps) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center px-4">
-      <div className="bg-white rounded-xl w-full max-w-[380px] p-6 shadow-xl">
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-          Delete {name}?
-        </h3>
-        <p className="text-sm text-gray-600 mb-6">
-          Are you sure you want to delete this {name}? This action cannot be
-          undone.
-        </p>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onCancel}
-            disabled={isDeleting}
-            className="px-4 py-2 text-[#282828] cursor-pointer rounded-lg text-sm border disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={isDeleting}
-            className="px-4 py-2 cursor-pointer rounded-lg text-sm bg-red-600 text-white disabled:opacity-60 flex items-center gap-2"
-          >
-            {isDeleting ? (
-              <>
-                <svg
-                  className="animate-spin h-3.5 w-3.5 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v8z"
-                  />
-                </svg>
-                Deleting...
-              </>
-            ) : (
-              "Delete"
-            )}
-          </button>
         </div>
       </div>
     </div>
@@ -240,19 +169,18 @@ export default function FolderFilesModal({
     }));
     setUploadItems(items);
     setUploading(true);
-    let failedUploads = 0;
 
-    for (let i = 0; i < selected.length; i++) {
-      const file = selected[i];
-      try {
-        await new Promise<void>((resolve, reject) => {
-          supabase.storage
-            .from("college-drive")
-            .createSignedUploadUrl(
-              `${collegeId}/${driveFolderId}/${file.name.trim()}`,
-              { upsert: true },
-            )
-            .then(({ data: signedData, error }) => {
+    const uploadResults = await Promise.all(
+      selected.map(async (file, i) => {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            supabase.storage
+              .from("college-drive")
+              .createSignedUploadUrl(
+                `${collegeId}/${driveFolderId}/${file.name.trim()}`,
+                { upsert: true },
+              )
+              .then(({ data: signedData, error }) => {
               if (error || !signedData?.signedUrl) {
                 reject(error);
                 return;
@@ -328,9 +256,6 @@ export default function FolderFilesModal({
                     }
                   }
 
-                  const updated = await fetchDriveFilesByFolder(driveFolderId);
-                  setFiles(updated as DriveFileRow[]);
-
                   setUploadItems((prev) =>
                     prev.map((item, idx) =>
                       idx === i
@@ -350,18 +275,30 @@ export default function FolderFilesModal({
                 "Content-Type",
                 file.type || "application/octet-stream",
               );
-              xhr.send(file);
-            });
-        });
-      } catch (error) {
-        failedUploads += 1;
-        console.error("Drive file upload failed:", error);
-        setUploadItems((prev) =>
-          prev.map((item, idx) =>
-            idx === i ? { ...item, status: "error" } : item,
-          ),
-        );
-      }
+                xhr.send(file);
+              })
+              .catch(reject);
+          });
+          return true;
+        } catch (error) {
+          console.error("Drive file upload failed:", error);
+          setUploadItems((prev) =>
+            prev.map((item, idx) =>
+              idx === i ? { ...item, status: "error" } : item,
+            ),
+          );
+          return false;
+        }
+      }),
+    );
+
+    const failedUploads = uploadResults.filter((success) => !success).length;
+
+    try {
+      const updated = await fetchDriveFilesByFolder(driveFolderId);
+      setFiles(updated as DriveFileRow[]);
+    } catch (error) {
+      console.error("Failed to refresh drive files after upload:", error);
     }
 
     if (failedUploads === selected.length) {
@@ -575,6 +512,9 @@ export default function FolderFilesModal({
           setSelectedFileIds([]);
         }}
         isDeleting={isDeletingFile}
+        title="Delete"
+        confirmText="Delete"
+        loadingText="Deleting..."
         name={
           selectedFileIds.length > 1
             ? `${selectedFileIds.length} files`
