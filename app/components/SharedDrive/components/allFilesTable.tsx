@@ -9,58 +9,7 @@ import FileIcon from "./fileIcon";
 import { DriveFileRow } from "@/lib/helpers/drive/driveFilesAPI";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-
-interface ConfirmDeleteModalProps {
-  open: boolean;
-  onConfirm: () => void | Promise<void>;
-  onCancel: () => void;
-  isDeleting?: boolean;
-  name?: string;
-}
-
-function ConfirmDeleteModal({
-  open,
-  onConfirm,
-  onCancel,
-  isDeleting = false,
-  name = "file",
-}: ConfirmDeleteModalProps) {
-  const t = useTranslations("Drive.student");
-
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center px-4">
-      <div className="bg-white rounded-xl w-full max-w-[380px] p-6 shadow-xl">
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-          {t("Delete {name}?", { name })}
-        </h3>
-        <p className="text-sm text-gray-600 mb-6">
-          {t(
-            "Are you sure you want to delete this {name}? This action cannot be undone",
-            { name },
-          )}
-        </p>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onCancel}
-            disabled={isDeleting}
-            className="px-4 py-2 text-[#282828] cursor-pointer rounded-lg text-sm border disabled:opacity-60"
-          >
-            {t("Cancel")}
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={isDeleting}
-            className="px-4 py-2 cursor-pointer rounded-lg text-sm bg-red-600 text-white disabled:opacity-60"
-          >
-            {isDeleting ? t("Deleting") : t("Delete")}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
 type Props = {
   files: DriveFileRow[];
@@ -100,6 +49,9 @@ export default function FilesTable({
         onCancel={() => !isDeleting && setFileToDelete(null)}
         isDeleting={isDeleting}
         name={fileToDelete?.fileName ?? "file"}
+        title={t("Delete")}
+        confirmText={t("Delete")}
+        loadingText={t("Deleting")}
       />
 
       <div className="mt-2 overflow-hidden rounded-2xl bg-white shadow-sm max-md:bg-transparent max-md:shadow-none">

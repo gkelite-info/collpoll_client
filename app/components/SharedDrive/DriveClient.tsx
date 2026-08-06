@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import FolderFilesModal from "@/app/components/modals/FolderFilesModal";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
-import { CaretLeftIcon, CaretRight } from "@phosphor-icons/react";
 import {
   DriveFolderRow,
   fetchRootDriveFolders,
@@ -22,9 +21,10 @@ import { FolderCard } from "./components/folderCard";
 import RecentFileCard from "./components/recentFileCard";
 import FilesTable from "./components/allFilesTable";
 import RenameFolderModal from "./components/modal/renameFolderModal";
-import DeleteFolderModal from "./components/modal/deleteFolderModal";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import ReplaceFolderModal from "./components/modal/replaceFolderModal";
 import { useTranslations } from "next-intl";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 type SortOption = "latest" | "name" | "size";
 
@@ -115,6 +115,7 @@ const DriveClient = () => {
   const [folders, setFolders] = useState<FolderItemProps[]>([]);
   const [recentFiles, setRecentFiles] = useState<DriveFileRow[]>([]);
   const [recentViewed, setRecentViewed] = useState<RecentFile[]>([]);
+  const [recentCurrentPage, setRecentCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState<SortOption>("latest");
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -133,6 +134,9 @@ const DriveClient = () => {
   const [isDeletingFile, setIsDeletingFile] = useState(false);
   const [loadingFolders, setLoadingFolders] = useState(true);
   const [loadingFiles, setLoadingFiles] = useState(true);
+  const [folderCurrentPage, setFolderCurrentPage] = useState(1);
+  const [totalFolders, setTotalFolders] = useState(0);
+  const [folderRefreshKey, setFolderRefreshKey] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [toastState, setToastState] = useState<{
@@ -146,7 +150,13 @@ const DriveClient = () => {
   } | null>(null);
 
   const rowsPerPage = 10;
-  const totalPages = Math.ceil(totalRecords / rowsPerPage);
+  const foldersPerPage = 5;
+  const recentItemsPerPage = 5;
+
+  const paginatedRecentFiles = recentViewed.slice(
+    (recentCurrentPage - 1) * recentItemsPerPage,
+    recentCurrentPage * recentItemsPerPage,
+  );
 
   const showToast = (message: string, type: "success" | "error") => {
     setToastState({ message, type });
@@ -176,13 +186,19 @@ const DriveClient = () => {
     setLoadingFiles(true);
 
     Promise.all([
-      fetchRootDriveFolders(collegeId, userId),
+      fetchRootDriveFolders(
+        collegeId,
+        userId,
+        folderCurrentPage,
+        foldersPerPage,
+      ),
       fetchFolderStats(collegeId, userId),
       fetchRecentDriveFiles(collegeId, currentPage, rowsPerPage, userId),
     ])
-      .then(([folderData, stats, filesResult]) => {
+      .then(([folderResult, stats, filesResult]) => {
+        const { data: folderData, totalCount: folderCount } = folderResult;
         setFolders(
-          (folderData as DriveFolderRow[]).map((f) => ({
+          folderData.map((f: DriveFolderRow) => ({
             driveFolderId: f.driveFolderId,
             name: f.folderName,
             color: f.color ?? "#0096A6",
@@ -190,6 +206,7 @@ const DriveClient = () => {
             sizeLabel: formatSize(stats[f.driveFolderId]?.totalSizeBytes ?? 0),
           })),
         );
+        setTotalFolders(folderCount);
 
         const { data, totalCount } = filesResult as {
           data: DriveFileRow[];
@@ -203,7 +220,14 @@ const DriveClient = () => {
         setLoadingFolders(false);
         setLoadingFiles(false);
       });
-  }, [collegeId, userId, currentPage, t]);
+  }, [
+    collegeId,
+    userId,
+    currentPage,
+    folderCurrentPage,
+    folderRefreshKey,
+    t,
+  ]);
 
   const sortedFolders = [...folders].sort((a, b) => {
     if (sortBy === "name") return a.name.localeCompare(b.name);
@@ -243,16 +267,8 @@ const DriveClient = () => {
 
       if (!result.success) throw new Error("Failed");
 
-      setFolders((prev) => [
-        {
-          driveFolderId: result.driveFolderId!,
-          name: data.name,
-          color: data.color,
-          filesCount: 0,
-          sizeLabel: "0 KB",
-        },
-        ...prev,
-      ]);
+      setFolderCurrentPage(1);
+      setFolderRefreshKey((key) => key + 1);
 
       setIsNewFolderOpen(false);
       showToast(t("Folder created successfully"), "success");
@@ -413,6 +429,13 @@ const DriveClient = () => {
       setFolders((prev) =>
         prev.filter((f) => f.driveFolderId !== folderToDelete.driveFolderId),
       );
+      const remainingFolders = Math.max(0, totalFolders - 1);
+      const lastFolderPage = Math.max(
+        1,
+        Math.ceil(remainingFolders / foldersPerPage),
+      );
+      setFolderCurrentPage((page) => Math.min(page, lastFolderPage));
+      setFolderRefreshKey((key) => key + 1);
 
       setRecentFiles((prev) =>
         prev.filter((f) => f.driveFolderId !== folderToDelete.driveFolderId),
@@ -422,6 +445,12 @@ const DriveClient = () => {
       );
       localStorage.setItem(getRecentKey(userId), JSON.stringify(updatedRecent));
       setRecentViewed(updatedRecent);
+      setRecentCurrentPage((page) =>
+        Math.min(
+          page,
+          Math.max(1, Math.ceil(updatedRecent.length / recentItemsPerPage)),
+        ),
+      );
 
       const savedColors: Record<number, string> = JSON.parse(
         localStorage.getItem("folderColors") ?? "{}",
@@ -516,6 +545,12 @@ const DriveClient = () => {
     );
     localStorage.setItem(getRecentKey(userId), JSON.stringify(updatedRecent));
     setRecentViewed(updatedRecent);
+    setRecentCurrentPage((page) =>
+      Math.min(
+        page,
+        Math.max(1, Math.ceil(updatedRecent.length / recentItemsPerPage)),
+      ),
+    );
 
     try {
       const { error } = await supabase
@@ -606,18 +641,18 @@ const DriveClient = () => {
           </h2>
 
           {loadingFolders ? (
-            <div className="mt-2 flex gap-4 max-md:grid max-md:grid-cols-2 max-md:gap-3">
+            <div className="mt-2 flex gap-4 overflow-x-auto pb-2">
               {[...Array(4)].map((_, i) => (
                 <div
                   key={i}
-                  className="relative overflow-hidden flex min-w-[200px] max-md:min-w-0 flex-col rounded-md p-2 bg-gray-100 h-[130px] max-md:h-[110px] max-md:rounded-xl"
+                  className="relative overflow-hidden flex min-w-[200px] shrink-0 flex-col rounded-md p-2 bg-gray-100 h-[130px] max-md:min-w-[160px] max-md:h-[110px] max-md:rounded-xl"
                 >
                   <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
                 </div>
               ))}
             </div>
           ) : (
-            <div className="mt-2 flex gap-4 overflow-x-auto pb-2 max-md:grid max-md:grid-cols-2 max-md:gap-3 max-md:overflow-visible">
+            <div className="mt-2 flex gap-4 overflow-x-auto pb-2">
               {sortedFolders.map((f) => (
                 <FolderCard
                   key={f.driveFolderId}
@@ -635,6 +670,18 @@ const DriveClient = () => {
                   {t("No folders yet Click New to create one")}
                 </p>
               )}
+            </div>
+          )}
+
+          {!loadingFolders && totalFolders > 0 && (
+            <div className="mt-3 w-full">
+              <Pagination
+                currentPage={folderCurrentPage}
+                totalItems={totalFolders}
+                itemsPerPage={foldersPerPage}
+                onPageChange={setFolderCurrentPage}
+                alwaysShow
+              />
             </div>
           )}
         </section>
@@ -657,7 +704,7 @@ const DriveClient = () => {
             </div>
           ) : recentViewed.length > 0 ? (
             <div className="mt-2 flex gap-4 overflow-x-auto pb-1 scrollbar-hide">
-              {recentViewed.slice(0, 10).map((file) => (
+              {paginatedRecentFiles.map((file) => (
                 <RecentFileCard
                   key={file.driveFileId}
                   name={file.fileName}
@@ -671,6 +718,18 @@ const DriveClient = () => {
             <p className="text-sm text-[#9CA3AF] mt-2">
               {t("No recently viewed files yet")}
             </p>
+          )}
+
+          {!loadingFiles && recentViewed.length > 0 && (
+            <div className="mt-3 w-full">
+              <Pagination
+                currentPage={recentCurrentPage}
+                totalItems={recentViewed.length}
+                itemsPerPage={recentItemsPerPage}
+                onPageChange={setRecentCurrentPage}
+                alwaysShow
+              />
+            </div>
           )}
         </section>
 
@@ -701,35 +760,15 @@ const DriveClient = () => {
                 isDeleting={isDeletingFile}
               />
 
-              {totalPages > 1 && (
-                <div className="flex justify-end items-center gap-3 mt-4 mb-2">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className={`w-10 h-10 flex items-center justify-center rounded-lg border ${currentPage === 1 ? "border-gray-200 text-gray-300" : "border-gray-300 text-gray-600 hover:bg-gray-100"}`}
-                  >
-                    <CaretLeftIcon size={18} weight="bold" />
-                  </button>
-
-                  {[...Array(totalPages)].map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentPage(i + 1)}
-                      className={`w-10 h-10 rounded-lg font-semibold ${currentPage === i + 1 ? "bg-[#16284F] text-white" : "border border-gray-300 text-gray-600 hover:bg-gray-100"}`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-
-                  <button
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    disabled={currentPage === totalPages}
-                    className={`w-10 h-10 flex items-center justify-center rounded-lg border ${currentPage === totalPages ? "border-gray-200 text-gray-300" : "border-gray-300 text-gray-600 hover:bg-gray-100"}`}
-                  >
-                    <CaretRight size={18} weight="bold" />
-                  </button>
+              {totalRecords > 0 && (
+                <div className="mt-4 mb-2">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalItems={totalRecords}
+                    itemsPerPage={rowsPerPage}
+                    onPageChange={setCurrentPage}
+                    alwaysShow
+                  />
                 </div>
               )}
             </>
@@ -745,12 +784,15 @@ const DriveClient = () => {
         loading={isRenaming}
       />
 
-      <DeleteFolderModal
+      <ConfirmDeleteModal
         open={!!folderToDelete}
-        folderName={folderToDelete?.name || ""}
+        name={folderToDelete?.name || t("this folder")}
+        title={t("Delete folder")}
+        confirmText={t("Delete")}
+        loadingText={t("Deleting")}
         onCancel={() => setFolderToDelete(null)}
         onConfirm={handleConfirmDeleteFolder}
-        loading={isDeleting}
+        isDeleting={isDeleting}
       />
 
       <ReplaceFolderModal
