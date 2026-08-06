@@ -3,7 +3,12 @@
 import TableComponent from "@/app/utils/table/table";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import FinanceEducationDropdown from "../../components/FinanceEducationDropdown";
-import { getBranchWiseCollectionDynamic } from "@/lib/helpers/finance-manager/analytics/FetchFinanceAnalytics";
+import {
+  getBranchWiseCollectionDynamic,
+  getSchoolYearWiseCollectionDynamic,
+} from "@/lib/helpers/finance-manager/analytics/FetchFinanceAnalytics";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AgCharts } from "ag-charts-react";
@@ -136,6 +141,7 @@ export default function BranchWiseCollectionView({
   } =
     useFinanceManager();
   const title = collegeEducationType || program || "Education";
+  const isSchool = isSchoolEducation(collegeEducationType);
   const [isLoading, setIsLoading] = useState(true);
   const [chartData, setChartData] = useState<
     { branch: string; collected: number; pending: number }[]
@@ -150,6 +156,8 @@ export default function BranchWiseCollectionView({
   const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(
     Number(searchParams.get("semesterId")) || null,
   );
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     let isMounted = true;
@@ -164,12 +172,17 @@ export default function BranchWiseCollectionView({
 
       setIsLoading(true);
       try {
-        const result = await getBranchWiseCollectionDynamic(
-          collegeId,
-          collegeEducationId,
-          selectedAcademicYearId,
-          selectedSemesterId,
-        );
+        const result = isSchool
+          ? await getSchoolYearWiseCollectionDynamic(
+              collegeId,
+              collegeEducationId,
+            )
+          : await getBranchWiseCollectionDynamic(
+              collegeId,
+              collegeEducationId,
+              selectedAcademicYearId,
+              selectedSemesterId,
+            );
         if (!isMounted) return;
         setChartData(result.chartData);
         setGridData(result.gridData);
@@ -197,6 +210,7 @@ export default function BranchWiseCollectionView({
     contextLoading,
     selectedAcademicYearId,
     selectedSemesterId,
+    isSchool,
   ]);
 
   const updateFilterParams = (academicYearId: number | null, semesterId: number | null) => {
@@ -208,12 +222,18 @@ export default function BranchWiseCollectionView({
     router.replace(`?${params.toString()}`, { scroll: false });
   };
 
-  const branchOverviewRows = rawTableData.map((item) => ({
+  const totalPages = Math.max(1, Math.ceil(rawTableData.length / itemsPerPage));
+  const displayedPage = Math.min(currentPage, totalPages);
+  const paginatedTableData = rawTableData.slice(
+    (displayedPage - 1) * itemsPerPage,
+    displayedPage * itemsPerPage,
+  );
+  const branchOverviewRows = paginatedTableData.map((item) => ({
     branch: item.branch,
     collected: item.collected,
     pending: item.pending,
     totalFees: item.totalFees,
-    actions: (
+    ...(!isSchool && { actions: (
       <button
         type="button"
         className="inline-flex cursor-pointer items-center gap-1 font-semibold text-[#22A55D] underline decoration-2 underline-offset-4"
@@ -225,8 +245,16 @@ export default function BranchWiseCollectionView({
       >
         View Years
       </button>
-    ),
+    ) }),
   }));
+  const overviewColumns = isSchool
+    ? [
+        { title: "Year", key: "branch" },
+        { title: "Collected", key: "collected" },
+        { title: "Pending", key: "pending" },
+        { title: "Total Fees", key: "totalFees" },
+      ]
+    : branchOverviewColumns;
   const isPageLoading = contextLoading || isLoading;
   const displayedBranchCards: Array<BranchCard | null> = isPageLoading
     ? Array.from({ length: 6 }, () => null)
@@ -246,7 +274,9 @@ export default function BranchWiseCollectionView({
           </button>
           <h1 className="text-xl font-semibold text-[#282828]">{title}</h1>
           <CaretRight size={18} className="text-[#8A8A8A]" />
-          <span className="text-sm text-[#525252]">Branch Wise Collection</span>
+          <span className="text-sm text-[#525252]">
+            {isSchool ? "Year Wise Collection" : "Branch Wise Collection"}
+          </span>
         </div>
         <FinanceEducationDropdown />
       </div>
@@ -258,6 +288,8 @@ export default function BranchWiseCollectionView({
           </h2>
 
           <div className="flex flex-wrap items-center gap-5 text-sm text-[#525252]">
+            {!isSchool && (
+              <>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-[#282828]">Academic Year</span>
               <select
@@ -266,6 +298,7 @@ export default function BranchWiseCollectionView({
                   const nextYearId = event.target.value ? Number(event.target.value) : null;
                   setSelectedAcademicYearId(nextYearId);
                   setSelectedSemesterId(null);
+                  setCurrentPage(1);
                   updateFilterParams(nextYearId, null);
                 }}
                 className="rounded-full bg-[#E9D8FF] px-3 py-1 font-semibold text-[#714EF2] outline-none"
@@ -287,6 +320,7 @@ export default function BranchWiseCollectionView({
                     ? Number(event.target.value)
                     : null;
                   setSelectedSemesterId(nextSemesterId);
+                  setCurrentPage(1);
                   updateFilterParams(selectedAcademicYearId, nextSemesterId);
                 }}
                 className="rounded-full bg-[#D9F4E4] px-3 py-1 font-semibold text-[#43C17A] outline-none"
@@ -299,6 +333,8 @@ export default function BranchWiseCollectionView({
                 ))}
               </select>
             </div>
+              </>
+            )}
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-sm bg-[#43C17A]" />
               <span>Collected</span>
@@ -363,12 +399,12 @@ export default function BranchWiseCollectionView({
 
       <section className="mt-5">
         <h2 className="mb-3 text-lg font-semibold text-[#282828]">
-          Branch Overview
+          {isSchool ? "Year Overview" : "Branch Overview"}
         </h2>
         <div className="custom-scrollbar overflow-x-auto">
           <div className="min-w-[900px]">
             <TableComponent
-              columns={branchOverviewColumns}
+              columns={overviewColumns}
               tableData={branchOverviewRows}
               height="auto"
               isLoading={isPageLoading}
@@ -376,6 +412,21 @@ export default function BranchWiseCollectionView({
             />
           </div>
         </div>
+        {!isPageLoading && rawTableData.length > 0 && (
+          <Pagination
+            currentPage={displayedPage}
+            totalItems={rawTableData.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            itemsPerPageOptions={[5, 10, 20, 50]}
+            onItemsPerPageChange={(items) => {
+              setItemsPerPage(items);
+              setCurrentPage(1);
+            }}
+            alwaysShow
+            roundedBottom="rounded-b-lg"
+          />
+        )}
       </section>
     </div>
   );

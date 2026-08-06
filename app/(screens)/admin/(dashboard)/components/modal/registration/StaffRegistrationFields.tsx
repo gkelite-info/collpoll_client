@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { CustomMultiSelect, CustomSingleSelect } from "@/app/(screens)/admin/(dashboard)/components/modal/userModalComponents";
 
 interface StaffRegistrationFieldsProps {
@@ -52,6 +52,34 @@ export const StaffRegistrationFields: React.FC<StaffRegistrationFieldsProps> = (
 }) => {
 
   const degreeOptions = useMemo(() => dbData.educations.map((e: any) => e.collegeEducationType), [dbData.educations]);
+  const adminFinanceEducationTypes = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          adminEducationOptions
+            .map((education: any) => education.collegeEducationType)
+            .filter(Boolean),
+        ),
+      ) as string[],
+    [adminEducationOptions],
+  );
+
+  useEffect(() => {
+    if (!isFinanceManager || user) return;
+
+    const inheritedEducationType = adminFinanceEducationTypes[0];
+    setSelectedFinanceEducationTypes((current) => {
+      if (!inheritedEducationType) return [];
+      return current.length === 1 && current[0] === inheritedEducationType
+        ? current
+        : [inheritedEducationType];
+    });
+  }, [
+    adminFinanceEducationTypes,
+    isFinanceManager,
+    setSelectedFinanceEducationTypes,
+    user,
+  ]);
 
   return (
     <>
@@ -60,10 +88,10 @@ export const StaffRegistrationFields: React.FC<StaffRegistrationFieldsProps> = (
           <label className="text-xs font-bold text-[#2D3748]">
             Education Type <span className="text-red-600">*</span>
           </label>
-          <div className={isFinanceManager ? "pointer-events-none opacity-50" : ""}>
+          <div>
             {isAccountant ? (
               <CustomMultiSelect
-                options={adminEducationOptions.map((e: any) => e.collegeEducationType)}
+                options={adminFinanceEducationTypes}
                 selectedValues={selectedFinanceEducationTypes}
                 onChange={(val) => toggleMultiSelectValue(val, setSelectedFinanceEducationTypes)}
                 onRemove={(val) => toggleMultiSelectValue(val, setSelectedFinanceEducationTypes)}
@@ -71,7 +99,7 @@ export const StaffRegistrationFields: React.FC<StaffRegistrationFieldsProps> = (
               />
             ) : (
               <CustomSingleSelect
-                options={adminEducationOptions.map((e: any) => e.collegeEducationType)}
+                options={adminFinanceEducationTypes}
                 selectedValue={selectedFinanceEducationTypes[0] || ""}
                 onChange={(val) => handleSingleSelect(val, setSelectedFinanceEducationTypes)}
                 placeholder="Select Education Type"
@@ -80,7 +108,7 @@ export const StaffRegistrationFields: React.FC<StaffRegistrationFieldsProps> = (
           </div>
           {isFinanceManager && (
             <span className="text-xs text-gray-500 mt-1">
-              Note: Executive managers are assigned to specific education types automatically.
+              Note: Only the logged-in admin&apos;s registered education types are available.
             </span>
           )}
         </div>
@@ -185,7 +213,7 @@ export const StaffRegistrationFields: React.FC<StaffRegistrationFieldsProps> = (
                 College Education Type <span className="text-red-600">*</span>
               </label>
               <CustomMultiSelect
-                options={adminEducationOptions.map((e: any) => e.collegeEducationType)}
+                options={adminFinanceEducationTypes}
                 selectedValues={selectedWellbeingEducationTypes}
                 onChange={(val) => toggleMultiSelectValue(val, setSelectedWellbeingEducationTypes)}
                 onRemove={(val) => toggleMultiSelectValue(val, setSelectedWellbeingEducationTypes)}

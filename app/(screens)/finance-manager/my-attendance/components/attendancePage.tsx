@@ -226,7 +226,7 @@ const AttendancePage = () => {
         name: fullName!,
         mobile: mobile!,
         adminId: identifierId || financeManagerId,
-        EducationType: collegeEducationType!,
+        EducationType: collegeEducationType ?? "Not Provided",
         email: email ?? mockProfile.email,
         joiningDate: formatDate(dateOfJoining),
         image: profilePhoto ?? "",

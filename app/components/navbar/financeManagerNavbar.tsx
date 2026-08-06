@@ -8,7 +8,6 @@ import {
   CheckCircle,
   FolderOpen,
   Gear,
-  Headset,
   House,
   Laptop,
   SmileyIcon,
@@ -16,6 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 type NavItem = {
   icon: (isActive: boolean) => ReactNode;
@@ -31,11 +31,12 @@ export default function FinanceManagerNavbar({
   onClose,
 }: FinanceManagerNavbarProps) {
   const pathname = usePathname();
+  const { isSchool } = useInstitutionTerminology();
   const iconSize = 18;
   const base = "/finance-manager";
 
-  const items: NavItem[] = useMemo(
-    () => [
+  const items: NavItem[] = useMemo(() => {
+    const navigationItems: NavItem[] = [
       {
         icon: (isActive) => (
           <House size={iconSize} weight={isActive ? "fill" : "regular"} />
@@ -107,9 +108,12 @@ export default function FinanceManagerNavbar({
         label: "Settings",
         path: `${base}/settings`,
       },
-    ],
-    [],
-  );
+    ];
+
+    return isSchool
+      ? navigationItems.filter((item) => item.label !== "Club")
+      : navigationItems;
+  }, [isSchool]);
 
   const isActivePath = (itemPath: string) => {
     if (itemPath === base) return pathname === base || pathname.startsWith("/profile");
@@ -119,7 +123,7 @@ export default function FinanceManagerNavbar({
   return (
     <div className="flex h-full w-full flex-col items-center rounded-tr-3xl bg-[#43C17A] text-white shadow-md">
       <div className="flex h-[10%] min-h-19.5 w-full items-center justify-center rounded-br-3xl text-lg font-bold">
-        College Logo
+        {isSchool ? "School Logo" : "College Logo"}
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col items-start gap-2.75 overflow-y-auto w-full pt-4 pl-4 pb-5">

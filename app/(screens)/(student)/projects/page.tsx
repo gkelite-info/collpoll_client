@@ -9,6 +9,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { useTranslations } from "next-intl";
 import { FaChevronDown } from "react-icons/fa6";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 const ProjectCardShimmer = () => (
   <div className="bg-white rounded-[26px] shadow-sm border border-gray-100 px-5 py-6 md:px-7 md:py-7 animate-pulse">
@@ -45,6 +46,8 @@ const Page = () => {
   } = useStudent();
   const [subjectFilter, setSubjectFilter] = useState<string | number>("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const { role } = useUser();
 
   useEffect(() => {
@@ -105,12 +108,16 @@ const Page = () => {
     return matchesSubject && matchesStatus;
   });
 
-  const subjectOptions = [
-    t("All"),
-    ...studentSubjects.map((s) => s.subjectName),
-  ];
-
   const statuses = [t("All"), t("Active"), t("Completed")];
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredProjects.length / itemsPerPage),
+  );
+  const displayedPage = Math.min(currentPage, totalPages);
+  const paginatedProjects = filteredProjects.slice(
+    (displayedPage - 1) * itemsPerPage,
+    displayedPage * itemsPerPage,
+  );
 
   return (
     <main className="p-4 relative overflow-hidden">
@@ -140,6 +147,7 @@ const Page = () => {
               onChange={(e) => {
                 const val = e.target.value;
                 setSubjectFilter(val === "All" ? "All" : Number(val));
+                setCurrentPage(1);
               }}
             >
               <option value="All">{t("All")}</option>
@@ -163,7 +171,10 @@ const Page = () => {
             <select
               className="appearance-none bg-[#DCEAE2] text-[#43C17A] rounded-full px-3 md:px-4 py-1 md:py-1.5 text-[12px] md:text-sm font-semibold outline-none cursor-pointer pr-8 md:pr-10 transition-colors hover:bg-[#cfe2d7]"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
             >
               {statuses.map((s) => (
                 <option key={s} value={s}>
@@ -203,6 +214,7 @@ const Page = () => {
               onClick={() => {
                 setSubjectFilter("All");
                 setStatusFilter("All");
+                setCurrentPage(1);
               }}
               className="mt-4 text-blue-600 text-sm font-medium hover:underline cursor-pointer"
             >
@@ -212,9 +224,26 @@ const Page = () => {
         </div>
       ) : (
         <ProjectCard
-          data={filteredProjects}
+          data={paginatedProjects}
           onViewDetails={(project) => setSelectedProject(project)}
         />
+      )}
+
+      {!isLoading && filteredProjects.length > 0 && (
+        <div className="mt-6 overflow-hidden rounded-xl">
+          <Pagination
+            currentPage={displayedPage}
+            totalItems={filteredProjects.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            itemsPerPageOptions={[5, 10, 20, 50]}
+            onItemsPerPageChange={(items) => {
+              setItemsPerPage(items);
+              setCurrentPage(1);
+            }}
+            alwaysShow
+          />
+        </div>
       )}
 
       {selectedProject && (
@@ -223,6 +252,18 @@ const Page = () => {
           onClose={() => setSelectedProject(null)}
           role={role}
           studentId={studentId}
+          onSubmissionChange={(fileUrl) => {
+            setProjects((current) =>
+              current.map((project) =>
+                project.projectId === selectedProject.projectId
+                  ? { ...project, studentFileUrl: fileUrl }
+                  : project,
+              ),
+            );
+            setSelectedProject((current) =>
+              current ? { ...current, studentFileUrl: fileUrl } : current,
+            );
+          }}
         />
       )}
     </main>

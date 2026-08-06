@@ -54,7 +54,10 @@ const SummaryShimmer = () => (
 );
 
 export default function SummaryPage() {
-  const { financeManagerId, collegeEducationType } = useFinanceManager();
+  const {
+    financeManagerId,
+    collegeEducationType: financeEducationType,
+  } = useFinanceManager();
 
   const {
     userId,
@@ -66,7 +69,9 @@ export default function SummaryPage() {
     email,
     professionalExperienceYears,
     identifierId,
+    collegeEducationType: userEducationType,
   } = useUser();
+  const collegeEducationType = financeEducationType ?? userEducationType;
 
   const [onboardingData, setOnboardingData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);

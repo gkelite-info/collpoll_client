@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  deleteStudentProjectSubmission,
   submitProject,
   uploadFileToStorage,
 } from "@/lib/helpers/student/student_project_submissionsAPI";
@@ -11,6 +12,7 @@ import toast from "react-hot-toast";
 import { FaCloudUploadAlt, FaTimes } from "react-icons/fa";
 import { useTranslations } from "next-intl";
 import { getSecureAttachmentUrl } from "@/lib/helpers/projects/projectFiles";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
 type ProjectCardListProps = {
   data: ProjectCardProps[];
@@ -60,7 +62,6 @@ const MemberAvatar = ({
 export const ProjectCard = ({
   data,
   onViewDetails,
-  role,
 }: ProjectCardListProps) => {
   const t = useTranslations("Projects.student");
   return (
@@ -208,6 +209,7 @@ type ProjectDetailsModalProps = {
   onClose: () => void;
   role: string | null;
   studentId: number | null;
+  onSubmissionChange: (fileUrl: string | null) => void;
 };
 
 export const ProjectDetailsModal = ({
@@ -215,12 +217,19 @@ export const ProjectDetailsModal = ({
   onClose,
   role,
   studentId,
+  onSubmissionChange,
 }: ProjectDetailsModalProps) => {
   const t = useTranslations("Projects.student"); // Hook
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [existingFileUrl, setExistingFileUrl] = useState<string | null>(
+    project.studentFileUrl ?? null,
+  );
+  const isUploadLocked = Boolean(existingFileUrl || selectedFiles.length > 0);
 
   const domains = project.techStack
     .split(",")
@@ -236,16 +245,24 @@ export const ProjectDetailsModal = ({
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
+    if (isUploadLocked) {
+      toast.error("Delete the existing file before uploading a new one");
+      return;
+    }
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const newFiles = Array.from(e.dataTransfer.files);
-      setSelectedFiles((prev) => [...prev, ...newFiles]);
+      setSelectedFiles([e.dataTransfer.files[0]]);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isUploadLocked) {
+      toast.error("Delete the existing file before uploading a new one");
+      e.target.value = "";
+      return;
+    }
     if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
-      setSelectedFiles((prev) => [...prev, ...newFiles]);
+      setSelectedFiles([e.target.files[0]]);
+      e.target.value = "";
     }
   };
 
@@ -281,15 +298,42 @@ export const ProjectDetailsModal = ({
       if (dbResult.success) {
         toast.success(t("Submission successful 🎉"));
         setSelectedFiles([]);
-        onClose();
+        setExistingFileUrl(uploadResult.url);
+        onSubmissionChange(uploadResult.url);
       } else {
         throw new Error(t("Failed to save submission record"));
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Submission error:", error);
-      alert(error.message || t("Something went wrong during submission"));
+      alert(
+        error instanceof Error
+          ? error.message
+          : t("Something went wrong during submission"),
+      );
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleDeleteSubmission = async () => {
+    if (!existingFileUrl || !studentId || !project.projectId) return;
+    setIsDeleting(true);
+    try {
+      const result = await deleteStudentProjectSubmission(
+        project.projectId,
+        studentId,
+        existingFileUrl,
+      );
+      if (!result.success) throw result.error;
+      setExistingFileUrl(null);
+      setShowDeleteConfirmation(false);
+      onSubmissionChange(null);
+      toast.success("File deleted. You can upload a new file now");
+    } catch (error) {
+      console.error("Project submission deletion error:", error);
+      toast.error("Failed to delete uploaded file");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -469,13 +513,34 @@ export const ProjectDetailsModal = ({
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
-              multiple
               accept=".pdf, .jpg, .jpeg, .png, .zip"
               className="hidden"
+              disabled={isUploadLocked}
             />
 
+            {existingFileUrl && (
+              <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm">
+                <a
+                  href={existingFileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="min-w-0 truncate text-sm font-medium text-blue-600 underline"
+                >
+                  {decodeURIComponent(existingFileUrl.split("/").pop() || existingFileUrl)}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirmation(true)}
+                  disabled={isDeleting}
+                  className="shrink-0 cursor-pointer text-sm font-medium text-red-500 underline disabled:opacity-50"
+                >
+                  Delete uploaded file
+                </button>
+              </div>
+            )}
+
             <div
-              className={`border-2 border-dashed rounded-lg p-10 max-md:p-6 flex flex-col items-center justify-center transition-all cursor-pointer ${isDragging
+              className={`border-2 border-dashed rounded-lg p-10 max-md:p-6 flex flex-col items-center justify-center transition-all ${isUploadLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"} ${isDragging
                 ? "border-green-500 bg-green-50 scale-[1.01]"
                 : "border-gray-300 bg-gray-50 hover:bg-gray-100"
                 }`}
@@ -492,7 +557,13 @@ export const ProjectDetailsModal = ({
                 setIsDragging(false);
               }}
               onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                if (isUploadLocked) {
+                  toast.error("Delete the existing file before uploading a new one");
+                  return;
+                }
+                fileInputRef.current?.click();
+              }}
             >
               <FaCloudUploadAlt
                 className={`text-4xl max-md:text-3xl mb-2 ${isDragging ? "text-green-500" : "text-gray-400"}`}
@@ -505,6 +576,7 @@ export const ProjectDetailsModal = ({
               <button
                 type="button"
                 className="border px-6 py-2 rounded bg-white font-medium text-[#282828] shadow-sm active:scale-95 transition-transform cursor-pointer max-md:text-[14px] max-md:px-4 max-md:py-1.5"
+                disabled={isUploadLocked}
               >
                 {t("Browse Files")}
               </button>
@@ -588,6 +660,18 @@ export const ProjectDetailsModal = ({
                 </div>
               </div>
             )}
+
+            <ConfirmDeleteModal
+              open={showDeleteConfirmation}
+              onConfirm={handleDeleteSubmission}
+              onCancel={() => setShowDeleteConfirmation(false)}
+              isDeleting={isDeleting}
+              title="Delete uploaded"
+              name="file"
+              confirmText="Delete uploaded file"
+              loadingText="Deleting"
+              actionType="remove"
+            />
           </div>
         )}
       </div>

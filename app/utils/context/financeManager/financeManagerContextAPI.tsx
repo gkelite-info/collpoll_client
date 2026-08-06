@@ -4,12 +4,16 @@ type FinanceManagerJoin = {
     financeManagerId: number;
     userId: number;
     collegeId: number;
+    collegeEducationId: number | null;
     isActive: boolean;
     type: "executive" | "manager";
 
     college: {
         collegeName: string;
     };
+    college_education: {
+        collegeEducationType: string;
+    } | null;
 };
 
 type FinanceManagerEducationTypeJoin = {
@@ -26,10 +30,14 @@ export async function fetchFinanceManagerContext(userId: number) {
       financeManagerId,
       userId,
       collegeId,
+      collegeEducationId,
       isActive,
       type,
       college:collegeId!inner (
         collegeName
+      ),
+      college_education:collegeEducationId (
+        collegeEducationType
       )
     `)
         .eq("userId", userId)
@@ -58,17 +66,26 @@ export async function fetchFinanceManagerContext(userId: number) {
         .is("finance_manager_education_types.deletedAt", null)
         .returns<any[]>();
 
-    if (educationTypesError) throw educationTypesError;
+    const mappedEducationTypes = educationTypesError ? [] : (educationTypes ?? []);
 
     let collegeEducationIds: number[] =
-        educationTypes && educationTypes.length > 0
-            ? educationTypes.map((education) => education.collegeEducationId)
+        mappedEducationTypes.length > 0
+            ? mappedEducationTypes.map((education) => education.collegeEducationId)
             : [];
 
     let collegeEducationTypes: string[] =
-        educationTypes && educationTypes.length > 0
-            ? educationTypes.map((education) => education.collegeEducationType)
+        mappedEducationTypes.length > 0
+            ? mappedEducationTypes.map((education) => education.collegeEducationType)
             : [];
+
+    if (
+        collegeEducationIds.length === 0 &&
+        data.collegeEducationId &&
+        data.college_education?.collegeEducationType
+    ) {
+        collegeEducationIds = [data.collegeEducationId];
+        collegeEducationTypes = [data.college_education.collegeEducationType];
+    }
 
     // Fallback: If no mappings exist in finance_manager_education_types, fetch all education types for this college
     if (collegeEducationIds.length === 0) {

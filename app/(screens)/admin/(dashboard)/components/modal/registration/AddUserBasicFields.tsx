@@ -110,13 +110,19 @@ export const AddUserBasicFields: React.FC<AddUserBasicFieldsProps> = ({
               "Parent",
               "Faculty",
               "Finance",
-              "Finance Manager",
+              "FinanceManager",
               "Accountant",
               "CollegeHr",
-              "Placement Officer",
-              "Wellbeing Manager",
+              "PlacementOfficer",
+              "WellbeingManager",
               "Admin",
             ]}
+            optionLabels={{
+              FinanceManager: "Finance Manager",
+              CollegeHr: "College HR",
+              PlacementOfficer: "Placement Officer",
+              WellbeingManager: "Wellbeing Manager",
+            }}
             selectedValue={basicData.role}
             onChange={(val) =>
               handleBasicChange({
