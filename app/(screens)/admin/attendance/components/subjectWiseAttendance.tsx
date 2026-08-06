@@ -16,6 +16,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 
+import { useQuery, keepPreviousData, useQueryClient } from "@tanstack/react-query";
+
 import {
   getAdminClassesForSection,
   getStudentsForClass,
@@ -36,16 +38,11 @@ interface SubjectWiseAttendanceProps {
   onBack: () => void;
 }
 
-const TOAST_IDS = {
-  NO_CLASSES: "no_classes_today",
-  LOAD_ERROR: "load_section_error",
-  STUDENT_LOAD_ERROR: "student_load_error",
-};
-
 const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
 
   const branch = searchParams.get("branch");
   const section = searchParams.get("section");
@@ -57,23 +54,32 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
   const collegeSectionsId = Number(searchParams.get("collegeSectionsId"));
   const selectedStudentId = searchParams.get("studentId");
 
-  const [loading, setLoading] = useState(true);
-  const [classOptions, setClassOptions] = useState<
-    { id: string; label: string }[]
-  >([]);
-  const [selectedClassId, setSelectedClassId] = useState<string>("");
-  const [studentsList, setStudentsList] = useState<UIStudent[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [calendarType, setCalendarType] = useState<"Single" | "Bulk">("Single");
+  const urlDate = searchParams.get("date");
+  const urlType = searchParams.get("type") as "Single" | "Bulk" | null;
+  const urlCId = searchParams.get("cId");
+  const urlPage = parseInt(searchParams.get("page") || "1", 10);
+  const urlLimit = parseInt(searchParams.get("limit") || "20", 10);
+
+  const [selectedDate, setSelectedDate] = useState<Date>(urlDate ? new Date(urlDate) : new Date());
+  const [calendarType, setCalendarType] = useState<"Single" | "Bulk">(urlType || "Single");
+  const [selectedClassId, setSelectedClassId] = useState<string>(urlCId || "");
+  const [currentPage, setCurrentPage] = useState(urlPage);
+  const [itemsPerPage, setItemsPerPage] = useState(urlLimit);
+
+  useEffect(() => {
+    if (urlDate) setSelectedDate(new Date(urlDate));
+    if (urlType) setCalendarType(urlType);
+    if (urlCId !== null) setSelectedClassId(urlCId);
+    if (urlPage) setCurrentPage(urlPage);
+    if (urlLimit) setItemsPerPage(urlLimit);
+  }, [urlDate, urlType, urlCId, urlPage, urlLimit]);
+
+  const [draftEdits, setDraftEdits] = useState<Record<string, { attendance: string, reason: string }>>({});
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isCancellingMode, setIsCancellingMode] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
 
   const { adminId, collegeEducationType } = useAdmin();
   const isSchool = isSchoolEducation(collegeEducationType);
@@ -81,6 +87,68 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
   const isBulk = selectedClassId.startsWith("bulk-");
   const eventIdPart = isBulk ? selectedClassId.split("-")[1] : selectedClassId.split("-")[0];
   const parsedEventId = eventIdPart ? parseInt(eventIdPart) : null;
+
+  const today = new Date();
+  const isFutureDate =
+    selectedDate.getFullYear() > today.getFullYear() ||
+    (selectedDate.getFullYear() === today.getFullYear() && selectedDate.getMonth() > today.getMonth()) ||
+    (selectedDate.getFullYear() === today.getFullYear() && selectedDate.getMonth() === today.getMonth() && selectedDate.getDate() > today.getDate());
+
+  const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
+
+  const { data: classOptionsRaw = [], isLoading: classesLoading, isFetching: classesFetching } = useQuery({
+    queryKey: ["adminClassesForSection", collegeSectionsId, dateStr],
+    queryFn: () => getAdminClassesForSection(collegeSectionsId, dateStr),
+    enabled: !!collegeSectionsId,
+    placeholderData: keepPreviousData,
+  });
+
+  const classOptions = classOptionsRaw.filter(c => calendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-"));
+
+  const { data: allStudentsRaw = { data: [], totalCount: 0 }, isLoading: studentsLoading, isFetching: studentsFetching } = useQuery({
+    queryKey: ["adminStudentsForClass", selectedClassId, collegeSectionsId, currentPage, itemsPerPage],
+    queryFn: () => getStudentsForClass(selectedClassId, String(collegeSectionsId), currentPage, itemsPerPage),
+    enabled: !!selectedClassId && !!collegeSectionsId,
+    placeholderData: keepPreviousData,
+  });
+
+  const totalCount = !selectedClassId ? 0 : allStudentsRaw.totalCount;
+  const paginatedStudents = allStudentsRaw.data;
+
+  const updateUrlParams = (updates: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  useEffect(() => {
+    if (classOptions.length > 0 && !classOptions.some(c => c.id === selectedClassId)) {
+      setSelectedClassId(classOptions[0].id);
+      setCurrentPage(1);
+      setDraftEdits({});
+    } else if (classOptions.length === 0) {
+      setSelectedClassId("");
+    }
+  }, [classOptions, classOptionsRaw, selectedClassId, calendarType]);
+
+  const handleFilterChange = (
+    type: "calendarType" | "class" | "date",
+    value: string,
+  ) => {
+    if (type === "date") {
+      updateUrlParams({ date: value, cId: "", page: "1" });
+    } else if (type === "calendarType") {
+      updateUrlParams({ type: value, cId: "", page: "1" });
+    } else if (type === "class") {
+      updateUrlParams({ cId: value, page: "1" });
+    }
+    setCurrentPage(1);
+    setDraftEdits({});
+    setIsEditing(false);
+  };
 
   useAttendanceRealtime(
     parsedEventId,
@@ -91,40 +159,21 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
         let matchedStudentName = "";
         let status = "Not Marked";
 
-        setStudentsList((prev) => {
-          return prev.map((s) => {
-            if (s.id === String(newRecord.studentId)) {
-              const upperStatus = newRecord.status?.toUpperCase();
-              if (upperStatus === "PRESENT") status = "Present";
-              else if (upperStatus === "LATE") status = "Late";
-              else if (upperStatus === "ABSENT") status = "Absent";
-              
-              if (s.attendance !== status) {
-                matchedStudentName = s.name;
-              }
+        setDraftEdits((prev) => {
+          const newDrafts = { ...prev };
+          const sId = String(newRecord.studentId);
+          
+          const upperStatus = newRecord.status?.toUpperCase();
+          if (upperStatus === "PRESENT") status = "Present";
+          else if (upperStatus === "LATE") status = "Late";
+          else if (upperStatus === "ABSENT") status = "Absent";
 
-              let newPercentage = s.percentage;
-              let newStats = s.stats;
-              if (s.stats) {
-                const recalc = recalculateAttendancePercentage(
-                  s.attendance,
-                  newRecord.status,
-                  s.stats
-                );
-                newPercentage = recalc.newPercentage;
-                newStats = recalc.newStats;
-              }
-              
-              return {
-                ...s,
-                attendance: status as any,
-                reason: newRecord.reason || "",
-                percentage: newPercentage,
-                stats: newStats,
-              };
-            }
-            return s;
-          });
+          if (!prev[sId] || prev[sId].attendance !== status) {
+            newDrafts[sId] = { ...prev[sId], attendance: status, reason: newRecord.reason || "" };
+            const student = paginatedStudents?.find((s: any) => s.id === sId);
+            if (student) matchedStudentName = student.name;
+          }
+          return newDrafts;
         });
 
         if (matchedStudentName) {
@@ -136,91 +185,32 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
     }
   );
 
-  useEffect(() => {
-    if (!collegeSectionsId) return;
-
-    const init = async () => {
-      setLoading(true);
-      try {
-        const year = selectedDate.getFullYear();
-        const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
-        const day = String(selectedDate.getDate()).padStart(2, "0");
-        const dateStr = `${year}-${month}-${day}`;
-
-        const classes = await getAdminClassesForSection(collegeSectionsId, dateStr);
-        setClassOptions(classes);
-
-        const filtered = classes.filter(c => calendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-"));
-
-        if (filtered.length > 0) {
-          const firstClass = filtered[0];
-          setSelectedClassId(firstClass.id);
-        } else {
-          setStudentsList([]);
-          setSelectedClassId("");
-          toast("No classes scheduled for this date", {
-            icon: "ℹ️",
-            id: TOAST_IDS.NO_CLASSES,
-          });
-        }
-      } catch (err) {
-        toast.error("Failed to load section data", {
-          id: TOAST_IDS.LOAD_ERROR,
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    init();
-  }, [collegeSectionsId, selectedDate]);
-
-  const handleClassChange = (newClassId: string) => {
-    setSelectedClassId(newClassId);
-    setIsEditing(false);
-    setCurrentPage(1);
-  };
-
-  useEffect(() => {
-    if (!selectedClassId) {
-      setStudentsList([]);
-      setTotalCount(0);
-      setLoading(false);
-      return;
+  const studentsList = !selectedClassId ? [] : paginatedStudents.map((s) => {
+    const draft = draftEdits[s.id];
+    let newPercentage = s.percentage;
+    let newStats = s.stats;
+    
+    if (draft && draft.attendance !== s.attendance && s.stats) {
+      const recalc = recalculateAttendancePercentage(s.attendance, draft.attendance, s.stats);
+      newPercentage = recalc.newPercentage;
+      newStats = recalc.newStats;
     }
+    
+    return draft ? { ...s, attendance: draft.attendance as any, reason: draft.reason, percentage: newPercentage, stats: newStats } : s;
+  });
 
-    let isMounted = true;
-    setLoading(true);
-
-    const loadStudents = async () => {
-      try {
-        const { data, totalCount: count } = await getStudentsForClass(
-          selectedClassId,
-          String(collegeSectionsId),
-          currentPage,
-          itemsPerPage
-        );
-        if (isMounted) {
-          setStudentsList(data);
-          setTotalCount(count);
-        }
-      } catch (err) {
-        if (isMounted) {
-          toast.error("Failed to load students", {
-            id: TOAST_IDS.STUDENT_LOAD_ERROR,
-          });
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    loadStudents();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedClassId, collegeSectionsId, currentPage, itemsPerPage]);
+  const handleSetStudents = (updater: UIStudent[] | ((prev: UIStudent[]) => UIStudent[])) => {
+    setDraftEdits((prevDrafts) => {
+      const currentList = studentsList;
+      const nextList = typeof updater === "function" ? updater(currentList) : updater;
+      
+      const newDrafts = { ...prevDrafts };
+      nextList.forEach((s) => {
+        newDrafts[s.id] = { attendance: s.attendance, reason: s.reason };
+      });
+      return newDrafts;
+    });
+  };
 
   const handleSaveAttendance = async () => {
     if (!selectedClassId) return;
@@ -232,16 +222,27 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
 
     setSaving(true);
     try {
-      const payload = studentsList.map((s) => ({
-        studentId: s.id,
-        status: s.attendance,
-        reason: s.reason,
+      const payload = Object.entries(draftEdits).map(([id, draft]) => ({
+        studentId: id,
         adminId: adminId ?? undefined,
+        status: draft.attendance,
+        reason: draft.reason,
       }));
+
+      if (payload.length === 0) {
+        toast.success("No changes to save!");
+        setIsEditing(false);
+        return;
+      }
+
       const result = await saveAttendance(selectedClassId, payload);
       if (!result.success) throw new Error(result.error);
+      
+      queryClient.invalidateQueries({ queryKey: ["adminStudentsForClass"] });
+      
       toast.success("Attendance Updated!");
       setIsEditing(false);
+      setDraftEdits({});
     } catch (error: any) {
       toast.error(error.message);
     } finally {
@@ -254,12 +255,13 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
       toast.error("Enter a reason");
       return;
     }
-    const updatedList = studentsList.map((s) => ({
-      ...s,
-      attendance: "Class Cancel" as const,
-      reason: cancelReason,
-    }));
-    setStudentsList(updatedList);
+    handleSetStudents((prev) => 
+      prev.map((s) => ({
+        ...s,
+        attendance: "Class Cancel" as any,
+        reason: cancelReason,
+      }))
+    );
     setIsCancellingMode(false);
     toast("Marked as Cancelled. Click Save.", { icon: "⚠️" });
   };
@@ -337,10 +339,10 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
         </div>
       </div>
 
-      <div className="flex mb-3 items-center gap-3 bg-gray-100 rounded-md">
+      <div className="flex mb-3 items-center gap-3 bg-gray-100 rounded-md p-2 w-fit">
         <span
           onClick={onBack}
-          className="text-green-500 text-sm font-medium cursor-pointer"
+          className="text-green-500 text-sm font-medium cursor-pointer hover:underline"
         >
           Attendance Overview
         </span>
@@ -371,26 +373,23 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
           <WorkWeekCalendar 
             style="h-full w-[350px]" 
             activeDate={selectedDate}
-            onDateSelect={(date) => setSelectedDate(date)}
+            onDateSelect={(date) => {
+              const localDate = new Date(date);
+              localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
+              handleFilterChange("date", localDate.toISOString().split("T")[0]);
+            }}
           />
         </div>
       </div>
 
-      <div className=" flex-1">
+      <div className="flex-1">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div className="flex items-center gap-3 justify-between">
             <div className="relative">
               <select
                 value={calendarType}
                 onChange={(e) => {
-                  const type = e.target.value as "Single" | "Bulk";
-                  setCalendarType(type);
-                  const filtered = classOptions.filter(c => type === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-"));
-                  if (filtered.length > 0) {
-                    handleClassChange(filtered[0].id);
-                  } else {
-                    handleClassChange("");
-                  }
+                  handleFilterChange("calendarType", e.target.value);
                 }}
                 className="appearance-none rounded-full bg-[#43C17A1C] pl-4 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm min-w-[100px]"
               >
@@ -407,11 +406,11 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
             <div className="relative">
               <select
                 value={selectedClassId}
-                onChange={(e) => handleClassChange(e.target.value)}
+                onChange={(e) => handleFilterChange("class", e.target.value)}
                 className="appearance-none rounded-full bg-[#43C17A1C] pl-4 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm min-w-[180px]"
               >
-                {classOptions.filter(c => calendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-")).length > 0 ? (
-                  classOptions.filter(c => calendarType === "Bulk" ? c.id.startsWith("bulk-") : !c.id.startsWith("bulk-")).map((c) => (
+                {classOptions.length > 0 ? (
+                  classOptions.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.label}
                     </option>
@@ -466,29 +465,37 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
           </div>
         </div>
 
-        {loading ? (
-          <div className="w-full mt-4">
-            <StuTableShimmer />
-          </div>
-        ) : studentsList.length > 0 ? (
+        {classOptions.length > 0 || classesLoading || classesFetching || studentsLoading || studentsFetching ? (
           <>
             <StuAttendanceTable
+              loadingData={classesLoading || classesFetching || studentsLoading || studentsFetching}
+              isFutureDate={isFutureDate}
               students={studentsList}
-              setStudents={setStudentsList}
+              setStudents={handleSetStudents}
               handleSaveAttendance={handleSaveAttendance}
               saving={saving}
               isTopicMode={true}
-              isEditing={isEditing}
-              onEditClick={() => setIsEditing(true)}
+              isEditing={isEditing && !isFutureDate}
+              onEditClick={() => {
+                if (isFutureDate) {
+                  toast.error("Cannot edit attendance for future dates.");
+                  return;
+                }
+                setIsEditing(true);
+              }}
             />
-            <div className="flex justify-center items-center mt-2 w-full rounded-lg shadow-sm">
+            <div className="flex justify-center items-center mt-2 w-full rounded-lg shadow-sm mb-6">
               <Pagination
                 currentPage={currentPage}
                 totalItems={totalCount}
                 itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
+                onPageChange={(p) => {
+                  updateUrlParams({ page: String(p) });
+                  setCurrentPage(p);
+                }}
                 itemsPerPageOptions={[10, 20, 50, 100]}
                 onItemsPerPageChange={(newLimit) => {
+                  updateUrlParams({ limit: String(newLimit), page: "1" });
                   setItemsPerPage(newLimit);
                   setCurrentPage(1);
                 }}

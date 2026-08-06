@@ -1,6 +1,6 @@
 "use server";
 
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@supabase/supabase-js";
 
 type UpsertUnitPayload = {
   collegeId: number;
@@ -13,6 +13,7 @@ type UpsertUnitPayload = {
   endDate?: string;
 
   topics: string[];
+  collegeSectionsId: number;
 };
 
 type SavedTopic = {
@@ -57,7 +58,13 @@ export async function upsertCollegeSubjectUnitWithTopics(
     startDate,
     endDate,
     topics,
+    collegeSectionsId,
   } = payload;
+
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   const startISO = toISODate(startDate);
   const endISO = toISODate(endDate);
@@ -72,7 +79,7 @@ export async function upsertCollegeSubjectUnitWithTopics(
    * 1️⃣ UPSERT SUBJECT UNIT
    * ------------------------------- */
 
-  const { data: unit, error: unitError } = await supabase
+  const { data: unit, error: unitError } = await supabaseAdmin
     .from("college_subject_units")
     .upsert(
       {
@@ -83,11 +90,13 @@ export async function upsertCollegeSubjectUnitWithTopics(
         startDate: startISO,
         endDate: endISO,
         createdBy,
-        createdAt: now,   // ✅ REQUIRED
-        updatedAt: now,   // ✅ REQUIRED
+        collegeSectionsId,
+        createdAt: now,
+        updatedAt: now,
+        isActive: true,
       },
       {
-        onConflict: "collegeId,collegeSubjectId,unitNumber",
+        onConflict: "collegeId,collegeSubjectId,unitNumber,collegeSectionsId",
       }
     )
     .select()
@@ -100,7 +109,11 @@ export async function upsertCollegeSubjectUnitWithTopics(
       throw new Error("Unit number already exists for this subject");
     }
 
-    throw unitError;
+    if (unitError.code === "42501") {
+      throw new Error("Unable to save this unit. It may already exist or you lack permission to modify it.");
+    }
+
+    throw new Error(unitError.message || "Failed to save unit to the database.");
   }
 
   const collegeSubjectUnitId = unit.collegeSubjectUnitId;
@@ -117,23 +130,31 @@ export async function upsertCollegeSubjectUnitWithTopics(
       collegeSubjectId,
       collegeId,
       createdBy,
+      collegeSectionsId,
       createdAt: now,   // ✅ REQUIRED
       updatedAt: now,   // ✅ REQUIRED
+      isActive: true,
     }));
 
-    const { error: topicError } = await supabase
+    const { error: topicError } = await supabaseAdmin
       .from("college_subject_unit_topics")
       .upsert(topicRows, {
-        onConflict: "collegeSubjectUnitId,topicTitle",
+        onConflict: "collegeSubjectUnitId,topicTitle,collegeSectionsId",
       });
 
     if (topicError) {
       console.error("❌ Topic upsert failed:", topicError);
-      throw topicError;
+      if (topicError.code === "23505") {
+        throw new Error("One or more topics already exist in this unit.");
+      }
+      if (topicError.code === "42501") {
+        throw new Error("Unable to save topics. You may lack permission to modify them.");
+      }
+      throw new Error(topicError.message || "Failed to save topics to the database.");
     }
   }
 
-  const { data: savedTopics, error: savedTopicsError } = await supabase
+  const { data: savedTopics, error: savedTopicsError } = await supabaseAdmin
     .from("college_subject_unit_topics")
     .select(
       `
@@ -148,12 +169,11 @@ export async function upsertCollegeSubjectUnitWithTopics(
     .eq("collegeSubjectUnitId", collegeSubjectUnitId)
     .eq("collegeId", collegeId)
     .eq("isActive", true)
-    .is("deletedAt", null)
     .order("displayOrder", { ascending: true });
 
   if (savedTopicsError) {
-    console.error("âŒ Saved topics fetch failed:", savedTopicsError);
-    throw savedTopicsError;
+    console.error("❌ Saved topics fetch failed:", savedTopicsError);
+    throw new Error(savedTopicsError.message || "Failed to retrieve saved topics.");
   }
 
   return {

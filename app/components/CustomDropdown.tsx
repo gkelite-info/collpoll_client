@@ -22,6 +22,8 @@ interface CustomDropdownProps {
   className?: string;
   theme?: "green" | "always-green" | "default";
   hideCheckmark?: boolean;
+  isMultiSelect?: boolean;
+  selectedValues?: (string | number)[];
 }
 
 export const CustomDropdown = ({
@@ -36,6 +38,8 @@ export const CustomDropdown = ({
   className = "",
   theme = "default",
   hideCheckmark = false,
+  isMultiSelect = false,
+  selectedValues = [],
 }: CustomDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -106,7 +110,9 @@ export const CustomDropdown = ({
           className="custom-dropdown-menu bg-white rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 overflow-hidden py-1 max-h-60 overflow-y-auto custom-scrollbar"
         >
           {finalOptions.map((opt, index) => {
-            const isSelected = String(opt.value) === String(selectedValue);
+            const isSelected = isMultiSelect 
+              ? selectedValues.includes(opt.value)
+              : String(opt.value) === String(selectedValue);
             
             return (
               <div
@@ -114,7 +120,9 @@ export const CustomDropdown = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   onChange(opt.value);
-                  setIsOpen(false);
+                  if (!isMultiSelect) {
+                    setIsOpen(false);
+                  }
                 }}
                 className={`px-3 py-2.5 text-[13px] cursor-pointer transition-colors duration-200 flex items-center justify-between ${
                   isSelected

@@ -308,6 +308,7 @@ export const useFacultyCalendarEvents = (
     enabled: !!facultyId && !!collegeId,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchInterval: 15000, // 15 seconds polling
   });
 
   useEffect(() => {

@@ -175,6 +175,8 @@ export const useFacultyCalendarModals = (
         setEventForm(null);
         setFormMode("create");
         queryClient.invalidateQueries({ queryKey: ["facultyCalendarEvents"] });
+        queryClient.invalidateQueries({ queryKey: ["upcomingClasses"] });
+        queryClient.invalidateQueries({ queryKey: ["facultyDashboardStats"] });
         return { success: true };
       }
 
@@ -225,6 +227,8 @@ export const useFacultyCalendarModals = (
       setFormMode("create");
 
       queryClient.invalidateQueries({ queryKey: ["facultyCalendarEvents"] });
+      queryClient.invalidateQueries({ queryKey: ["upcomingClasses"] });
+      queryClient.invalidateQueries({ queryKey: ["facultyDashboardStats"] });
 
       return { success: true };
     } catch (err) {
@@ -306,6 +310,8 @@ export const useFacultyCalendarModals = (
         setEventForm(null);
         setFormMode("create");
         queryClient.invalidateQueries({ queryKey: ["facultyCalendarEvents"] });
+        queryClient.invalidateQueries({ queryKey: ["upcomingClasses"] });
+        queryClient.invalidateQueries({ queryKey: ["facultyDashboardStats"] });
         return;
       }
 
@@ -363,6 +369,8 @@ export const useFacultyCalendarModals = (
       setFormMode("create");
 
       queryClient.invalidateQueries({ queryKey: ["facultyCalendarEvents"] });
+      queryClient.invalidateQueries({ queryKey: ["upcomingClasses"] });
+      queryClient.invalidateQueries({ queryKey: ["facultyDashboardStats"] });
     } catch (err) {
       console.error("confirmAddEvent error", err);
       toast.error("Failed to save event");
@@ -400,6 +408,8 @@ export const useFacultyCalendarModals = (
       }
 
       queryClient.invalidateQueries({ queryKey: ["facultyCalendarEvents"] });
+      queryClient.invalidateQueries({ queryKey: ["upcomingClasses"] });
+      queryClient.invalidateQueries({ queryKey: ["facultyDashboardStats"] });
       toast.success("Section deleted successfully");
     } catch (err) {
       toast.error("Failed to delete section");

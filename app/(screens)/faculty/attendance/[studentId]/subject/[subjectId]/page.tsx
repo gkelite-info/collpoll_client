@@ -8,7 +8,7 @@ import { getSubjectAttendanceDetails } from "@/lib/helpers/faculty/attendance/ge
 import { CaretLeft } from "@phosphor-icons/react";
 import StudentProfileCard from "../../../components/stuProfileCard";
 import AiBotCard from "../../../components/aiBotCard";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import SubjectDetailsSkeleton from "../../shimmer/subjectDetailsSkeleton";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -38,10 +38,11 @@ export default function SubjectDetailPage() {
   const [page, setPage] = useState(1);
   const limit = 10;
 
-  const { data, isLoading: dataLoading } = useQuery({
+  const { data, isLoading: dataLoading, isFetching: dataFetching } = useQuery({
     queryKey: ["subjectAttendanceDetails", studentId, subjectId, filter, page, limit],
     queryFn: () => getSubjectAttendanceDetails(studentId as string, subjectId as string, filter, page, limit),
     enabled: !!studentId && !!subjectId,
+    placeholderData: keepPreviousData,
   });
 
   const { data: student, isLoading: studentLoading } = useQuery({
@@ -214,13 +215,7 @@ export default function SubjectDetailPage() {
       </section>
 
       <section className="w-full min-w-0">
-        {filteredRecords.length > 0 ? (
-          <SubjectAttendanceTable records={filteredRecords} />
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-500 font-medium">
-            No attendance records found for the selected filter.
-          </div>
-        )}
+        <SubjectAttendanceTable records={filteredRecords} loadingData={dataFetching || dataLoading} />
         
         <div className="mt-6 flex justify-center mb-6">
           <Pagination

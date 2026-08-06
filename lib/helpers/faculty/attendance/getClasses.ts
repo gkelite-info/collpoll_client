@@ -10,6 +10,7 @@ export interface UpcomingLesson {
   toTime: string;
   section?: string;
   date?: string;
+  rawDate?: string;
   roomNo?: string;
   semester: string[];
   department: { name: string }[];
@@ -251,6 +252,7 @@ export async function getUpcomingClasses(
         fromTime: convertTo12HourFormat(event.fromTime),
         toTime: convertTo12HourFormat(event.toTime),
         date: formatDate(event.date),
+        rawDate: event.date,
         roomNo: safeGet(event.college_rooms, "roomNo"),
         section: undefined,
         semester: [],
@@ -295,6 +297,7 @@ export async function getUpcomingClasses(
         fromTime: convertTo12HourFormat(event.fromTime),
         toTime: convertTo12HourFormat(event.toTime),
         date: formatDate(event.date),
+        rawDate: event.date,
         roomNo: safeGet(event.college_rooms, "roomNo"),
         section: sectionRow.section?.collegeSections,
         semester: [semester],
@@ -347,6 +350,7 @@ export async function getUpcomingClasses(
             fromTime: convertTo12HourFormat(event.fromTime),
             toTime: convertTo12HourFormat(event.toTime),
             date: formatDate(dateStr),
+            rawDate: dateStr,
             roomNo: safeGet(event.college_rooms, "roomNo"),
             section: undefined,
             semester: [],
@@ -401,6 +405,7 @@ export async function getUpcomingClasses(
               fromTime: convertTo12HourFormat(event.fromTime),
               toTime: convertTo12HourFormat(event.toTime),
               date: formatDate(dateStr),
+              rawDate: dateStr,
               roomNo: safeGet(event.college_rooms, "roomNo"),
               section: sectionName,
               semester: [semester],
@@ -555,6 +560,7 @@ export async function getClassDetails(
       fromTime: convertTo12HourFormat(event.fromTime),
       toTime: convertTo12HourFormat(event.toTime),
       date: formatDate(occurrenceDate),
+      rawDate: occurrenceDate,
       roomNo: safeGet(event.college_rooms, "roomNo"),
       section: sectionNames,
       semester: semesters as string[],
@@ -640,6 +646,7 @@ export async function getClassDetails(
     fromTime: convertTo12HourFormat(event.fromTime),
     toTime: convertTo12HourFormat(event.toTime),
     date: formatDate(event.date),
+    rawDate: event.date,
     roomNo: safeGet(event.college_rooms, "roomNo"),
     section: sectionNames,
     semester: semesters as string[],

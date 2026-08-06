@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { CaretLeft } from "@phosphor-icons/react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
@@ -32,7 +33,6 @@ interface Props {
 export default function CalendarView({ faculty, onBack }: Props) {
   const [activeTab, setActiveTab] = useState("All");
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [degreeOptions, setDegreeOptions] = useState<any[]>([]);
 
   const { collegeId } = useUser();
   const weekDays = getWeekDays(currentDate);
@@ -45,18 +45,11 @@ export default function CalendarView({ faculty, onBack }: Props) {
     loadEvents
   );
 
-  const loadDegrees = async () => {
-    try {
-      const data = await fetchCollegeDegrees();
-      setDegreeOptions(data);
-    } catch {
-      toast.error("Failed to load degrees");
-    }
-  };
-
-  useEffect(() => {
-    loadDegrees();
-  }, []);
+  const { data: degreeOptions = [] } = useQuery({
+    queryKey: ["collegeDegrees"],
+    queryFn: fetchCollegeDegrees,
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+  });
 
   const handleNextWeek = () => {
     const next = new Date(currentDate);

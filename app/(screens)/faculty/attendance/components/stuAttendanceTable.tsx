@@ -608,7 +608,10 @@ export default function StuAttendanceTable({
             itemsPerPage={itemsPerPage}
             onPageChange={onPageChange}
             itemsPerPageOptions={[10, 20, 50, 100]}
-            onItemsPerPageChange={onItemsPerPageChange}
+            onItemsPerPageChange={(limit) => {
+              if (onItemsPerPageChange) onItemsPerPageChange(limit);
+              if (onPageChange) onPageChange(1);
+            }}
             disabled={isEditing || loadingFilters}
             roundedBottom="rounded-b-xl"
             alwaysShow={true}

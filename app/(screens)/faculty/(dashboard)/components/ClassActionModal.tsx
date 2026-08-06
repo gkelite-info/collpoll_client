@@ -113,6 +113,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
 
             <div className="px-5 py-4 flex gap-3">
               <button
+                type="button"
                 onClick={() => {
                   if (isAccepted) {
                     router.push(`/faculty/attendance?classId=${lesson.id}`);
@@ -126,6 +127,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
                 {isAccepted ? "Mark Attendance" : "Accept"}
               </button>
               <button
+                type="button"
                 onClick={() => {
                   if (!isCancelled) setStep("cancel_reason");
                 }}
@@ -181,6 +183,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
             </div>
             <div className="px-5 py-4 flex gap-3">
               <button
+                type="button"
                 onClick={async () => {
                   setIsProcessingAccept(true);
                   try {
@@ -199,6 +202,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
                 {isProcessingAccept ? "Accepting..." : "Yes, Accept"}
               </button>
               <button
+                type="button"
                 onClick={() => setStep("initial")}
                 disabled={isProcessingAccept}
                 className="flex-1 cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2.5 rounded-md text-sm transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
@@ -226,6 +230,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
             </div>
             <div className="px-5 py-4 flex gap-3">
               <button
+                type="button"
                 onClick={async () => {
                   if (!reason.trim())
                     return toast.error("Please enter a reason.");
@@ -242,6 +247,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
                 {isProcessingCancel ? "Cancelling..." : "Confirm Cancel"}
               </button>
               <button
+                type="button"
                 onClick={() => setStep("initial")}
                 disabled={isProcessingCancel}
                 className="flex-1 cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2.5 rounded-md text-sm transition-colors disabled:opacity-70 disabled:cursor-not-allowed"

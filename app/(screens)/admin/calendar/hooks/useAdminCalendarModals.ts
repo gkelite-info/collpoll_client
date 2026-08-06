@@ -1,5 +1,6 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { CalendarEvent } from "../types";
 import {
   saveCalendarEvent,
@@ -26,6 +27,7 @@ export const useAdminCalendarModals = (
   collegeId: number | null,
   loadEvents: () => Promise<any> | void
 ) => {
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [conflictDetails, setConflictDetails] = useState<ConflictingSection[]>([]);
@@ -129,6 +131,9 @@ export const useAdminCalendarModals = (
         setEventForm(null);
         setFormMode("create");
         await loadEvents();
+        queryClient.invalidateQueries({ queryKey: ["adminCalendarEvents"] });
+        queryClient.invalidateQueries({ queryKey: ["upcomingClasses"] });
+        queryClient.invalidateQueries({ queryKey: ["facultyDashboardStats"] });
         return { success: true };
       }
 
@@ -192,6 +197,9 @@ export const useAdminCalendarModals = (
       setFormMode("create");
 
       await loadEvents();
+      queryClient.invalidateQueries({ queryKey: ["adminCalendarEvents"] });
+        queryClient.invalidateQueries({ queryKey: ["upcomingClasses"] });
+      queryClient.invalidateQueries({ queryKey: ["facultyDashboardStats"] });
       return { success: true };
     } catch (err) {
       console.error("ADMIN SAVE EVENT FAILED", err);
@@ -245,6 +253,9 @@ export const useAdminCalendarModals = (
         
         toast.success("Bulk Event saved despite conflict ⚠️");
         await loadEvents();
+        queryClient.invalidateQueries({ queryKey: ["adminCalendarEvents"] });
+        queryClient.invalidateQueries({ queryKey: ["upcomingClasses"] });
+        queryClient.invalidateQueries({ queryKey: ["facultyDashboardStats"] });
         setEditingEventId(null);
         setEventForm(null);
         setFormMode("create");
@@ -302,6 +313,9 @@ export const useAdminCalendarModals = (
       toast.success("Event saved despite conflict ⚠️", { id: "admin-event-saved-conflict" });
 
       await loadEvents();
+      queryClient.invalidateQueries({ queryKey: ["adminCalendarEvents"] });
+        queryClient.invalidateQueries({ queryKey: ["upcomingClasses"] });
+      queryClient.invalidateQueries({ queryKey: ["facultyDashboardStats"] });
       setEditingEventId(null);
       setEventForm(null);
       setFormMode("create");
@@ -438,6 +452,9 @@ export const useAdminCalendarModals = (
       }
 
       await loadEvents();
+      queryClient.invalidateQueries({ queryKey: ["adminCalendarEvents"] });
+        queryClient.invalidateQueries({ queryKey: ["upcomingClasses"] });
+      queryClient.invalidateQueries({ queryKey: ["facultyDashboardStats"] });
       toast.success("Event deleted successfully.", { id: "admin-delete-event-success" });
       return true;
     } catch (err) {
