@@ -206,7 +206,15 @@ export async function fetchFacultyContext(userId: number) {
             collegeAcademicYears.map(y => y.collegeAcademicYear).join(", ") || null,
         sectionIds: [...new Set(sections.map(s => s.collegeSectionsId))],
         subjectIds: [...new Set((facultySections ?? []).map(s => s.collegeSubjectId))],
-        academicYearIds: [...new Set((facultySections ?? []).map(s => s.collegeAcademicYearId))]
+        academicYearIds: [...new Set((facultySections ?? []).map(s => s.collegeAcademicYearId))],
+        educationIds: [...new Set([
+            faculty.collegeEducationId,
+            ...(facultySections ?? []).map(s => s.collegeEducationId)
+        ].filter(Boolean))],
+        branchIds: [...new Set([
+            faculty.collegeBranchId,
+            ...(facultySections ?? []).map(s => s.collegeBranchId)
+        ].filter(Boolean))]
     };
 }
 

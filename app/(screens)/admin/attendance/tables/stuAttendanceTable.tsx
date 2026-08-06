@@ -33,7 +33,44 @@ interface Props {
   selectedSection?: string;
   onFilterChange?: (type: "class" | "section", value: string) => void;
   loadingFilters?: boolean;
+  loadingData?: boolean;
+  isFutureDate?: boolean;
 }
+
+const TableRowSkeleton = () => (
+  <tr className="border-b border-gray-50">
+    <td className="px-4 py-4 whitespace-nowrap">
+      <div className="h-4 w-4 bg-gray-200 rounded shimmer-bg" />
+    </td>
+    <td className="px-4 py-4 whitespace-nowrap">
+      <div className="h-4 w-6 bg-gray-200 rounded shimmer-bg" />
+    </td>
+    <td className="px-4 py-4 whitespace-nowrap">
+      <div className="h-4 w-20 bg-gray-200 rounded shimmer-bg" />
+    </td>
+    <td className="px-4 py-4 whitespace-nowrap">
+      <div className="h-8 w-8 bg-gray-200 rounded-full shimmer-bg" />
+    </td>
+    <td className="px-4 py-4 whitespace-nowrap">
+      <div className="h-4 w-32 bg-gray-200 rounded shimmer-bg" />
+    </td>
+    <td className="px-4 py-4 whitespace-nowrap">
+      <div className="h-8 w-24 bg-gray-200 rounded-full shimmer-bg" />
+    </td>
+    <td className="px-4 py-4 whitespace-nowrap">
+      <div className="h-4 w-12 bg-gray-200 rounded shimmer-bg" />
+    </td>
+    <td className="px-4 py-4 whitespace-nowrap">
+      <div className="h-4 w-24 bg-gray-200 rounded shimmer-bg" />
+    </td>
+    <td className="px-4 py-4 whitespace-nowrap">
+      <div className="h-4 w-12 bg-gray-200 rounded shimmer-bg" />
+    </td>
+    <td className="px-4 py-4 whitespace-nowrap">
+      <div className="h-4 w-16 bg-gray-200 rounded shimmer-bg" />
+    </td>
+  </tr>
+);
 
 export default function StuAttendanceTable({
   students,
@@ -49,6 +86,8 @@ export default function StuAttendanceTable({
   selectedSection = "",
   onFilterChange,
   loadingFilters = false,
+  loadingData = false,
+  isFutureDate = false,
 }: Props) {
   const router = useRouter();
   const [sort, setSort] = useState<string>("All");
@@ -115,6 +154,31 @@ export default function StuAttendanceTable({
 
   return (
     <div className="space-y-4">
+      <style>{`
+        .shimmer-bg {
+          position: relative;
+          overflow: hidden;
+        }
+        .shimmer-bg::after {
+          content: "";
+          position: absolute;
+          top: 0; right: 0; bottom: 0; left: 0;
+          transform: translateX(-100%);
+          background-image: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0) 0,
+            rgba(255, 255, 255, 0.4) 20%,
+            rgba(255, 255, 255, 0.6) 50%,
+            rgba(255, 255, 255, 0) 100%
+          );
+          animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+          100% {
+            transform: translateX(100%);
+          }
+        }
+      `}</style>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {!isTopicMode && onFilterChange && (
@@ -200,9 +264,9 @@ export default function StuAttendanceTable({
             <button
               onClick={onEditClick}
               disabled={
-                (!isTopicMode && !selectedClass) || students.length === 0
+                (!isTopicMode && !selectedClass) || students.length === 0 || loadingData || isFutureDate
               }
-              className="flex items-center gap-2 bg-[#43C17A] hover:bg-[#36a86a] text-sm cursor-pointer text-white px-4 py-2 rounded-lg shadow-sm transition-transform active:scale-95 disabled:opacity-50 font-medium"
+              className="flex items-center gap-2 bg-[#43C17A] hover:bg-[#36a86a] text-sm cursor-pointer text-white px-4 py-2 rounded-lg shadow-sm transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               <PencilSimple size={18} weight="bold" />
               Edit Attendance
@@ -298,8 +362,11 @@ export default function StuAttendanceTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filtered.map((s, index) => (
-                <tr
+              {loadingData ? (
+                [...Array(5)].map((_, i) => <TableRowSkeleton key={i} />)
+              ) : filtered.length > 0 ? (
+                filtered.map((s, index) => (
+                  <tr
                   key={s.id}
                   className={`text-[#515151] transition-colors hover:bg-gray-50/50 ${selectedIds.includes(s.id) ? "bg-[#43C17A05]" : ""}`}
                 >
@@ -425,7 +492,14 @@ export default function StuAttendanceTable({
                     </button>
                   </td>
                 </tr>
-              ))}
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                    No students found.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

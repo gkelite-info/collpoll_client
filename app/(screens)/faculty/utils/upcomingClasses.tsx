@@ -4,6 +4,7 @@ import { CaretDown, Plus, X } from "@phosphor-icons/react";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { UpcomingLesson } from "@/lib/helpers/faculty/attendance/getClasses";
 import { handleMissionClassStatus } from "@/lib/helpers/faculty/attendance/attendanceActions";
 import { ClassActionModal } from "../(dashboard)/components/ClassActionModal";
@@ -187,10 +188,11 @@ const LessonCard: React.FC<{ lesson: UpcomingLesson }> = ({ lesson }) => (
           )}
         </div>
         <h3 className="text-[#1e2952] font-bold text-xs leading-tight mt-1">
-          {lesson.degree ? `${lesson.degree} ` : ""}
-          {lesson.department.map((item) => item.name).join(", ")}
-          {lesson.year ? ` - Year ${lesson.year}` : ""}
-          {lesson.section ? ` - Section ${lesson.section}` : ""}
+          {[
+            [lesson.degree && !lesson.degree.includes("Unknown Branch") ? lesson.degree : "", lesson.department.filter((d) => d.name && !d.name.includes("Unknown Branch")).map((item) => item.name).join(", ")].filter(Boolean).join(" "),
+            lesson.year ? `Year ${lesson.year}` : "",
+            lesson.section ? `Section ${lesson.section}` : ""
+          ].filter(Boolean).join(" - ")}
         </h3>
         <p className="text-gray-600 text-[13px] mt-1 leading-snug line-clamp-2">
           {lesson.description}
@@ -216,6 +218,7 @@ export default function UpcomingClasses({
   isFetchingNextPage,
 }: UpcomingClassesProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState<UpcomingLesson | null>(
@@ -279,7 +282,23 @@ export default function UpcomingClasses({
       setLocalLessons((prev) =>
         prev.map((l) => (l.id === id ? { ...l, sessionStatus: "Accepted" } : l)),
       );
-      router.push(`/faculty/attendance?classId=${id}`);
+      queryClient.setQueriesData({ queryKey: ["upcomingClasses"] }, (oldData: any) => {
+        if (!oldData || !oldData.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page: any[]) =>
+            page.map((l) => (l.id === id ? { ...l, sessionStatus: "Accepted" } : l)),
+          ),
+        };
+      });
+      // Delay invalidation to allow DB to sync and avoid overwriting optimistic update with stale data
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["upcomingClasses"] });
+        queryClient.invalidateQueries({ queryKey: ["facultyDashboardStats"] });
+      }, 1000);
+      const acceptedLesson = localLessons.find((l) => l.id === id);
+      const dateParam = acceptedLesson?.rawDate ? `&date=${acceptedLesson.rawDate}` : "";
+      router.push(`/faculty/attendance?classId=${id}${dateParam}`);
       return true;
     } else {
       toast.error("Failed to accept class");
@@ -295,7 +314,20 @@ export default function UpcomingClasses({
       setLocalLessons((prev) =>
         prev.map((l) => (l.id === id ? { ...l, sessionStatus: "Cancel" } : l)),
       );
+      queryClient.setQueriesData({ queryKey: ["upcomingClasses"] }, (oldData: any) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page: any) =>
+            page.map((l: any) => (l.id === id ? { ...l, sessionStatus: "Cancel" } : l))
+          ),
+        };
+      });
       setIsActionModalOpen(false);
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["upcomingClasses"] });
+        queryClient.invalidateQueries({ queryKey: ["facultyDashboardStats"] });
+      }, 1000);
     } else {
       toast.error("Failed to cancel class");
     }

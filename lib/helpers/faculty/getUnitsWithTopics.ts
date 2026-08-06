@@ -9,6 +9,7 @@ export type DbUnit = {
   completionPercentage: number | null;
   collegeSubjectId: number;
   collegeId: number;
+  collegeSectionsId: number | null;
 };
 
 export type DbTopic = {
@@ -17,6 +18,7 @@ export type DbTopic = {
   isCompleted: boolean | null;
   displayOrder: number;
   collegeSubjectUnitId: number;
+  collegeSectionsId: number | null;
 };
 
 
@@ -66,11 +68,12 @@ const colorByUnitNumber = (n: number): UnitColor => {
 export async function getUnitsWithTopics(params: {
   collegeId: number;
   collegeSubjectId: number;
+  collegeSectionsId?: number | null;
 }) {
-  const { collegeId, collegeSubjectId } = params;
+  const { collegeId, collegeSubjectId, collegeSectionsId } = params;
 
   // 1) units
-  const { data: units, error: unitsErr } = await supabase
+  let unitsQuery = supabase
     .from("college_subject_units")
     .select(
       `
@@ -81,22 +84,41 @@ export async function getUnitsWithTopics(params: {
       endDate,
       completionPercentage,
       collegeSubjectId,
-      collegeId
+      collegeId,
+      collegeSectionsId
     `
     )
     .eq("collegeId", collegeId)
     .eq("collegeSubjectId", collegeSubjectId)
-    .eq("isActive", true)
-    .order("unitNumber", { ascending: true });
+    .eq("isActive", true);
+
+  if (collegeSectionsId) {
+    unitsQuery = unitsQuery.or(`collegeSectionsId.eq.${collegeSectionsId},collegeSectionsId.is.null`);
+  } else {
+    unitsQuery = unitsQuery.is("collegeSectionsId", null);
+  }
+
+  const { data: rawUnits, error: unitsErr } = await unitsQuery.order("unitNumber", { ascending: true });
 
   if (unitsErr) throw new Error(unitsErr.message);
+
+  // Filter to prefer section-specific units over global units with the same unitNumber
+  const unitsMap = new Map<number, DbUnit>();
+  (rawUnits ?? []).forEach((u) => {
+    const existing = unitsMap.get(u.unitNumber);
+    if (!existing || (existing.collegeSectionsId === null && u.collegeSectionsId !== null)) {
+      unitsMap.set(u.unitNumber, u);
+    }
+  });
+  
+  const units = Array.from(unitsMap.values()).sort((a, b) => a.unitNumber - b.unitNumber);
 
   const unitIds = (units ?? []).map((u) => u.collegeSubjectUnitId);
 
   // 2) topics (only if we have units)
   let topics: DbTopic[] = [];
   if (unitIds.length > 0) {
-    const { data: t, error: topicsErr } = await supabase
+    let topicsQuery = supabase
       .from("college_subject_unit_topics")
       .select(
         `
@@ -104,14 +126,21 @@ export async function getUnitsWithTopics(params: {
         topicTitle,
         isCompleted,
         displayOrder,
-        collegeSubjectUnitId
+        collegeSubjectUnitId,
+        collegeSectionsId
       `
       )
       .eq("collegeId", collegeId)
-      .eq("collegeSubjectId", collegeSubjectId)
       .eq("isActive", true)
-      .in("collegeSubjectUnitId", unitIds)
-      .order("displayOrder", { ascending: true });
+      .in("collegeSubjectUnitId", unitIds);
+
+    if (collegeSectionsId) {
+      topicsQuery = topicsQuery.or(`collegeSectionsId.eq.${collegeSectionsId},collegeSectionsId.is.null`);
+    } else {
+      topicsQuery = topicsQuery.is("collegeSectionsId", null);
+    }
+
+    const { data: t, error: topicsErr } = await topicsQuery.order("displayOrder", { ascending: true });
 
     if (topicsErr) throw new Error(topicsErr.message);
     topics = t ?? [];

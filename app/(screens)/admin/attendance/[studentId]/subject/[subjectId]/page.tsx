@@ -13,6 +13,8 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import SubjectDetailShimmer from "./shimmer";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useSearchParams, usePathname } from "next/navigation";
 
 type StudentAttendanceDetails = Awaited<
   ReturnType<typeof getStudentAttendanceDetails>
@@ -35,46 +37,48 @@ export default function SubjectDetailPage() {
     ? params.subjectId[0]
     : params?.subjectId;
 
-  const [filter, setFilter] = useState<"ALL" | "Present" | "Absent" | "Leave">("ALL");
-  const [data, setData] = useState<SubjectAttendanceDetails | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [student, setStudent] = useState<StudentAttendanceDetails | null>(null);
-  
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  const urlFilter = (searchParams.get("filter") as "ALL" | "Present" | "Absent" | "Leave") || "ALL";
+  const urlPage = parseInt(searchParams.get("page") || "1", 10);
+  const urlLimit = parseInt(searchParams.get("limit") || "20", 10);
+
+  const [filter, setFilter] = useState<"ALL" | "Present" | "Absent" | "Leave">(urlFilter);
+  const [currentPage, setCurrentPage] = useState(urlPage);
+  const [itemsPerPage, setItemsPerPage] = useState(urlLimit);
 
   useEffect(() => {
-    if (!studentId || !subjectId) return;
+    if (urlFilter) setFilter(urlFilter);
+    if (urlPage) setCurrentPage(urlPage);
+    if (urlLimit) setItemsPerPage(urlLimit);
+  }, [urlFilter, urlPage, urlLimit]);
 
-    let isMounted = true;
+  const updateUrlParams = (updates: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
-    const fetchData = async () => {
-      setLoading(true);
+  const { data: dataRaw, isLoading: attendanceLoading, isFetching: attendanceFetching } = useQuery({
+    queryKey: ["adminSubjectAttendance", studentId, subjectId, filter, currentPage, itemsPerPage],
+    queryFn: () => getSubjectAttendanceDetails(studentId as string, subjectId as string, filter, currentPage, itemsPerPage),
+    enabled: !!studentId && !!subjectId,
+    placeholderData: keepPreviousData,
+  });
 
-      const [attendanceRes, studentRes] = await Promise.allSettled([
-        getSubjectAttendanceDetails(studentId, subjectId, filter, currentPage, itemsPerPage),
-        getStudentAttendanceDetails(studentId),
-      ]);
+  const { data: studentRaw, isLoading: studentLoading } = useQuery({
+    queryKey: ["adminStudentDetails", studentId],
+    queryFn: () => getStudentAttendanceDetails(studentId as string),
+    enabled: !!studentId,
+  });
 
-      if (!isMounted) return;
-
-      if (attendanceRes.status === "fulfilled") {
-        setData(attendanceRes.value);
-      }
-
-      if (studentRes.status === "fulfilled") {
-        setStudent(studentRes.value);
-      }
-
-      setLoading(false);
-    };
-
-    fetchData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [studentId, subjectId, filter, currentPage, itemsPerPage]);
+  const loading = attendanceLoading || studentLoading;
+  const data = dataRaw;
+  const student = studentRaw;
 
   if (loading) {
     return <SubjectDetailShimmer />;
@@ -128,7 +132,11 @@ export default function SubjectDetailPage() {
             isSubjectMode={true}
             subjectSummary={subjectSummary}
             activeFilter={filter}
-            onFilterChange={setFilter}
+            onFilterChange={(newFilter) => {
+              updateUrlParams({ filter: newFilter, page: "1" });
+              setFilter(newFilter);
+              setCurrentPage(1);
+            }}
             attendanceDays={0}
             absentDays={0}
             leaveDays={0}
@@ -192,18 +200,23 @@ export default function SubjectDetailPage() {
       </section>
 
       <section>
-        <SubjectAttendanceTable records={filteredRecords} />
+        <SubjectAttendanceTable records={filteredRecords} loadingData={attendanceFetching || attendanceLoading} />
         <div className="flex justify-center items-center mt-2 w-full rounded-lg shadow-sm">
           <Pagination
             currentPage={currentPage}
             totalItems={data.totalCount ?? 0}
             itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
+            onPageChange={(p) => {
+              updateUrlParams({ page: String(p) });
+              setCurrentPage(p);
+            }}
             itemsPerPageOptions={[10, 20, 50, 100]}
             onItemsPerPageChange={(newLimit) => {
+              updateUrlParams({ limit: String(newLimit), page: "1" });
               setItemsPerPage(newLimit);
               setCurrentPage(1);
             }}
+            alwaysShow={true}
             roundedBottom="rounded-lg"
           />
         </div>

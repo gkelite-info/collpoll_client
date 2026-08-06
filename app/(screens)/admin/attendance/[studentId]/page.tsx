@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/getStudentAttendanceDetails";
 import AiBotCard from "@/app/(screens)/faculty/attendance/components/aiBotCard";
+import { useQuery } from "@tanstack/react-query";
 import SubjectWiseAttendance from "../tables/subjectWiseTable";
 import StudentProfileCard from "@/app/(screens)/faculty/attendance/components/stuProfileCard";
-import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { CaretLeftIcon } from "@phosphor-icons/react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
@@ -24,25 +23,15 @@ export default function StudentAttendanceDetailsPage() {
     ? params.studentId[0]
     : params?.studentId;
 
-  const router = useRouter()
+  const router = useRouter();
 
-  const [student, setStudent] = useState<StudentAttendanceDetails | null>(null);
-  const [loading, setLoading] = useState(true);
   const { collegeEducationType } = useUser();
 
-  useEffect(() => {
-    async function fetchData() {
-      if (!studentId) return;
-      try {
-        const data = await getStudentAttendanceDetails(studentId);
-        setStudent(data);
-      } catch {
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [studentId]);
+  const { data: student, isLoading: loading } = useQuery({
+    queryKey: ["adminStudentAttendanceDetails", studentId],
+    queryFn: () => getStudentAttendanceDetails(studentId!),
+    enabled: !!studentId,
+  });
 
   if (loading) {
     return <StudentDetailsShimmer />;

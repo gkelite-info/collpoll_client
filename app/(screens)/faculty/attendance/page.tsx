@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useQuery, keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { CardsSkeleton } from "./shimmer/cardsSkeleton";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import {
@@ -41,6 +41,7 @@ function AttendanceContent() {
   const searchParams = useSearchParams();
   const urlClassId = searchParams.get("classId");
   const router = useRouter();
+  const pathname = usePathname();
   const { facultyId, loading: contextLoading } = useFaculty();
   const queryClient = useQueryClient();
 
@@ -53,14 +54,19 @@ function AttendanceContent() {
   const urlSId = searchParams.get("sId");
   const urlSort = searchParams.get("sort");
 
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(urlDate ? new Date(urlDate) : new Date());
+  const parseLocalDate = (dateStr: string) => {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  };
+
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(urlDate ? parseLocalDate(urlDate) : new Date());
   const [selectedCalendarType, setSelectedCalendarType] = useState<"Single" | "Bulk">(urlType || "Single");
   const [selectedClassId, setSelectedClassId] = useState<string>(urlCId || "");
   const [selectedSectionId, setSelectedSectionId] = useState<string>(urlSId || "");
   
   // Update state when URL changes (for Back button navigation)
   useEffect(() => {
-    if (urlDate) setSelectedCalendarDate(new Date(urlDate));
+    if (urlDate) setSelectedCalendarDate(parseLocalDate(urlDate));
     if (urlType) setSelectedCalendarType(urlType);
     if (urlCId !== null) setSelectedClassId(urlCId);
     if (urlSId !== null) setSelectedSectionId(urlSId);
@@ -123,7 +129,7 @@ function AttendanceContent() {
   });
 
   // Server-side pagination mapping
-  const totalItems = allStudentsRaw.total;
+  const totalItems = !activeClassId ? 0 : allStudentsRaw.total;
   const paginatedStudents = allStudentsRaw.data;
 
   // Handle auto-selecting class and section
@@ -232,7 +238,7 @@ function AttendanceContent() {
       if (value) params.set(key, value);
       else params.delete(key);
     });
-    router.replace(`?${params.toString()}`, { scroll: false });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   const handleFilterChange = (
@@ -297,8 +303,6 @@ function AttendanceContent() {
       toast.success("Saved!");
       setIsEditing(false);
       setDraftEdits({}); // Clear drafts after saving
-
-      if (urlClassId) setTimeout(() => router.push("/faculty"), 2000);
     } catch (error: any) {
       let errorMsg = "An unexpected error occurred while saving attendance.";
       if (error.message) {
@@ -454,7 +458,7 @@ function AttendanceContent() {
               
               const localDate = new Date(date);
               localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
-              updateUrlParams({ date: localDate.toISOString().split("T")[0], cId: "", sId: "" });
+              updateUrlParams({ date: localDate.toISOString().split("T")[0], classId: "", cId: "", sId: "" });
             }}
             style="h-full bg-white rounded-xl shadow-sm"
           />

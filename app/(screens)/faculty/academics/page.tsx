@@ -3,81 +3,100 @@
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import SubjectCard from "./components/subjectCards";
 import { useUser } from "@/app/utils/context/UserContext";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { fetchFacultyContext } from "@/app/utils/context/faculty/facultyContextAPI";
-import { Loader } from "../../(student)/calendar/right/timetable";
-import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
-import { CardProps } from "@/lib/types/faculty";
+import { getFacultySubjectsPaginated } from "@/lib/helpers/faculty/getFacultySubjectsPaginated";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import toast from "react-hot-toast";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import AcademicsSkeleton from "./components/academicsSkeleton";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function Academics() {
-  const { userId, collegeId, role } = useUser();
-  const [pageLoading, setPageLoading] = useState(true);
-  const [subjects, setSubjects] = useState<CardProps[]>([]);
-  const [facultyCtx, setFacultyCtx] = useState<any>(null);
-  const { facultyId } = useFaculty();
+  const { userId, collegeId, role, loading: userLoading } = useUser();
 
-  const hasLoadedOnce = useRef(false);
+  // Filter + pagination state
+  const [subjectId, setSubjectId] = useState<number | null>(null);
+  const [sectionId, setSectionId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 6;
+
+  // Load faculty context once with React Query
+  const { 
+    data: facultyCtx, 
+    isLoading: isCtxLoading, 
+    isError: isCtxError 
+  } = useQuery({
+    queryKey: ["facultyContext", userId],
+    queryFn: () => fetchFacultyContext(userId!),
+    enabled: !userLoading && userId !== null && collegeId !== null,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const ctxLoading = userLoading || isCtxLoading;
 
   useEffect(() => {
-    if (userId === null || collegeId === null) {
-      setPageLoading(false);
-      return;
+    if (isCtxError) {
+      toast.error("Faculty data missing. Please check your assignment.", { id: "faculty-ctx-error" });
+    } else if (!ctxLoading && userId && !facultyCtx) {
+      toast.error("Faculty data missing. Please check your assignment.", { id: "faculty-ctx-error" });
     }
+  }, [isCtxError, ctxLoading, facultyCtx, userId]);
 
-    const safeUserId = userId;
-    const safeCollegeId = collegeId;
+  // React Query for subjects with server-side pagination
+  const {
+    data: subjectsData,
+    isLoading: subjectsLoading,
+    isFetching: subjectsFetching,
+  } = useQuery({
+    queryKey: [
+      "facultySubjectsPaginated",
+      collegeId,
+      facultyCtx?.collegeEducationId,
+      facultyCtx?.collegeBranchId,
+      subjectId,
+      sectionId,
+      page,
+      itemsPerPage,
+    ],
+    queryFn: () =>
+      getFacultySubjectsPaginated({
+        collegeId: collegeId!,
+        facultyId: facultyCtx!.facultyId,
+        collegeEducationId: facultyCtx!.collegeEducationId,
+        collegeBranchId: facultyCtx!.collegeBranchId,
+        academicYearIds: facultyCtx!.academicYearIds,
+        subjectIds: facultyCtx!.subjectIds,
+        sectionIds: facultyCtx!.sectionIds,
+        subjectId,
+        sectionId,
+        page,
+        limit: itemsPerPage,
+      }),
+    enabled: !!facultyCtx && !!collegeId && (facultyCtx.subjectIds?.length > 0),
+    placeholderData: keepPreviousData,
+  });
 
-    if (!hasLoadedOnce.current) {
-      setPageLoading(true);
-    }
+  const subjects = subjectsData?.data ?? [];
+  const totalCount = subjectsData?.totalCount ?? 0;
+  
+  const shouldFetchSubjects = !!facultyCtx && !!collegeId && (facultyCtx.subjectIds?.length > 0);
+  
+  // Only show shimmer if we are strictly loading context OR if we should fetch data but don't have it yet.
+  // This prevents the "No classes" text from flashing while React Query transitions states.
+  const isLoading = ctxLoading || (shouldFetchSubjects && !subjectsData);
+  const isDataFetching = subjectsFetching;
 
-    let isCancelled = false;
+  // Reset page when filters change
+  const handleSubjectChange = (val: number | null) => {
+    setSubjectId(val);
+    setSectionId(null);
+    setPage(1);
+  };
 
-    async function loadSubjects() {
-      try {
-        const ctx = await fetchFacultyContext(safeUserId);
-
-        if (!ctx) {
-          setSubjects([]);
-          return;
-        }
-
-        setFacultyCtx(ctx);
-
-        if (!ctx.subjectIds?.length) {
-          setSubjects([]);
-          return;
-        }
-
-        const data = await getFacultySubjects({
-          collegeId: safeCollegeId,
-          collegeEducationId: ctx.collegeEducationId,
-          collegeBranchId: ctx.collegeBranchId,
-          academicYearIds: ctx.academicYearIds,
-          subjectIds: ctx.subjectIds,
-          sectionIds: ctx.sectionIds,
-        });
-
-        if (!isCancelled) {
-          setSubjects(data);
-        }
-      } catch (err) {
-        toast.error("Failed to load subjects");
-      } finally {
-        if (!isCancelled) {
-          setPageLoading(false);
-          hasLoadedOnce.current = true;
-        }
-      }
-    }
-    loadSubjects();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [userId, collegeId]);
+  const handleSectionChange = (val: number | null) => {
+    setSectionId(val);
+    setPage(1);
+  };
 
   return (
     <div className="p-2 flex flex-col h-[calc(100vh-80px)] lg:pb-5">
@@ -100,23 +119,35 @@ export default function Academics() {
         </div>
       </div>
 
-      {pageLoading ? (
-        <Loader />
-      ) : (
+      {isLoading ? (
         <div className="mt-4 flex-1 overflow-y-auto pr-2">
-          {subjects.length === 0 && facultyId ? (
-            <p className="text-sm text-gray-500 text-center mt-10">
-              No classes assigned
-            </p>
-          ) : (
-            <SubjectCard
-              subjectProps={subjects}
-              facultyCtx={facultyCtx}
-              role={role}
-            />
-          )}
+          <AcademicsSkeleton />
+        </div>
+      ) : !facultyCtx || !facultyCtx.subjectIds?.length ? (
+        <div className="mt-4 flex-1 flex items-center justify-center">
+          <p className="text-sm text-gray-500 text-center">
+            No classes assigned
+          </p>
+        </div>
+      ) : (
+        <div className="mt-4 flex-1 flex flex-col overflow-y-auto pr-2">
+          <SubjectCard
+            subjectProps={subjects}
+            facultyCtx={facultyCtx}
+            role={role}
+            totalCount={totalCount}
+            page={page}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setPage}
+            loadingData={isDataFetching}
+            subjectId={subjectId}
+            sectionId={sectionId}
+            onSubjectChange={handleSubjectChange}
+            onSectionChange={handleSectionChange}
+          />
         </div>
       )}
+      <Toaster position="top-right" />
     </div>
   );
 }

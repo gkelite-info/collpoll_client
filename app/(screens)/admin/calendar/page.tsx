@@ -1,7 +1,8 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect, useState, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard"
 import FacultyOverview from "./components/FacultyOverview"
 import CalendarView from "./components/CalendarView"
@@ -15,14 +16,12 @@ import { decryptId, encryptId } from "@/app/utils/encryption"
 import HolidayCalendar from "@/app/(screens)/hr/calendar/components/HolidayCalendar"
 import HolidayCalendarShimmer from "@/app/(screens)/hr/calendar/components/HolidayCalendarShimmer"
 import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/holidayAPI"
-import { useCallback } from "react"
 
 function PageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlParamId = searchParams.get("facultyId")
   const facultyId = urlParamId ? decryptId(urlParamId) : null
-  const [selectedFaculty, setSelectedFaculty] = useState<any>(null)
   const { collegeId } = useUser()
   const { collegeEducationId } = useAdmin()
 
@@ -65,44 +64,40 @@ function PageContent() {
     }
   }, [activeTab, loadHolidays, holidayYear, collegeId]);
 
-  useEffect(() => {
-    if (urlParamId && !facultyId) {
-      toast.error("Invalid calendar link")
-      router.push("/admin/calendar")
-      return
-    }
-
-    if (!facultyId) {
-      setSelectedFaculty(null)
-      return
-    }
-
-    const loadFaculty = async () => {
-      if (!collegeId) return
-
+  const { data: selectedFaculty, isLoading: isLoadingFaculty } = useQuery({
+    queryKey: ["selectedAdminCalendarFaculty", collegeId, facultyId],
+    queryFn: async () => {
+      if (!collegeId || !facultyId) return null;
       try {
         const { data } = await fetchFilteredFaculties({
           collegeId,
           facultyId: Number(facultyId),
-        })
-
-        const faculty = data[0]
-        if (faculty) {
-          setSelectedFaculty(faculty)
+        });
+        if (data && data.length > 0) {
+          return data[0];
         } else {
-          toast.error("Faculty not found")
-          router.push("/admin/calendar")
+          toast.error("Faculty not found");
+          router.push("/admin/calendar");
+          return null;
         }
       } catch (error) {
-        toast.error("Failed to load faculty data")
-        router.push("/admin/calendar")
+        toast.error("Failed to load faculty data");
+        router.push("/admin/calendar");
+        return null;
       }
+    },
+    enabled: !!collegeId && !!facultyId,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+  });
+
+  useEffect(() => {
+    if (urlParamId && !facultyId) {
+      toast.error("Invalid calendar link");
+      router.push("/admin/calendar");
     }
+  }, [urlParamId, facultyId, router]);
 
-    loadFaculty()
-  }, [facultyId, collegeId, collegeEducationId, router])
-
-  if (facultyId && !selectedFaculty) {
+  if (facultyId && (!selectedFaculty || isLoadingFaculty)) {
     return (
       <div className="p-4 bg-[#f3f4f6] min-h-screen">
         <CalendarViewShimmer />

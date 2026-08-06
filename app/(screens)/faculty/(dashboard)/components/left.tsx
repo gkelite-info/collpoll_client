@@ -69,6 +69,7 @@ export default function FacultyDashLeft() {
     initialPageParam: 0,
     enabled: !!userId && !userLoading && !facultyLoading,
     staleTime: 5 * 60 * 1000,
+    refetchInterval: 15000, // 15 seconds polling
   });
 
   const upcomingClasses = upcomingClassesData?.pages.flat() || [];
@@ -79,6 +80,7 @@ export default function FacultyDashLeft() {
     enabled: !!facultyId && !facultyLoading,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    refetchInterval: 15000, // 15 seconds polling
   });
 
   const isDataLoading = userLoading || facultyLoading || isLoadingStats;

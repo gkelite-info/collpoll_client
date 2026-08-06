@@ -64,45 +64,104 @@ export async function getSubjectAttendanceDetails(
 
   const subjectName = subjectData?.subjectName || "Unknown Subject";
 
-  const [singleRes, bulkRes] = await Promise.all([
+  const [singleStatusRes, bulkStatusRes] = await Promise.all([
     supabase
       .from("attendance_record")
-      .select(`
-        attendanceRecordId,
-        status,
-        markedAt,
-        reason,
-        calendarEventId,
-        bulkCalendarEventId,
-        event:calendar_event!inner (
-          date,
-          fromTime,
-          toTime,
-          subject,
-          faculty:faculty ( users (fullName) ) 
-        )
-      `)
+      .select(`status, calendarEventId, bulkCalendarEventId, event:calendar_event!inner(subject, faculty:faculty(users(fullName)))`)
       .eq("studentId", studentId)
       .eq("event.subject", subjectId),
     supabase
       .from("attendance_record")
-      .select(`
-        attendanceRecordId,
-        status,
-        markedAt,
-        reason,
-        calendarEventId,
-        bulkCalendarEventId,
-        bulk_event:bulk_calendar_events!inner (
-          fromDate,
-          fromTime,
-          toTime,
-          subject,
-          faculty:faculty ( users (fullName) )
-        )
-      `)
+      .select(`status, calendarEventId, bulkCalendarEventId, bulk_event:bulk_calendar_events!inner(subject, faculty:faculty(users(fullName)))`)
       .eq("studentId", studentId)
       .eq("bulk_event.subject", subjectId)
+  ]);
+
+  let totalClasses = 0;
+  let attended = 0;
+  let absent = 0;
+  let leave = 0;
+
+  const facultyNames = new Map<string, number>();
+
+  const allStatuses = [...(singleStatusRes.data || []), ...(bulkStatusRes.data || [])];
+  allStatuses.forEach((r) => {
+    if (["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
+      totalClasses++;
+      if (r.status === "PRESENT" || r.status === "LATE") attended++;
+      if (r.status === "ABSENT") absent++;
+      if (r.status === "LEAVE") leave++;
+    }
+
+    const rAny = r as any;
+    const eventObj = r.calendarEventId ? rAny.event : rAny.bulk_event;
+    const e = safeGet(eventObj);
+    const fac = safeGet(e?.faculty);
+    const user = safeGet((fac as any)?.users);
+    const fname = user?.fullName || "Unknown Faculty";
+    facultyNames.set(fname, (facultyNames.get(fname) || 0) + 1);
+  });
+
+  let topFaculty = "Unknown Faculty";
+  let maxCount = -1;
+  facultyNames.forEach((count, name) => {
+    if (count > maxCount) {
+      maxCount = count;
+      topFaculty = name;
+    }
+  });
+
+  const pctString = calculateAttendancePercentage(attended, totalClasses);
+
+  let singleQuery = supabase
+    .from("attendance_record")
+    .select(`
+      attendanceRecordId,
+      status,
+      markedAt,
+      reason,
+      calendarEventId,
+      bulkCalendarEventId,
+      event:calendar_event!inner (
+        date,
+        fromTime,
+        toTime,
+        subject,
+        faculty:faculty ( users (fullName) ) 
+      )
+    `)
+    .eq("studentId", studentId)
+    .eq("event.subject", subjectId);
+
+  let bulkQuery = supabase
+    .from("attendance_record")
+    .select(`
+      attendanceRecordId,
+      status,
+      markedAt,
+      reason,
+      calendarEventId,
+      bulkCalendarEventId,
+      bulk_event:bulk_calendar_events!inner (
+        fromDate,
+        fromTime,
+        toTime,
+        subject,
+        faculty:faculty ( users (fullName) )
+      )
+    `)
+    .eq("studentId", studentId)
+    .eq("bulk_event.subject", subjectId);
+
+  if (filter !== "ALL") {
+    const filterUpper = filter.toUpperCase();
+    singleQuery = singleQuery.eq("status", filterUpper);
+    bulkQuery = bulkQuery.eq("status", filterUpper);
+  }
+
+  const [singleRes, bulkRes] = await Promise.all([
+    singleQuery,
+    bulkQuery
   ]);
 
   const attendanceError = singleRes.error || bulkRes.error;
@@ -125,21 +184,7 @@ export async function getSubjectAttendanceDetails(
     };
   }
 
-  let totalClasses = 0;
-  let attended = 0;
-  let absent = 0;
-  let leave = 0;
-
-  const facultyNames = new Map<string, number>();
-
   const formattedRecords = (records as AttendanceRecordRow[]).map((r) => {
-    if (["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
-      totalClasses++;
-      if (r.status === "PRESENT" || r.status === "LATE") attended++;
-      if (r.status === "ABSENT") absent++;
-      if (r.status === "LEAVE") leave++;
-    }
-
     const rAny = r as any;
     const eventObj = r.calendarEventId ? rAny.event : rAny.bulk_event;
 
@@ -173,7 +218,6 @@ export async function getSubjectAttendanceDetails(
     const fac = safeGet(e?.faculty);
     const user = safeGet((fac as any)?.users);
     const fname = user?.fullName || "Unknown Faculty";
-    facultyNames.set(fname, (facultyNames.get(fname) || 0) + 1);
 
     return {
       id: String(r.attendanceRecordId),
@@ -185,27 +229,10 @@ export async function getSubjectAttendanceDetails(
     };
   });
 
-  let topFaculty = "Unknown Faculty";
-  let maxCount = -1;
-  facultyNames.forEach((count, name) => {
-    if (count > maxCount) {
-      maxCount = count;
-      topFaculty = name;
-    }
-  });
-
-  const pctString = calculateAttendancePercentage(attended, totalClasses);
-
-  // Apply Filter
-  const filteredRecords = filter === "ALL" 
-    ? formattedRecords 
-    : formattedRecords.filter(r => r.status === filter);
-
-  // Apply Pagination
-  const totalCount = filteredRecords.length;
+  const totalCount = formattedRecords.length;
   const from = (page - 1) * limit;
   const to = from + limit;
-  const paginatedRecords = filteredRecords.slice(from, to);
+  const paginatedRecords = formattedRecords.slice(from, to);
 
   return {
     subjectName,
