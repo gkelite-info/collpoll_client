@@ -101,17 +101,23 @@ const getStaffRoleOrder = (isSchool: boolean): EmployeeLeaveTaggedRole[] => {
 type EmployeeLeaveRoutingFieldsProps = {
   value: EmployeeLeaveTagSelection[];
   onChange: (value: EmployeeLeaveTagSelection[]) => void;
+  requesterRole?: string | null;
+  collegeIdOverride?: number | null;
 };
 
 export default function EmployeeLeaveRoutingFields({
   value,
   onChange,
+  requesterRole,
+  collegeIdOverride,
 }: EmployeeLeaveRoutingFieldsProps) {
   const { collegeId, collegeEducationType, role, userId } = useUser();
   const isSchool = isSchoolEducation(collegeEducationType);
-  const tagRoles = getRequiredEmployeeLeaveTagRoles(role);
+  const effectiveCollegeId = collegeIdOverride ?? collegeId;
+  const effectiveRole = requesterRole ?? role;
+  const tagRoles = getRequiredEmployeeLeaveTagRoles(effectiveRole);
 
-  if (!collegeId || !tagRoles.length) return null;
+  if (!effectiveCollegeId || !tagRoles.length) return null;
 
   const handleTagChange = (
     fieldRole: EmployeeLeaveTagFetchRole,
@@ -134,11 +140,11 @@ export default function EmployeeLeaveRoutingFields({
       {tagRoles.map((taggedRole) => (
         <EmployeeLeaveTagSelect
           key={taggedRole}
-          collegeId={collegeId}
+          collegeId={effectiveCollegeId}
           isSchool={isSchool}
           excludeUserId={
             taggedRole === "AllStaff" ||
-            (role === "CollegeHr" && taggedRole === "CollegeHr")
+            (effectiveRole === "CollegeHr" && taggedRole === "CollegeHr")
               ? null
               : userId
           }

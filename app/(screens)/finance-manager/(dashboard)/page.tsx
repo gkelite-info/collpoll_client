@@ -26,12 +26,17 @@ import TotalRevenueCollectedView from "./components/TotalRevenueCollectedView";
 import TotalStudentsOverviewView from "./components/TotalStudentsOverviewView";
 import YearWiseFeeCollectionView from "../finance-analytics/components/YearWiseFeeCollectionView";
 import { Loader } from "../../(student)/calendar/right/timetable";
+import { useUser } from "@/app/utils/context/UserContext";
 
 function DashboardContent() {
   const searchParams = useSearchParams();
   const currentView = searchParams.get("view");
   const program = searchParams.get("program") || "B-Tech";
   const branch = searchParams.get("branch") || "CSE";
+  const { userId, financeManagerId } = useUser();
+
+  console.log("What we have actually", userId, financeManagerId);
+
 
   return (
     <DashboardView

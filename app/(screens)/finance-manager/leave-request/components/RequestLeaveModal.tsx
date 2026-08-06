@@ -10,6 +10,7 @@ import EmployeeLeaveRoutingFields, {
   hasRequiredEmployeeLeaveTags,
 } from "@/app/components/modals/EmployeeLeaveRoutingFields";
 import { EmployeeLeaveTagSelection } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestTagsAPI";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 type RequestLeaveModalProps = {
   open: boolean;
@@ -44,8 +45,20 @@ export default function RequestLeaveModal({
   open,
   onClose,
 }: RequestLeaveModalProps) {
-  const { userId, role } = useUser();
-  const { collegeId, loading: financeContextLoading } = useFinanceManager();
+  const { userId, role, collegeId: userCollegeId } = useUser();
+  const { collegeId: financeCollegeId, loading: financeContextLoading } =
+    useFinanceManager();
+  const { isSchool } = useInstitutionTerminology();
+  const collegeId = isSchool
+    ? (userCollegeId ?? financeCollegeId)
+    : financeCollegeId;
+  const normalizedRole = role?.replace(/[\s_-]/g, "").toLowerCase();
+  const financeRole =
+    normalizedRole === "financemanager"
+      ? "FinanceManager"
+      : normalizedRole === "finance"
+        ? "Finance"
+        : null;
   const [formData, setFormData] = useState<LeaveFormData>(initialFormData);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,7 +83,7 @@ export default function RequestLeaveModal({
       return;
     }
 
-    if (role !== "Finance" && role !== "FinanceManager") {
+    if (!financeRole) {
       toast.error("This request is available for finance staff only.");
       return;
     }
@@ -100,7 +113,7 @@ export default function RequestLeaveModal({
       return;
     }
 
-    if (!hasRequiredEmployeeLeaveTags(role, formData.tags)) {
+    if (!hasRequiredEmployeeLeaveTags(financeRole, formData.tags)) {
       toast.error("Please select all required tagged users.");
       return;
     }
@@ -110,7 +123,7 @@ export default function RequestLeaveModal({
       await createEmployeeLeaveRequest({
         userId,
         collegeId,
-        role: role === "FinanceManager" ? "FinanceManager" : "Finance",
+        role: financeRole,
         leaveType: formData.leaveType,
         leaveFromDate: formData.startDate,
         leaveToDate: formData.endDate,
@@ -215,6 +228,8 @@ export default function RequestLeaveModal({
           <EmployeeLeaveRoutingFields
             value={formData.tags}
             onChange={(tags) => setFormData({ ...formData, tags })}
+            requesterRole="FinanceManager"
+            collegeIdOverride={collegeId}
           />
 
           <div className="flex flex-col gap-2">
@@ -297,7 +312,8 @@ export default function RequestLeaveModal({
             <button
               type="submit"
               disabled={
-                isSubmitting || !hasRequiredEmployeeLeaveTags(role, formData.tags)
+                isSubmitting ||
+                !hasRequiredEmployeeLeaveTags(financeRole, formData.tags)
               }
               className="h-11 cursor-pointer rounded bg-[#43C17A] text-sm font-semibold text-white hover:bg-[#34A565] disabled:cursor-not-allowed disabled:opacity-70"
             >

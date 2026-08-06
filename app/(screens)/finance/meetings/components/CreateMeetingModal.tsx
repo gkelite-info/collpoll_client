@@ -1039,9 +1039,11 @@ import {
 } from "@/lib/helpers/finance/meetings/meetingsAPI";
 import ConflictErrorModal from "./ConflictErrorModal";
 import { useUser } from "@/app/utils/context/UserContext";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 interface CreateMeetingModalProps {
   isOpen: boolean;
+  initialRole?: string;
   onClose: () => void;
   onSuccess: () => void;
   editingMeetingId?: number | null;
@@ -1224,6 +1226,7 @@ const validateMeetingUrl = (url: string): boolean => {
 
 const CreateMeetingModal = ({
   isOpen,
+  initialRole,
   onClose,
   onSuccess,
   editingMeetingId,
@@ -1264,8 +1267,13 @@ const CreateMeetingModal = ({
   } | null>(null);
   const roleDropdownRef = useRef<HTMLDivElement>(null);
   const sectionDropdownRef = useRef<HTMLDivElement>(null);
-  const { collegeId, collegeEducationId, financeManagerId } =
-    useFinanceManager();
+  const {
+    collegeId,
+    collegeEducationId,
+    collegeEducationType,
+    financeManagerId,
+  } = useFinanceManager();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const isEditMode = !!editingMeetingId;
 
   const [reminderMinutes, setReminderMinutes] = useState<number>(15);
@@ -1285,7 +1293,7 @@ const CreateMeetingModal = ({
   const resetForm = () => {
     setTitle("");
     setDescription("");
-    setRole("Select Role");
+    setRole(initialRole && initialRole !== "Staff" ? initialRole : "Select Role");
     setMeetingLink("");
     setBranch(null);
     setYear(null);
@@ -1371,14 +1379,25 @@ const CreateMeetingModal = ({
     if (!isOpen || !collegeId || !collegeEducationId) return;
     const loadInitialData = async () => {
       try {
+        if (isSchool) {
+          setBranch(null);
+          setBranches([]);
+          const yearData = await fetchAcademicYears(
+            collegeId,
+            collegeEducationId,
+            null,
+          );
+          setYears(yearData);
+          return;
+        }
         const branchData = await fetchBranches(collegeId, collegeEducationId);
         setBranches(branchData);
       } catch (error) {
-        toast.error("Failed to load branches");
+        toast.error(isSchool ? "Failed to load years" : "Failed to load branches");
       }
     };
     loadInitialData();
-  }, [isOpen, collegeId, collegeEducationId]);
+  }, [isOpen, collegeId, collegeEducationId, isSchool]);
 
   useEffect(() => {
     if (!isOpen || !editingMeetingId || !collegeId || !collegeEducationId)
@@ -1414,7 +1433,7 @@ const CreateMeetingModal = ({
           ) ?? existingSections[0];
 
           if (specificSection) {
-            setBranch(specificSection.collegeBranchId);
+            setBranch(isSchool ? null : specificSection.collegeBranchId);
             setYear(specificSection.collegeAcademicYearId);
             const selectedSectionIds = existingSections
               .filter(
@@ -1430,18 +1449,18 @@ const CreateMeetingModal = ({
                   sectionIds.indexOf(sectionId) === index,
               );
             setSectionsSelected(selectedSectionIds);
-            if (specificSection.collegeBranchId) {
+            if (isSchool || specificSection.collegeBranchId) {
               const yearData = await fetchAcademicYears(
                 collegeId,
                 collegeEducationId,
-                specificSection.collegeBranchId,
+                isSchool ? null : specificSection.collegeBranchId,
               );
               setYears(yearData);
               if (specificSection.collegeAcademicYearId) {
                 const sectionData = await fetchSections(
                   collegeId,
                   collegeEducationId,
-                  specificSection.collegeBranchId,
+                  isSchool ? null : specificSection.collegeBranchId,
                   specificSection.collegeAcademicYearId,
                 );
                 setSections(sectionData);
@@ -1462,6 +1481,7 @@ const CreateMeetingModal = ({
     editingSectionId,
     collegeId,
     collegeEducationId,
+    isSchool,
   ]);
 
   const handleBranchChange = async (value: number) => {
@@ -1492,7 +1512,7 @@ const CreateMeetingModal = ({
       const sectionData = await fetchSections(
         collegeId,
         collegeEducationId,
-        branch!,
+        isSchool ? null : branch,
         value,
       );
       setSections(sectionData);
@@ -1570,7 +1590,7 @@ const CreateMeetingModal = ({
       setIsPastTimeError(false);
 
       if (isSectionMeetingRole(role)) {
-        if (!branch) {
+        if (!isSchool && !branch) {
           toast.error("Please select branch");
           return;
         }
@@ -1665,7 +1685,7 @@ const CreateMeetingModal = ({
             );
             const matchingExistingSections = existingSections.filter(
               (section) =>
-                section.collegeBranchId === branch &&
+                section.collegeBranchId === (isSchool ? null : branch) &&
                 section.collegeAcademicYearId === year,
             );
 
@@ -1692,7 +1712,7 @@ const CreateMeetingModal = ({
                     id: existingSection?.financeMeetingSectionsId,
                     financeMeetingId: meetingRes.financeMeetingId!,
                     collegeEducationId,
-                    collegeBranchId: branch,
+                    collegeBranchId: isSchool ? null : branch,
                     collegeAcademicYearId: year,
                     collegeSectionsId: sectionId,
                   },
@@ -1705,7 +1725,7 @@ const CreateMeetingModal = ({
               existingSections
                 .filter(
                   (section) =>
-                    section.collegeBranchId !== branch ||
+                    section.collegeBranchId !== (isSchool ? null : branch) ||
                     section.collegeAcademicYearId !== year,
                 )
                 .map((section) =>
@@ -1719,7 +1739,7 @@ const CreateMeetingModal = ({
                     {
                       financeMeetingId: meetingRes.financeMeetingId!,
                       collegeEducationId,
-                      collegeBranchId: branch,
+                      collegeBranchId: isSchool ? null : branch,
                       collegeAcademicYearId: year,
                       collegeSectionsId: sectionId,
                     },
@@ -2080,7 +2100,7 @@ const CreateMeetingModal = ({
             </div>
             {isSectionMeetingRole(role) && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
+                {!isSchool && <div className="space-y-1">
                   <label className="text-sm text-[#282828]">
                     Branch <span className="text-red-500">*</span>
                   </label>
@@ -2118,7 +2138,7 @@ const CreateMeetingModal = ({
                       </svg>
                     </div>
                   </div>
-                </div>
+                </div>}
                 <div className="space-y-1">
                   <label className="text-sm text-[#282828]">
                     Year <span className="text-red-500">*</span>
@@ -2126,7 +2146,7 @@ const CreateMeetingModal = ({
                   <div className="relative">
                     <select
                       value={year ?? ""}
-                      disabled={!branch}
+                      disabled={!isSchool && !branch}
                       onChange={(e) => handleYearChange(Number(e.target.value))}
                       className="w-full px-3 py-2 border border-[#CCCCCC] rounded-md focus:outline-none focus:ring-1 focus:ring-[#43C17A] text-sm appearance-none bg-white text-gray-500 cursor-pointer disabled:cursor-not-allowed"
                     >

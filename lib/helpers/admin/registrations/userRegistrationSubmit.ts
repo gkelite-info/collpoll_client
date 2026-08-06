@@ -74,7 +74,7 @@ export interface UserRegistrationPayload {
   dbData: {
     educations: any[];
   };
-  adminUserId?: string | number | null;
+  creatorAdminId: number;
 
   setLoading: (loading: boolean) => void;
   setIsSuccess: (success: boolean) => void;
@@ -115,7 +115,7 @@ export const submitUserRegistration = async (
     studentAvailableSections,
     isSelectedSchool,
     dbData,
-    adminUserId,
+    creatorAdminId,
     setLoading,
     setIsSuccess,
     resetForm,
@@ -136,8 +136,13 @@ export const submitUserRegistration = async (
   let createdUserId: number | null = null;
   let createdStudentId: number | null = null;
   let createdAccountantId: number | null = null;
+  let createdFinanceManagerId: number | null = null;
 
   try {
+    if (!Number.isInteger(creatorAdminId) || creatorAdminId <= 0) {
+      throw new Error("A valid admin profile is required to register a user.");
+    }
+
     const timestamp = new Date().toISOString();
     const parentStudentId = isParent
       ? await resolveStudentIdFromPin(basicData.studentId, basicData.collegeIntId)
@@ -264,7 +269,7 @@ export const submitUserRegistration = async (
           collegeId: basicData.collegeIntId,
           collegeEducationId:
             financeEducationIds.length > 0 ? financeEducationIds[0] : null,
-          createdBy: Number(adminUserId!),
+          createdBy: creatorAdminId,
           isActive: true,
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -281,13 +286,13 @@ export const submitUserRegistration = async (
         const financeManagerId = await createFinanceManager({
           userId: targetUserId,
           collegeId: basicData.collegeIntId,
-          collegeEducationId: financeEducationIds[0],
-          createdBy: basicData.adminId,
+          createdBy: creatorAdminId,
           type: isFinanceManager ? "manager" : "executive",
           isActive: true,
           createdAt: timestamp,
           updatedAt: timestamp,
         });
+        createdFinanceManagerId = financeManagerId;
 
         await upsertFinanceManagerEducationTypes({
           financeManagerId,
@@ -300,7 +305,7 @@ export const submitUserRegistration = async (
       const hrRes = await upsertCollegeHR({
         userId: targetUserId,
         collegeId: basicData.collegeIntId,
-        createdBy: basicData.adminId,
+        createdBy: creatorAdminId,
         isActive: true,
       });
       if (!hrRes.success) {
@@ -312,7 +317,7 @@ export const submitUserRegistration = async (
       const placementRes = await upsertPlacementEmployee({
         userId: targetUserId,
         collegeId: basicData.collegeIntId,
-        createdBy: basicData.adminId,
+        createdBy: creatorAdminId,
       });
       if (!placementRes.success) {
         throw new Error(
@@ -348,7 +353,7 @@ export const submitUserRegistration = async (
         gender: basicData.gender,
         employeeId: basicData.identifierValue,
         dateOfJoining: normalizedDateOfJoining,
-        createdBy: basicData.adminId,
+        createdBy: creatorAdminId,
         createdAt: timestamp,
         updatedAt: timestamp,
         collegeDetails: wellbeingCollegeDetails,
@@ -378,7 +383,7 @@ export const submitUserRegistration = async (
       const payloads = flattenAssignmentsToPayloads(
         assignments,
         facultyId,
-        basicData.adminId,
+        creatorAdminId,
         timestamp
       );
       await batchInsertFacultySections(payloads);
@@ -422,7 +427,7 @@ export const submitUserRegistration = async (
           collegeBranchId: branchId,
           collegeId: basicData.collegeIntId,
           collegeSessionId: selectedSessionId,
-          createdBy: basicData.adminId,
+          createdBy: creatorAdminId,
           entryType: selectedEntryType[0] as any,
           status: "Active",
           batch: basicData.batch || null,
@@ -436,7 +441,7 @@ export const submitUserRegistration = async (
         collegeAcademicYearId: yearId,
         collegeSemesterId: semesterId,
         collegeSectionsId: sectionId,
-        promotedBy: basicData.adminId,
+        promotedBy: creatorAdminId,
         createdAt: timestamp,
         updatedAt: timestamp,
         isCurrent: true,
@@ -450,7 +455,7 @@ export const submitUserRegistration = async (
             collegeAcademicYearId: yearId,
             collegeEducationId: eduId,
             collegeBranchId: branchId,
-            createdBy: basicData.adminId,
+            createdBy: creatorAdminId,
           },
           timestamp
         );
@@ -478,7 +483,7 @@ export const submitUserRegistration = async (
         userId: targetUserId,
         studentId: parentStudentId!,
         collegeId: basicData.collegeIntId,
-        createdBy: basicData.adminId,
+        createdBy: creatorAdminId,
       });
       if (!parentRes.success) {
         throw new Error(parentRes.error || "Parent creation failed");
@@ -559,8 +564,33 @@ export const submitUserRegistration = async (
         .eq("accountantId", createdAccountantId);
     }
 
+    if (createdFinanceManagerId && !user) {
+      const { error: educationCleanupError } = await supabase
+        .from("finance_manager_education_types")
+        .delete()
+        .eq("financeManagerId", createdFinanceManagerId);
+      if (educationCleanupError) {
+        console.error("Finance manager education cleanup failed:", educationCleanupError);
+      }
+
+      const { error: managerCleanupError } = await supabase
+        .from("finance_manager")
+        .delete()
+        .eq("financeManagerId", createdFinanceManagerId);
+      if (managerCleanupError) {
+        console.error("Finance manager cleanup failed:", managerCleanupError);
+      }
+    }
+
     if (createdUserId && !user) {
-      await supabase.from("users").delete().eq("userId", createdUserId);
+      const { error: userCleanupError } = await supabase
+        .from("users")
+        .delete()
+        .eq("userId", createdUserId);
+      if (userCleanupError) {
+        console.error("User cleanup failed:", userCleanupError);
+        toast.error("Registration failed and automatic cleanup was unsuccessful. Please contact support.");
+      }
     }
   } finally {
     setLoading(false);

@@ -7,6 +7,7 @@ import { useFinanceManager } from "@/app/utils/context/financeManager/useFinance
 import FinanceEducationDropdown from "../../components/FinanceEducationDropdown";
 import { getFinanceAnalyticsOverview } from "@/lib/helpers/finance-manager/analytics/FetchFinanceAnalytics";
 import FinanceAnalyticsSummaryCards from "./FinanceAnalyticsSummaryCards";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type ProgramCard = {
   title: string;
@@ -150,7 +151,13 @@ function RevenueBars({ data }: { data: ChartRow[] }) {
 
 export default function FinanceAnalyticsView() {
   const router = useRouter();
-  const { collegeId, collegeEducationId, loading: contextLoading } = useFinanceManager();
+  const {
+    collegeId,
+    collegeEducationId,
+    collegeEducationType,
+    loading: contextLoading,
+  } = useFinanceManager();
+  const isSchool = isSchoolEducation(collegeEducationType);
   const [loading, setLoading] = useState(true);
   const [summaryCards, setSummaryCards] = useState<SummaryCard[]>([]);
   const [programCards, setProgramCards] = useState<ProgramCard[]>([]);
@@ -268,7 +275,7 @@ export default function FinanceAnalyticsView() {
                       </h3>
                       <button
                         type="button"
-                        aria-label={`View ${card.title} branch collection`}
+                        aria-label={`View ${card.title} ${isSchool ? "year" : "branch"} collection`}
                         className="cursor-pointer text-[#282828] transition hover:text-[#43C17A]"
                         onClick={() =>
                           router.push(

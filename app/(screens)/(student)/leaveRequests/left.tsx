@@ -42,6 +42,7 @@ function LeaveLeftContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [tableData, setTableData] = useState<any[]>([]);
   const [counts, setCounts] = useState({
@@ -56,8 +57,6 @@ function LeaveLeftContent() {
 
   const [selectedDateKey, setSelectedDateKey] = useState("");
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-
-  const itemsPerPage = 10;
 
   const COLUMNS = [
     { title: t("SNo"), key: "sNo" },
@@ -119,7 +118,14 @@ function LeaveLeftContent() {
 
   useEffect(() => {
     loadData();
-  }, [studentId, activeTab, debouncedSearch, page, selectedDateKey]);
+  }, [
+    studentId,
+    activeTab,
+    debouncedSearch,
+    page,
+    selectedDateKey,
+    itemsPerPage,
+  ]);
 
   const handleTabChange = (tabId: any) => {
     setActiveTab(tabId);
@@ -199,7 +205,7 @@ function LeaveLeftContent() {
         </button>
       ),
     }));
-  }, [tableData, page]);
+  }, [tableData, page, itemsPerPage, t]);
 
   const cards = [
     {
@@ -359,6 +365,7 @@ function LeaveLeftContent() {
                   onChange={(event) => {
                     if (event.target.value) {
                       setSelectedDateKey(event.target.value);
+                      setPage(1);
                       setIsDatePickerOpen(false);
                     }
                   }}
@@ -369,6 +376,7 @@ function LeaveLeftContent() {
                     type="button"
                     onClick={() => {
                       setSelectedDateKey("");
+                      setPage(1);
                       setIsDatePickerOpen(false);
                     }}
                     className="cursor-pointer rounded px-1 text-xs font-semibold text-red-500 hover:text-red-700"
@@ -398,13 +406,19 @@ function LeaveLeftContent() {
           />
         </div>
 
-        {!isLoading && totalItems > itemsPerPage && (
+        {!isLoading && totalItems > 0 && (
           <div className="mt-2">
             <Pagination
               currentPage={page}
               totalItems={totalItems}
               itemsPerPage={itemsPerPage}
               onPageChange={setPage}
+              itemsPerPageOptions={[5, 10, 20, 50]}
+              onItemsPerPageChange={(items) => {
+                setItemsPerPage(items);
+                setPage(1);
+              }}
+              alwaysShow
             />
           </div>
         )}

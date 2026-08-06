@@ -30,7 +30,11 @@ const AddUserModal: React.FC<{
   onClose: () => void;
   user?: any;
 }> = ({ isOpen, onClose, user }) => {
-  const { collegeEducationType, userId: adminUserId } = useAdmin();
+  const {
+    adminId: creatorAdminId,
+    collegeEducationType,
+    loading: isAdminContextLoading,
+  } = useAdmin();
   const state = useAddUserModalState(isOpen, user, collegeEducationType);
 
   const [showPassword, setShowPassword] = useState(false);
@@ -54,17 +58,24 @@ const AddUserModal: React.FC<{
     selectedSessionId, isSelectedSchool
   } = state;
 
-  const isAdmin = basicData.role === "Admin";
-  const isFaculty = basicData.role === "Faculty";
-  const isStudent = basicData.role === "Student";
-  const isParent = basicData.role === "Parent";
-  const isFinance = basicData.role === "Finance";
-  const isFinanceManager = basicData.role === "FinanceManager";
-  const isAccountant = basicData.role === "Accountant";
+  const canonicalRole =
+    ({
+      "Finance Manager": "FinanceManager",
+      "Placement Officer": "PlacementOfficer",
+      "Wellbeing Manager": "WellbeingManager",
+      "College HR": "CollegeHr",
+    } as Record<string, string>)[basicData.role] ?? basicData.role;
+  const isAdmin = canonicalRole === "Admin";
+  const isFaculty = canonicalRole === "Faculty";
+  const isStudent = canonicalRole === "Student";
+  const isParent = canonicalRole === "Parent";
+  const isFinance = canonicalRole === "Finance";
+  const isFinanceManager = canonicalRole === "FinanceManager";
+  const isAccountant = canonicalRole === "Accountant";
   const showFinanceFields = isFinance || isFinanceManager || isAccountant;
-  const isHR = basicData.role === "CollegeHr";
-  const isPlacement = basicData.role === "PlacementOfficer";
-  const isWellbeing = basicData.role === "WellbeingManager";
+  const isHR = canonicalRole === "CollegeHr";
+  const isPlacement = canonicalRole === "PlacementOfficer";
+  const isWellbeing = canonicalRole === "WellbeingManager";
   const selectedWellbeingRegistrationType = basicData.wellbeingRegistrationType || "";
   const isWellbeingHostel = isWellbeing && (selectedWellbeingRegistrationType === "Hostel" || selectedWellbeingRegistrationType === "Both");
   const isWellbeingCollege = isWellbeing && (selectedWellbeingRegistrationType === "College" || selectedWellbeingRegistrationType === "Both");
@@ -75,6 +86,12 @@ const AddUserModal: React.FC<{
   const showEmployeeIdField = !isStudent && !isParent && basicData.role !== "";
 
   const handleSaveWrapper = async () => {
+    if (isAdminContextLoading) {
+      return toast.error("Admin information is still loading. Please try again.");
+    }
+    if (!creatorAdminId) {
+      return toast.error("Admin profile was not found. Please refresh and try again.");
+    }
     if (!basicData.fullName) return toast.error("Full Name is required.");
     if (!basicData.email) return toast.error("Email is required.");
     if (!basicData.role) return toast.error("Role is required.");
@@ -152,10 +169,10 @@ const AddUserModal: React.FC<{
     }
 
     await submitUserRegistration({
-      basicData, user, isAdmin, isFaculty, isStudent, isParent, isFinance, isFinanceManager, isAccountant, isHR, isPlacement, isWellbeing, isWellbeingHostel, isWellbeingCollege, showFinanceFields,
+      basicData: { ...basicData, role: canonicalRole }, user, isAdmin, isFaculty, isStudent, isParent, isFinance, isFinanceManager, isAccountant, isHR, isPlacement, isWellbeing, isWellbeingHostel, isWellbeingCollege, showFinanceFields,
       selectedEducationId, selectedFinanceEducationTypes, selectedWellbeingEducationTypes, selectedEntryType, selectedSemester, selectedSections, selectedSessionId,
       assignments, studentSelectedEducation, studentSelectedBranch, studentSelectedYear, studentAvailableSemesters, studentAvailableSections, isSelectedSchool, dbData,
-      adminUserId, setLoading, setIsSuccess, resetForm, onClose
+      creatorAdminId, setLoading, setIsSuccess, resetForm, onClose
     });
   };
 
@@ -313,9 +330,9 @@ const AddUserModal: React.FC<{
           <div className="px-4 sm:px-6 py-4 sm:py-5 border-t border-gray-100 flex gap-4 flex-shrink-0 bg-white rounded-b-2xl">
             <button
               onClick={handleSaveWrapper}
-              disabled={loading || isFetchingData}
+              disabled={loading || isFetchingData || isAdminContextLoading || !creatorAdminId}
               className={`flex-1 focus:outline-none text-white text-sm font-bold py-3 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 ${
-                loading || isFetchingData
+                loading || isFetchingData || isAdminContextLoading || !creatorAdminId
                   ? "bg-[#43C17A]/70 cursor-not-allowed opacity-80"
                   : "bg-[#43C17A] hover:bg-[#3ea876] hover:shadow-md cursor-pointer active:scale-[0.98]"
               }`}

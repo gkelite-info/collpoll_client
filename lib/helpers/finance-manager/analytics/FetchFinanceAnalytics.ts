@@ -1030,6 +1030,92 @@ export async function getBranchWiseCollectionDynamic(
   };
 }
 
+export async function getSchoolYearWiseCollectionDynamic(
+  collegeId: number,
+  collegeEducationId: number,
+) {
+  const { data: academicYears, error: yearError } = await supabase
+    .from("college_academic_year")
+    .select("collegeAcademicYearId, collegeAcademicYear")
+    .eq("collegeId", collegeId)
+    .eq("collegeEducationId", collegeEducationId)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (yearError) throw yearError;
+
+  const yearMap = new Map<
+    number,
+    { branch: string; branchId: number; total: number; collected: number }
+  >();
+  (academicYears ?? []).forEach((year) => {
+    yearMap.set(year.collegeAcademicYearId, {
+      branch: year.collegeAcademicYear,
+      branchId: year.collegeAcademicYearId,
+      total: 0,
+      collected: 0,
+    });
+  });
+
+  const yearIds = Array.from(yearMap.keys());
+  if (yearIds.length > 0) {
+    const { data: obligations, error: obligationError } = await supabase
+      .from("student_fee_obligation")
+      .select(`
+        totalAmount,
+        collegeAcademicYearId,
+        student_fee_collection ( collectedAmount )
+      `)
+      .eq("collegeEducationId", collegeEducationId)
+      .in("collegeAcademicYearId", yearIds)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    if (obligationError) throw obligationError;
+
+    obligations?.forEach((obligation) => {
+      const metric = yearMap.get(obligation.collegeAcademicYearId);
+      if (!metric) return;
+      metric.total += Number(obligation.totalAmount) || 0;
+      obligation.student_fee_collection?.forEach((collection) => {
+        metric.collected += Number(collection.collectedAmount) || 0;
+      });
+    });
+  }
+
+  const rows = Array.from(yearMap.values())
+    .map((metric) => ({
+      ...metric,
+      pending: Math.max(metric.total - metric.collected, 0),
+    }))
+    .sort((a, b) =>
+      a.branch.localeCompare(b.branch, undefined, { numeric: true }),
+    );
+
+  return {
+    chartData: rows.map((row) => ({
+      branch: row.branch,
+      collected: row.collected,
+      pending: row.pending,
+    })),
+    gridData: rows.map((row) => ({
+      branch: row.branch,
+      totalFeesShort: formatCleanShortCurrency(row.total),
+      collectedShort: formatCleanShortCurrency(row.collected),
+      pendingShort: formatCleanShortCurrency(row.pending),
+    })),
+    tableData: rows.map((row) => ({
+      branch: row.branch,
+      branchId: row.branchId,
+      collected: formatCleanCurrency(row.collected),
+      pending: formatCleanCurrency(row.pending),
+      totalFees: formatCleanCurrency(row.total),
+    })),
+    academicYears: [] as FilterOption[],
+    semesters: [] as FilterOption[],
+  };
+}
+
 export async function getYearWiseDetailsDynamic(
   collegeId: number,
   collegeEducationId: number,

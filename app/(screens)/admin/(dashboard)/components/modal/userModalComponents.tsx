@@ -262,6 +262,7 @@ interface SingleSelectProps {
   placeholderColorActive?: string;
   gap?: string;
   isProcessing?: boolean;
+  optionLabels?: Record<string, string>;
 }
 
 export const CustomSingleSelect: React.FC<SingleSelectProps> = ({
@@ -277,6 +278,7 @@ export const CustomSingleSelect: React.FC<SingleSelectProps> = ({
   placeholderColorActive = "text-gray-400",
   gap = "gap-1",
   isProcessing = false,
+  optionLabels,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -331,7 +333,7 @@ export const CustomSingleSelect: React.FC<SingleSelectProps> = ({
             selectedValue ? "text-[#48C78E] font-bold" : placeholderColorActive
           }`}
         >
-          {selectedValue || placeholder}
+          {(selectedValue && (optionLabels?.[selectedValue] ?? selectedValue)) || placeholder}
         </span>
 
         <CaretDown
@@ -382,7 +384,7 @@ export const CustomSingleSelect: React.FC<SingleSelectProps> = ({
                   ${selectedValue === opt ? "bg-[#EBF7F1] font-semibold text-[#48C78E]" : "text-gray-700 hover:bg-gray-50"}
                 `}
               >
-                <span>{opt}</span>
+                <span>{optionLabels?.[opt] ?? opt}</span>
 
                 {selectedValue === opt && (
                   <Check

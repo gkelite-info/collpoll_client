@@ -47,7 +47,11 @@ export const FinanceManagerProvider = ({
         const loadFinanceManager = async () => {
             if (userLoading) return;
 
-            if (!userId || (role !== "Finance" && role !== "FinanceManager")) {
+            const normalizedRole = role?.replace(/[\s_-]/g, "").toLowerCase();
+            const isFinanceRole =
+                normalizedRole === "finance" || normalizedRole === "financemanager";
+
+            if (!userId || !isFinanceRole) {
                 setState((s) => ({ ...s, loading: false }));
                 return;
             }

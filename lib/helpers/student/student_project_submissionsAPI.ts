@@ -110,6 +110,33 @@ export async function deleteSubmission(
     return { success: true };
 }
 
+export async function deleteStudentProjectSubmission(
+    projectId: number,
+    studentId: number,
+    fileUrl: string
+) {
+    const storageMarker = "/project_submissions/";
+    const markerIndex = fileUrl.indexOf(storageMarker);
+    const filePath = markerIndex >= 0
+        ? decodeURIComponent(fileUrl.slice(markerIndex + storageMarker.length))
+        : fileUrl;
+
+    const { error: storageError } = await supabase.storage
+        .from("project_submissions")
+        .remove([filePath]);
+
+    if (storageError) return { success: false, error: storageError };
+
+    const { error: databaseError } = await supabase
+        .from("student_project_submissions")
+        .delete()
+        .eq("projectId", projectId)
+        .eq("studentId", studentId);
+
+    if (databaseError) return { success: false, error: databaseError };
+    return { success: true };
+}
+
 export async function fetchProjectSubmissionsWithStudents(projectId: number, page: number = 1, limit: number = 20) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;

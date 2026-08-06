@@ -13,10 +13,9 @@ import {
 } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 const rupee = "\u20B9";
-
-const ITEMS_PER_PAGE = 10;
 
 const columns = [
   { title: "Student Name", key: "studentName" },
@@ -309,6 +308,7 @@ export default function YearWiseFeeCollectionView({
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalRecords, setTotalRecords] = useState(0);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const skippedTableLoadKeyRef = useRef<string | null>(null);
@@ -334,8 +334,9 @@ export default function YearWiseFeeCollectionView({
         nextSemesterId ?? "all-semesters",
         nextPage,
         nextSearch,
+        itemsPerPage,
       ].join("|"),
-    [branchTitle, collegeEducationId, collegeId],
+    [branchTitle, collegeEducationId, collegeId, itemsPerPage],
   );
 
   const tableLoadKey = useMemo(
@@ -408,7 +409,7 @@ export default function YearWiseFeeCollectionView({
           selectedAcademicYearId,
           semesterForTable,
           pageForTable,
-          ITEMS_PER_PAGE,
+          itemsPerPage,
           searchForTable,
           { includeCharts: true },
         );
@@ -450,6 +451,7 @@ export default function YearWiseFeeCollectionView({
     collegeEducationId,
     contextLoading,
     getTableLoadKey,
+    itemsPerPage,
     selectedAcademicYearId,
   ]);
 
@@ -481,7 +483,7 @@ export default function YearWiseFeeCollectionView({
           selectedAcademicYearId,
           selectedSemesterId,
           currentPage,
-          ITEMS_PER_PAGE,
+          itemsPerPage,
           debouncedSearch,
           { includeCharts: false },
         );
@@ -516,6 +518,7 @@ export default function YearWiseFeeCollectionView({
     selectedAcademicYearId,
     selectedSemesterId,
     tableLoadKey,
+    itemsPerPage,
   ]);
 
   const updateFilterParams = (academicYearId: number | null, semesterId: number | null) => {
@@ -583,7 +586,6 @@ export default function YearWiseFeeCollectionView({
     [sortDirection, studentData],
   );
 
-  const totalPages = Math.ceil(totalRecords / ITEMS_PER_PAGE);
   const isChartSectionLoading = contextLoading || isChartLoading;
   const isStudentTableLoading = contextLoading || isTableLoading;
 
@@ -731,29 +733,20 @@ export default function YearWiseFeeCollectionView({
             />
           </div>
         </div>
-        {totalPages > 1 && !isStudentTableLoading && (
-          <div className="mt-4 flex items-center justify-center gap-2">
-            <button
-              type="button"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-              className="rounded-md border bg-white px-3 py-1 text-sm disabled:opacity-40"
-            >
-              Prev
-            </button>
-            <span className="text-sm text-[#525252]">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              type="button"
-              disabled={currentPage === totalPages}
-              onClick={() =>
-                setCurrentPage((page) => Math.min(totalPages, page + 1))
-              }
-              className="rounded-md border bg-white px-3 py-1 text-sm disabled:opacity-40"
-            >
-              Next
-            </button>
+        {totalRecords > 0 && !isStudentTableLoading && (
+          <div className="mt-4 overflow-hidden rounded-lg">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={totalRecords}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              itemsPerPageOptions={[5, 10, 20, 50]}
+              onItemsPerPageChange={(items) => {
+                setItemsPerPage(items);
+                setCurrentPage(1);
+              }}
+              alwaysShow
+            />
           </div>
         )}
       </section>

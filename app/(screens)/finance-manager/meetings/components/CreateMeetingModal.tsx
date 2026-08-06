@@ -4,6 +4,7 @@ import FinanceCreateMeetingModal from "../../../finance/meetings/components/Crea
 
 type CreateMeetingModalProps = {
   isOpen: boolean;
+  initialRole?: "Parent" | "Student" | "Faculty" | "Staff";
   onClose: () => void;
   onSuccess: () => void;
   editingMeetingId?: number | null;

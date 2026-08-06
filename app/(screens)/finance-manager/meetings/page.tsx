@@ -333,6 +333,7 @@ function MeetingListContent() {
 
       <CreateMeetingModal
         isOpen={isModalOpen}
+        initialRole={currentCategory}
         onClose={() => {
           setIsModalOpen(false);
           setEditingMeetingId(null);

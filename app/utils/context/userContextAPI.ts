@@ -216,6 +216,7 @@ export async function fetchUserFullProfile(queryClient: QueryClient) {
   };
 
   // Run role loader logic
+  const normalizedRole = role.replace(/[\s_-]/g, "").toLowerCase();
   if (role === "Student") {
       const [sid, studentCtx] = await Promise.all([
         getStudentId(),
@@ -239,10 +240,10 @@ export async function fetchUserFullProfile(queryClient: QueryClient) {
       result.collegeEducationId = adminCtx?.collegeEducationId ?? null;
       result.collegeEducationType = adminCtx?.collegeEducationType ?? null;
       result.identifierId = empId ?? null;
-  } else if (role === "Finance" || role === "FinanceManager") {
+  } else if (normalizedRole === "finance" || normalizedRole === "financemanager") {
       const [financeData, financeCtx, empId] = await Promise.all([
         supabase.from("finance_manager").select("financeManagerId").eq("userId", uid).eq("is_deleted", false).maybeSingle(),
-        fetchFinanceManagerContext(uid),
+        fetchFinanceManagerContext(uid).catch(() => null),
         getEmployeeEmpId(uid, cid),
       ]);
       result.financeManagerId = financeData.data?.financeManagerId ?? null;
@@ -261,6 +262,23 @@ export async function fetchUserFullProfile(queryClient: QueryClient) {
         
         const educationTypeFromMapping = uniqueJoinedValues((educationTypes ?? []).map((edu) => getCollegeEducationType(edu.college_education as any)));
         result.collegeEducationType = educationTypeFromMapping || financeCtx?.collegeEducationType || null;
+
+      }
+
+      if (!result.collegeEducationType) {
+        const { data: collegeEducationTypes } = await supabase
+          .from("college_education")
+          .select("collegeEducationType")
+          .eq("collegeId", cid)
+          .eq("isActive", true)
+          .is("deletedAt", null)
+          .order("collegeEducationType", { ascending: true });
+
+        result.collegeEducationType = uniqueJoinedValues(
+          (collegeEducationTypes ?? []).map(
+            (education) => education.collegeEducationType,
+          ),
+        );
       }
   } else if (role === "Accountant") {
       const [{ data }, empId] = await Promise.all([
