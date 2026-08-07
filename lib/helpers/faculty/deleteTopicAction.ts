@@ -14,13 +14,13 @@ export async function deleteTopicAction(unitId: number, topicId: number) {
       .from("college_subject_unit_topics")
       .update({
         isActive: false,
-        deletedAt: now,
         updatedAt: now,
       })
       .eq("collegeSubjectUnitTopicId", topicId);
 
     if (deleteError) {
-      throw new Error(`Failed to delete topic: ${deleteError.message}`);
+      console.error("DB Error deleting topic:", deleteError);
+      throw new Error("Unable to delete topic at this time. Please try again.");
     }
 
     const { data: remainingTopics, error: fetchError } = await supabase
@@ -30,7 +30,8 @@ export async function deleteTopicAction(unitId: number, topicId: number) {
       .eq("isActive", true);
 
     if (fetchError) {
-      throw new Error(`Failed to fetch remaining topics: ${fetchError.message}`);
+      console.error("DB Error fetching remaining topics:", fetchError);
+      throw new Error("Unable to verify remaining topics. Please refresh the page.");
     }
 
     const total = remainingTopics.length;
@@ -46,7 +47,8 @@ export async function deleteTopicAction(unitId: number, topicId: number) {
       .eq("collegeSubjectUnitId", unitId);
 
     if (unitError) {
-      throw new Error(`Failed to update unit percentage: ${unitError.message}`);
+      console.error("DB Error updating unit percentage:", unitError);
+      throw new Error("Failed to update the unit's overall progress. Please refresh.");
     }
 
     return { success: true, newPercentage };

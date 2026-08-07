@@ -139,7 +139,7 @@ export async function upsertCollegeSubjectUnitWithTopics(
     const { error: topicError } = await supabaseAdmin
       .from("college_subject_unit_topics")
       .upsert(topicRows, {
-        onConflict: "collegeSubjectUnitId,topicTitle,collegeSectionsId",
+        onConflict: "collegeSubjectUnitId,topicTitle",
       });
 
     if (topicError) {

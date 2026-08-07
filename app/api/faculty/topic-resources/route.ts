@@ -162,6 +162,9 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const topicId = Number(searchParams.get("topicId"));
 
+    const page = Number(searchParams.get("page") || "1");
+    const limit = Number(searchParams.get("limit") || "10");
+
     if (!topicId) {
       return NextResponse.json(
         { error: "topicId is required" },
@@ -171,7 +174,9 @@ export async function GET(req: Request) {
 
     await getTopicInCollege(topicId, actor.collegeId);
 
-    const { data, error } = await supabaseAdmin
+    const startIndex = (page - 1) * limit;
+
+    const { data, error, count } = await supabaseAdmin
       .from("college_subject_unit_topic_resources")
       .select(
         `
@@ -187,16 +192,24 @@ export async function GET(req: Request) {
         createdAt,
         updatedAt
       `,
+        { count: "exact" }
       )
       .eq("collegeSubjectUnitTopicId", topicId)
       .eq("isActive", true)
-      .order("createdAt", { ascending: false });
+      .order("createdAt", { ascending: false })
+      .range(startIndex, startIndex + limit - 1);
 
     if (error) {
       throw new Error(error.message);
     }
 
-    return NextResponse.json({ resources: data ?? [] });
+    const hasNextPage = count !== null && startIndex + limit < count;
+
+    return NextResponse.json({
+      resources: data ?? [],
+      hasNextPage,
+      nextCursor: hasNextPage ? page + 1 : undefined,
+    });
   } catch (error: any) {
     const status =
       error?.message === "Unauthorized"
