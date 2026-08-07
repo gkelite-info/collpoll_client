@@ -137,27 +137,57 @@ export async function getFacultySubjectsPaginated(params: {
   const uniqueBatches = Array.from(
     new Set(facultySections.map((fs: any) => {
       const subject = Array.isArray(fs.college_subjects) ? fs.college_subjects[0] : fs.college_subjects;
-      return `${subject.collegeAcademicYearId}-${subject.collegeSemesterId}-${fs.collegeSectionsId}`;
+      return `${subject.collegeEducationId}-${subject.collegeBranchId}-${subject.collegeAcademicYearId}-${subject.collegeSemesterId}-${fs.collegeSectionsId}`;
     }))
   ) as string[];
 
   const studentCounts = new Map<string, number>();
   await Promise.all(
     uniqueBatches.map(async (batchKey) => {
-      const [yearIdStr, semIdStr, sectionIdStr] = batchKey.split("-");
+      const [eduIdStr, branchIdStr, yearIdStr, semIdStr, sectionIdStr] = batchKey.split("-");
+      const eduId = eduIdStr !== "null" && eduIdStr !== "undefined" ? Number(eduIdStr) : null;
+      const branchId = branchIdStr !== "null" && branchIdStr !== "undefined" ? Number(branchIdStr) : null;
       const yearId = yearIdStr !== "null" && yearIdStr !== "undefined" ? Number(yearIdStr) : null;
       const semId = semIdStr !== "null" && semIdStr !== "undefined" ? Number(semIdStr) : null;
       const secId = sectionIdStr !== "null" && sectionIdStr !== "undefined" ? Number(sectionIdStr) : null;
 
       let studentCountQuery = supabase
-        .from("student_academic_history")
-        .select("studentAcademicHistoryId", { count: "exact", head: true })
-        .eq("isCurrent", true)
-        .is("deletedAt", null);
+        .from("students")
+        .select("studentId, student_academic_history!inner(studentAcademicHistoryId)", { count: "exact", head: true })
+        .eq("collegeId", collegeId)
+        .eq("isActive", true)
+        .eq("status", "Active")
+        .is("deletedAt", null)
+        .eq("student_academic_history.isCurrent", true)
+        .is("student_academic_history.deletedAt", null);
 
-      if (yearId) studentCountQuery = studentCountQuery.eq("collegeAcademicYearId", yearId);
-      if (semId) studentCountQuery = studentCountQuery.eq("collegeSemesterId", semId);
-      if (secId) studentCountQuery = studentCountQuery.eq("collegeSectionsId", secId);
+      if (eduId) {
+        studentCountQuery = studentCountQuery.eq("collegeEducationId", eduId);
+      } else {
+        studentCountQuery = studentCountQuery.is("collegeEducationId", null);
+      }
+
+      if (branchId) {
+        studentCountQuery = studentCountQuery.eq("collegeBranchId", branchId);
+      } else {
+        studentCountQuery = studentCountQuery.is("collegeBranchId", null);
+      }
+
+      if (secId) {
+        studentCountQuery = studentCountQuery.eq("student_academic_history.collegeSectionsId", secId);
+      } else {
+        if (yearId) {
+          studentCountQuery = studentCountQuery.eq("student_academic_history.collegeAcademicYearId", yearId);
+        } else {
+          studentCountQuery = studentCountQuery.is("student_academic_history.collegeAcademicYearId", null);
+        }
+
+        if (semId) {
+          studentCountQuery = studentCountQuery.eq("student_academic_history.collegeSemesterId", semId);
+        } else {
+          studentCountQuery = studentCountQuery.is("student_academic_history.collegeSemesterId", null);
+        }
+      }
 
       const { count } = await studentCountQuery;
       studentCounts.set(batchKey, count ?? 0);
@@ -256,7 +286,7 @@ export async function getFacultySubjectsPaginated(params: {
 
     const semesterDisplay = semData?.collegeSemester ? `Sem ${semData.collegeSemester}` : "-";
 
-    const batchKey = `${s.collegeAcademicYearId}-${s.collegeSemesterId}-${fs.collegeSectionsId}`;
+    const batchKey = `${s.collegeEducationId}-${s.collegeBranchId}-${s.collegeAcademicYearId}-${s.collegeSemesterId}-${fs.collegeSectionsId}`;
     const students = studentCounts.get(batchKey) ?? 0;
 
     return {

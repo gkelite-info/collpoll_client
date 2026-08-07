@@ -12,14 +12,21 @@ export type TopicResource = {
   updatedAt: string;
 };
 
-export async function getTopicResources(
-  collegeSubjectUnitTopicId: number,
-): Promise<TopicResource[]> {
+export async function getTopicResources(params: {
+  collegeSubjectUnitTopicId: number;
+  page?: number;
+  limit?: number;
+}): Promise<{ resources: TopicResource[], hasNextPage: boolean, nextCursor?: number }> {
   let response: Response;
 
   try {
+    const url = new URL("/api/faculty/topic-resources", window.location.origin);
+    url.searchParams.append("topicId", String(params.collegeSubjectUnitTopicId));
+    if (params.page) url.searchParams.append("page", String(params.page));
+    if (params.limit) url.searchParams.append("limit", String(params.limit));
+
     response = await fetch(
-      `/api/faculty/topic-resources?topicId=${collegeSubjectUnitTopicId}`,
+      url.toString().replace(window.location.origin, ""),
       {
         method: "GET",
         credentials: "include",
@@ -37,7 +44,11 @@ export async function getTopicResources(
     throw new Error(payload.error || "Failed to load resources");
   }
 
-  return payload.resources as TopicResource[];
+  return {
+    resources: payload.resources as TopicResource[],
+    hasNextPage: payload.hasNextPage as boolean,
+    nextCursor: payload.nextCursor as number | undefined,
+  };
 }
 
 export async function uploadTopicResource(params: {

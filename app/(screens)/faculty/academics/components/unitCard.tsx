@@ -1,7 +1,17 @@
-import { CheckCircleIcon, FilePdf, Trash, CaretDown, Clock } from "@phosphor-icons/react";
+import { getTopicsPaginated } from "@/lib/helpers/faculty/getTopicsPaginated";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInView } from "react-intersection-observer";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
+import {
+  FilePdf,
+  CaretDown,
+  Trash,
+  PencilSimple,
+  Clock,
+  CheckCircleIcon,
+} from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CardProps } from "@/lib/types/faculty";
 
 export type TopicItem = {
   title: string;
@@ -84,73 +94,62 @@ type UnitCardProps = {
   ) => void;
   onDeleteUnit: (unitId: number) => Promise<void>;
   onDeleteTopic: (unitId: number, topicId: number) => Promise<void>;
+  onEditUnit?: (unit: Unit) => void;
   onOpenTopicPdf: (selection: TopicPdfSelection) => void;
   loadingUnitId: number | null;
   setHasChanges: (value: boolean) => void;
+  collegeSectionId?: number | null;
+  collegeId: number;
 };
-function ConfirmDeleteModal({
-  isOpen,
-  onClose,
-  onConfirm,
-  title,
-  message,
-  isDeleting,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  title: string;
-  message: string;
-  isDeleting: boolean;
-}) {
-  if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-3">
-        <div className="flex items-center gap-3">
-          <div className="bg-red-100 text-red-600 p-2.5 rounded-full">
-            <Trash size={22} weight="fill" />
-          </div>
-          <h3 className="text-lg font-bold text-gray-800">{title}</h3>
-        </div>
-        <p className="text-sm text-gray-600 mt-1 leading-relaxed">{message}</p>
-        <div className="flex gap-3 justify-end mt-4">
-          <button
-            onClick={onClose}
-            disabled={isDeleting}
-            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={isDeleting}
-            className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50"
-          >
-            {isDeleting ? "Deleting..." : "Delete"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { TopicSkeleton } from "./subjectDetailsSkeleton";
 
 export function UnitCard({
   unit,
   onMarkComplete,
   onDeleteUnit,
   onDeleteTopic,
+  onEditUnit,
   onOpenTopicPdf,
   setHasChanges,
   loadingUnitId,
+  collegeSectionId,
+  collegeId,
 }: UnitCardProps) {
+
   const colors = colorMap[unit.color];
+  const { ref: desktopLoadMoreRef, inView: desktopInView } = useInView();
+  const { ref: mobileLoadMoreRef, inView: mobileInView } = useInView();
+
+  const {
+    data: topicsData,
+    fetchNextPage: fetchNextTopics,
+    hasNextPage: hasNextTopics,
+    isFetchingNextPage: isFetchingNextTopics,
+    isLoading: isTopicsLoading,
+  } = useInfiniteQuery({
+    queryKey: ["unitTopics", unit.id, collegeSectionId],
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await getTopicsPaginated({
+        collegeId,
+        collegeSubjectUnitId: unit.id,
+        collegeSectionsId: collegeSectionId,
+        page: pageParam,
+        limit: 10,
+      });
+      return res;
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    initialPageParam: 1,
+    enabled: !!(collegeId && unit.id),
+  });
+
+  const rawTopics = topicsData?.pages.flatMap((page) => page.topics) ?? unit.topics ?? [];
+
   const [selectedUnitLessons, setSelectedUnitLessons] = useState<
     LessonData[] | null
   >(null);
-  // const [topics, setTopics] = useState<UnitTopic[]>(unit.topics);
-  const [localTopics, setLocalTopics] = useState<UnitTopic[]>(unit.topics);
+  const [localTopics, setLocalTopics] = useState<UnitTopic[]>(rawTopics);
   const [isDirty, setIsDirty] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -161,29 +160,35 @@ export function UnitCard({
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
-    setLocalTopics(unit.topics);
-    setIsDirty(false);
-  }, [unit.topics]);
+    if ((desktopInView || mobileInView) && hasNextTopics && !isFetchingNextTopics) {
+      fetchNextTopics();
+    }
+  }, [desktopInView, mobileInView, hasNextTopics, isFetchingNextTopics, fetchNextTopics]);
 
   useEffect(() => {
-    localTopics;
-  }, [localTopics]);
+    setLocalTopics(rawTopics);
+    setIsDirty(false);
+  }, [topicsData, unit.topics]);
 
   const isSavingThisUnit = loadingUnitId === unit.id;
   if (selectedUnitLessons) {
     return <div className="w-full px-8 bg-[#F5F5F7] min-h-screen pt-6"></div>;
   }
-  const completedCount = localTopics.filter((t) => t.isCompleted).length;
-  const percentage =
-    localTopics.length === 0
-      ? 0
-      : Math.round((completedCount / localTopics.length) * 100);
+  const firstPage = topicsData?.pages[0];
+  const serverTotalCount = firstPage?.totalCount ?? 0;
+  const serverCompletedCount = firstPage?.totalCompletedCount ?? 0;
 
-  // const completedCount = topics.filter(t => t.isCompleted).length;
-  // const totalCount = topics.length;
+  const serverCompletedCountInRaw = rawTopics.filter((t) => t.isCompleted).length;
+  const localCompletedCount = localTopics.filter((t) => t.isCompleted).length;
+  const delta = localCompletedCount - serverCompletedCountInRaw;
 
-  // const percentage =
-  //   totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
+  let percentage = unit.percentage;
+  if (serverTotalCount > 0) {
+    const liveCompleted = Math.max(0, Math.min(serverTotalCount, serverCompletedCount + delta));
+    percentage = Math.round((liveCompleted / serverTotalCount) * 100);
+  } else if (localTopics.length > 0 && isDirty) {
+    percentage = Math.round((localCompletedCount / localTopics.length) * 100);
+  }
 
   return (
     <>
@@ -204,6 +209,19 @@ export function UnitCard({
         </div>
         
         <div className="flex items-center gap-2">
+          {onEditUnit && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditUnit({ ...unit, topics: localTopics });
+              }}
+              className={`${colors.accent} hover:bg-black/5 transition-all p-1.5 rounded-md cursor-pointer max-md:hidden`}
+              title="Edit Unit"
+            >
+              <PencilSimple size={20} />
+            </button>
+          )}
           <button
             type="button"
             onClick={(e) => {
@@ -230,17 +248,32 @@ export function UnitCard({
           >
             {unit.title}
           </h3>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteTarget({ type: "unit" });
-            }}
-            className="text-red-500 hover:text-red-600 hover:bg-red-50 transition-all p-1 rounded-md cursor-pointer hidden max-md:block -mt-1"
-            title="Delete Unit"
-          >
-            <Trash size={16} />
-          </button>
+          <div className="flex items-center gap-1 hidden max-md:flex -mt-1">
+            {onEditUnit && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditUnit({ ...unit, topics: localTopics });
+                }}
+                className={`${colors.accent} hover:bg-black/5 transition-all p-1 rounded-md cursor-pointer`}
+                title="Edit Unit"
+              >
+                <PencilSimple size={16} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteTarget({ type: "unit" });
+              }}
+              className="text-red-500 hover:text-red-600 hover:bg-red-50 transition-all p-1 rounded-md cursor-pointer"
+              title="Delete Unit"
+            >
+              <Trash size={16} />
+            </button>
+          </div>
         </div>
 
         <div className="relative w-full h-3 max-md:h-[8px] rounded-full bg-gray-200 overflow-hidden shrink-0 max-md:mb-0">
@@ -308,7 +341,7 @@ export function UnitCard({
                     <CheckCircleIcon
                       size={16}
                       weight="fill"
-                      className={topic.isCompleted ? colors.accent : "text-gray-300"}
+                      className={`${topic.isCompleted ? colors.accent : "text-gray-300"} cursor-pointer`}
                     />
                   </button>
                   <span className={topic.isCompleted ? "" : "text-gray-400"}>
@@ -348,6 +381,28 @@ export function UnitCard({
                 </div>
               </li>
             ))}
+            
+            {isTopicsLoading && localTopics.length === 0 && (
+              <>
+                <TopicSkeleton />
+                <TopicSkeleton />
+                <TopicSkeleton />
+                <TopicSkeleton />
+                <TopicSkeleton />
+              </>
+            )}
+
+            {hasNextTopics && (
+              <div ref={desktopLoadMoreRef} className="flex flex-col w-full">
+                {isFetchingNextTopics && (
+                  <>
+                    <TopicSkeleton />
+                    <TopicSkeleton />
+                    <TopicSkeleton />
+                  </>
+                )}
+              </div>
+            )}
           </ul>
 
           {/* Mobile Accordion List */}
@@ -427,6 +482,28 @@ export function UnitCard({
                     </div>
                   </li>
                 ))}
+                
+                {isTopicsLoading && localTopics.length === 0 && (
+                  <>
+                    <TopicSkeleton />
+                    <TopicSkeleton />
+                    <TopicSkeleton />
+                    <TopicSkeleton />
+                    <TopicSkeleton />
+                  </>
+                )}
+
+                {hasNextTopics && (
+                  <div ref={mobileLoadMoreRef} className="flex flex-col w-full">
+                    {isFetchingNextTopics && (
+                      <>
+                        <TopicSkeleton />
+                        <TopicSkeleton />
+                        <TopicSkeleton />
+                      </>
+                    )}
+                  </div>
+                )}
               </motion.ul>
             )}
           </AnimatePresence>
@@ -436,12 +513,19 @@ export function UnitCard({
 
         <div className={`absolute bottom-4 right-4 justify-end shrink-0 max-md:bottom-[8px] max-md:right-[12px] md:flex ${isExpanded ? "flex" : "hidden"}`}>
           <button
-            onClick={() => onMarkComplete(unit.id, localTopics, percentage)}
+            onClick={async () => {
+              try {
+                await onMarkComplete(unit.id, localTopics, percentage);
+                setIsDirty(false);
+              } catch (e) {
+                // error handled by mutation
+              }
+            }}
             disabled={!isDirty || isSavingThisUnit}
-            className={`border px-4 py-1.5 max-md:px-3 max-md:py-1 rounded-lg cursor-pointer text-sm max-md:text-[11px] transition
+            className={`border px-4 py-1.5 max-md:px-3 max-md:py-1 rounded-lg text-sm max-md:text-[11px] transition
     ${!isDirty || isSavingThisUnit
                 ? "border-[#43C17A] text-[#43C17A] opacity-50 cursor-not-allowed"
-                : "border-[#43C17A] text-[#43C17A] hover:bg-[#43C17A]/10 bg-white"
+                : "border-[#43C17A] text-[#43C17A] hover:bg-[#43C17A]/10 bg-white cursor-pointer"
               }`}
           >
             {isSavingThisUnit ? "Saving..." : "Save Progress"}
@@ -450,11 +534,11 @@ export function UnitCard({
       </div>
     </div>
       <ConfirmDeleteModal
-        isOpen={deleteTarget !== null}
-        onClose={() => setDeleteTarget(null)}
+        open={deleteTarget !== null}
+        onCancel={() => setDeleteTarget(null)}
         isDeleting={isDeleting}
         title={deleteTarget?.type === "unit" ? "Delete Unit" : "Delete Topic"}
-        message={
+        customDescription={
           deleteTarget?.type === "unit"
             ? "Are you sure you want to permanently delete this unit and all its topics?"
             : "Are you sure you want to permanently delete this topic?"
@@ -476,4 +560,4 @@ export function UnitCard({
     </>
   );
 }
-
+

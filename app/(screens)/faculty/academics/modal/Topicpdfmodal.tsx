@@ -11,6 +11,8 @@ import {
 } from "@/lib/helpers/faculty/topicResources";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInView } from "react-intersection-observer";
 import toast from "react-hot-toast";
 
 
@@ -108,33 +110,44 @@ export function TopicPdfModal({
     const resolvedCollegeId = facultyCollegeId ?? adminCollegeId;
     const actorRole = facultyId ? "Faculty" : adminId ? "Admin" : null;
 
-    const [savedResources, setSavedResources] = useState<TopicResource[]>([]);
-    const [loadingResources, setLoadingResources] = useState(false);
+    const queryClient = useQueryClient();
+
+    const getProxyUrl = (url: string) => {
+        const marker = "/storage/v1/object/public/";
+        const idx = url.indexOf(marker);
+        if (idx !== -1) return `/api/files/${url.slice(idx + marker.length)}`;
+        return url;
+    };
+
+    const { ref: loadMoreRef, inView } = useInView();
+
+    const {
+        data: resourcesData,
+        isLoading: loadingResources,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage
+    } = useInfiniteQuery({
+        queryKey: ["topicResources", topicId],
+        queryFn: ({ pageParam = 1 }) => getTopicResources({ collegeSubjectUnitTopicId: topicId, page: pageParam, limit: 3 }),
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        initialPageParam: 1,
+        enabled: isOpen && !!topicId,
+    });
+
+    const savedResources = resourcesData?.pages.flatMap(page => page.resources) ?? [];
+
+    useEffect(() => {
+        if (inView && hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
     const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
     const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set());
     const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
     const [dragging, setDragging] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        if (!isOpen || !topicId) return;
-        let cancelled = false;
-
-        async function load() {
-            setLoadingResources(true);
-            try {
-                const data = await getTopicResources(topicId);
-                if (!cancelled) setSavedResources(data);
-            } catch (err: any) {
-                toast.error("Failed to load resources");
-            } finally {
-                if (!cancelled) setLoadingResources(false);
-            }
-        }
-
-        load();
-        return () => { cancelled = true; };
-    }, [isOpen, topicId]);
 
     useEffect(() => {
         if (!isOpen) setStagedFiles([]);
@@ -177,7 +190,7 @@ export function TopicPdfModal({
         const results: TopicResource[] = [];
         const failures: string[] = [];
 
-        for (const staged of stagedFiles) {
+        await Promise.all(stagedFiles.map(async (staged) => {
             try {
                 const resource = await uploadTopicResource({
                     file: staged.file,
@@ -187,9 +200,12 @@ export function TopicPdfModal({
             } catch (err: any) {
                 failures.push(`"${staged.previewName}": ${err?.message ?? "Upload failed"}`);
             }
+        }));
+
+        if (results.length > 0) {
+            queryClient.invalidateQueries({ queryKey: ["topicResources", topicId] });
         }
 
-        setSavedResources((prev) => [...prev, ...results]);
         setStagedFiles([]);
         setUploadingIds(new Set());
 
@@ -210,27 +226,30 @@ export function TopicPdfModal({
         }
     };
 
+    const deleteMutation = useMutation({
+        mutationFn: async (resourceId: number) => {
+            await deleteTopicResource({ resourceId });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["topicResources", topicId] });
+            toast.success("Resource deleted");
+        },
+        onError: () => {
+            toast.error("Failed to delete resource");
+        }
+    });
+
     const handleDeleteSaved = async (resource: TopicResource) => {
         setDeletingIds((prev) => new Set(prev).add(resource.collegeSubjectUnitTopicResourceId));
-        try {
-            await deleteTopicResource({
-                resourceId: resource.collegeSubjectUnitTopicResourceId,
-            });
-            setSavedResources((prev) =>
-                prev.filter(
-                    (r) => r.collegeSubjectUnitTopicResourceId !== resource.collegeSubjectUnitTopicResourceId
-                )
-            );
-            toast.success("Resource deleted");
-        } catch (err: any) {
-            toast.error("Failed to delete resource");
-        } finally {
-            setDeletingIds((prev) => {
-                const next = new Set(prev);
-                next.delete(resource.collegeSubjectUnitTopicResourceId);
-                return next;
-            });
-        }
+        deleteMutation.mutate(resource.collegeSubjectUnitTopicResourceId, {
+            onSettled: () => {
+                setDeletingIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(resource.collegeSubjectUnitTopicResourceId);
+                    return next;
+                });
+            }
+        });
     };
 
     if (!isOpen) return null;
@@ -339,7 +358,7 @@ export function TopicPdfModal({
                                     <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
                                         Uploaded ({savedResources.length})
                                     </p>
-                                    <ul className="flex flex-col gap-2 max-h-52 overflow-y-auto pr-1">
+                                    <ul className="flex flex-col gap-2 max-h-52 overflow-y-auto pr-1 custom-scrollbar">
                                         {savedResources.map((r) => {
                                             const isDeleting = deletingIds.has(r.collegeSubjectUnitTopicResourceId);
                                             return (
@@ -360,7 +379,7 @@ export function TopicPdfModal({
                                                     </div>
                                                     <div className="flex items-center gap-2 flex-shrink-0">
                                                         <a
-                                                            href={r.resourceUrl}
+                                                            href={getProxyUrl(r.resourceUrl)}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="text-gray-400 hover:text-[#7E5DFF] transition"
@@ -383,6 +402,11 @@ export function TopicPdfModal({
                                                 </li>
                                             );
                                         })}
+                                        {hasNextPage && (
+                                            <li ref={loadMoreRef} className="py-2 flex justify-center">
+                                                {isFetchingNextPage && <SpinnerGap size={24} className="animate-spin text-gray-400" />}
+                                            </li>
+                                        )}
                                     </ul>
                                 </div>
                             ) : null}

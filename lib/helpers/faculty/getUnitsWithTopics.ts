@@ -58,7 +58,7 @@ const buildDateRange = (startDate: string | null, endDate: string | null) => {
   return "";
 };
 
-const colorByUnitNumber = (n: number): UnitColor => {
+export const colorByUnitNumber = (n: number): UnitColor => {
   const mod = n % 3;
   if (mod === 1) return "purple";
   if (mod === 2) return "orange";

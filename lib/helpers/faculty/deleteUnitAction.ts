@@ -14,27 +14,27 @@ export async function deleteUnitAction(unitId: number) {
       .from("college_subject_units")
       .update({
         isActive: false,
-        deletedAt: now,
         updatedAt: now,
       })
       .eq("collegeSubjectUnitId", unitId);
 
     if (unitError) {
-      throw new Error(`Failed to delete unit: ${unitError.message}`);
+      console.error("DB Error deleting unit:", unitError);
+      throw new Error("Unable to delete unit at this time. Please try again.");
     }
 
     const { error: topicError } = await supabase
       .from("college_subject_unit_topics")
       .update({
         isActive: false,
-        deletedAt: now,
         updatedAt: now,
       })
       .eq("collegeSubjectUnitId", unitId)
       .eq("isActive", true);
 
     if (topicError) {
-      throw new Error(`Failed to delete associated topics: ${topicError.message}`);
+      console.error("DB Error deleting associated topics:", topicError);
+      throw new Error("Unable to delete associated topics. Please try again.");
     }
 
     return { success: true };

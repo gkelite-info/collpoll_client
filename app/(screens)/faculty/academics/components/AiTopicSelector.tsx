@@ -43,7 +43,7 @@ export function AiTopicSelector({
   }
 
   return (
-    <div className="mt-3 border border-[#BBF7D0] bg-[#F0FDF4] rounded-lg p-3 col-span-2">
+    <div className="mt-3 border border-[#BBF7D0] bg-[#F0FDF4] rounded-lg p-3 col-span-2 min-h-[160px]">
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs font-semibold text-[#43C17A]">
           AI Suggested Topics
