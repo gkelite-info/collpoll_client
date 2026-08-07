@@ -15,11 +15,17 @@ interface StaffRegistrationFieldsProps {
   selectedEducationId: number | null;
   setSelectedEducationId: (val: number | null) => void;
   isWellbeing: boolean;
+  isWellbeingExecutive: boolean;
   selectedWellbeingRegistrationType: string;
+  selectedWellbeingRegistrationTypes: string[];
+  setSelectedWellbeingRegistrationTypes: React.Dispatch<React.SetStateAction<string[]>>;
   isWellbeingHostel: boolean;
   isWellbeingCollege: boolean;
   selectedWellbeingEducationTypes: string[];
   setSelectedWellbeingEducationTypes: React.Dispatch<React.SetStateAction<string[]>>;
+  wellbeingCategoryOptions: string[];
+  selectedWellbeingCategories: string[];
+  setSelectedWellbeingCategories: React.Dispatch<React.SetStateAction<string[]>>;
   handleSingleSelect: (value: string, setList: React.Dispatch<React.SetStateAction<string[]>>) => void;
   toggleMultiSelectValue: (value: string, setList: React.Dispatch<React.SetStateAction<string[]>>) => void;
   adminEducationOptions: any[];
@@ -40,11 +46,17 @@ export const StaffRegistrationFields: React.FC<StaffRegistrationFieldsProps> = (
   selectedEducationId,
   setSelectedEducationId,
   isWellbeing,
+  isWellbeingExecutive,
   selectedWellbeingRegistrationType,
+  selectedWellbeingRegistrationTypes,
+  setSelectedWellbeingRegistrationTypes,
   isWellbeingHostel,
   isWellbeingCollege,
   selectedWellbeingEducationTypes,
   setSelectedWellbeingEducationTypes,
+  wellbeingCategoryOptions,
+  selectedWellbeingCategories,
+  setSelectedWellbeingCategories,
   handleSingleSelect,
   toggleMultiSelectValue,
   adminEducationOptions,
@@ -80,6 +92,31 @@ export const StaffRegistrationFields: React.FC<StaffRegistrationFieldsProps> = (
     setSelectedFinanceEducationTypes,
     user,
   ]);
+
+  const toggleWellbeingRegistrationType = (value: string) => {
+    setSelectedWellbeingRegistrationTypes((current) => {
+      const next = current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value];
+
+      if (!next.includes("College")) {
+        setSelectedWellbeingEducationTypes([]);
+      }
+      if (!next.includes("Hostel")) {
+        handleBasicChange({
+          target: { name: "hostelBlock", value: "" },
+        } as React.ChangeEvent<HTMLInputElement>);
+        handleBasicChange({
+          target: { name: "buildingNumber", value: "" },
+        } as React.ChangeEvent<HTMLInputElement>);
+        handleBasicChange({
+          target: { name: "hostelType", value: "" },
+        } as React.ChangeEvent<HTMLInputElement>);
+      }
+
+      return next;
+    });
+  };
 
   return (
     <>
@@ -137,26 +174,57 @@ export const StaffRegistrationFields: React.FC<StaffRegistrationFieldsProps> = (
 
       {isWellbeing && (
         <>
+          {isWellbeingExecutive && (
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-[#2D3748]">
+                Category <span className="text-red-600">*</span>
+              </label>
+              <CustomMultiSelect
+                options={wellbeingCategoryOptions}
+                selectedValues={selectedWellbeingCategories}
+                onChange={(val) =>
+                  toggleMultiSelectValue(val, setSelectedWellbeingCategories)
+                }
+                onRemove={(val) =>
+                  toggleMultiSelectValue(val, setSelectedWellbeingCategories)
+                }
+                placeholder="Select Category"
+                displaySelectedValues
+              />
+            </div>
+          )}
+
           <div className="space-y-1">
             <label className="text-xs font-bold text-[#2D3748]">
               Registration Type <span className="text-red-600">*</span>
             </label>
-            <select
-              value={selectedWellbeingRegistrationType}
-              onChange={(e) => {
-                const value = e.target.value;
-                handleBasicChange({ target: { name: "wellbeingRegistrationType", value } } as any);
-                if (value === "Hostel") {
-                  setSelectedWellbeingEducationTypes([]);
-                }
-              }}
-              className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer"
-            >
-              <option value="" disabled>Select Type</option>
-              <option value="Hostel">Hostel Manager</option>
-              <option value="College">College Manager</option>
-              <option value="Both">Both (Hostel & College)</option>
-            </select>
+            {isWellbeingExecutive ? (
+              <CustomMultiSelect
+                options={["Hostel", "College"]}
+                selectedValues={selectedWellbeingRegistrationTypes}
+                onChange={toggleWellbeingRegistrationType}
+                onRemove={toggleWellbeingRegistrationType}
+                placeholder="Select Registration Type"
+                displaySelectedValues
+              />
+            ) : (
+              <select
+                value={selectedWellbeingRegistrationType}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  handleBasicChange({ target: { name: "wellbeingRegistrationType", value } } as React.ChangeEvent<HTMLSelectElement>);
+                  if (value === "Hostel") {
+                    setSelectedWellbeingEducationTypes([]);
+                  }
+                }}
+                className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer"
+              >
+                <option value="" disabled>Select Type</option>
+                <option value="Hostel">Hostel Manager</option>
+                <option value="College">College Manager</option>
+                <option value="Both">Both (Hostel & College)</option>
+              </select>
+            )}
           </div>
 
           {isWellbeingHostel && (
@@ -200,8 +268,9 @@ export const StaffRegistrationFields: React.FC<StaffRegistrationFieldsProps> = (
                   className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer"
                 >
                   <option value="" disabled>Select Type</option>
-                  <option value="Boys">Boys Hostel</option>
-                  <option value="Girls">Girls Hostel</option>
+                  <option value="boyshostel">Boys Hostel</option>
+                  <option value="girlshostel">Girls Hostel</option>
+                  <option value="both">Both</option>
                 </select>
               </div>
             </div>

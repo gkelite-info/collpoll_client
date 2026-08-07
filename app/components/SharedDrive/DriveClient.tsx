@@ -117,6 +117,8 @@ const DriveClient = () => {
   const [recentViewed, setRecentViewed] = useState<RecentFile[]>([]);
   const [recentCurrentPage, setRecentCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState<SortOption>("latest");
+  const [fileSearch, setFileSearch] = useState("");
+  const [debouncedFileSearch, setDebouncedFileSearch] = useState("");
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
@@ -180,10 +182,20 @@ const DriveClient = () => {
   }, [collegeId]);
 
   useEffect(() => {
+    const debounceTimer = window.setTimeout(() => {
+      if (fileSearch === debouncedFileSearch) return;
+      setLoadingFiles(true);
+      setCurrentPage(1);
+      setDebouncedFileSearch(fileSearch);
+    }, 400);
+
+    return () => window.clearTimeout(debounceTimer);
+  }, [fileSearch, debouncedFileSearch]);
+
+  useEffect(() => {
     if (!collegeId || !userId) return;
 
     setLoadingFolders(true);
-    setLoadingFiles(true);
 
     Promise.all([
       fetchRootDriveFolders(
@@ -191,11 +203,11 @@ const DriveClient = () => {
         userId,
         folderCurrentPage,
         foldersPerPage,
+        sortBy,
       ),
       fetchFolderStats(collegeId, userId),
-      fetchRecentDriveFiles(collegeId, currentPage, rowsPerPage, userId),
     ])
-      .then(([folderResult, stats, filesResult]) => {
+      .then(([folderResult, stats]) => {
         const { data: folderData, totalCount: folderCount } = folderResult;
         setFolders(
           folderData.map((f: DriveFolderRow) => ({
@@ -207,37 +219,51 @@ const DriveClient = () => {
           })),
         );
         setTotalFolders(folderCount);
-
-        const { data, totalCount } = filesResult as {
-          data: DriveFileRow[];
-          totalCount: number;
-        };
-        setRecentFiles(data);
-        setTotalRecords(totalCount);
       })
       .catch(() => showToast(t("Failed to load data"), "error"))
-      .finally(() => {
-        setLoadingFolders(false);
-        setLoadingFiles(false);
-      });
+      .finally(() => setLoadingFolders(false));
   }, [
     collegeId,
     userId,
-    currentPage,
     folderCurrentPage,
     folderRefreshKey,
+    sortBy,
     t,
   ]);
+
+  useEffect(() => {
+    if (!collegeId || !userId) return;
+
+    let cancelled = false;
+
+    fetchRecentDriveFiles(
+      collegeId,
+      currentPage,
+      rowsPerPage,
+      userId,
+      sortBy,
+      debouncedFileSearch,
+    )
+      .then(({ data, totalCount }) => {
+        if (cancelled) return;
+        setRecentFiles(data as DriveFileRow[]);
+        setTotalRecords(totalCount);
+      })
+      .catch(() => {
+        if (!cancelled) showToast(t("Failed to load data"), "error");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingFiles(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [collegeId, userId, currentPage, sortBy, debouncedFileSearch, t]);
 
   const sortedFolders = [...folders].sort((a, b) => {
     if (sortBy === "name") return a.name.localeCompare(b.name);
     if (sortBy === "size") return b.filesCount - a.filesCount;
-    return 0;
-  });
-
-  const sortedFiles = [...recentFiles].sort((a, b) => {
-    if (sortBy === "name") return a.fileName.localeCompare(b.fileName);
-    if (sortBy === "size") return (b.fileSize ?? 0) - (a.fileSize ?? 0);
     return 0;
   });
 
@@ -499,7 +525,14 @@ const DriveClient = () => {
         })
         .catch(console.error);
 
-      fetchRecentDriveFiles(collegeId, currentPage, rowsPerPage, userId)
+      fetchRecentDriveFiles(
+        collegeId,
+        currentPage,
+        rowsPerPage,
+        userId,
+        sortBy,
+        debouncedFileSearch,
+      )
         .then(({ data, totalCount }) => {
           setRecentFiles(data as DriveFileRow[]);
           setTotalRecords(totalCount);
@@ -627,7 +660,13 @@ const DriveClient = () => {
 
         <ActionBar
           sortBy={sortBy}
-          onSort={(val) => setSortBy(val as SortOption)}
+          onSort={(val) => {
+            setLoadingFolders(true);
+            setLoadingFiles(true);
+            setSortBy(val as SortOption);
+            setFolderCurrentPage(1);
+            setCurrentPage(1);
+          }}
           onNew={() => setIsNewFolderOpen(true)}
           onFilters={() => console.log("Filters")}
           isVisible={false}
@@ -679,7 +718,10 @@ const DriveClient = () => {
                 currentPage={folderCurrentPage}
                 totalItems={totalFolders}
                 itemsPerPage={foldersPerPage}
-                onPageChange={setFolderCurrentPage}
+                onPageChange={(page) => {
+                  setLoadingFolders(true);
+                  setFolderCurrentPage(page);
+                }}
                 alwaysShow
               />
             </div>
@@ -738,40 +780,31 @@ const DriveClient = () => {
             {t("All Files")}
           </h2>
 
-          {loadingFiles ? (
-            <div className="mt-2 rounded-2xl bg-white overflow-hidden max-md:bg-transparent">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="relative overflow-hidden flex gap-4 px-4 py-3 border-b border-gray-100 max-md:bg-white max-md:rounded-xl max-md:mb-2 max-md:border-none"
-                >
-                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
-                  <div className="h-4 flex-[3] rounded bg-gray-200" />
-                  <div className="h-4 flex-1 rounded bg-gray-200 max-md:hidden" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              <FilesTable
-                files={sortedFiles}
-                onDelete={handleDeleteFile}
-                onDownload={handleDownloadFile}
-                isDeleting={isDeletingFile}
-              />
+          <FilesTable
+            files={recentFiles}
+            search={fileSearch}
+            onSearchChange={(value) => {
+              setFileSearch(value);
+            }}
+            onDelete={handleDeleteFile}
+            onDownload={handleDownloadFile}
+            isDeleting={isDeletingFile}
+            loading={loadingFiles}
+          />
 
-              {totalRecords > 0 && (
-                <div className="mt-4 mb-2">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalItems={totalRecords}
-                    itemsPerPage={rowsPerPage}
-                    onPageChange={setCurrentPage}
-                    alwaysShow
-                  />
-                </div>
-              )}
-            </>
+          {!loadingFiles && totalRecords > 0 && (
+            <div className="mt-4 mb-2">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalRecords}
+                itemsPerPage={rowsPerPage}
+                onPageChange={(page) => {
+                  setLoadingFiles(true);
+                  setCurrentPage(page);
+                }}
+                alwaysShow
+              />
+            </div>
           )}
         </section>
       </div>

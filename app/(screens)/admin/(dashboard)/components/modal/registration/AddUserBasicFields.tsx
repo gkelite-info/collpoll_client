@@ -7,7 +7,7 @@ interface AddUserBasicFieldsProps {
   handleBasicChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   isStudent: boolean;
   isParent: boolean;
-  isWellbeing: boolean;
+  isMobileRequired: boolean;
   showEmploymentFields: boolean;
   showDateOfJoiningField: boolean;
   showEmployeeIdField: boolean;
@@ -20,7 +20,7 @@ export const AddUserBasicFields: React.FC<AddUserBasicFieldsProps> = ({
   handleBasicChange,
   isStudent,
   isParent,
-  isWellbeing,
+  isMobileRequired,
   showEmploymentFields,
   showDateOfJoiningField,
   showEmployeeIdField,
@@ -77,7 +77,7 @@ export const AddUserBasicFields: React.FC<AddUserBasicFieldsProps> = ({
         </div>
         <div className="space-y-1">
           <label className="text-xs font-bold text-[#2D3748]">
-            Mobile {!isWellbeing && <span className="text-red-600">*</span>}
+            Mobile {isMobileRequired && <span className="text-red-600">*</span>}
           </label>
           <div className="flex gap-2">
             <input
@@ -114,6 +114,7 @@ export const AddUserBasicFields: React.FC<AddUserBasicFieldsProps> = ({
               "Accountant",
               "CollegeHr",
               "PlacementOfficer",
+              "WellbeingExecutive",
               "WellbeingManager",
               "Admin",
             ]}
@@ -121,6 +122,7 @@ export const AddUserBasicFields: React.FC<AddUserBasicFieldsProps> = ({
               FinanceManager: "Finance Manager",
               CollegeHr: "College HR",
               PlacementOfficer: "Placement Officer",
+              WellbeingExecutive: "Wellbeing Executive",
               WellbeingManager: "Wellbeing Manager",
             }}
             selectedValue={basicData.role}

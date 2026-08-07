@@ -51,6 +51,7 @@ export interface UserRegistrationPayload {
   isHR: boolean;
   isPlacement: boolean;
   isWellbeing: boolean;
+  isWellbeingExecutive: boolean;
   isWellbeingHostel: boolean;
   isWellbeingCollege: boolean;
   showFinanceFields: boolean;
@@ -58,6 +59,8 @@ export interface UserRegistrationPayload {
   selectedEducationId: number | null;
   selectedFinanceEducationTypes: string[];
   selectedWellbeingEducationTypes: string[];
+  selectedWellbeingCategories: string[];
+  wellbeingCategories: Array<{ categoryId: number; categoryName: string }>;
   selectedEntryType: string[];
   selectedSemester: string[];
   selectedSections: string[];
@@ -97,12 +100,15 @@ export const submitUserRegistration = async (
     isHR,
     isPlacement,
     isWellbeing,
+    isWellbeingExecutive,
     isWellbeingHostel,
     isWellbeingCollege,
     showFinanceFields,
     selectedEducationId,
     selectedFinanceEducationTypes,
     selectedWellbeingEducationTypes,
+    selectedWellbeingCategories,
+    wellbeingCategories,
     selectedEntryType,
     selectedSemester,
     selectedSections,
@@ -349,13 +355,22 @@ export const submitUserRegistration = async (
       await createWellbeing({
         userId: targetUserId,
         collegeId: basicData.collegeIntId,
-        roleType: "wellbeingManager",
+        roleType: isWellbeingExecutive
+          ? "wellbeingExecutive"
+          : "wellbeingManager",
         gender: basicData.gender,
         employeeId: basicData.identifierValue,
         dateOfJoining: normalizedDateOfJoining,
         createdBy: creatorAdminId,
         createdAt: timestamp,
         updatedAt: timestamp,
+        categoryIds: isWellbeingExecutive
+          ? wellbeingCategories
+              .filter((category) =>
+                selectedWellbeingCategories.includes(category.categoryName),
+              )
+              .map((category) => category.categoryId)
+          : undefined,
         collegeDetails: wellbeingCollegeDetails,
         hostelDetails: isWellbeingHostel
           ? {

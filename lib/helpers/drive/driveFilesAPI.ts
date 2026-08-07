@@ -1,6 +1,40 @@
 import { supabase } from "@/lib/supabaseClient";
 
 const BUCKET = "college-drive";
+export const DRIVE_STORAGE_LIMIT_BYTES = 5 * 1024 * 1024 * 1024;
+
+export async function fetchDriveStorageUsage(
+    collegeId: number,
+    userId: number,
+): Promise<number> {
+    const pageSize = 1000;
+    let from = 0;
+    let totalBytes = 0;
+
+    while (true) {
+        const { data, error } = await supabase
+            .from("drive_files")
+            .select("fileSize")
+            .eq("collegeId", collegeId)
+            .eq("uploadedBy", userId)
+            .is("deletedAt", null)
+            .range(from, from + pageSize - 1);
+
+        if (error) {
+            console.error("fetchDriveStorageUsage error:", error);
+            throw error;
+        }
+
+        const rows = data ?? [];
+        totalBytes += rows.reduce(
+            (sum, row) => sum + (row.fileSize ?? 0),
+            0,
+        );
+
+        if (rows.length < pageSize) return totalBytes;
+        from += pageSize;
+    }
+}
 
 export function normalizeDriveFileType(fileName: string, fileType?: string | null) {
     const extension = fileName.trim().split(".").pop()?.toLowerCase();
@@ -90,6 +124,8 @@ export async function fetchRecentDriveFiles(
     page: number = 1,
     limit: number = 10,
     userId?: number,
+    sortBy: "latest" | "name" | "size" = "latest",
+    searchQuery: string = "",
 ) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
@@ -105,11 +141,23 @@ export async function fetchRecentDriveFiles(
       fileUrl,
       uploadedBy,
       createdAt
-    `, { count: "exact" })
+        `, { count: "exact" })
         .eq("collegeId", collegeId)
-        .is("deletedAt", null)
-        .order("createdAt", { ascending: false })
-        .range(from, to);
+        .is("deletedAt", null);
+
+    if (searchQuery.trim()) {
+        query.ilike("fileName", `%${searchQuery.trim()}%`);
+    }
+
+    if (sortBy === "name") {
+        query.order("fileName", { ascending: true });
+    } else if (sortBy === "size") {
+        query.order("fileSize", { ascending: false, nullsFirst: false });
+    } else {
+        query.order("createdAt", { ascending: false });
+    }
+
+    query.range(from, to);
 
     const { data, error, count } = await (userId ? query.eq("uploadedBy", userId) : query);
 

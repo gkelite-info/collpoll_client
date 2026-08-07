@@ -11,6 +11,7 @@ import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { TeachingAssignment } from "@/app/(screens)/admin/(dashboard)/components/modal/faculty/facultyAssignmentTypes";
 import { createEmptyAssignment } from "@/lib/helpers/admin/registrations/faculty/facultyAssignmentHelpers";
 import toast from "react-hot-toast";
+import { fetchAllActiveWellbeingCategories } from "@/lib/helpers/wellbeingCategories/wellbeingCategoryAPI";
 
 const initialBasicData = {
   fullName: "",
@@ -73,6 +74,8 @@ export const useAddUserModalState = (isOpen: boolean, user: any, collegeEducatio
   const [selectedSessionType, setSelectedSessionType] = useState<string[]>([]);
   const [selectedFinanceEducationTypes, setSelectedFinanceEducationTypes] = useState<string[]>([]);
   const [selectedWellbeingEducationTypes, setSelectedWellbeingEducationTypes] = useState<string[]>([]);
+  const [selectedWellbeingCategories, setSelectedWellbeingCategories] = useState<string[]>([]);
+  const [selectedWellbeingRegistrationTypes, setSelectedWellbeingRegistrationTypes] = useState<string[]>([]);
 
   const { data: sessionOptions = [], isLoading: isLoadingSessions } = useQuery({
     queryKey: queryKeys.admin.sessionOptions(contextCollegeId!),
@@ -100,6 +103,26 @@ export const useAddUserModalState = (isOpen: boolean, user: any, collegeEducatio
     enabled: isOpen && !!contextCollegeId,
   });
 
+  const {
+    data: wellbeingCategories = [],
+    isLoading: isLoadingWellbeingCategories,
+    error: wellbeingCategoriesError,
+  } = useQuery({
+    queryKey: ["admin", "wellbeing-categories", contextCollegeId],
+    queryFn: () => fetchAllActiveWellbeingCategories(contextCollegeId!),
+    enabled: isOpen && !!contextCollegeId,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (!wellbeingCategoriesError) return;
+    console.error(
+      "Failed to load wellbeing categories in Add User:",
+      wellbeingCategoriesError,
+    );
+    toast.error("Failed to load wellbeing categories. Please try again.");
+  }, [wellbeingCategoriesError]);
+
   const dbData = dbDataRaw || {
     educations: [],
     branches: [],
@@ -109,7 +132,11 @@ export const useAddUserModalState = (isOpen: boolean, user: any, collegeEducatio
     semesters: [],
   };
 
-  const isFetchingData = isLoadingSessions || isLoadingEducations || isLoadingDbData;
+  const isFetchingData =
+    isLoadingSessions ||
+    isLoadingEducations ||
+    isLoadingDbData ||
+    isLoadingWellbeingCategories;
 
   const [assignments, setAssignments] = useState<TeachingAssignment[]>([
     createEmptyAssignment(),
@@ -137,6 +164,8 @@ export const useAddUserModalState = (isOpen: boolean, user: any, collegeEducatio
     setSelectedEntryType([]);
     setSelectedFinanceEducationTypes([]);
     setSelectedWellbeingEducationTypes([]);
+    setSelectedWellbeingCategories([]);
+    setSelectedWellbeingRegistrationTypes([]);
     setIsSuccess(false);
   };
 
@@ -333,6 +362,9 @@ export const useAddUserModalState = (isOpen: boolean, user: any, collegeEducatio
       setSelectedSemester([]);
       setSelectedEntryType([]);
       setSelectedFinanceEducationTypes([]);
+      setSelectedWellbeingEducationTypes([]);
+      setSelectedWellbeingCategories([]);
+      setSelectedWellbeingRegistrationTypes([]);
       setBasicData((p: any) => ({
         ...p,
         wellbeingRegistrationType: "",
@@ -390,6 +422,11 @@ export const useAddUserModalState = (isOpen: boolean, user: any, collegeEducatio
     setSelectedFinanceEducationTypes,
     selectedWellbeingEducationTypes,
     setSelectedWellbeingEducationTypes,
+    selectedWellbeingCategories,
+    setSelectedWellbeingCategories,
+    wellbeingCategories,
+    selectedWellbeingRegistrationTypes,
+    setSelectedWellbeingRegistrationTypes,
     sessionOptions,
     adminEducationOptions,
     assignments,

@@ -38,6 +38,7 @@ export type CreateWellbeingPayload = {
   createdBy: number;
   createdAt: string;
   updatedAt: string;
+  categoryIds?: number[];
   collegeDetails?: CreateWellbeingCollegeDetail[];
   hostelDetails?: {
     block: string;
@@ -154,6 +155,27 @@ export const createWellbeing = async (
     createdAt: payload.createdAt,
     updatedAt: payload.updatedAt,
   });
+
+  if (payload.categoryIds?.length) {
+    const { error } = await supabase
+      .from("wellbeing_assigned_categories")
+      .upsert(
+        Array.from(new Set(payload.categoryIds)).map((categoryId) => ({
+          wellBeingId,
+          categoryId,
+          isActive: true,
+          is_deleted: false,
+          deletedAt: null,
+          createdAt: payload.createdAt,
+          updatedAt: payload.updatedAt,
+        })),
+        { onConflict: "wellBeingId,categoryId" },
+      );
+
+    if (error) {
+      throw new Error(formatSupabaseError("assignWellbeingCategories", error));
+    }
+  }
 
   if (hasCollege) {
     const uniqueRows = Array.from(

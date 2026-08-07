@@ -259,6 +259,7 @@ export async function fetchAllActiveWellbeingCategories(
     .eq("isActive", true)
     .eq("is_deleted", false);
 
+
   if (error) {
     console.error("fetchAllActiveWellbeingCategories error:", error);
     throw error;
