@@ -50,7 +50,10 @@ const AddUserModal: React.FC<{
     selectedSemester, setSelectedSemester, selectedEntryType, setSelectedEntryType,
     selectedSessionType, setSelectedSessionType, selectedFinanceEducationTypes,
     setSelectedFinanceEducationTypes, selectedWellbeingEducationTypes,
-    setSelectedWellbeingEducationTypes, sessionOptions,
+    setSelectedWellbeingEducationTypes, selectedWellbeingCategories,
+    setSelectedWellbeingCategories, wellbeingCategories,
+    selectedWellbeingRegistrationTypes, setSelectedWellbeingRegistrationTypes,
+    sessionOptions,
     adminEducationOptions, assignments, setAssignments, handleBasicChange,
     handleSingleSelect, toggleMultiSelectValue, resetForm, studentSelectedEducation,
     studentAvailableBranches, studentSelectedBranch, studentAvailableYears,
@@ -63,6 +66,7 @@ const AddUserModal: React.FC<{
       "Finance Manager": "FinanceManager",
       "Placement Officer": "PlacementOfficer",
       "Wellbeing Manager": "WellbeingManager",
+      "Wellbeing Executive": "WellbeingExecutive",
       "College HR": "CollegeHr",
     } as Record<string, string>)[basicData.role] ?? basicData.role;
   const isAdmin = canonicalRole === "Admin";
@@ -75,12 +79,23 @@ const AddUserModal: React.FC<{
   const showFinanceFields = isFinance || isFinanceManager || isAccountant;
   const isHR = canonicalRole === "CollegeHr";
   const isPlacement = canonicalRole === "PlacementOfficer";
-  const isWellbeing = canonicalRole === "WellbeingManager";
+  const isWellbeingExecutive = canonicalRole === "WellbeingExecutive";
+  const isWellbeingManager = canonicalRole === "WellbeingManager";
+  const isWellbeing = isWellbeingManager || isWellbeingExecutive;
   const selectedWellbeingRegistrationType = basicData.wellbeingRegistrationType || "";
-  const isWellbeingHostel = isWellbeing && (selectedWellbeingRegistrationType === "Hostel" || selectedWellbeingRegistrationType === "Both");
-  const isWellbeingCollege = isWellbeing && (selectedWellbeingRegistrationType === "College" || selectedWellbeingRegistrationType === "Both");
+  const isWellbeingHostel = isWellbeing && (
+    isWellbeingExecutive
+      ? selectedWellbeingRegistrationTypes.includes("Hostel")
+      : selectedWellbeingRegistrationType === "Hostel" || selectedWellbeingRegistrationType === "Both"
+  );
+  const isWellbeingCollege = isWellbeing && (
+    isWellbeingExecutive
+      ? selectedWellbeingRegistrationTypes.includes("College")
+      : selectedWellbeingRegistrationType === "College" || selectedWellbeingRegistrationType === "Both"
+  );
 
-  const showEmploymentFields = !isStudent && !isParent && !isWellbeing && basicData.role !== "";
+  const showEmploymentFields =
+    !isStudent && !isParent && !isWellbeingManager && basicData.role !== "";
   const showDateOfJoiningField = !isStudent && !isParent && basicData.role !== "";
   const showRollNoField = isStudent;
   const showEmployeeIdField = !isStudent && !isParent && basicData.role !== "";
@@ -97,13 +112,14 @@ const AddUserModal: React.FC<{
     if (!basicData.role) return toast.error("Role is required.");
 
     const hasMobileNumber = Boolean(basicData.mobileNumber?.trim());
-    if (!isWellbeing && !basicData.mobileCode) {
+    const isMobileRequired = !isWellbeingManager;
+    if (isMobileRequired && !basicData.mobileCode) {
       return toast.error("Country code is required.");
     }
-    if ((hasMobileNumber || !isWellbeing) && !/^\+[0-9]+$/.test(basicData.mobileCode)) {
+    if ((hasMobileNumber || isMobileRequired) && !/^\+[0-9]+$/.test(basicData.mobileCode)) {
       return toast.error("Invalid country code format.");
     }
-    if (!isWellbeing && !basicData.mobileNumber) {
+    if (isMobileRequired && !basicData.mobileNumber) {
       return toast.error("Mobile number is required.");
     }
     if (hasMobileNumber && !/^[0-9]{10}$/.test(basicData.mobileNumber)) {
@@ -117,7 +133,24 @@ const AddUserModal: React.FC<{
 
     if (isWellbeing) {
       if (!basicData.dateOfJoining) return toast.error("Date of Joining is required.");
-      if (!selectedWellbeingRegistrationType) return toast.error("Registration Type is required.");
+      if (
+        isWellbeingExecutive &&
+        (basicData.professionalExperienceYears === undefined ||
+          basicData.professionalExperienceYears === null ||
+          basicData.professionalExperienceYears === "")
+      ) {
+        return toast.error("Experience (Years) is required.");
+      }
+      if (isWellbeingExecutive && !selectedWellbeingCategories.length) {
+        return toast.error("Category is required.");
+      }
+      if (
+        isWellbeingExecutive
+          ? !selectedWellbeingRegistrationTypes.length
+          : !selectedWellbeingRegistrationType
+      ) {
+        return toast.error("Registration Type is required.");
+      }
       if (isWellbeingHostel) {
         if (!basicData.hostelBlock) return toast.error("Block is required.");
         if (!basicData.buildingNumber) return toast.error("Building Number is required.");
@@ -169,8 +202,8 @@ const AddUserModal: React.FC<{
     }
 
     await submitUserRegistration({
-      basicData: { ...basicData, role: canonicalRole }, user, isAdmin, isFaculty, isStudent, isParent, isFinance, isFinanceManager, isAccountant, isHR, isPlacement, isWellbeing, isWellbeingHostel, isWellbeingCollege, showFinanceFields,
-      selectedEducationId, selectedFinanceEducationTypes, selectedWellbeingEducationTypes, selectedEntryType, selectedSemester, selectedSections, selectedSessionId,
+      basicData: { ...basicData, role: canonicalRole }, user, isAdmin, isFaculty, isStudent, isParent, isFinance, isFinanceManager, isAccountant, isHR, isPlacement, isWellbeing, isWellbeingExecutive, isWellbeingHostel, isWellbeingCollege, showFinanceFields,
+      selectedEducationId, selectedFinanceEducationTypes, selectedWellbeingEducationTypes, selectedWellbeingCategories, wellbeingCategories, selectedEntryType, selectedSemester, selectedSections, selectedSessionId,
       assignments, studentSelectedEducation, studentSelectedBranch, studentSelectedYear, studentAvailableSemesters, studentAvailableSections, isSelectedSchool, dbData,
       creatorAdminId, setLoading, setIsSuccess, resetForm, onClose
     });
@@ -199,7 +232,7 @@ const AddUserModal: React.FC<{
               handleBasicChange={handleBasicChange}
               isStudent={isStudent}
               isParent={isParent}
-              isWellbeing={isWellbeing}
+              isMobileRequired={!isWellbeingManager}
               showEmploymentFields={showEmploymentFields}
               showDateOfJoiningField={showDateOfJoiningField}
               showEmployeeIdField={showEmployeeIdField}
@@ -253,11 +286,17 @@ const AddUserModal: React.FC<{
               selectedEducationId={selectedEducationId}
               setSelectedEducationId={setSelectedEducationId}
               isWellbeing={isWellbeing}
+              isWellbeingExecutive={isWellbeingExecutive}
               selectedWellbeingRegistrationType={selectedWellbeingRegistrationType}
+              selectedWellbeingRegistrationTypes={selectedWellbeingRegistrationTypes}
+              setSelectedWellbeingRegistrationTypes={setSelectedWellbeingRegistrationTypes}
               isWellbeingHostel={isWellbeingHostel}
               isWellbeingCollege={isWellbeingCollege}
               selectedWellbeingEducationTypes={selectedWellbeingEducationTypes}
               setSelectedWellbeingEducationTypes={setSelectedWellbeingEducationTypes}
+              wellbeingCategoryOptions={wellbeingCategories.map((category) => category.categoryName)}
+              selectedWellbeingCategories={selectedWellbeingCategories}
+              setSelectedWellbeingCategories={setSelectedWellbeingCategories}
               handleSingleSelect={handleSingleSelect}
               toggleMultiSelectValue={toggleMultiSelectValue}
               adminEducationOptions={adminEducationOptions}

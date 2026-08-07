@@ -39,6 +39,7 @@ interface MultiSelectProps {
   placeholderColorActive?: string;
   gap?: string;
   isProcessing?: boolean;
+  displaySelectedValues?: boolean;
 }
 
 export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
@@ -56,6 +57,7 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
   placeholderColorActive = "text-gray-400",
   gap = "gap-2",
   isProcessing = false,
+  displaySelectedValues = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -117,9 +119,11 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
             }`}
           >
             {selectedValues.length > 0
-              ? `${selectedValues.length} ${label ?? ""}${
-                  selectedValues.length > 1 ? "s" : ""
-                } selected`
+              ? displaySelectedValues
+                ? selectedValues.join(", ")
+                : `${selectedValues.length} ${label ?? ""}${
+                    selectedValues.length > 1 ? "s" : ""
+                  } selected`
               : placeholder}
           </span>
 

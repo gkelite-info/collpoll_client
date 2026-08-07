@@ -20,6 +20,7 @@ export async function fetchRootDriveFolders(
   userId?: number,
   page: number = 1,
   limit: number = 5,
+  sortBy: "latest" | "name" | "size" = "latest",
 ) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -42,9 +43,15 @@ export async function fetchRootDriveFolders(
     )
     .eq("collegeId", collegeId)
     .is("parentFolderId", null)
-    .is("deletedAt", null)
-    .order("folderName", { ascending: true })
-    .range(from, to);
+    .is("deletedAt", null);
+
+  if (sortBy === "name") {
+    query.order("folderName", { ascending: true });
+  } else {
+    query.order("createdAt", { ascending: false });
+  }
+
+  query.range(from, to);
 
   const { data, error, count } = await (userId
     ? query.eq("createdBy", userId)

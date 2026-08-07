@@ -18,6 +18,8 @@ import {
   normalizeDriveFileType,
   deleteDriveFile,
   DriveFileRow,
+  DRIVE_STORAGE_LIMIT_BYTES,
+  fetchDriveStorageUsage,
 } from "@/lib/helpers/drive/driveFilesAPI";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
@@ -45,6 +47,8 @@ type UploadItem = {
 function formatSize(bytes: number | null): string {
   if (!bytes || bytes === 0) return "0 KB";
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes >= 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
@@ -159,8 +163,33 @@ export default function FolderFilesModal({
     droppedFiles?: File[],
   ) => {
     const selected = droppedFiles ?? Array.from(e?.target.files ?? []);
-    if (!selected.length || !driveFolderId || !collegeId || !userId) return;
+    if (
+      !selected.length ||
+      !driveFolderId ||
+      !collegeId ||
+      !userId ||
+      uploading
+    )
+      return;
     if (uploadInputRef.current) uploadInputRef.current.value = "";
+    setUploading(true);
+
+    const selectedBytes = selected.reduce((sum, file) => sum + file.size, 0);
+    try {
+      const usedBytes = await fetchDriveStorageUsage(collegeId, userId);
+      if (usedBytes + selectedBytes > DRIVE_STORAGE_LIMIT_BYTES) {
+        showToast(
+          `Storage limit exceeded. You are using ${formatSize(usedBytes)} of 5 GB.`,
+          "error",
+        );
+        setUploading(false);
+        return;
+      }
+    } catch {
+      showToast("Unable to verify available storage. Please try again.", "error");
+      setUploading(false);
+      return;
+    }
 
     const items: UploadItem[] = selected.map((f) => ({
       file: f,
@@ -168,8 +197,6 @@ export default function FolderFilesModal({
       status: "uploading",
     }));
     setUploadItems(items);
-    setUploading(true);
-
     const uploadResults = await Promise.all(
       selected.map(async (file, i) => {
         try {
@@ -361,6 +388,17 @@ export default function FolderFilesModal({
 
     setUploading(true);
     try {
+      const usedBytes = await fetchDriveStorageUsage(collegeId, userId);
+      const usageAfterReplace =
+        usedBytes - (existingFile.fileSize ?? 0) + newFile.size;
+      if (usageAfterReplace > DRIVE_STORAGE_LIMIT_BYTES) {
+        showToast(
+          `Storage limit exceeded. You are using ${formatSize(usedBytes)} of 5 GB.`,
+          "error",
+        );
+        return;
+      }
+
       const oldPath = `${collegeId}/${driveFolderId}/${existingFile.fileName.trim()}`;
       await supabase.storage.from("college-drive").remove([oldPath]);
 
