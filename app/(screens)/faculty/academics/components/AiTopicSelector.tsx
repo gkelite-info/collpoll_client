@@ -38,7 +38,7 @@ export function AiTopicSelector({
   filteredAvailableTopics,
   isInvalidUnit,
 }: AiTopicSelectorProps) {
-  if (!formData.unitName || (!availableTopics.length && !selectedTopics.length && !isLoadingTopics && !topicsError)) {
+  if (!formData.unitName) {
     return null;
   }
 
@@ -70,7 +70,7 @@ export function AiTopicSelector({
                     setSelectedTopics([]);
                   }
                 }}
-                className="accent-[#43C17A]"
+                className="accent-[#43C17A] cursor-pointer"
               />
               Select All
             </label>
@@ -100,23 +100,21 @@ export function AiTopicSelector({
       )}
 
       {!isLoadingTopics && topicsError && (
-        <div className="flex items-start gap-2 mt-1 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-600">
-          <span className="shrink-0">⚠️</span>
-          <span>{topicsError}</span>
+        <div className="flex items-start gap-2 mt-1 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+          <span className="shrink-0">💡</span>
+          <span>AI couldn't suggest topics for this unit. You can type and add topics manually using the search box above.</span>
         </div>
       )}
 
-      {showSearch && !isInvalidUnit && (
-        <input
-          type="text"
-          placeholder="Search topics..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full rounded-lg px-3 py-2 text-xs border border-[#BBF7D0] bg-[#ECFDF5] text-[#065F46] placeholder:text-[#86EFAC] focus:ring-2 focus:ring-[#43C17A] outline-none"
-        />
-      )}
+      <input
+        type="text"
+        placeholder="Search or add custom topic..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="w-full rounded-lg px-3 py-2 text-xs border border-[#BBF7D0] bg-white text-[#065F46] placeholder:text-gray-400 focus:ring-2 focus:ring-[#43C17A] outline-none mb-2"
+      />
 
-      {searchQuery && searchState.type === "new" && !isInvalidUnit && (
+      {searchQuery && searchState.type === "new" && (
         <button
           type="button"
           onClick={() => {
@@ -128,7 +126,7 @@ export function AiTopicSelector({
             setSearchQuery("");
             setSelectAll(false);
           }}
-          className="mt-2 text-xs font-semibold text-[#43C17A] flex items-center gap-1"
+          className="mt-2 text-xs font-semibold text-[#43C17A] flex items-center gap-1 cursor-pointer"
         >
           + Add "{searchQuery}"
         </button>

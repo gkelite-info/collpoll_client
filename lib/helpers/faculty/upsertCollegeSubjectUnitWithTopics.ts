@@ -76,29 +76,53 @@ export async function upsertCollegeSubjectUnitWithTopics(
   const now = new Date().toISOString();
 
   /* -------------------------------
-   * 1️⃣ UPSERT SUBJECT UNIT
+   * 1️⃣ CHECK FOR DUPLICATES
+   * ------------------------------- */
+
+  const { data: existingUnits, error: checkError } = await supabaseAdmin
+    .from("college_subject_units")
+    .select("unitTitle, unitNumber")
+    .eq("collegeId", collegeId)
+    .eq("collegeSubjectId", collegeSubjectId)
+    .eq("collegeSectionsId", collegeSectionsId)
+    .eq("isActive", true);
+
+  if (checkError) {
+    console.error("❌ Failed to check existing units:", checkError);
+    throw new Error("Failed to validate unit uniqueness.");
+  }
+
+  if (existingUnits && existingUnits.length > 0) {
+    const duplicateName = existingUnits.find(u => u.unitTitle.toLowerCase().trim() === unitTitle.toLowerCase().trim());
+    if (duplicateName) {
+      throw new Error(`Unit "${unitTitle}" is already added for a selected section!`);
+    }
+
+    const duplicateNum = existingUnits.find(u => Number(u.unitNumber) === Number(unitNumber));
+    if (duplicateNum) {
+      throw new Error(`Unit ${unitNumber} is already added for a selected section!`);
+    }
+  }
+
+  /* -------------------------------
+   * 2️⃣ INSERT SUBJECT UNIT
    * ------------------------------- */
 
   const { data: unit, error: unitError } = await supabaseAdmin
     .from("college_subject_units")
-    .upsert(
-      {
-        collegeId,
-        collegeSubjectId,
-        unitNumber,
-        unitTitle,
-        startDate: startISO,
-        endDate: endISO,
-        createdBy,
-        collegeSectionsId,
-        createdAt: now,
-        updatedAt: now,
-        isActive: true,
-      },
-      {
-        onConflict: "collegeId,collegeSubjectId,unitNumber,collegeSectionsId",
-      }
-    )
+    .insert({
+      collegeId,
+      collegeSubjectId,
+      unitNumber,
+      unitTitle,
+      startDate: startISO,
+      endDate: endISO,
+      createdBy,
+      collegeSectionsId,
+      createdAt: now,
+      updatedAt: now,
+      isActive: true,
+    })
     .select()
     .single();
 
@@ -138,9 +162,7 @@ export async function upsertCollegeSubjectUnitWithTopics(
 
     const { error: topicError } = await supabaseAdmin
       .from("college_subject_unit_topics")
-      .upsert(topicRows, {
-        onConflict: "collegeSubjectUnitId,topicTitle",
-      });
+      .insert(topicRows);
 
     if (topicError) {
       console.error("❌ Topic upsert failed:", topicError);

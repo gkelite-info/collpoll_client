@@ -42,7 +42,7 @@ type FacultyAcademicForm = {
   collegeSubjectId?: number;
   sectionIds: number[];
   unitName: string;
-  unitNumber: number;
+  unitNumber: number | "";
   startDate: string;
   endDate: string;
   topics: string[];
@@ -65,7 +65,7 @@ export default function AddNewCardModal({
     subjectId: undefined,
     sectionIds: [],
     unitName: "",
-    unitNumber: 1,
+    unitNumber: "",
     startDate: "",
     endDate: "",
     topics: [],
@@ -469,7 +469,7 @@ export default function AddNewCardModal({
                 {formData.sectionIds.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {formData.sectionIds.map((id) => {
-                      const section = sections.find((s) => s.collegeSectionsId === id);
+                      const section = sections.find((s:any) => s.collegeSectionsId === id);
                       if (!section) return null;
                       return (
                         <div
@@ -507,7 +507,7 @@ export default function AddNewCardModal({
                             : [...prev.sectionIds, value],
                         }));
                       }}
-                      options={sections.map((s) => ({ value: s.collegeSectionsId, label: s.collegeSections }))}
+                      options={sections.map((s: any) => ({ value: s.collegeSectionsId, label: s.collegeSections }))}
                       placeholder="Select"
                       className="!border-none !ring-0 !shadow-none !bg-transparent !py-0 !pl-1 w-full"
                       isMultiSelect={true}
@@ -544,14 +544,14 @@ export default function AddNewCardModal({
               <input
                 type="text"
                 inputMode="numeric"
-                min={1}
-                value={formData.unitNumber || ""}
-                onChange={(e) =>
+                value={formData.unitNumber}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, "");
                   setFormData((prev) => ({
                     ...prev,
-                    unitNumber: Number(e.target.value),
-                  }))
-                }
+                    unitNumber: val === "" ? "" : Number(val),
+                  }));
+                }}
                 placeholder="Enter unit number"
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#43C17A] focus:outline-none"
               />

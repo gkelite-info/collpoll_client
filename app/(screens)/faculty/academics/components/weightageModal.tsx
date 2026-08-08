@@ -2,14 +2,16 @@
 import { FacultySectionRow, fetchFacultySections } from "@/lib/helpers/faculty/facultysectionsAPI";
 import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
 import { fetchExistingFacultyWeightageConfig, fetchFacultyWeightageConfigs, saveFacultyWeightageConfig } from "@/lib/helpers/subjectWeightage/weightageConfig";
-import { fetchFacultyWeightageItems, saveFacultyWeightageItem } from "@/lib/helpers/subjectWeightage/weightageItems";
+import { fetchFacultyWeightageItems, saveFacultyWeightageItem, deleteFacultyWeightageItem } from "@/lib/helpers/subjectWeightage/weightageItems";
 import { CardProps } from "@/lib/types/faculty";
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { FaPlusCircle } from "react-icons/fa";
 import { FaTrash, FaCircleCheck, FaCircleExclamation } from "react-icons/fa6";
 import { FaChevronDown } from "react-icons/fa6";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
 function CustomSelect({ value, onChange, options, placeholder, disabled = false }: any) {
     const [isOpen, setIsOpen] = useState(false);
@@ -78,13 +80,12 @@ interface AddWeightageModalProps {
 }
 
 export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, initialSubjectId, initialSectionId, preselectedSubject, cardFaculties = [], }: AddWeightageModalProps) {
-    const [subjects, setSubjects] = useState<CardProps[]>([]);
     const [selectedSubject, setSelectedSubject] = useState<CardProps | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [facultySections, setFacultySections] = useState<FacultySectionRow[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
     const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
     const [faculties, setFaculties] = useState<any[]>([]);
     const [selectedFacultyId, setSelectedFacultyId] = useState<number | null>(null);
+    const [itemToDelete, setItemToDelete] = useState<{ id: string, label: string, isCustom: boolean } | null>(null);
 
     const handleFacultyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const id = e.target.value ? Number(e.target.value) : null;
@@ -92,6 +93,38 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
     };
 
     const isSchool = isSchoolEducation(facultyCtx?.faculty_edu_type);
+
+    const effectiveId = selectedFacultyId || facultyCtx?.facultyId || facultyCtx?.adminId;
+    const selectedFacultyData = cardFaculties.find(f => f.facultyId === selectedFacultyId);
+    const effectiveSubjectIds = selectedFacultyData?.subjectIds || facultyCtx.subjectIds || [];
+    const effectiveSectionIds = selectedFacultyData?.sectionIds || facultyCtx.sectionIds || [];
+
+    const { data: initialData, isLoading } = useQuery({
+        queryKey: ["weightageInitialData", effectiveId, effectiveSubjectIds, effectiveSectionIds, preselectedSubject?.subjectId],
+        queryFn: async () => {
+            if (!effectiveId) return { subjectsData: [], sectionsData: [] };
+
+            const [subjectsData, sectionsData] = await Promise.all([
+                getFacultySubjects({
+                    collegeId: Number(facultyCtx.collegeId),
+                    collegeEducationId: Number(facultyCtx.collegeEducationId),
+                    collegeBranchId: Number(facultyCtx.collegeBranchId),
+                    academicYearIds: facultyCtx.academicYearIds || [],
+                    subjectIds: preselectedSubject?.subjectId
+                        ? [Number(preselectedSubject.subjectId)]
+                        : effectiveSubjectIds,
+                    sectionIds: effectiveSectionIds,
+                }),
+                fetchFacultySections(effectiveId)
+            ]);
+            return { subjectsData, sectionsData };
+        },
+        enabled: isOpen && !!effectiveId,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const subjects = initialData?.subjectsData || [];
+    const facultySections = initialData?.sectionsData || [];
 
     const availableSections = useMemo(() => {
         if (!selectedSubject || facultySections.length === 0) {
@@ -137,10 +170,10 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
         }
 
         return result;
-    }, [selectedSubject, facultySections, isSchool, role, initialSectionId]);
+    }, [selectedSubject, facultySections, isSchool, role, initialSectionId, facultyCtx?.sectionName]);
 
     useEffect(() => {
-        if (!loading && subjects.length > 0) {
+        if (!isLoading && subjects.length > 0 && !selectedSubject) {
             const targetSub = initialSubjectId
                 ? subjects.find(s => s.collegeSubjectId === initialSubjectId)
                 : subjects[0];
@@ -149,7 +182,7 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
                 setSelectedSubject(targetSub);
             }
         }
-    }, [loading, subjects, initialSubjectId]);
+    }, [isLoading, subjects, initialSubjectId, selectedSubject, preselectedSubject]);
 
     useEffect(() => {
         if (availableSections.length > 0) {
@@ -174,78 +207,7 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
 
     const [availableOptions, setAvailableOptions] = useState(["Lab", "Assignments", "Exams"]);
 
-    useEffect(() => {
-        async function loadInitialData() {
-            if (!isOpen) return;
-
-            const effectiveId = selectedFacultyId || facultyCtx?.facultyId || facultyCtx?.adminId;
-
-            if (!effectiveId) {
-                console.warn("loadInitialData aborted: No valid ID found in faculty", facultyCtx);
-                return;
-            }
-
-            try {
-                setLoading(true);
-
-                const [subjectsData, sectionsData] = await Promise.all([
-                    getFacultySubjects({
-                        collegeId: Number(facultyCtx.collegeId),
-                        collegeEducationId: Number(facultyCtx.collegeEducationId),
-                        collegeBranchId: Number(facultyCtx.collegeBranchId),
-                        academicYearIds: facultyCtx.academicYearIds || [],
-                        subjectIds: preselectedSubject?.subjectId
-                            ? [Number(preselectedSubject.subjectId)]
-                            : (facultyCtx.subjectIds || []),
-                        sectionIds: facultyCtx.sectionIds || [],
-                    }),
-                    fetchFacultySections(effectiveId)
-                ]);
-
-                setSubjects(subjectsData);
-                setFacultySections(sectionsData);
-
-                if (preselectedSubject) {
-                    const matched = subjectsData.find(
-                        s => s.collegeSubjectId === preselectedSubject.subjectId
-                    );
-                    setSelectedSubject(matched || subjectsData[0]);
-                } else {
-                    const preselected = initialSubjectId
-                        ? subjectsData.find(s => s.collegeSubjectId === initialSubjectId)
-                        : subjectsData[0];
-                    setSelectedSubject(preselected || subjectsData[0]);
-                }
-
-                if (initialSectionId) {
-                    setSelectedSectionId(initialSectionId);
-                }
-            } catch (err) {
-                toast.error("Failed to load");
-            } finally {
-                setLoading(false);
-            }
-        }
-        loadInitialData();
-    }, [isOpen, facultyCtx, preselectedSubject, selectedFacultyId, initialSubjectId, initialSectionId]);
-
-    useEffect(() => {
-        async function updateSections() {
-            const targetFacultyId = selectedFacultyId || facultyCtx?.facultyId || facultyCtx?.adminId;
-            const targetSubjectId = selectedSubject?.collegeSubjectId;
-
-            if (targetFacultyId && targetSubjectId) {
-                try {
-                    const sectionsData = await fetchFacultySections(targetFacultyId, isSchool ? undefined : targetSubjectId);
-                    setFacultySections(sectionsData);
-                } catch (err) {
-                    toast.error("Failed to refresh sections");
-                }
-            }
-        }
-
-        updateSections();
-    }, [selectedFacultyId, selectedSubject?.collegeSubjectId, facultyCtx, isSchool]);
+    // Existing loadExistingWeightages useEffect remains here...
 
 
     useEffect(() => {
@@ -341,17 +303,26 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
 
     useEffect(() => {
         if (!isOpen) {
-            setFacultySections([]);
             setSelectedSectionId(null);
         }
     }, [isOpen]);
 
     const handleSave = async () => {
-        if (!isTotalValid || !selectedSubject || !selectedSectionId) return;
+        if (!selectedSubject) {
+            toast.error("Please select a subject to add weightage.");
+            return;
+        }
+        if (!selectedSectionId) {
+            toast.error("Please select a section to add weightage.");
+            return;
+        }
+        if (!isTotalValid) {
+            toast.error(`Weightage distribution must equal exactly 100%. (Currently ${totalPercentage}%)`);
+            return;
+        }
 
-        setLoading(true);
+        setIsSaving(true);
         try {
-
             const targetFacultyId = selectedFacultyId || facultyCtx?.facultyId || facultyCtx?.adminId;
 
             if (!targetFacultyId) {
@@ -387,6 +358,18 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
             }
             const targetConfigId = configResponse.facultyWeightageConfigId;
 
+            // Step 1: Remove items from DB that were deleted in the UI
+            if (configId) {
+                const existingItems = await fetchFacultyWeightageItems(configId);
+                const activeIds = activeWeights.map((w: any) => w.facultyWeightageItemId).filter(Boolean);
+                const itemsToDelete = existingItems.filter(item => !activeIds.includes(item.facultyWeightageItemId));
+                
+                if (itemsToDelete.length > 0) {
+                    await Promise.all(itemsToDelete.map(item => deleteFacultyWeightageItem(item.facultyWeightageItemId)));
+                }
+            }
+
+            // Step 2: Save active items
             const itemPromises = activeWeights.map((item: any) => {
                 return saveFacultyWeightageItem({
                     facultyWeightageItemId: item.facultyWeightageItemId,
@@ -409,9 +392,26 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
             onClose();
         } catch (error: any) {
             console.error("handleSave Error:", error);
-            toast.error("Failed to update weightage.");
+            
+            let errorMessage = error?.message || "Failed to update weightage.";
+            const lowerError = errorMessage.toLowerCase();
+            
+            if (
+                lowerError.includes("does not exist") ||
+                lowerError.includes("syntax error") ||
+                lowerError.includes("relation") ||
+                lowerError.includes("violates") ||
+                lowerError.includes("database") ||
+                lowerError.includes("duplicate key") ||
+                lowerError.includes("constraint") ||
+                lowerError.includes("conflict")
+            ) {
+                errorMessage = "An unexpected error occurred while updating the weightage. Please try again.";
+            }
+
+            toast.error(errorMessage);
         } finally {
-            setLoading(false);
+            setIsSaving(false);
         }
     };
 
@@ -457,8 +457,8 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
                                     const sub = subjects.find(s => s.collegeSubjectId === val);
                                     if (sub) setSelectedSubject(sub);
                                 }}
-                                options={loading ? [] : subjects.map(s => ({ value: s.collegeSubjectId, label: s.subjectTitle }))}
-                                placeholder={loading ? "Loading subjects..." : "Select Subject"}
+                                options={isLoading ? [] : subjects.map(s => ({ value: s.collegeSubjectId, label: s.subjectTitle }))}
+                                placeholder={isLoading ? "Loading subjects..." : "Select Subject"}
                             />
                         </div>
 
@@ -553,7 +553,7 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
                                                     onChange={(e) => handleValueChange(item.id, e.target.value)}
                                                     placeholder="0%" className={`w-20 border rounded-lg p-2 text-center text-sm outline-none font-semibold ${isTotalValid ? 'border-green-200 text-[#43C17A]' : 'border-gray-200 text-red-400'}`}
                                                 />
-                                                <button onClick={() => handleRemoveItem(item.id, item.label, item.isCustom)} className="p-1.5 hover:bg-red-50 rounded-lg  cursor-pointer">
+                                                <button onClick={() => setItemToDelete({ id: item.id, label: item.label, isCustom: item.isCustom })} className="p-1.5 hover:bg-red-50 rounded-lg  cursor-pointer">
                                                     <FaTrash className="text-red-400 text-xs" />
                                                 </button>
                                             </div>
@@ -584,18 +584,32 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
                 </div>
 
                 <div className="flex gap-5 mt-8 shrink-0">
-                    <button onClick={onClose} className="flex-1 py-4 border border-gray-200 rounded-lg font-bold text-[#525252] hover:bg-gray-50 cursor-pointer">
+                    <button onClick={onClose} disabled={isSaving || isLoading} className="flex-1 py-4 border border-gray-200 rounded-lg font-bold text-[#525252] hover:bg-gray-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                         Cancel
                     </button>
                     <button
-                        className={`flex-1 py-4 text-white rounded-lg font-bold transition-all ${isTotalValid ? 'bg-[#43C17A] shadow-lg shadow-green-100' : 'bg-gray-300 cursor-not-allowed'} cursor-pointer`}
+                        className={`flex-1 py-4 text-white rounded-lg font-bold transition-all ${isTotalValid && !isSaving && !isLoading ? 'bg-[#43C17A] shadow-lg shadow-green-100 cursor-pointer' : 'bg-gray-300 cursor-not-allowed'}`}
                         onClick={handleSave}
-                        disabled={!isTotalValid}
+                        disabled={isSaving || isLoading}
                     >
-                        {loading ? "Saving..." : "Save"}
+                        {isSaving ? "Saving..." : "Save"}
                     </button>
                 </div>
             </div>
+
+            {itemToDelete && (
+                <ConfirmDeleteModal
+                    open={true}
+                    onCancel={() => setItemToDelete(null)}
+                    onConfirm={() => {
+                        handleRemoveItem(itemToDelete.id, itemToDelete.label, itemToDelete.isCustom);
+                        setItemToDelete(null);
+                    }}
+                    title="Remove Weightage"
+                    name={itemToDelete.label || 'this item'}
+                    customDescription={`Are you sure you want to remove the weightage for "${itemToDelete.label || 'this item'}"?`}
+                />
+            )}
         </div>
     );
 }

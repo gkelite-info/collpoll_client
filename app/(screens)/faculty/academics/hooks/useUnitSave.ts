@@ -84,19 +84,8 @@ export function useUnitSave({
       return;
     }
 
-    if (existingUnits && existingUnits.length > 0) {
-      const numberExists = existingUnits.find((u: any) => Number(u.unitLabel?.replace("Unit - ", "")) === Number(formData.unitNumber));
-      if (numberExists) {
-        toast.error(`Unit ${formData.unitNumber} is already added for this subject!`);
-        return;
-      }
-
-      const nameExists = existingUnits.find((u: any) => u.title?.toLowerCase().trim() === formData.unitName.trim().toLowerCase());
-      if (nameExists) {
-        toast.error(`Unit "${formData.unitName}" is already added for this subject!`);
-        return;
-      }
-    }
+    // Validation checks for duplicates are now strictly handled by the robust backend layer (upsertCollegeSubjectUnitWithTopics) 
+    // per-section to correctly allow local overrides of global units without throwing false positives.
 
     const validTopics = selectedTopics.filter((t) => t !== INVALID_UNIT_MESSAGE);
 
@@ -296,7 +285,7 @@ export function useUnitSave({
         subjectId: facultySubjects.length === 1 ? facultySubjects[0].collegeSubjectId : undefined,
         sectionIds: [],
         unitName: "",
-        unitNumber: 1,
+        unitNumber: "",
         startDate: "",
         endDate: "",
         topics: [],
@@ -315,7 +304,9 @@ export function useUnitSave({
         lowerError.includes("relation") ||
         lowerError.includes("violates") ||
         lowerError.includes("database") ||
-        lowerError.includes("duplicate key")
+        lowerError.includes("duplicate key") ||
+        lowerError.includes("constraint") ||
+        lowerError.includes("conflict")
       ) {
         errorMessage = "An unexpected error occurred while saving the unit. Please try again.";
       }
