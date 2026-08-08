@@ -98,9 +98,20 @@ export function useAcademicsDropdowns({
     },
     enabled: isEnabled && !!formData.academicYearId,
   });
-  const sections = facultyCtx?.sectionIds?.length > 0
-    ? rawSections.filter((s: any) => facultyCtx.sectionIds.includes(s.collegeSectionsId))
-    : rawSections;
+  const sections = (() => {
+    if (!formData.subjectId || !facultyCtx?.sections) return rawSections;
+    
+    // Get the exact sections assigned to this subject directly from faculty context
+    const assignedSections = facultyCtx.sections
+      .filter((s: any) => Number(s.collegeSubjectId) === Number(formData.subjectId))
+      .map((s: any) => ({
+        collegeSectionsId: s.collegeSectionsId,
+        collegeSections: s.college_sections?.collegeSections || ""
+      }));
+
+    if (assignedSections.length === 0) return rawSections;
+    return assignedSections;
+  })();
 
   // 6. Subjects Query
   const { data: subjects = [], isLoading: subjectsLoading } = useQuery({

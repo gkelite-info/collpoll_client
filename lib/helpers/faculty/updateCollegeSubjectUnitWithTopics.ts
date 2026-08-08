@@ -74,7 +74,37 @@ export async function updateCollegeSubjectUnitWithTopics(
   const now = new Date().toISOString();
 
   /* -------------------------------
-   * 1️⃣ UPDATE SUBJECT UNIT
+   * 1️⃣ CHECK FOR DUPLICATES
+   * ------------------------------- */
+
+  const { data: existingUnits, error: checkError } = await supabaseAdmin
+    .from("college_subject_units")
+    .select("collegeSubjectUnitId, unitTitle, unitNumber")
+    .eq("collegeId", collegeId)
+    .eq("collegeSubjectId", collegeSubjectId)
+    .eq("collegeSectionsId", collegeSectionsId)
+    .eq("isActive", true)
+    .neq("collegeSubjectUnitId", collegeSubjectUnitId); // Exclude the current unit being edited!
+
+  if (checkError) {
+    console.error("❌ Failed to check existing units:", checkError);
+    throw new Error("Failed to validate unit uniqueness.");
+  }
+
+  if (existingUnits && existingUnits.length > 0) {
+    const duplicateName = existingUnits.find(u => u.unitTitle.toLowerCase().trim() === unitTitle.toLowerCase().trim());
+    if (duplicateName) {
+      throw new Error(`Unit "${unitTitle}" is already added for a selected section!`);
+    }
+
+    const duplicateNum = existingUnits.find(u => Number(u.unitNumber) === Number(unitNumber));
+    if (duplicateNum) {
+      throw new Error(`Unit ${unitNumber} is already added for a selected section!`);
+    }
+  }
+
+  /* -------------------------------
+   * 2️⃣ UPDATE SUBJECT UNIT
    * ------------------------------- */
 
   const { data: unit, error: unitError } = await supabaseAdmin

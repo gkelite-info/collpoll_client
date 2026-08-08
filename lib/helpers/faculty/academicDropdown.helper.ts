@@ -217,7 +217,6 @@ export async function fetchAcademicDropdowns(
                 .eq("isActive", true);
                 
             if (branchId) query = query.eq("collegeBranchId", branchId);
-            else query = query.is("collegeBranchId", null);
  
             const { data, error } = await query.order("collegeSections");
  

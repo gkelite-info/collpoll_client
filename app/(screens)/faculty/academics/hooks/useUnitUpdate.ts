@@ -68,19 +68,8 @@ export function useUnitUpdate({
       return;
     }
 
-    if (existingUnits && existingUnits.length > 0) {
-      const numberExists = existingUnits.find((u: any) => Number(u.unitLabel?.replace("Unit - ", "")) === Number(formData.unitNumber) && u.collegeSubjectUnitId !== editingUnitId);
-      if (numberExists) {
-        toast.error(`Unit ${formData.unitNumber} is already added for this subject!`);
-        return;
-      }
-
-      const nameExists = existingUnits.find((u: any) => u.title?.toLowerCase().trim() === formData.unitName.trim().toLowerCase() && u.collegeSubjectUnitId !== editingUnitId);
-      if (nameExists) {
-        toast.error(`Unit "${formData.unitName}" is already added for this subject!`);
-        return;
-      }
-    }
+    // Validation checks for duplicates are now strictly handled by the robust backend layer (updateCollegeSubjectUnitWithTopics) 
+    // per-section to correctly allow local overrides of global units without throwing false positives.
 
     const validTopics = selectedTopics.filter((t) => t !== INVALID_UNIT_MESSAGE);
 
@@ -233,7 +222,16 @@ export function useUnitUpdate({
       console.error("[useUnitUpdate] Error:", err);
       let errorMessage = err?.message || "Failed to update unit";
       const lowerError = errorMessage.toLowerCase();
-      if (lowerError.includes("does not exist") || lowerError.includes("syntax error") || lowerError.includes("database")) {
+      if (
+        lowerError.includes("does not exist") ||
+        lowerError.includes("syntax error") ||
+        lowerError.includes("relation") ||
+        lowerError.includes("violates") ||
+        lowerError.includes("database") ||
+        lowerError.includes("duplicate key") ||
+        lowerError.includes("constraint") ||
+        lowerError.includes("conflict")
+      ) {
         errorMessage = "An unexpected error occurred while updating the unit. Please try again.";
       }
       toast.error(errorMessage, { id: loadingToastId });
