@@ -76,19 +76,43 @@ export async function fetchExecutivePerformance(
   const categoryName =
     categoryData?.categoryName ?? params.fallbackCategoryName ?? "Assigned Category";
 
-  const { data: issueData, error: issueError } = await supabase
-    .from("wellbeing_support_issues")
-    .select(
-      "wellbeingSupportIssueId, issueTitle, categoryId, priority, description, createdAt",
-    )
-    .eq("collegeId", params.collegeId)
-    .eq("categoryId", params.categoryId)
+  const { data: jobData, error: jobError } = await supabase
+    .from("wellbeing_issue_jobs")
+    .select("wellbeingSupportIssueId, status, updatedAt")
+    .eq("wellBeingId", params.wellBeingId)
     .eq("isActive", true)
     .eq("is_deleted", false)
     .is("deletedAt", null)
-    .gte("createdAt", params.fromDate)
-    .lte("createdAt", params.toDate)
-    .order("createdAt", { ascending: false });
+    .gte("updatedAt", params.fromDate)
+    .lte("updatedAt", params.toDate)
+    .order("updatedAt", { ascending: false });
+
+  if (jobError) {
+    throw jobError;
+  }
+
+  const latestJobByIssueId = new Map<number, IssueJobRow>();
+  ((jobData ?? []) as IssueJobRow[]).forEach((job) => {
+    if (!latestJobByIssueId.has(job.wellbeingSupportIssueId)) {
+      latestJobByIssueId.set(job.wellbeingSupportIssueId, job);
+    }
+  });
+  const handledIssueIds = Array.from(latestJobByIssueId.keys());
+
+  const { data: issueData, error: issueError } = handledIssueIds.length
+    ? await supabase
+        .from("wellbeing_support_issues")
+        .select(
+          "wellbeingSupportIssueId, issueTitle, categoryId, priority, description, createdAt",
+        )
+        .in("wellbeingSupportIssueId", handledIssueIds)
+        .eq("collegeId", params.collegeId)
+        .eq("categoryId", params.categoryId)
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .is("deletedAt", null)
+        .order("createdAt", { ascending: false })
+    : { data: [], error: null };
 
   if (issueError) {
     throw issueError;
@@ -97,40 +121,16 @@ export async function fetchExecutivePerformance(
   const issues = (issueData ?? []) as PerformanceIssueRow[];
   const issueIds = issues.map((issue) => issue.wellbeingSupportIssueId);
 
-  const [jobsResult, attachmentsResult] = await Promise.all([
-    issueIds.length
-      ? supabase
-          .from("wellbeing_issue_jobs")
-          .select("wellbeingSupportIssueId, status, updatedAt")
-          .in("wellbeingSupportIssueId", issueIds)
-          .eq("wellBeingId", params.wellBeingId)
-          .eq("isActive", true)
-          .eq("is_deleted", false)
-          .is("deletedAt", null)
-          .order("updatedAt", { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-    issueIds.length
-      ? supabase
+  const attachmentsResult = issueIds.length
+      ? await supabase
           .from("wellbeing_support_issue_attachments")
           .select("wellbeingSupportIssueId, attachment, is_deleted, deletedAt")
           .in("wellbeingSupportIssueId", issueIds)
-      : Promise.resolve({ data: [], error: null }),
-  ]);
-
-  if (jobsResult.error) {
-    throw jobsResult.error;
-  }
+      : await Promise.resolve({ data: [], error: null });
 
   if (attachmentsResult.error) {
     throw attachmentsResult.error;
   }
-
-  const latestJobByIssueId = new Map<number, IssueJobRow>();
-  ((jobsResult.data ?? []) as IssueJobRow[]).forEach((job) => {
-    if (!latestJobByIssueId.has(job.wellbeingSupportIssueId)) {
-      latestJobByIssueId.set(job.wellbeingSupportIssueId, job);
-    }
-  });
 
   const attachmentsByIssueId = new Map<number, Issue["attachments"]>();
   ((attachmentsResult.data ?? []) as IssueAttachmentRow[])

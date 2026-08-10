@@ -5,15 +5,25 @@ import dynamic from "next/dynamic";
 import { useRouter, usePathname } from "next/navigation";
 import { CalendarDotsIcon, CaretDown, Plus } from "@phosphor-icons/react";
 
+import { useEffect, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
-import {
-  managerAnnouncements,
-  managerCategories,
-  managerFilters,
-  managerIssueStats,
-} from "../data";
+import { managerIssueStats } from "../data";
 import ManagerDashboardCard from "./ManagerDashboardCard";
 import DashboardIssueTables from "./DashboardIssueTables";
+import {
+  fetchWellbeingManagerDashboard,
+  fetchWellbeingManagerDashboardCategories,
+  type ManagerDashboardCategory,
+  type ManagerDashboardData,
+} from "@/lib/helpers/wellbeingDashboard/wellbeingManagerDashboardAPI";
+
+const emptyDashboard: ManagerDashboardData = {
+  stats: { total: 0, high: 0, pending: 0, resolved: 0 },
+  statusBreakdown: [],
+  categoryBreakdown: [],
+  collegeIssues: [],
+  hostelIssues: [],
+};
 
 const ManagerIssueDonut = dynamic(() => import("./ManagerIssueDonut"), {
   ssr: false,
@@ -40,24 +50,70 @@ function DonutFallback() {
   );
 }
 
-function FilterPill({ label }: { label: string }) {
+function CategoryFilter({
+  value,
+  categories,
+  onChange,
+}: {
+  value: string;
+  categories: Array<{ id: number; name: string }>;
+  onChange: (value: string) => void;
+}) {
   return (
-    <button className="flex h-8 min-w-[125px] items-center justify-between gap-2 rounded-md bg-[#16284F] px-3 text-[12px] font-semibold text-white shadow-sm">
-      <span>{label}</span>
-      <CaretDown size={16} weight="bold" />
-    </button>
+    <label className="relative">
+      <select
+        aria-label="Issue category"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-8 min-w-[190px] cursor-pointer appearance-none rounded-md bg-[#16284F] py-0 pl-3 pr-9 text-[12px] font-semibold text-white shadow-sm outline-none"
+      >
+        <option value="all">All Categories</option>
+        {categories.map((category) => (
+          <option key={category.id} value={category.id}>
+            {category.name}
+          </option>
+        ))}
+      </select>
+      <CaretDown
+        size={16}
+        weight="bold"
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white"
+      />
+    </label>
   );
 }
 
-function DatePill({ label }: { label: string }) {
+function DashboardDataShimmer() {
   return (
-    <button className="flex h-8 items-center gap-2 rounded-full bg-[#43C17A] px-3 text-[12px] font-bold text-white shadow-sm">
+    <div aria-label="Loading dashboard data" className="animate-pulse">
+      <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+        {[1, 2, 3, 4].map((item) => (
+          <div key={item} className="h-[112px] rounded-md bg-gray-200" />
+        ))}
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
+        <div className="h-[250px] rounded-2xl bg-gray-200" />
+        <div className="h-[250px] rounded-2xl bg-gray-200" />
+      </div>
+      <div className="mt-3 h-[390px] rounded-2xl bg-gray-200" />
+      <div className="mt-3 h-[390px] rounded-2xl bg-gray-200" />
+    </div>
+  );
+}
+
+function DatePill({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="relative flex h-8 cursor-pointer items-center gap-2 rounded-full bg-[#43C17A] px-3 text-[12px] font-bold text-white shadow-sm">
       <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#43C17A]">
         <CalendarDotsIcon size={12} weight="fill" />
       </span>
-      <span>{label}</span>
-      <CaretDown size={14} weight="bold" />
-    </button>
+      <input
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="cursor-pointer bg-transparent text-white outline-none [color-scheme:dark]"
+      />
+    </label>
   );
 }
 
@@ -149,8 +205,11 @@ function IssueStatTile({ item }: { item: (typeof managerIssueStats)[number] }) {
   );
 }
 
-function CategoryBreakdown() {
-  const max = Math.max(...managerCategories.map((item) => item.value));
+function CategoryBreakdown({ data }: { data: Array<{ name: string; value: number }> }) {
+  const max = Math.max(1, ...data.map((item) => item.value));
+  const step = Math.max(1, Math.ceil(max / 6));
+  const axisMax = step * 6;
+  const ticks = Array.from({ length: 7 }, (_, index) => axisMax - index * step);
 
   return (
     <ManagerDashboardCard className="min-h-[250px] overflow-hidden">
@@ -159,12 +218,12 @@ function CategoryBreakdown() {
       </h3>
       <div className="flex h-[195px] items-end gap-4 pl-1">
         <div className="flex h-full shrink-0 flex-col justify-between pb-7 text-[12px] font-medium text-[#282828]">
-          {[60, 50, 40, 30, 20, 10, 0].map((tick) => (
+          {ticks.map((tick) => (
             <span key={tick}>{tick}</span>
           ))}
         </div>
         <div className="grid h-full flex-1 grid-cols-5 items-end gap-3">
-          {managerCategories.map((item) => (
+          {data.map((item) => (
             <div
               key={item.name}
               className="flex h-full min-w-0 flex-col items-center justify-end gap-2"
@@ -172,7 +231,7 @@ function CategoryBreakdown() {
               <div className="flex flex-1 items-end">
                 <div
                   className="mx-auto min-h-2 w-[40px] rounded-t-md bg-[#43C17A]"
-                  style={{ height: `${(item.value / max) * 100}%` }}
+                  style={{ height: `${(item.value / axisMax) * 100}%` }}
                 />
               </div>
               <span className="block w-full truncate text-center text-[9px] font-medium text-[#282828]">
@@ -191,6 +250,57 @@ export default function WellbeingManagerLeft({
 }: {
   onAddExecutive?: () => void;
 }) {
+  const {
+    collegeId,
+    wellBeingRegistrationTypes,
+  } = useUser();
+  const [dashboard, setDashboard] = useState<ManagerDashboardData>(emptyDashboard);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [categories, setCategories] = useState<ManagerDashboardCategory[]>([]);
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const normalizedRegistrationTypes = wellBeingRegistrationTypes.map((type) => type.toLowerCase());
+  const showCollege =
+    normalizedRegistrationTypes.length === 0 ||
+    normalizedRegistrationTypes.some((type) => type === "college" || type === "both");
+  const showHostel =
+    normalizedRegistrationTypes.length === 0 ||
+    normalizedRegistrationTypes.some((type) => type === "hostel" || type === "both");
+
+  useEffect(() => {
+    if (!collegeId) return;
+    let cancelled = false;
+    setDashboardLoading(true);
+    void fetchWellbeingManagerDashboard(collegeId, new Date(`${selectedDate}T00:00:00`), {
+      registrationTypes: wellBeingRegistrationTypes,
+      categoryId: selectedCategory === "all" ? null : Number(selectedCategory),
+    })
+      .then((data) => { if (!cancelled) setDashboard(data); })
+      .catch((error) => console.error("Manager dashboard fetch failed:", error))
+      .finally(() => { if (!cancelled) setDashboardLoading(false); });
+    return () => { cancelled = true; };
+  }, [collegeId, selectedCategory, selectedDate, wellBeingRegistrationTypes]);
+
+  useEffect(() => {
+    if (!collegeId) return;
+    let cancelled = false;
+    void fetchWellbeingManagerDashboardCategories(collegeId, wellBeingRegistrationTypes)
+      .then((data) => { if (!cancelled) setCategories(data); })
+      .catch((error) => console.error("Manager dashboard categories fetch failed:", error));
+    return () => { cancelled = true; };
+  }, [collegeId, wellBeingRegistrationTypes]);
+
+  const dynamicStats = managerIssueStats.map((item) => ({
+    ...item,
+    value:
+      item.route === "total"
+        ? dashboard.stats.total
+        : item.route === "high"
+          ? dashboard.stats.high
+          : item.route === "pending"
+            ? dashboard.stats.pending
+            : dashboard.stats.resolved,
+  }));
   return (
     <div className="w-full p-2 lg:w-[68%]">
       <WelcomePanel />
@@ -210,18 +320,23 @@ export default function WellbeingManagerLeft({
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-3">
-          {managerFilters.issueTypes.map((filter) => (
-            <FilterPill key={filter} label={filter} />
-          ))}
+          <CategoryFilter
+            value={selectedCategory}
+            categories={categories}
+            onChange={setSelectedCategory}
+          />
         </div>
         <div className="flex flex-wrap gap-2">
-          <DatePill label="04/06/2026" />
-          <DatePill label={managerFilters.months[0]} />
+          <DatePill value={selectedDate} onChange={setSelectedDate} />
         </div>
       </div>
 
+      {dashboardLoading ? (
+        <DashboardDataShimmer />
+      ) : (
+        <>
       <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
-        {managerIssueStats.map((item) => (
+          {dynamicStats.map((item) => (
           <IssueStatTile key={item.label} item={item} />
         ))}
       </div>
@@ -229,16 +344,23 @@ export default function WellbeingManagerLeft({
       <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
         <ManagerDashboardCard>
           <h3 className="mb-3 text-sm font-bold text-[#282828]">
-            Today Hostel Issue Status Distribution
+            Today {showCollege && showHostel ? "College & Hostel" : showHostel ? "Hostel" : "College"} Issue Status Distribution
           </h3>
-          <ManagerIssueDonut />
+          <ManagerIssueDonut data={dashboard.statusBreakdown} />
         </ManagerDashboardCard>
-        <CategoryBreakdown />
+        <CategoryBreakdown data={dashboard.categoryBreakdown} />
       </div>
 
       <div className="mt-3">
-        <DashboardIssueTables />
+        <DashboardIssueTables
+          collegeIssues={dashboard.collegeIssues}
+          hostelIssues={dashboard.hostelIssues}
+          showCollege={showCollege}
+          showHostel={showHostel}
+        />
       </div>
+        </>
+      )}
       
     </div>
   );

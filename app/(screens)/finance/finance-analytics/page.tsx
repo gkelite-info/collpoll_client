@@ -153,10 +153,16 @@ function FinanceAnalyticsContent() {
       );
 
       if (result) {
-        setChartData(result.chartData);
-        setGridData(result.gridData);
-        setRawTableData(result.tableData);
-        setAvailableYears(result.availableYears!);
+        setChartData(Array.isArray(result.chartData) ? result.chartData : []);
+        setGridData(Array.isArray(result.gridData) ? result.gridData : []);
+        setRawTableData(
+          Array.isArray(result.tableData) ? result.tableData : [],
+        );
+        setAvailableYears(
+          Array.isArray(result.availableYears) && result.availableYears.length > 0
+            ? result.availableYears
+            : [new Date().getFullYear().toString()],
+        );
       }
       setIsLoading(false);
     }

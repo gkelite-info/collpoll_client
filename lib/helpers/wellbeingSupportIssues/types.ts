@@ -82,11 +82,18 @@ export type StudentWellbeingIssueListItem = {
   dateReported: string;
   status: StudentWellbeingIssueStatus;
   canModify: boolean;
+  requesterName?: string;
+  requesterRole?: string;
   attachments: {
     id: number;
     name: string;
     size: string;
   }[];
+};
+
+export type ManagerWellbeingIssueListItem = StudentWellbeingIssueListItem & {
+  requesterName: string;
+  requesterRole: string;
 };
 
 export type GroundStaffWellbeingIssueCounts = {

@@ -1,7 +1,6 @@
 "use client";
 
-import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   BuildingIcon,
@@ -14,21 +13,25 @@ import {
 import { MdPictureAsPdf } from "react-icons/md";
 import TableComponent from "@/app/utils/table/table";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { Avatar } from "@/app/utils/Avatar";
+import { useUser } from "@/app/utils/context/UserContext";
 import WellbeingRight from "../../components/WellbeingRight";
 import ReassignTicketModal from "../../components/ReassignTicketModal";
-import { collegeIssueRows, DashboardIssue, hostelIssueRows } from "./dashboardIssueData";
+import type { DashboardIssue } from "./dashboardIssueData";
+import {
+  fetchWellbeingManagerDashboard,
+  type ManagerDashboardIssue,
+} from "@/lib/helpers/wellbeingDashboard/wellbeingManagerDashboardAPI";
 
 const ITEMS_PER_PAGE = 10;
 
 function StudentCell({ row }: { row: DashboardIssue }) {
   return (
     <div className="flex min-w-[250px] items-center gap-3 text-left">
-      <Image
-        src={row.studentImage}
+      <Avatar
+        src={row.studentImage || null}
         alt={row.student}
-        width={42}
-        height={42}
-        className="h-[42px] w-[42px] rounded-full object-cover"
+        size={42}
       />
       <div className="min-w-0">
         <p className="truncate text-[13px] font-bold text-[#282828]">{row.student}</p>
@@ -112,13 +115,33 @@ export default function DashboardAllIssueListView({ stage }: { stage: number }) 
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const initialScope = searchParams.get("scope") === "hostel" ? "hostel" : "college";
+  const { collegeId, wellBeingRegistrationTypes } = useUser();
   const [scope, setScope] = useState<"college" | "hostel">(initialScope);
+  const [collegeRows, setCollegeRows] = useState<ManagerDashboardIssue[]>([]);
+  const [hostelRows, setHostelRows] = useState<ManagerDashboardIssue[]>([]);
+  const [loading, setLoading] = useState(true);
   const [priority, setPriority] = useState<DashboardIssue["priority"] | "All">("All");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [reassignModalTargetId, setReassignModalTargetId] = useState<string | null>(null);
 
-  const rows = scope === "college" ? collegeIssueRows : hostelIssueRows;
+  useEffect(() => {
+    if (!collegeId) return;
+    let cancelled = false;
+    setLoading(true);
+    void fetchWellbeingManagerDashboard(collegeId, new Date(), {
+      registrationTypes: wellBeingRegistrationTypes,
+    }).then((data) => {
+      if (!cancelled) {
+        setCollegeRows(data.collegeIssues);
+        setHostelRows(data.hostelIssues);
+      }
+    }).catch((error) => console.error("Manager all issues fetch failed:", error))
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [collegeId, wellBeingRegistrationTypes]);
+
+  const rows = scope === "college" ? collegeRows : hostelRows;
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -216,16 +239,6 @@ export default function DashboardAllIssueListView({ stage }: { stage: number }) 
                 onChange={(event) => handleScopeChange(event.target.value as "college" | "hostel")}
                 className="h-9 cursor-pointer rounded-md border border-[#D7D7D7] bg-white px-3 text-[12px] font-bold text-[#282828] outline-none"
               >
-                <option value="college">Student</option>
-                <option value="hostel">Faculty</option>
-                <option value="hostel">Admin</option>
-                <option value="hostel">Finance</option>
-              </select>
-              <select
-                value={scope}
-                onChange={(event) => handleScopeChange(event.target.value as "college" | "hostel")}
-                className="h-9 cursor-pointer rounded-md border border-[#D7D7D7] bg-white px-3 text-[12px] font-bold text-[#282828] outline-none"
-              >
                 <option value="college">College</option>
                 <option value="hostel">Hostel</option>
               </select>
@@ -272,7 +285,9 @@ export default function DashboardAllIssueListView({ stage }: { stage: number }) 
         </div>
 
         <div className="mt-3 rounded-2xl bg-white shadow-sm">
-          <div className="overflow-x-auto p-2">
+          {loading ? (
+            <div className="m-4 h-[420px] animate-pulse rounded-xl bg-gray-200" />
+          ) : <><div className="overflow-x-auto p-2">
             <div className={scope === "college" ? "min-w-[1120px]" : "min-w-[1260px]"}>
               <TableComponent
                 columns={columns}
@@ -289,7 +304,9 @@ export default function DashboardAllIssueListView({ stage }: { stage: number }) 
             itemsPerPage={ITEMS_PER_PAGE}
             onPageChange={setPage}
             roundedBottom="rounded-b-2xl"
+            alwaysShow
           />
+          </>}
         </div>
       </div>
 

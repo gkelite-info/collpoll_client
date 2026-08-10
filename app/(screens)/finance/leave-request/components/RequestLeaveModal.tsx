@@ -10,6 +10,7 @@ import EmployeeLeaveRoutingFields, {
   hasRequiredEmployeeLeaveTags,
 } from "@/app/components/modals/EmployeeLeaveRoutingFields";
 import { EmployeeLeaveTagSelection } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestTagsAPI";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 type RequestLeaveModalProps = {
   open: boolean;
@@ -44,8 +45,12 @@ export default function RequestLeaveModal({
   open,
   onClose,
 }: RequestLeaveModalProps) {
-  const { userId, role } = useUser();
-  const { collegeId, loading: financeContextLoading } = useFinanceManager();
+  const { userId, role, collegeId: userCollegeId } = useUser();
+  const { collegeId: financeCollegeId, loading: financeContextLoading } = useFinanceManager();
+  const { isSchool } = useInstitutionTerminology();
+  const collegeId = isSchool ? (userCollegeId ?? financeCollegeId) : financeCollegeId;
+  const normalizedRole = role?.replace(/[\s_-]/g, "").toLowerCase();
+  const financeRole = normalizedRole === "finance" ? "Finance" : null;
   const [formData, setFormData] = useState<LeaveFormData>(initialFormData);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,7 +70,7 @@ export default function RequestLeaveModal({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!userId || !collegeId || role !== "Finance" || financeContextLoading) {
+    if (!userId || !collegeId || !financeRole || financeContextLoading) {
       toast.error("Finance executive session not found. Please re-login.");
       return;
     }
@@ -95,7 +100,7 @@ export default function RequestLeaveModal({
       return;
     }
 
-    if (!hasRequiredEmployeeLeaveTags(role, formData.tags)) {
+    if (!hasRequiredEmployeeLeaveTags(financeRole, formData.tags)) {
       toast.error("Please select all required tagged users.");
       return;
     }
@@ -105,7 +110,7 @@ export default function RequestLeaveModal({
       await createEmployeeLeaveRequest({
         userId,
         collegeId,
-        role: "Finance",
+        role: financeRole,
         leaveType: formData.leaveType,
         leaveFromDate: formData.startDate,
         leaveToDate: formData.endDate,
@@ -199,6 +204,8 @@ export default function RequestLeaveModal({
           <EmployeeLeaveRoutingFields
             value={formData.tags}
             onChange={(tags) => setFormData({ ...formData, tags })}
+            requesterRole="Finance"
+            collegeIdOverride={collegeId}
           />
 
           <Field label="Leave Date">

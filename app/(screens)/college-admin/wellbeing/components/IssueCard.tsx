@@ -90,6 +90,15 @@ export default function IssueCard({
 
       <h3 className="text-lg font-bold text-gray-800">{issue.title}</h3>
 
+      {issue.requesterRole ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-semibold text-gray-700">Raised By :</span>
+          <span className="rounded-full bg-white px-3 py-1 font-semibold text-[#16284F] shadow-sm">
+            {issue.requesterName || "Unknown user"} · {issue.requesterRole}
+          </span>
+        </div>
+      ) : null}
+
       <div className="flex flex-col items-start gap-4 text-sm sm:flex-row sm:items-center">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-gray-700">Category :</span>

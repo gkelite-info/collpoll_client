@@ -98,7 +98,7 @@ export default function TicketDetailsView({ ticketId, onBack }: TicketDetailsVie
 
   const supportIssueId = useMemo(() => getIssueIdFromTicket(ticketId), [ticketId]);
   const categoryName = issue?.categoryName || "-";
-  const displayTicketId = issue ? `#TK-${issue.wellbeingSupportIssueId}` : ticketId;
+  const displayTicketId = issue ? `TK-${issue.wellbeingSupportIssueId}` : ticketId.replace(/^#/, "");
 
   const loadIssue = useCallback(async () => {
     if (!collegeId || !supportIssueId) {

@@ -4,6 +4,7 @@ import type {
   GroundStaffIssueRecipient,
   GroundStaffWellbeingIssueCounts,
   GroundStaffWellbeingIssueListItem,
+  ManagerWellbeingIssueListItem,
   StudentWellbeingIssueCounts,
   StudentWellbeingIssueListItem,
   StudentWellbeingIssueTab,
@@ -445,6 +446,209 @@ export async function fetchStudentWellbeingIssueCounts(
     pending,
     resolved,
     rejected,
+  };
+}
+
+export async function fetchManagerWellbeingIssueCounts(
+  collegeId: number,
+): Promise<StudentWellbeingIssueCounts> {
+  const { data, error } = await supabase
+    .from("wellbeing_support_issues")
+    .select("wellbeingSupportIssueId, IssueStatus")
+    .eq("collegeId", collegeId)
+    .in("issueVisibilityRole", ["wellbeingmanager", "both"])
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null);
+
+  if (error) throw error;
+
+  const rows = (data ?? []) as Array<{
+    wellbeingSupportIssueId: number;
+    IssueStatus: WellbeingIssueStatus;
+  }>;
+  const issueIds = rows.map((issue) => issue.wellbeingSupportIssueId);
+  const { data: jobsData, error: jobsError } = issueIds.length
+    ? await supabase
+        .from("wellbeing_issue_jobs")
+        .select("wellbeingSupportIssueId, status, updatedAt")
+        .in("wellbeingSupportIssueId", issueIds)
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .is("deletedAt", null)
+        .order("updatedAt", { ascending: false })
+    : { data: [], error: null };
+
+  if (jobsError) throw jobsError;
+  const latestJobs = getLatestIssueJobByIssueId(
+    (jobsData ?? []) as WellbeingIssueJobLookupRow[],
+  );
+  const effectiveStatus = (issue: (typeof rows)[number]): WellbeingIssueStatus => {
+    const jobStatus = latestJobs.get(issue.wellbeingSupportIssueId)?.status;
+    if (jobStatus === "completed") return "resolved";
+    if (jobStatus === "cancelled") return "rejected";
+    return issue.IssueStatus;
+  };
+
+  return {
+    raised: rows.length,
+    pending: rows.filter((issue) => effectiveStatus(issue) === "pending").length,
+    resolved: rows.filter((issue) => effectiveStatus(issue) === "resolved").length,
+    rejected: rows.filter((issue) => effectiveStatus(issue) === "rejected").length,
+  };
+}
+
+export async function fetchManagerWellbeingIssues({
+  collegeId,
+  page,
+  limit,
+  tab,
+}: {
+  collegeId: number;
+  page: number;
+  limit: number;
+  tab: StudentWellbeingIssueTab;
+}): Promise<{ data: ManagerWellbeingIssueListItem[]; totalCount: number }> {
+  const from = (page - 1) * limit;
+  const statusByTab: Partial<Record<StudentWellbeingIssueTab, WellbeingIssueStatus>> = {
+    pending: "pending",
+    resolved: "resolved",
+    rejected: "rejected",
+  };
+
+  const query = supabase
+    .from("wellbeing_support_issues")
+    .select(
+      "wellbeingSupportIssueId, issueTitle, categoryId, subCategoryId, issueVisibilityRole, priority, IssueStatus, description, appliesTo, createdAt, createdBy, fullName",
+      { count: "exact" },
+    )
+    .eq("collegeId", collegeId)
+    .in("issueVisibilityRole", ["wellbeingmanager", "both"])
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null);
+
+  const { data, error } = await query.order("createdAt", { ascending: false });
+
+  if (error) throw error;
+
+  const allRows = (data ?? []) as Array<StudentWellbeingIssueRow & {
+    createdBy: number;
+    fullName: string | null;
+  }>;
+  const allIssueIds = allRows.map((issue) => issue.wellbeingSupportIssueId);
+  const { data: jobsData, error: jobsError } = allIssueIds.length
+    ? await supabase
+        .from("wellbeing_issue_jobs")
+        .select("wellbeingSupportIssueId, status, updatedAt")
+        .in("wellbeingSupportIssueId", allIssueIds)
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .is("deletedAt", null)
+        .order("updatedAt", { ascending: false })
+    : { data: [], error: null };
+
+  if (jobsError) throw jobsError;
+  const latestJobs = getLatestIssueJobByIssueId(
+    (jobsData ?? []) as WellbeingIssueJobLookupRow[],
+  );
+  const effectiveStatusByIssueId = new Map<number, WellbeingIssueStatus>();
+  allRows.forEach((issue) => {
+    const jobStatus = latestJobs.get(issue.wellbeingSupportIssueId)?.status;
+    effectiveStatusByIssueId.set(
+      issue.wellbeingSupportIssueId,
+      jobStatus === "completed"
+        ? "resolved"
+        : jobStatus === "cancelled"
+          ? "rejected"
+          : issue.IssueStatus,
+    );
+  });
+  const status = statusByTab[tab];
+  const filteredRows = status
+    ? allRows.filter(
+        (issue) => effectiveStatusByIssueId.get(issue.wellbeingSupportIssueId) === status,
+      )
+    : allRows;
+  const totalCount = filteredRows.length;
+  const rows = filteredRows.slice(from, from + limit);
+  const categoryIds = Array.from(new Set(rows.map((issue) => issue.categoryId)));
+  const subCategoryIds = Array.from(new Set(rows.map((issue) => issue.subCategoryId)));
+  const issueIds = rows.map((issue) => issue.wellbeingSupportIssueId);
+  const userIds = Array.from(new Set(rows.map((issue) => issue.createdBy)));
+
+  const [categoriesRes, subCategoriesRes, attachmentsRes, usersRes] = await Promise.all([
+    categoryIds.length
+      ? supabase.from("wellbeing_categories").select("categoryId, categoryName").in("categoryId", categoryIds)
+      : Promise.resolve({ data: [], error: null }),
+    subCategoryIds.length
+      ? supabase.from("wellbeing_sub_categories").select("subCategoryId, subCategoryName").in("subCategoryId", subCategoryIds)
+      : Promise.resolve({ data: [], error: null }),
+    issueIds.length
+      ? supabase
+          .from("wellbeing_support_issue_attachments")
+          .select("wellbeingSupportIssueAttachmentId, wellbeingSupportIssueId, attachment, is_deleted, deletedAt")
+          .in("wellbeingSupportIssueId", issueIds)
+      : Promise.resolve({ data: [], error: null }),
+    userIds.length
+      ? supabase.from("users").select("userId, fullName, role").in("userId", userIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (categoriesRes.error) throw categoriesRes.error;
+  if (subCategoriesRes.error) throw subCategoriesRes.error;
+  if (attachmentsRes.error) throw attachmentsRes.error;
+  if (usersRes.error) throw usersRes.error;
+
+  const categoryById = new Map(
+    ((categoriesRes.data ?? []) as WellbeingSupportIssueCategoryLookupRow[]).map((item) => [item.categoryId, item.categoryName]),
+  );
+  const subCategoryById = new Map(
+    ((subCategoriesRes.data ?? []) as WellbeingSupportIssueSubCategoryLookupRow[]).map((item) => [item.subCategoryId, item.subCategoryName]),
+  );
+  const userById = new Map(
+    ((usersRes.data ?? []) as Array<{ userId: number; fullName: string | null; role: string | null }>).map((user) => [user.userId, user]),
+  );
+  const attachmentsByIssueId = new Map<number, WellbeingSupportIssueAttachmentRow[]>();
+  ((attachmentsRes.data ?? []) as WellbeingSupportIssueAttachmentRow[]).forEach((attachment) => {
+    const issueId = attachment.wellbeingSupportIssueId;
+    if (!issueId) return;
+    attachmentsByIssueId.set(issueId, [...(attachmentsByIssueId.get(issueId) ?? []), attachment]);
+  });
+
+  return {
+    data: rows.map((issue) => {
+      const requester = userById.get(issue.createdBy);
+      return {
+        id: String(issue.wellbeingSupportIssueId),
+        title: issue.issueTitle,
+        categoryId: issue.categoryId,
+        subCategoryId: issue.subCategoryId,
+        issueVisibilityRole: issue.issueVisibilityRole,
+        issueRaisedRole: (requester?.role || "Admin") as WellbeingIssueRaisedRole,
+        priority: issue.priority,
+        appliesTo: issue.appliesTo,
+        category: categoryById.get(issue.categoryId) || "Not specified",
+        subCategory: subCategoryById.get(issue.subCategoryId) || "Not specified",
+        branch: issue.appliesTo || "Not specified",
+        description: issue.description,
+        dateReported: formatDate(issue.createdAt),
+        status: toUiStatus(
+          effectiveStatusByIssueId.get(issue.wellbeingSupportIssueId) ?? issue.IssueStatus,
+        ),
+        canModify: false,
+        requesterName: requester?.fullName || issue.fullName || "Unknown user",
+        requesterRole: requester?.role || "Unknown role",
+        attachments: (attachmentsByIssueId.get(issue.wellbeingSupportIssueId) ?? [])
+          .filter((attachment) => !attachment.is_deleted && !attachment.deletedAt)
+          .map((attachment) => ({
+            id: attachment.wellbeingSupportIssueAttachmentId,
+            name: getAttachmentName(attachment.attachment),
+            size: "File",
+          })),
+      };
+    }),
+    totalCount,
   };
 }
 
