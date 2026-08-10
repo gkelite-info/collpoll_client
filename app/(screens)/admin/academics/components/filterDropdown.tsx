@@ -14,6 +14,7 @@ interface FilterProps {
   displayModifier?: (opt: string) => string;
   placeholder?: string;
   widthClassName?: string;
+  isLoading?: boolean;
 }
 
 export const FilterDropdown = ({
@@ -25,6 +26,7 @@ export const FilterDropdown = ({
   displayModifier,
   placeholder = "Select...",
   widthClassName = "min-w-[120px]",
+  isLoading = false,
 }: FilterProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -115,6 +117,15 @@ export const FilterDropdown = ({
       )}
     </AnimatePresence>
   );
+
+  if (isLoading) {
+    return (
+      <div className={`flex flex-col gap-1 overflow-hidden ${widthClassName}`}>
+        <div className="h-[14px] w-16 bg-gray-200 rounded animate-pulse mx-1 my-0.5" />
+        <div className="h-[34px] w-full bg-gray-100 rounded-md animate-pulse border border-gray-200" />
+      </div>
+    );
+  }
 
   return (
     <div className={`flex flex-col gap-1 overflow-visible ${widthClassName}`}>

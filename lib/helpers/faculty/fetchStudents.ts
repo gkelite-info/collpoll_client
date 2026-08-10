@@ -119,6 +119,7 @@ export async function fetchStudentsWithProfile(
     const limit = filters?.limit ?? 10;
     const from = (page - 1) * limit;
     const to = from + limit - 1;
+    const hasAcademicFilters = !!(filters?.sectionId || filters?.yearId);
     let query = supabase
         .from("students")
         .select(`
@@ -131,17 +132,20 @@ export async function fetchStudentsWithProfile(
                 user_profile (
                     profileUrl
                 )
-            ),
+            )${hasAcademicFilters ? `,
             student_academic_history!inner ( 
                 collegeSectionsId,
                 collegeAcademicYearId,
                 isCurrent
-            )
+            )` : ''}
         `)
         .eq("collegeId", collegeId)
         .eq("isActive", true)
-        .is("deletedAt", null)
-        .eq("student_academic_history.isCurrent", true);
+        .is("deletedAt", null);
+
+    if (hasAcademicFilters) {
+        query = query.eq("student_academic_history.isCurrent", true);
+    }
 
     if (filters?.branchId) {
         query = query.eq("collegeBranchId", filters.branchId);

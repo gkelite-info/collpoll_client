@@ -68,7 +68,7 @@ export async function fetchActiveFacultyData(
         // ✅ Step 1: Lightweight — just get facultyIds from sections
         const { data: sectionData, error: sectionError } = await supabase
             .from("faculty_sections")
-            .select("facultyId")
+            .select("facultyId, collegeEducationId, collegeBranchId")
             .eq("collegeAcademicYearId", collegeAcademicYearId)
             .eq("isActive", true)
             .is("deletedAt", null);
@@ -77,26 +77,36 @@ export async function fetchActiveFacultyData(
 
         const uniqueFacultyIds = [...new Set(sectionData.map((s: any) => s.facultyId))];
 
-        // ✅ Step 2: Filter by branch + education — no joins
+        // ✅ Step 2: Fetch faculties first
         let query = supabase
             .from("faculty")
-            .select("facultyId, userId")
+            .select("facultyId, userId, collegeEducationId, collegeBranchId")
             .in("facultyId", uniqueFacultyIds)
-            .eq("collegeEducationId", collegeEducationId)
             .eq("isActive", true)
             .is("deletedAt", null);
-
-        if (collegeBranchId === null) {
-            query = query.is("collegeBranchId", null);
-        } else {
-            query = query.eq("collegeBranchId", collegeBranchId);
-        }
 
         const { data: facultyData, error: facultyError } = await query;
 
         if (facultyError || !facultyData?.length) return { count: 0, photos: [] };
 
-        const userIds = facultyData.map((f: any) => f.userId).filter(Boolean);
+        // We filter manually here to account for multi-subject fallback
+        // we map sectionData to get fallback educations/branches if needed
+        const sectionMap = new Map(sectionData.map((s: any) => [s.facultyId, s]));
+
+        const validFacultyData = facultyData.filter((f: any) => {
+            const fs = sectionMap.get(f.facultyId);
+            const eduId = f.collegeEducationId ?? fs?.collegeEducationId;
+            const branchId = f.collegeBranchId ?? fs?.collegeBranchId;
+
+            if (eduId && collegeEducationId && eduId !== collegeEducationId) return false;
+            if (collegeBranchId !== null && branchId && branchId !== collegeBranchId) return false;
+            
+            return true;
+        });
+
+        if (!validFacultyData.length) return { count: 0, photos: [] };
+
+        const userIds = validFacultyData.map((f: any) => f.userId).filter(Boolean);
 
         // ✅ Step 3: Get photos separately — simple flat query
         const { data: profileData } = await supabase

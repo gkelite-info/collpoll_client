@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { FaTimes, FaSearch } from "react-icons/fa";
 import SelectionModalShimmer from "../shimmers/SelectionModalShimmer";
 import { Avatar } from "@/app/utils/Avatar";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 export interface SelectionItem {
     id: number;
@@ -32,21 +33,29 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     
-    const [items, setItems] = useState<SelectionItem[]>([]);
-    const [page, setPage] = useState(1);
-    const [hasMore, setHasMore] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isFetchingMore, setIsFetchingMore] = useState(false);
-    
     const observer = useRef<IntersectionObserver | null>(null);
+
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading,
+    } = useInfiniteQuery({
+        queryKey: ["selectionModal", title, debouncedSearch],
+        queryFn: ({ pageParam = 1 }) => fetchItems(debouncedSearch, pageParam),
+        getNextPageParam: (lastPage, allPages) => lastPage.hasMore ? allPages.length + 1 : undefined,
+        enabled: isOpen,
+        initialPageParam: 1,
+    });
+
+    const items = data?.pages.flatMap(page => page.data) || [];
 
     useEffect(() => {
         if (isOpen) {
             setLocalSelectedItems(selectedItems);
             setSearchQuery("");
             setDebouncedSearch("");
-            setItems([]);
-            setPage(1);
         }
     }, [isOpen, selectedItems]);
 
@@ -57,62 +66,18 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    useEffect(() => {
-        if (!isOpen) return;
-        
-        let isMounted = true;
-        const loadInitialData = async () => {
-            setIsLoading(true);
-            try {
-                const result = await fetchItems(debouncedSearch, 1);
-                if (isMounted) {
-                    setItems(result.data);
-                    setHasMore(result.hasMore);
-                    setPage(1);
-                }
-            } catch (error) {
-                console.error("Failed to load initial data", error);
-            } finally {
-                if (isMounted) setIsLoading(false);
-            }
-        };
-        
-        loadInitialData();
-        return () => { isMounted = false; };
-    }, [isOpen, debouncedSearch, fetchItems]);
-
-    const loadMore = useCallback(async () => {
-        if (isFetchingMore || !hasMore || isLoading) return;
-        
-        setIsFetchingMore(true);
-        try {
-            const nextPage = page + 1;
-            const result = await fetchItems(debouncedSearch, nextPage);
-            setItems(prev => {
-                const newItems = result.data.filter(newItem => !prev.some(existing => existing.id === newItem.id));
-                return [...prev, ...newItems];
-            });
-            setHasMore(result.hasMore);
-            setPage(nextPage);
-        } catch (error) {
-            console.error("Failed to load more data", error);
-        } finally {
-            setIsFetchingMore(false);
-        }
-    }, [page, hasMore, debouncedSearch, fetchItems, isFetchingMore, isLoading]);
-
     const lastElementRef = useCallback((node: any) => {
-        if (isLoading || isFetchingMore) return;
+        if (isLoading || isFetchingNextPage) return;
         if (observer.current) observer.current.disconnect();
         
         observer.current = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting && hasMore) {
-                loadMore();
+            if (entries[0].isIntersecting && hasNextPage) {
+                fetchNextPage();
             }
         });
         
         if (node) observer.current.observe(node);
-    }, [isLoading, isFetchingMore, hasMore, loadMore]);
+    }, [isLoading, isFetchingNextPage, hasNextPage, fetchNextPage]);
 
     if (!isOpen) return null;
 
@@ -212,7 +177,7 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
                                         />
                                     </label>
                                 ))}
-                                {isFetchingMore && (
+                                {isFetchingNextPage && (
                                     Array.from({ length: 3 }).map((_, i) => <SelectionModalShimmer key={`more-${i}`} />)
                                 )}
                             </>

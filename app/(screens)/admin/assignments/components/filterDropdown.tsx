@@ -16,6 +16,7 @@ type FilterDropdownProps = {
   options: Option[];
   onChange: (value: string) => void;
   disabled?: boolean;
+  placeholder?: string;
 };
 
 export const FilterDropdown = ({
@@ -24,12 +25,13 @@ export const FilterDropdown = ({
   options,
   onChange,
   disabled,
+  placeholder,
 }: FilterDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const selectedOption = options.find((opt) => String(opt.value) === String(value)) || options[0];
+  const selectedOption = options.find((opt) => String(opt.value) === String(value) && value !== "");
 
   const updateRect = () => {
     if (dropdownRef.current) {
@@ -123,22 +125,26 @@ export const FilterDropdown = ({
             if (!isOpen) updateRect();
             setIsOpen(!isOpen);
           }}
-          className={`relative rounded-full pl-4 pr-9 py-1.5 flex items-center justify-between min-w-[120px] transition-all duration-300 ease-in-out cursor-pointer select-none outline-none ${
+          className={`relative rounded-full pl-4 pr-9 py-1.5 flex items-center justify-between min-w-[120px] transition-all duration-300 ease-in-out select-none outline-none border w-full ${
             disabled
-              ? "bg-[#43C17A1C] opacity-50 cursor-not-allowed"
+              ? "bg-[#F3F4F6] cursor-not-allowed border-gray-200"
               : isOpen 
-                ? "bg-[#43C17A25] ring-2 ring-[#43C17A]/40" 
-                : "bg-[#43C17A1C] hover:bg-[#43C17A2C]"
+                ? "bg-[#43C17A25] ring-2 ring-[#43C17A]/40 border-transparent cursor-pointer" 
+                : "bg-[#43C17A1C] hover:bg-[#43C17A2C] border-transparent cursor-pointer"
           }`}
         >
-          <span className="text-[13px] font-semibold text-[#43C17A] truncate">
-            {selectedOption?.label || "Select"}
+          <span className={`text-[13px] font-semibold truncate ${
+            selectedOption 
+              ? (disabled ? 'text-gray-500' : 'text-[#43C17A]') 
+              : 'text-gray-500 font-medium'
+          }`}>
+            {selectedOption?.label || placeholder || `Select ${label}`}
           </span>
           <CaretDown
             size={12}
-            className={`absolute right-3.5 text-[#43C17A] pointer-events-none transition-transform duration-300 ease-in-out ${
-              isOpen ? "rotate-180" : ""
-            }`}
+            className={`absolute right-3.5 pointer-events-none transition-transform duration-300 ease-in-out ${
+              disabled ? 'text-gray-400' : 'text-[#43C17A]'
+            } ${isOpen ? "rotate-180" : ""}`}
             weight="bold"
           />
         </button>
