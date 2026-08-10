@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { supabase } from "@/lib/supabaseClient";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
@@ -8,10 +8,12 @@ import { FaAngleLeft, FaPlus } from "react-icons/fa6";
 import SelectionModal, { SelectionItem } from "./modals/SelectionModal";
 import { fetchFilteredFaculties } from "@/lib/helpers/admin/calender/fetchFacultyCalendar";
 import { fetchStudentsWithProfile } from "@/lib/helpers/faculty/fetchStudents";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchFacultySections,
   fetchFacultySubjects,
   fetchFacultyYears,
+  fetchFacultyBranches,
 } from "@/lib/helpers/faculty/facultyAPI";
 import toast from "react-hot-toast";
 import { FacultySectionRow } from "@/lib/helpers/faculty/facultysectionsAPI";
@@ -26,6 +28,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { FilterDropdown } from "../../admin/assignments/components/filterDropdown";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export type ProjectPayload = {
   title: string;
@@ -47,463 +50,65 @@ type FacultyOption = {
   id: number | string;
   name: string;
   image?: string;
-};
-
-interface Props {
-  onCancel: () => void;
-  college_branch: string | null;
-  collegeAcademicYear: string | null;
-  faculty_edu_type: string | null;
 }
 
+import { useAddProjectForm, AddProjectFormProps } from "./hooks/useAddProjectForm";
 const AddProjectForm = ({
   onCancel,
   college_branch,
   collegeAcademicYear,
   faculty_edu_type,
-}: Props) => {
+}: AddProjectFormProps) => {
   const {
-    collegeId: facultyCollegeId,
-    facultyId: contextFacultyId,
-    role,
-  } = useFaculty();
-  const { collegeId: adminCollegeId, adminId } = useAdmin();
-  const { role: userRole, collegeEducationType } = useUser();
-
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const facultyIdFromParams = searchParams.get("facultyId");
-  const selectedYearId = searchParams.get("yearId");
-  const selectedSubjectId = searchParams.get("subjectId");
-
-  const resolvedFacultyId =
-    contextFacultyId ??
-    (facultyIdFromParams ? Number(facultyIdFromParams) : null);
-  const resolvedCollegeId = facultyCollegeId ?? adminCollegeId;
-
-  const isAdmin = userRole === "Admin";
-
-  const [availableYears, setAvailableYears] = useState<
-    { id: number; label: string }[]
-  >([]);
-  const [availableSubjects, setAvailableSubjects] = useState<
-    { id: number; label: string }[]
-  >([]);
-  const [availableSections, setAvailableSections] = useState<
-    FacultySectionRow[]
-  >([]);
-  const [loading, setLoading] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [domainInput, setDomainInput] = useState("");
-  const [isMentorModalOpen, setIsMentorModalOpen] = useState(false);
-  const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
-  
-  const [selectedStudents, setSelectedStudents] = useState<SelectionItem[]>([]);
-  const [selectedMentors, setSelectedMentors] = useState<SelectionItem[]>([]);
-
-  const [formData, setFormData] = useState<ProjectPayload>({
-    title: "",
-    description: "",
-    domain: [],
-    marks: "" as unknown as number,
-    startDate: "",
-    endDate: "",
-    mentorIds: [],
-    studentIds: [],
-    fileUrls: [],
-    files: [],
-    year: "",
-    subject: "",
-    section: "",
+    formData,
+    handleChange,
+    handleSaveProject,
+    domainInput,
+    setDomainInput,
+    handleAddDomain,
+    removeDomain,
+    handleFileChange,
+    removeFile,
+    handleDrag,
+    handleDrop,
+    isDragging,
+    setIsDragging,
+    fileInputRef,
+    loading,
+    isMentorModalOpen,
+    setIsMentorModalOpen,
+    isStudentModalOpen,
+    setIsStudentModalOpen,
+    selectedMentors,
+    setSelectedMentors,
+    selectedStudents,
+    setSelectedStudents,
+    fetchMentorItems,
+    fetchStudentItems,
+    branches,
+    years,
+    subjects,
+    sections,
+    isBranchesLoading,
+    isYearsLoading,
+    isSubjectsLoading,
+    isSectionsLoading,
+    isAdmin,
+    isInter,
+    isSchool,
+    resolvedCollegeId,
+  } = useAddProjectForm({
+    onCancel,
+    college_branch,
+    collegeAcademicYear,
+    faculty_edu_type,
   });
 
-  const handleChange = <K extends keyof ProjectPayload>(
-    field: K,
-    value: ProjectPayload[K],
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  useEffect(() => {
-    const loadYears = async () => {
-      if (!resolvedFacultyId) return;
-
-      const years = await fetchFacultyYears(resolvedFacultyId);
-      setAvailableYears(years);
-
-      if (!isInitialized && years.length > 0) {
-        const selected = selectedYearId
-          ? years.find((y) => y.id === Number(selectedYearId))
-          : years[0];
-
-        if (selected) {
-          setFormData((prev) => ({ ...prev, year: selected.id.toString() }));
-        }
-      }
-    };
-    loadYears();
-  }, [resolvedFacultyId]);
-
-  useEffect(() => {
-    const loadSubjects = async () => {
-      if (!resolvedFacultyId || !formData.year) return;
-
-      const subs = await fetchFacultySubjects(
-        resolvedFacultyId,
-        parseInt(formData.year),
-      );
-      setAvailableSubjects(subs);
-
-      if (!isInitialized && subs.length > 0) {
-        const selected = selectedSubjectId
-          ? subs.find((s) => s.id === Number(selectedSubjectId))
-          : subs[0];
-
-        if (selected) {
-          setFormData((prev) => ({ ...prev, subject: selected.id.toString() }));
-        }
-      }
-    };
-    loadSubjects();
-  }, [formData.year, resolvedFacultyId]);
-
-  useEffect(() => {
-    const loadSections = async () => {
-      const yearId = parseInt(formData.year);
-      const subjectId = parseInt(formData.subject);
-
-      if (!resolvedFacultyId || isNaN(yearId) || isNaN(subjectId)) {
-        setAvailableSections([]);
-        return;
-      }
-
-      try {
-        const sections = await fetchFacultySections(
-          resolvedFacultyId,
-          yearId,
-          subjectId,
-        );
-        setAvailableSections(sections);
-
-        if (!isInitialized && sections.length > 0) {
-          const firstSectionId =
-            sections[0].college_sections?.collegeSectionsId.toString() ?? "";
-
-          setFormData((prev) => ({ ...prev, section: firstSectionId }));
-          setIsInitialized(true);
-        }
-      } catch (err) {
-        console.error("Failed to load sections", err);
-      }
-    };
-    loadSections();
-  }, [formData.year, formData.subject, resolvedFacultyId]);
-
-  const fetchMentorItems = useCallback(async (searchQuery: string, page: number) => {
-    if (!resolvedCollegeId) return { data: [], hasMore: false };
-    try {
-      let eduId: number | undefined = undefined;
-      let branchId: number | undefined = undefined;
-
-      if (faculty_edu_type) {
-        const { data: eduData } = await supabase
-          .from("college_education")
-          .select("collegeEducationId")
-          .eq("collegeId", resolvedCollegeId)
-          .eq("collegeEducationType", faculty_edu_type)
-          .is("deletedAt", null)
-          .maybeSingle();
-        if (eduData) eduId = eduData.collegeEducationId;
-      }
-
-      if (college_branch) {
-        const { data: branchData } = await supabase
-          .from("college_branch")
-          .select("collegeBranchId")
-          .eq("collegeId", resolvedCollegeId)
-          .eq("collegeBranchCode", college_branch)
-          .is("deletedAt", null)
-          .maybeSingle();
-        if (branchData) branchId = branchData.collegeBranchId;
-      }
-
-      const response = await fetchFilteredFaculties({
-        collegeId: resolvedCollegeId,
-        ...(eduId ? { collegeEducationId: eduId } : {}),
-        ...(branchId ? { collegeBranchId: branchId } : {}),
-        searchQuery,
-        page,
-        limit: 10
-      });
-
-      return {
-        data: response.data.map((faculty: any) => ({
-          id: Number(faculty.id),
-          name: faculty.name,
-          image: faculty.image,
-        })),
-        hasMore: response.hasMore ?? false
-      };
-    } catch (error) {
-      console.error("Failed to load mentors", error);
-      return { data: [], hasMore: false };
-    }
-  }, [resolvedCollegeId, faculty_edu_type]);
-
-  const fetchStudentItems = useCallback(async (searchQuery: string, page: number) => {
-    const yearId = parseInt(formData.year);
-    const sectionId = parseInt(formData.section);
-
-    if (!resolvedCollegeId || isNaN(yearId) || isNaN(sectionId)) {
-      return { data: [], hasMore: false };
-    }
-
-    try {
-      let eduId: number | undefined = undefined;
-      let branchId: number | undefined = undefined;
-
-      if (faculty_edu_type) {
-        const { data: eduData } = await supabase
-          .from("college_education")
-          .select("collegeEducationId")
-          .eq("collegeId", resolvedCollegeId)
-          .eq("collegeEducationType", faculty_edu_type)
-          .is("deletedAt", null)
-          .maybeSingle();
-        if (eduData) eduId = eduData.collegeEducationId;
-      }
-
-      if (college_branch) {
-        const { data: branchData } = await supabase
-          .from("college_branch")
-          .select("collegeBranchId")
-          .eq("collegeId", resolvedCollegeId)
-          .eq("collegeBranchCode", college_branch)
-          .is("deletedAt", null)
-          .maybeSingle();
-        if (branchData) branchId = branchData.collegeBranchId;
-      }
-
-      const response = await fetchStudentsWithProfile(Number(resolvedCollegeId), {
-        yearId,
-        sectionId,
-        ...(eduId ? { educationId: eduId } : {}),
-        ...(branchId ? { branchId: branchId } : {}),
-        searchQuery,
-        page,
-        limit: 10
-      });
-      return {
-        data: response.data.map((student: any) => ({
-          id: Number(student.studentId),
-          name: student.users?.fullName || `Student ${student.studentId}`,
-          image: student.users?.user_profile?.[0]?.profileUrl,
-        })),
-        hasMore: response.hasMore ?? false
-      };
-    } catch (error) {
-      console.error("Failed to load students:", error);
-      return { data: [], hasMore: false };
-    }
-  }, [resolvedCollegeId, formData.year, formData.section]);
-
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const droppedFiles = e.dataTransfer.files;
-    if (droppedFiles?.length > 0) {
-      const allowedExtensions = ["pdf", "jpg", "jpeg", "png", "zip"];
-      const validFiles = Array.from(droppedFiles).filter((file) =>
-        allowedExtensions.includes(
-          file.name.split(".").pop()?.toLowerCase() || "",
-        ),
-      );
-      if (validFiles.length > 0) {
-        setFormData((prev) => ({
-          ...prev,
-          files: [...prev.files, ...validFiles],
-          fileUrls: [...prev.fileUrls, ...validFiles.map((f) => f.name)],
-        }));
-      } else {
-        alert("Invalid file type. Please upload PDF, JPG, PNG, or ZIP.");
-      }
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files?.length) {
-      const newFiles = Array.from(files);
-      setFormData((prev) => ({
-        ...prev,
-        files: [...prev.files, ...newFiles],
-        fileUrls: [...prev.fileUrls, ...newFiles.map((f) => f.name)],
-      }));
-    }
-  };
-
-  const removeFile = (indexToRemove: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      files: prev.files.filter((_, i) => i !== indexToRemove),
-      fileUrls: prev.fileUrls.filter((_, i) => i !== indexToRemove),
-    }));
-  };
-
-  const handleAddDomain = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && domainInput.trim()) {
-      e.preventDefault();
-      if (!formData.domain.includes(domainInput.trim())) {
-        handleChange("domain", [...formData.domain, domainInput.trim()]);
-      }
-      setDomainInput("");
-    }
-  };
-
-  const removeDomain = (domainToRemove: string) => {
-    handleChange(
-      "domain",
-      formData.domain.filter((d) => d !== domainToRemove),
-    );
-  };
-
-  const handleSaveProject = async () => {
-    const pendingDomain = domainInput.trim();
-    const domainValues =
-      pendingDomain && !formData.domain.includes(pendingDomain)
-        ? [...formData.domain, pendingDomain]
-        : formData.domain;
-
-    if (!formData.title.trim()) {
-      toast.error("Project title is required.");
-      return;
-    }
-    if (domainValues.length === 0) {
-      toast.error("Please add at least one domain.");
-      return;
-    }
-    if (!formData.description.trim()) {
-      toast.error("Project description is required.");
-      return;
-    }
-    if (!formData.year) {
-      toast.error("Please select a year.");
-      return;
-    }
-    if (!formData.subject) {
-      toast.error("Please select a subject.");
-      return;
-    }
-    if (!formData.section) {
-      toast.error("Please select a section.");
-      return;
-    }
-    if (formData.studentIds.length === 0) {
-      toast.error("Please assign at least one team member.");
-      return;
-    }
-    if (formData.mentorIds.length === 0) {
-      toast.error("Please assign at least one mentor.");
-      return;
-    }
-    if (formData.marks === "" || Number(formData.marks) <= 0) {
-      toast.error("Please enter valid marks.");
-      return;
-    }
-    if (!formData.startDate) {
-      toast.error("Please select a start date.");
-      return;
-    }
-    if (!formData.endDate) {
-      toast.error("Please select an end date.");
-      return;
-    }
-    if (new Date(formData.endDate) <= new Date(formData.startDate)) {
-      toast.error("End date must be after start date.");
-      return;
-    }
-    if (!resolvedCollegeId) {
-      toast.error("College context is not loaded.");
-      return;
-    }
-    if (!resolvedFacultyId) {
-      toast.error("Faculty context is not loaded.");
-      return;
-    }
-
-    setLoading(true);
-    const loadingToast = toast.loading("Creating project...");
-
-    try {
-      const projectResult = await saveProject({
-        title: formData.title,
-        description: formData.description,
-        domain: domainValues,
-        marks: formData.marks === "" ? 0 : Number(formData.marks),
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        collegeId: resolvedCollegeId,
-        facultyId: resolvedFacultyId,
-        adminId: isAdmin ? adminId : null,
-        collegeAcademicYearId: Number(formData.year),
-        collegeSubjectId: Number(formData.subject),
-        collegeSectionsId: Number(formData.section),
-      });
-
-      if (!projectResult.success || !projectResult.projectId) {
-        throw new Error("Failed to create project");
-      }
-
-      const newId = projectResult.projectId;
-      const uploadedUrls: string[] = [];
-
-      for (const file of formData.files) {
-        const result = await uploadProjectFile(newId, file);
-        if (result.success) uploadedUrls.push(result.publicUrl);
-        else console.warn("File upload failed for:", file.name);
-      }
-
-      const [teamRes, mentorRes, fileRes] = await Promise.all([
-        addStudentsToProject(newId, formData.studentIds),
-        addMentorsToProject(newId, formData.mentorIds),
-        addProjectFiles(newId, uploadedUrls),
-      ]);
-
-      if (teamRes.success && mentorRes.success && fileRes.success) {
-        toast.success("Project and all details saved!", { id: loadingToast });
-
-        if (isAdmin) {
-          onCancel();
-        } else {
-          router.push("/faculty/projects");
-          router.refresh();
-        }
-      } else {
-        toast.error("Project saved, but some team/mentor data failed.", {
-          id: loadingToast,
-        });
-      }
-    } catch (error) {
-      console.error("handleSaveProject error:", error);
-      toast.error("Something went wrong during save.", { id: loadingToast });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <main className="min-h-screen">
-      <div className={`flex ${isAdmin ? 'justify-end' : 'justify-between'} items-start mb-6`}>
+    <main className="min-h-screen p-2">
+      <div
+        className={`flex ${isAdmin ? "justify-end" : "justify-between"} items-start mb-6`}
+      >
         {!isAdmin && (
           <div>
             <div className="flex items-center gap-1">
@@ -519,47 +124,71 @@ const AddProjectForm = ({
             </p>
           </div>
         )}
-
-        {(role === "Faculty" || isAdmin) && (
-          <div className="bg-[#43C17A] text-white px-2 py-1 w-fit rounded text-sm font-medium max-md:hidden">
-            {college_branch ? `${college_branch} - ${collegeAcademicYear}` : collegeAcademicYear}
-          </div>
-        )}
       </div>
 
-      <div className="mb-6 flex flex-col md:flex-row w-full gap-4 overflow-x-auto custom-scrollbar pb-2">
+      <div className="mb-6 flex flex-col md:flex-row w-full gap-4 overflow-x-visible pb-2 pl-2">
+        {!isSchool && (
+          <FilterDropdown
+            label={isInter ? "Group" : "Branch"}
+            value={formData.branch}
+            options={branches.map((b: any) => ({
+              label: b.label,
+              value: b.id.toString(),
+            }))}
+            onChange={(val) => handleChange("branch", val)}
+            disabled={isBranchesLoading || branches.length <= 1}
+          />
+        )}
+
         <FilterDropdown
           label="Year"
           value={formData.year}
-          options={availableYears.map(y => ({ label: y.label, value: y.id.toString() }))}
+          options={years.map((y: any) => ({
+            label: y.label,
+            value: y.id.toString(),
+          }))}
           onChange={(val) => handleChange("year", val)}
+          disabled={isYearsLoading || years.length <= 1}
         />
 
         <FilterDropdown
           label="Subject"
           value={formData.subject}
           options={[
-            ...Array.from(new Map(availableSubjects.map((sub) => [sub.id, sub])).values()).map(sub => ({
+            ...Array.from(
+              new Map<any, any>(subjects.map((sub: any) => [sub.id, sub])).values(),
+            ).map((sub) => ({
               label: sub.label,
-              value: sub.id.toString()
-            }))
+              value: sub.id.toString(),
+            })),
           ]}
-          disabled={availableSubjects.length === 0}
+          disabled={isSubjectsLoading || subjects.length <= 1}
           onChange={(val) => handleChange("subject", val)}
         />
 
-        <FilterDropdown
-          label="Section"
-          value={formData.section}
-          options={[
-            ...availableSections.map(sec => ({
-              label: sec.college_sections?.collegeSections || "",
-              value: sec.college_sections?.collegeSectionsId.toString() || ""
-            }))
-          ]}
-          disabled={availableSections.length === 0}
-          onChange={(val) => handleChange("section", val)}
-        />
+        {(() => {
+          const uniqueSections = Array.from(
+            new Map<any, any>(
+              sections.map((sec: any) => [
+                sec.college_sections?.collegeSectionsId,
+                sec,
+              ]),
+            ).values(),
+          );
+
+          return (
+            <FilterDropdown
+              label="Section"
+              value={formData.section}
+              options={uniqueSections.map((sec) => ({
+                label: sec.college_sections?.collegeSections || "",
+                value: (sec.college_sections?.collegeSectionsId || "").toString(),
+              }))}
+              disabled={isSectionsLoading || uniqueSections.length <= 1}
+              onChange={(val) => handleChange("section", val)}
+            />
+          );
+        })()}
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-8 max-w-5xl mx-auto">
@@ -648,7 +277,7 @@ const AddProjectForm = ({
               Team Members <span className="text-red-500">*</span>
             </label>
             <div className="border rounded-md p-2 flex items-center justify-between border-[#282828] min-h-[46px]">
-              <div className="flex items-center gap-2 overflow-x-auto">
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                 {selectedStudents.length > 0 ? (
                   selectedStudents.map((student) => {
                     return (
@@ -662,9 +291,14 @@ const AddProjectForm = ({
                         <button
                           type="button"
                           onClick={() => {
-                            const newStudents = selectedStudents.filter((s) => s.id !== student.id);
+                            const newStudents = selectedStudents.filter(
+                              (s) => s.id !== student.id,
+                            );
                             setSelectedStudents(newStudents);
-                            handleChange("studentIds", newStudents.map(s => s.id));
+                            handleChange(
+                              "studentIds",
+                              newStudents.map((s) => s.id),
+                            );
                           }}
                           className="hover:text-red-500 font-bold leading-none cursor-pointer"
                         >
@@ -695,7 +329,7 @@ const AddProjectForm = ({
             </label>
             <div className="flex flex-col gap-2">
               <div className="border rounded-md p-2 flex items-center justify-between border-[#282828] min-h-[46px] bg-white">
-                <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar">
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                   {selectedMentors.length > 0 ? (
                     selectedMentors.map((mentor) => {
                       return (
@@ -709,9 +343,14 @@ const AddProjectForm = ({
                           <button
                             type="button"
                             onClick={() => {
-                              const newMentors = selectedMentors.filter((m) => m.id !== mentor.id);
+                              const newMentors = selectedMentors.filter(
+                                (m) => m.id !== mentor.id,
+                              );
                               setSelectedMentors(newMentors);
-                              handleChange("mentorIds", newMentors.map(m => m.id));
+                              handleChange(
+                                "mentorIds",
+                                newMentors.map((m) => m.id),
+                              );
                             }}
                             className="hover:text-red-500 font-bold leading-none cursor-pointer"
                           >
@@ -750,7 +389,7 @@ const AddProjectForm = ({
               }}
               onWheel={(e) => e.currentTarget.blur()}
               placeholder="Enter marks"
-              className="w-full border rounded-md px-2 py-1.5 text-[#282828] focus:outline-green-600"
+              className="w-full border rounded-md px-2 py-1.5 text-[#282828] focus:outline-green-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
 
@@ -884,7 +523,10 @@ const AddProjectForm = ({
         selectedItems={selectedMentors}
         onSelectionChange={(items) => {
           setSelectedMentors(items);
-          handleChange("mentorIds", items.map(i => i.id));
+          handleChange(
+            "mentorIds",
+            items.map((i) => i.id),
+          );
         }}
       />
       <SelectionModal
@@ -895,7 +537,10 @@ const AddProjectForm = ({
         selectedItems={selectedStudents}
         onSelectionChange={(items) => {
           setSelectedStudents(items);
-          handleChange("studentIds", items.map(i => i.id));
+          handleChange(
+            "studentIds",
+            items.map((i) => i.id),
+          );
         }}
       />
     </main>
@@ -903,3 +548,4 @@ const AddProjectForm = ({
 };
 
 export default AddProjectForm;
+

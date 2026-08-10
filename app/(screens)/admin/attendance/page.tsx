@@ -203,6 +203,11 @@ const AttendancePage = () => {
     refetchCards();
   });
 
+  const currentPageBelow75 = cards.reduce(
+    (acc, card) => acc + (card.belowThresholdCount || 0),
+    0
+  );
+
   const cardData = [
     {
       id: "1",
@@ -225,8 +230,9 @@ const AttendancePage = () => {
       style: "bg-[#FFE0E0] ",
       icon: <User size={23} weight="fill" color="#EFEFEF" />,
       iconBgColor: "#FF2020",
-      value: stats.studentsBelow75,
+      value: currentPageBelow75,
       label: "Students Below 75%",
+      subLabel: "(Current Page)",
     },
     {
       id: "4",
@@ -300,6 +306,7 @@ const AttendancePage = () => {
                 iconBgColor={item.iconBgColor}
                 value={item.value}
                 label={item.label}
+                subLabel={item.subLabel}
               />
             ))}
           </div>
@@ -328,6 +335,7 @@ const AttendancePage = () => {
         <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap lg:flex-nowrap w-full lg:flex-1 gap-2 border border-gray-100">
           <FilterDropdown
             label="Education"
+            isLoading={adminLoading}
             widthClassName="flex-1 min-w-0 md:min-w-[110px]"
             value={education?.collegeEducationId?.toString() ?? "All"}
             placeholder="Select Education"
@@ -352,6 +360,7 @@ const AttendancePage = () => {
           {!isSchool && (
             <FilterDropdown
               label={education?.collegeEducationType === "Inter" ? "Group" : "Branch"}
+              isLoading={adminLoading}
               widthClassName="flex-1 min-w-0 md:min-w-[110px]"
               value={branch?.collegeBranchId?.toString() ?? "All"}
               disabled={!education}
@@ -379,6 +388,7 @@ const AttendancePage = () => {
 
           <FilterDropdown
             label="Year"
+            isLoading={adminLoading}
             widthClassName="flex-1 min-w-0 md:min-w-[110px]"
             value={year?.collegeAcademicYearId?.toString() ?? "All"}
             disabled={isSchool ? !education : !branch}
@@ -406,6 +416,7 @@ const AttendancePage = () => {
 
           <FilterDropdown
             label="Section"
+            isLoading={adminLoading}
             widthClassName="flex-1 min-w-0 md:min-w-[110px]"
             value={section?.collegeSectionsId?.toString() ?? "All"}
             disabled={!year}
@@ -433,6 +444,7 @@ const AttendancePage = () => {
 
           <FilterDropdown
             label="Subject"
+            isLoading={adminLoading}
             widthClassName="flex-1 min-w-0 md:min-w-[110px]"
             value={subject?.collegeSubjectId?.toString() ?? "All"}
             disabled={!section}

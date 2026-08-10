@@ -157,23 +157,23 @@ export const CustomDropdown = ({
             if (!isOpen) updateRect();
             setIsOpen(!isOpen);
           }}
-          className={`relative rounded-md pl-3 pr-9 py-2 flex items-center justify-between transition-colors duration-300 ease-in-out cursor-pointer select-none outline-none border w-full ${className} ${
+          className={`relative rounded-md pl-3 pr-9 py-2 flex items-center justify-between transition-colors duration-300 ease-in-out select-none outline-none border w-full ${className} ${
             disabled
-              ? theme === "always-green" ? "bg-[#43C17A15] opacity-50 cursor-not-allowed border-[#43C17A]/40" : "bg-gray-100 opacity-50 cursor-not-allowed border-gray-300"
+              ? theme === "always-green" ? "bg-[#43C17A15] cursor-not-allowed border-[#43C17A]/30" : "bg-[#F3F4F6] cursor-not-allowed border-gray-200"
               : theme === "always-green" 
-                ? "bg-[#43C17A15] border-[#43C17A]/40 hover:bg-[#43C17A20]"
+                ? "bg-[#43C17A15] border-[#43C17A]/40 hover:bg-[#43C17A20] cursor-pointer"
                 : isOpen 
-                  ? theme === "green" ? "bg-[#43C17A15] border-[#43C17A]/40" : "bg-blue-50 border-blue-200" 
-                  : "bg-white border-gray-300 hover:border-gray-400"
+                  ? theme === "green" ? "bg-[#43C17A15] border-[#43C17A]/40 cursor-pointer" : "bg-blue-50 border-blue-200 cursor-pointer" 
+                  : "bg-white border-gray-300 hover:border-gray-400 cursor-pointer"
           }`}
         >
-          <span className={`text-[13px] font-medium truncate ${disabled ? (theme === "always-green" ? "text-[#43C17A]" : "text-gray-400") : theme === "always-green" ? "text-[#43C17A] font-semibold" : isOpen ? (theme === "green" ? "text-[#43C17A] font-semibold" : "text-blue-600 font-semibold") : "text-gray-700"}`}>
+          <span className={`text-[13px] font-medium truncate ${disabled ? (theme === "always-green" ? "text-[#43C17A] opacity-70" : "text-gray-500") : theme === "always-green" ? "text-[#43C17A] font-semibold" : isOpen ? (theme === "green" ? "text-[#43C17A] font-semibold" : "text-blue-600 font-semibold") : "text-gray-700"}`}>
             {selectedLabel || placeholder}
           </span>
           <CaretDown
             size={14}
             className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-300 ease-in-out ${
-              isOpen ? (theme === "green" || theme === "always-green" ? "rotate-180 text-[#43C17A]" : "rotate-180 text-blue-500") : theme === "always-green" ? "text-[#43C17A]" : "text-gray-500"
+              isOpen ? (theme === "green" || theme === "always-green" ? "rotate-180 text-[#43C17A]" : "rotate-180 text-blue-500") : disabled ? (theme === "always-green" ? "text-[#43C17A] opacity-70" : "text-gray-400") : theme === "always-green" ? "text-[#43C17A]" : "text-gray-500"
             }`}
             weight="bold"
           />

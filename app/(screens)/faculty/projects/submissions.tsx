@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { format } from "date-fns";
-import { fetchProjectSubmissionsWithStudents } from "@/lib/helpers/student/student_project_submissionsAPI";
+import { fetchProjectSubmissionsWithStudents, fetchProjectContextDetails } from "@/lib/helpers/student/student_project_submissionsAPI";
+import { getSecureAttachmentUrl } from "@/lib/helpers/projects/projectFiles";
 import TableComponent from "@/app/utils/table/table";
 import { Avatar } from "@/app/utils/Avatar";
 import toast from "react-hot-toast";
 import { decodeId } from "@/app/utils/crypto";
 import AddMarksModal from "./AddMarksModal";
+import { Pagination } from "../../admin/academic-setup/components/pagination";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface StudentSubmissionsProps {
   projectId: string | null;
@@ -16,113 +19,128 @@ interface StudentSubmissionsProps {
 
 export default function StudentSubmissions() {
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
 
   const projectId = searchParams.get("projectId");
 
-  const [submissions, setSubmissions] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+
+  const [page, setPage] = useState(1);
+  const limit = 10;
 
   const projectTitle = searchParams.get("title")
     ? decodeURIComponent(searchParams.get("title")!)
     : "Project Submissions";
 
-  useEffect(() => {
-    const getSubmissions = async () => {
-      if (!projectId) {
-        setIsLoading(false);
-        return;
+  const branchName = searchParams.get("branchName");
+  const yearName = searchParams.get("yearName");
+
+  const decodedString = projectId ? decodeId(projectId) : null;
+  const parsedProjectId = decodedString ? Number(decodedString) : null;
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["projectSubmissions", parsedProjectId, page],
+    queryFn: async () => {
+      if (!parsedProjectId || isNaN(parsedProjectId)) {
+        return { data: [], total: 0 };
       }
-      const decodedString = decodeId(projectId);
-      const parsedProjectId = Number(decodedString);
+      return await fetchProjectSubmissionsWithStudents(parsedProjectId, page, limit);
+    },
+    enabled: !!parsedProjectId && !isNaN(parsedProjectId),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-      if (!decodedString || isNaN(parsedProjectId)) {
-        setIsLoading(false);
-        return;
-      }
+  const { data: projectContext } = useQuery({
+    queryKey: ["projectContext", parsedProjectId],
+    queryFn: async () => {
+      if (!parsedProjectId || isNaN(parsedProjectId)) return null;
+      return await fetchProjectContextDetails(parsedProjectId);
+    },
+    enabled: !!parsedProjectId && !isNaN(parsedProjectId),
+    staleTime: 1000 * 60 * 60, // 1 hour
+  });
 
-      setIsLoading(true);
-      try {
-        const response = await fetchProjectSubmissionsWithStudents(
-          Number(parsedProjectId),
-        );
+  const contextAny = projectContext as any;
+  const subjectName = Array.isArray(contextAny?.college_subjects) 
+    ? contextAny?.college_subjects[0]?.subjectName 
+    : contextAny?.college_subjects?.subjectName;
+    
+  const sectionName = Array.isArray(contextAny?.college_sections) 
+    ? contextAny?.college_sections[0]?.collegeSections 
+    : contextAny?.college_sections?.collegeSections;
 
-        const formattedData = (response.data || []).map((item: any, index: number) => {
-          const student = item.students;
-          const user = student?.users;
+  if (isError) {
+    toast.error("Failed to load submissions", { id: "submissions-error" });
+  }
 
-          const profileData = student?.users?.user_profile;
-          const profileUrl = Array.isArray(profileData)
-            ? profileData[0]?.profileUrl
-            : profileData?.profileUrl;
+  const submissionsData = data?.data || [];
+  const totalItems = data?.total || 0;
 
-          const rollData = student?.student_pins;
-          const pinNumber = Array.isArray(rollData)
-            ? rollData[0]?.pinNumber
-            : rollData?.pinNumber;
+  const formattedSubmissions = submissionsData.map((item: any, index: number) => {
+    const student = item.students;
+    const user = student?.users;
 
-          return {
-            sno: index + 1,
-            photo: (
-              <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden mx-auto border border-gray-100">
-                <Avatar src={profileUrl} alt="" size={30} />
-              </div>
-            ),
-            name: user?.fullName || "Unknown Student",
-            rollNo: pinNumber || "N/A",
-            date: item.updatedAt
-              ? format(new Date(item.updatedAt), "dd MMM yyyy")
-              : "N/A",
-            file: (
-              <a
-                href={item.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-green-600 hover:text-green-800 font-semibold hover:underline"
-              >
-                View
-              </a>
-            ),
-            marks: (
-              <button
-                onClick={() => {
-                  setSelectedSubmission({
-                    id: item.studentProjectSubmissionId,
-                    name: user?.fullName || "Unknown Student",
-                    rollNo: pinNumber || "N/A",
-                    submittedOn: item.updatedAt
-                      ? format(new Date(item.updatedAt), "dd/MM/yyyy")
-                      : "N/A",
-                    totalMarks: item.projects?.marks || 0,
-                    obtainedMarks: item.marksObtained,
-                  });
-                  setIsModalOpen(true);
-                }}
-                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
-                  item.marksObtained !== null && item.marksObtained !== undefined
-                    ? "bg-[#16a34a] text-white hover:bg-green-700"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {item.marksObtained !== null && item.marksObtained !== undefined
-                  ? `${item.marksObtained} / ${item.projects?.marks || 0}`
-                  : "Add Marks"}
-              </button>
-            ),
-          };
-        });
+    const profileData = student?.users?.user_profile;
+    const profileUrl = Array.isArray(profileData)
+      ? profileData[0]?.profileUrl
+      : profileData?.profileUrl;
 
-        setSubmissions(formattedData);
-      } catch (err) {
-        toast.error("Failed to load submissions");
-      } finally {
-        setIsLoading(false);
-      }
+    const rollData = student?.student_pins;
+    const pinNumber = Array.isArray(rollData)
+      ? rollData[0]?.pinNumber
+      : rollData?.pinNumber;
+
+    return {
+      sno: (page - 1) * limit + index + 1,
+      photo: (
+        <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden mx-auto border border-gray-100">
+          <Avatar src={profileUrl} alt="" size={30} />
+        </div>
+      ),
+      name: user?.fullName || "Unknown Student",
+      rollNo: pinNumber || "N/A",
+      date: item.updatedAt
+        ? format(new Date(item.updatedAt), "dd MMM yyyy")
+        : "N/A",
+      file: (
+        <a
+          href={getSecureAttachmentUrl(item.fileUrl)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-green-600 hover:text-green-800 font-semibold hover:underline"
+        >
+          View
+        </a>
+      ),
+      marks: (
+        <button
+          onClick={() => {
+            setSelectedSubmission({
+              id: item.studentProjectSubmissionId,
+              name: user?.fullName || "Unknown Student",
+              rollNo: pinNumber || "N/A",
+              submittedOn: item.updatedAt
+                ? format(new Date(item.updatedAt), "dd/MM/yyyy")
+                : "N/A",
+              totalMarks: item.projects?.marks || 0,
+              obtainedMarks: item.marksObtained,
+            });
+            setIsModalOpen(true);
+          }}
+          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
+            item.marksObtained !== null && item.marksObtained !== undefined
+              ? "bg-[#16a34a] text-white hover:bg-green-700"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          {item.marksObtained !== null && item.marksObtained !== undefined
+            ? `${item.marksObtained} / ${item.projects?.marks || 0}`
+            : "Add Marks"}
+        </button>
+      ),
     };
-
-    getSubmissions();
-  }, [projectId]);
+  });
 
   const columns = [
     { title: "S.No", key: "sno" },
@@ -141,35 +159,59 @@ export default function StudentSubmissions() {
           <h2 className="text-[#16a34a] text-xl md:text-2xl font-bold">
             {projectTitle}
           </h2>
+          <div className="flex gap-2 mt-3 mb-2 flex-wrap">
+            {branchName && (
+              <div className="bg-gray-100 border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium">
+                {branchName}
+              </div>
+            )}
+            {yearName && (
+              <div className="bg-gray-100 border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium">
+                {yearName}
+              </div>
+            )}
+            {subjectName && (
+              <div className="bg-gray-100 border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium">
+                {subjectName}
+              </div>
+            )}
+            {sectionName && (
+              <div className="bg-gray-100 border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium">
+                Section: {sectionName}
+              </div>
+            )}
+          </div>
           <p className="text-gray-500 text-sm mt-1">
-            {submissions.length} Total Submissions
+            {totalItems} Total Submissions
           </p>
         </div>
       </div>
 
       <TableComponent
         columns={columns}
-        tableData={submissions}
+        tableData={formattedSubmissions}
         isLoading={isLoading}
         height="60vh"
       />
+
+      {!isLoading && (
+        <div className="mt-2 flex justify-center w-full pb-4">
+          <Pagination
+            currentPage={page}
+            totalItems={totalItems}
+            itemsPerPage={limit}
+            onPageChange={(newPage) => setPage(newPage)}
+            alwaysShow={true}
+          />
+        </div>
+      )}
 
       <AddMarksModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         submission={selectedSubmission}
-        onSave={(marks) => {
-          setSubmissions((prev) =>
-            prev.map((sub) => {
-              if (sub.marks.props.children[0] === undefined) {
-                // To properly update UI, we need to re-fetch or hack the update
-              }
-              // A simple way to trigger re-render is reload window or re-fetch
-              return sub;
-            })
-          );
-          // Just reload for simplicity and consistency
-          window.location.reload();
+        onSave={() => {
+          queryClient.invalidateQueries({ queryKey: ["projectSubmissions", parsedProjectId] });
         }}
       />
     </div>

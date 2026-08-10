@@ -224,3 +224,21 @@ export async function updateProjectSubmissionMarks(
 
     return { success: true, data };
 }
+
+export async function fetchProjectContextDetails(projectId: number) {
+    const { data, error } = await supabase
+        .from("projects")
+        .select(`
+            college_subjects ( subjectName ),
+            college_sections ( collegeSections )
+        `)
+        .eq("projectId", projectId)
+        .single();
+    
+    if (error) {
+        console.error("fetchProjectContextDetails error:", error);
+        return null;
+    }
+    
+    return data;
+}

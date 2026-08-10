@@ -8,41 +8,46 @@ function getBranch(row: any) {
 
 async function getBatchStudentCounts(
   sections: Array<{
-    collegeAcademicYearId: number;
     collegeSectionsId: number;
   }>,
 ) {
   if (sections.length === 0) return new Map();
 
+  const sectionIds = [...new Set(sections.map((s) => s.collegeSectionsId))];
+
   const { data, error } = await supabase
     .from("student_academic_history")
-    .select("collegeAcademicYearId, collegeSectionsId")
+    .select("collegeSectionsId, studentId, students(isActive, status)")
     .eq("isCurrent", true)
     .is("deletedAt", null)
-    .in("collegeAcademicYearId", [
-      ...new Set(sections.map((s) => s.collegeAcademicYearId)),
-    ])
-    .in("collegeSectionsId", [
-      ...new Set(sections.map((s) => s.collegeSectionsId)),
-    ]);
+    .in("collegeSectionsId", sectionIds);
 
   if (error) {
     console.error("getBatchStudentCounts error", error);
     return new Map();
   }
 
-  const countMap = new Map<string, number>();
-  data?.forEach((row) => {
-    const key = `${row.collegeAcademicYearId}-${row.collegeSectionsId}`;
-    countMap.set(key, (countMap.get(key) || 0) + 1);
+  const countMap = new Map<number, Set<number>>();
+  data?.forEach((row: any) => {
+    const student = Array.isArray(row.students) ? row.students[0] : row.students;
+    if (student && student.isActive !== false) {
+      if (!countMap.has(row.collegeSectionsId)) {
+        countMap.set(row.collegeSectionsId, new Set());
+      }
+      countMap.get(row.collegeSectionsId)!.add(row.studentId);
+    }
   });
 
-  return countMap;
+  const finalMap = new Map<number, number>();
+  countMap.forEach((studentSet, key) => {
+    finalMap.set(key, studentSet.size);
+  });
+
+  return finalMap;
 }
 
 async function getBatchSubjectCounts(
   sections: Array<{
-    collegeAcademicYearId: number;
     collegeSectionsId: number;
   }>,
 ) {
@@ -50,12 +55,8 @@ async function getBatchSubjectCounts(
 
   const { data, error } = await supabase
     .from("faculty_sections")
-    .select("collegeAcademicYearId, collegeSectionsId, collegeSubjectId")
-    .eq("isActive", true)
+    .select("collegeSectionsId, collegeSubjectId")
     .is("deletedAt", null)
-    .in("collegeAcademicYearId", [
-      ...new Set(sections.map((s) => s.collegeAcademicYearId)),
-    ])
     .in("collegeSectionsId", [
       ...new Set(sections.map((s) => s.collegeSectionsId)),
     ]);
@@ -65,16 +66,15 @@ async function getBatchSubjectCounts(
     return new Map();
   }
 
-  const countMap = new Map<string, Set<number>>();
+  const countMap = new Map<number, Set<number>>();
   data?.forEach((row) => {
-    const key = `${row.collegeAcademicYearId}-${row.collegeSectionsId}`;
-    if (!countMap.has(key)) {
-      countMap.set(key, new Set());
+    if (!countMap.has(row.collegeSectionsId)) {
+      countMap.set(row.collegeSectionsId, new Set());
     }
-    countMap.get(key)!.add(row.collegeSubjectId);
+    countMap.get(row.collegeSectionsId)!.add(row.collegeSubjectId);
   });
 
-  const finalMap = new Map<string, number>();
+  const finalMap = new Map<number, number>();
   countMap.forEach((subjectSet, key) => {
     finalMap.set(key, subjectSet.size);
   });
@@ -84,83 +84,53 @@ async function getBatchSubjectCounts(
 
 async function getBatchFacultyCounts(
   sections: Array<{
-    collegeAcademicYearId: number;
     collegeSectionsId: number;
-    collegeBranchId: number;
-    collegeEducationId: number;
   }>,
 ) {
   if (sections.length === 0) return new Map();
 
-  const validSections = sections.filter(
-    (s) => s.collegeBranchId && s.collegeEducationId,
-  );
-  if (validSections.length === 0) return new Map();
+  const sectionIds = [...new Set(sections.map((s) => s.collegeSectionsId))];
 
   const { data, error } = await supabase
     .from("faculty_sections")
-    .select(
-      `
-      collegeAcademicYearId,
-      collegeSectionsId,
-      facultyId,
-      faculty (
-        collegeBranchId,
-        collegeEducationId
-      )
-    `,
-    )
-    .eq("isActive", true)
+    .select("collegeSectionsId, facultyId, collegeEducationId, collegeBranchId, faculty(deletedAt)")
     .is("deletedAt", null)
-    .in("collegeAcademicYearId", [
-      ...new Set(validSections.map((s) => s.collegeAcademicYearId)),
-    ])
-    .in("collegeSectionsId", [
-      ...new Set(validSections.map((s) => s.collegeSectionsId)),
-    ]);
+    .in("collegeSectionsId", sectionIds);
 
   if (error) {
     console.error("getBatchFacultyCounts error", error);
     return new Map();
   }
 
-  const sectionFilters = new Map<
-    string,
-    { branchId: number; educationId: number }
-  >();
-  validSections.forEach((s) => {
-    const key = `${s.collegeAcademicYearId}-${s.collegeSectionsId}`;
-    sectionFilters.set(key, {
-      branchId: s.collegeBranchId,
-      educationId: s.collegeEducationId,
-    });
-  });
-
-  const countMap = new Map<string, Set<number>>();
-  data?.forEach((row) => {
-    const key = `${row.collegeAcademicYearId}-${row.collegeSectionsId}`;
-    const filter = sectionFilters.get(key);
-
-    const faculty = Array.isArray(row.faculty) ? row.faculty[0] : row.faculty;
-
-    if (
-      filter &&
-      faculty?.collegeBranchId === filter.branchId &&
-      faculty?.collegeEducationId === filter.educationId
-    ) {
-      if (!countMap.has(key)) {
-        countMap.set(key, new Set());
-      }
-      countMap.get(key)!.add(row.facultyId);
+  const countMap = new Map<number, Set<number>>();
+  data?.forEach((row: any) => {
+    const fac = Array.isArray(row.faculty) ? row.faculty[0] : row.faculty;
+    if (fac && fac.deletedAt !== null) return;
+    
+    if (!countMap.has(row.collegeSectionsId)) {
+      countMap.set(row.collegeSectionsId, new Set());
     }
+    countMap.get(row.collegeSectionsId)!.add(row.facultyId);
   });
 
-  const finalMap = new Map<string, number>();
+  const finalMap = new Map<number, number>();
   countMap.forEach((facultySet, key) => {
     finalMap.set(key, facultySet.size);
   });
 
   return finalMap;
+}
+
+function parseIntegerId(val: any): number | null {
+  if (val === null || val === undefined) return null;
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (!trimmed || trimmed === "All" || trimmed === "null" || trimmed === "undefined") {
+      return null;
+    }
+  }
+  const num = Number(val);
+  return !isNaN(num) && num > 0 ? num : null;
 }
 
 export async function getAdminAcademicsCards(
@@ -169,14 +139,16 @@ export async function getAdminAcademicsCards(
   limit: number,
   search?: string,
   filters?: {
-    educationId?: number | null;
-    branchId?: number | null;
-    academicYearId?: number | null;
-    sectionId?: number | null;
-    subjectId?: number | null;
+    educationId?: number | string | null;
+    branchId?: number | string | null;
+    academicYearId?: number | string | null;
+    sectionId?: number | string | null;
+    subjectId?: number | string | null;
   },
 ) {
-  // 1. Fetch lightweight base records (NO .range() pagination yet!)
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
   let query = supabase
     .from("college_sections")
     .select(
@@ -197,89 +169,65 @@ export async function getAdminAcademicsCards(
       faculty_sections (
         facultyId,
         collegeAcademicYearId,
+        collegeEducationId,
+        collegeBranchId,
         faculty (
           facultyId,
+          userId,
           fullName,
           email,
           collegeBranchId,
-          collegeEducationId,
-          users:userId (
-            user_profile (
-              profileUrl,
-              is_deleted
-            )
-          )
+          collegeEducationId
         )
       )
     `,
+      { count: "exact" },
     )
     .eq("collegeId", collegeId)
     .eq("isActive", true)
     .is("deletedAt", null);
 
-  if (filters?.educationId)
-    query = query.eq("collegeEducationId", filters.educationId);
-  if (filters?.branchId) query = query.eq("collegeBranchId", filters.branchId);
-  if (filters?.academicYearId)
-    query = query.eq("collegeAcademicYearId", filters.academicYearId);
-  if (filters?.sectionId)
-    query = query.eq("collegeSectionsId", filters.sectionId);
-  if (filters?.subjectId)
-    query = query.eq("faculty_sections.collegeSubjectId", filters.subjectId);
-
-  const { data, error } = await query;
-
-  if (error) throw new Error("Failed to load academic records");
-
-  let filteredData = data ?? [];
-
-  // 2. Perform Smart Global Search in Memory
-  const searchText = (search || "").toLowerCase().replace(/\s+/g, ""); // "ece a" becomes "ecea"
+  const searchText = search?.trim().toLowerCase();
+  let branchSearch: string | null = null;
+  let sectionSearch: string | null = null;
 
   if (searchText) {
-    filteredData = filteredData.filter((row: any) => {
-      const branch = Array.isArray(row.collegeBranch)
-        ? row.collegeBranch[0]
-        : row.collegeBranch;
-      const branchCode = (branch?.collegeBranchCode || "").toLowerCase();
-      const branchName = (branch?.collegeBranchType || "").toLowerCase();
-      const section = (row.collegeSections || "").toLowerCase();
-
-      const yearObj = Array.isArray(row.collegeAcademicYear)
-        ? row.collegeAcademicYear[0]
-        : row.collegeAcademicYear;
-      const year = (
-        yearObj?.collegeAcademicYear?.toString() || ""
-      ).toLowerCase();
-
-      // Match "ece-a", "ecea", etc.
-      const comboWithDash = `${branchCode}-${section}`;
-      const comboStripped = `${branchCode}${section}`;
-
-      return (
-        comboWithDash.includes(searchText) ||
-        comboStripped.includes(searchText) ||
-        branchCode.includes(searchText) ||
-        branchName.includes(searchText) ||
-        section.includes(searchText) ||
-        year.includes(searchText)
-      );
+    searchText.split(/[-\s]+/).forEach((part) => {
+      if (part.length === 1) sectionSearch = part.toUpperCase();
+      else branchSearch = part;
     });
   }
 
-  const totalCount = filteredData.length;
-
-  const from = (page - 1) * limit;
-  const paginatedData = filteredData.slice(from, from + limit);
-
-  if (paginatedData.length === 0) {
-    return { data: [], totalCount: 0 };
+  if (branchSearch) {
+    query = query.or(
+      `collegeBranchCode.ilike.%${branchSearch}%,collegeBranchType.ilike.%${branchSearch}%`,
+      { foreignTable: "collegeBranch" },
+    );
   }
 
-  const sectionsForBatch = paginatedData.map((row: any) => {
-    const branch = Array.isArray(row.collegeBranch)
-      ? row.collegeBranch[0]
-      : row.collegeBranch;
+  if (sectionSearch) query = query.eq("collegeSections", sectionSearch);
+
+  const eduId = parseIntegerId(filters?.educationId);
+  const brId = parseIntegerId(filters?.branchId);
+  const yrId = parseIntegerId(filters?.academicYearId);
+  const secId = parseIntegerId(filters?.sectionId);
+  const subId = parseIntegerId(filters?.subjectId);
+
+  if (eduId) query = query.eq("collegeEducationId", eduId);
+  if (brId) query = query.eq("collegeBranchId", brId);
+  if (yrId) query = query.eq("collegeAcademicYearId", yrId);
+  if (secId) query = query.eq("collegeSectionsId", secId);
+  if (subId) query = query.eq("faculty_sections.collegeSubjectId", subId);
+
+  const { data, count, error } = await query.range(from, to);
+
+  if (error) {
+    console.error("getAdminAcademicsCards error", error);
+    throw new Error("Failed to load academic records");
+  }
+
+  const sections = (data ?? []).map(row => {
+    const branch = Array.isArray(row.collegeBranch) ? row.collegeBranch[0] : row.collegeBranch;
     return {
       collegeAcademicYearId: row.collegeAcademicYearId,
       collegeSectionsId: row.collegeSectionsId,
@@ -288,27 +236,51 @@ export async function getAdminAcademicsCards(
     };
   });
 
-  const [studentCountMap, subjectCountMap, facultyCountMap] = await Promise.all(
-    [
-      getBatchStudentCounts(sectionsForBatch),
-      getBatchSubjectCounts(sectionsForBatch),
-      getBatchFacultyCounts(sectionsForBatch),
-    ],
-  );
+  const facultyUserIds = new Set<number>();
+  (data ?? []).forEach(row => {
+    row.faculty_sections?.forEach((fs: any) => {
+      const f = Array.isArray(fs.faculty) ? fs.faculty[0] : fs.faculty;
+      if (f?.userId) facultyUserIds.add(f.userId);
+    });
+  });
 
-  const enrichedData = paginatedData.map((row: any) => {
-    const key = `${row.collegeAcademicYearId}-${row.collegeSectionsId}`;
+  const [studentCountMap, subjectCountMap, facultyCountMap, profilesRes] = await Promise.all([
+    getBatchStudentCounts(sections),
+    getBatchSubjectCounts(sections),
+    getBatchFacultyCounts(sections),
+    facultyUserIds.size > 0 
+      ? supabase.from("user_profile").select("userId, profileUrl").in("userId", Array.from(facultyUserIds)).eq("is_deleted", false)
+      : Promise.resolve({ data: [] })
+  ]);
+
+  const profileMap = new Map<number, string>();
+  (profilesRes.data ?? []).forEach((p: any) => {
+    if (p.profileUrl) profileMap.set(p.userId, p.profileUrl);
+  });
+
+  const enrichedData = (data ?? []).map((row) => {
+    if (row.faculty_sections) {
+      row.faculty_sections = row.faculty_sections.map((fs: any) => {
+        const f = Array.isArray(fs.faculty) ? fs.faculty[0] : fs.faculty;
+        if (f) {
+          f.profileUrl = profileMap.get(f.userId) || "";
+          fs.faculty = f;
+        }
+        return fs;
+      });
+    }
+
     return {
       ...row,
-      studentCount: studentCountMap.get(key) || 0,
-      subjectCount: subjectCountMap.get(key) || 0,
-      facultyCount: facultyCountMap.get(key) || 0,
+      studentCount: studentCountMap.get(row.collegeSectionsId) || 0,
+      subjectCount: subjectCountMap.get(row.collegeSectionsId) || 0,
+      facultyCount: facultyCountMap.get(row.collegeSectionsId) || 0,
     };
   });
 
   return {
     data: enrichedData,
-    totalCount: totalCount,
+    totalCount: count ?? 0,
   };
 }
 export function mapAcademicCards(data: any[]) {
@@ -320,21 +292,19 @@ export function mapAcademicCards(data: any[]) {
     const uniqueFacultiesMap = new Map<number, any>();
     row.faculty_sections?.forEach((fs: any) => {
       const f = Array.isArray(fs.faculty) ? fs.faculty[0] : fs.faculty;
+      
+      const eduId = f?.collegeEducationId ?? fs?.collegeEducationId;
+      const branchId = f?.collegeBranchId ?? fs?.collegeBranchId;
+      
+      if (eduId && row.collegeEducationId && eduId !== row.collegeEducationId) return;
+      if (branchId && row.collegeBranchId && branchId !== row.collegeBranchId) return;
+      
       if (f && f.facultyId && !uniqueFacultiesMap.has(f.facultyId)) {
-        // Extract profileUrl correctly
-        let profileUrl = null;
-        const profileData = f.users?.user_profile;
-        if (profileData) {
-          const profiles = Array.isArray(profileData) ? profileData : [profileData];
-          const activeProfile = profiles.find((profile: any) => profile && !profile.is_deleted);
-          if (activeProfile) profileUrl = activeProfile.profileUrl;
-        }
-
         uniqueFacultiesMap.set(f.facultyId, {
           facultyId: f.facultyId,
           fullName: f.fullName,
           email: f.email,
-          profileUrl: profileUrl || "",
+          profileUrl: f.profileUrl || "",
         });
       }
     });

@@ -251,7 +251,11 @@ export async function fetchEnrichedProjectsByFaculty(
     collegeSubjectId?: number,
     page?: number,
     limit?: number,
-    statusFilter?: "active" | "completed"
+    statusFilter?: "active" | "completed" | "previous",
+    collegeBranchId?: number,
+    collegeAcademicYearId?: number,
+    fromDate?: string,
+    toDate?: string
 ): Promise<{ data: EnrichedProject[], total: number }> {
 
     const today = new Date().toISOString();
@@ -279,9 +283,37 @@ export async function fetchEnrichedProjectsByFaculty(
         query = query.eq("collegeSubjectId", collegeSubjectId);
     }
 
+    if (collegeBranchId !== undefined && collegeBranchId !== null) {
+        // Fetch matching academic year IDs for this branch
+        const { data: academicYears } = await supabase
+            .from("college_academic_year")
+            .select("collegeAcademicYearId")
+            .eq("collegeBranchId", collegeBranchId);
+            
+        if (academicYears && academicYears.length > 0) {
+            const yearIds = academicYears.map(ay => ay.collegeAcademicYearId);
+            query = query.in("collegeAcademicYearId", yearIds);
+        } else {
+            // No academic years found for this branch, return empty result later or force fail
+            query = query.in("collegeAcademicYearId", [-1]); 
+        }
+    }
+    
+    if (collegeAcademicYearId !== undefined && collegeAcademicYearId !== null) {
+        query = query.eq("collegeAcademicYearId", collegeAcademicYearId);
+    }
+    
+    if (fromDate) {
+        query = query.gte("startDate", fromDate);
+    }
+    
+    if (toDate) {
+        query = query.lte("endDate", toDate);
+    }
+
     if (statusFilter === "active") {
         query = query.gte("endDate", today);
-    } else if (statusFilter === "completed") {
+    } else if (statusFilter === "completed" || statusFilter === "previous") {
         query = query.lt("endDate", today);
     }
 

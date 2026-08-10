@@ -14,6 +14,7 @@ type CardProps = {
   totalPercentage?: string | number;
   to?: string;
   onClick?: () => void;
+  subLabel?: string;
 };
 
 export default function CardComponent({
@@ -27,6 +28,7 @@ export default function CardComponent({
   underlineValue = false,
   totalPercentage,
   onClick,
+  subLabel,
 }: CardProps) {
   const router = useRouter();
 
@@ -65,6 +67,9 @@ export default function CardComponent({
       <div>
         <p className="text-[#282828] text-lg font-semibold">{value}</p>
         <span className="text-[#282828] text-sm">{label}</span>
+        {subLabel && (
+          <p className="text-gray-400 text-xs mt-1">{subLabel}</p>
+        )}
       </div>
     </div>
   );

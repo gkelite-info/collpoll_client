@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { getAdminAcademicsCards, mapAcademicCards } from "@/lib/helpers/admin/academics/getAdminAcademicsCards";
 import { useAcademicFilters } from "@/lib/helpers/admin/academics/useAcademicFilters";
+import { useQuery } from "@tanstack/react-query";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import FacultyAcademicCard from "./components/facultyAcademicCard";
 import { FilterDropdown } from "./components/filterDropdown";
@@ -71,11 +72,8 @@ const AcademicPage = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const { userId } = useUser();
-  const [cards, setCards] = useState<AcademicCardData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [totalRecords, setTotalRecords] = useState(0);
   const [mounted, setMounted] = useState(false);
-  const { collegeId: adminCollegeId, collegeEducationId, collegeEducationType } = useAdmin();
+  const { collegeId: adminCollegeId, collegeEducationId, collegeEducationType, loading: adminLoading } = useAdmin();
 
   const cardsPerPage = 9;
   const searchParams = useSearchParams();
@@ -119,8 +117,15 @@ const AcademicPage = () => {
   const isSchool = isSchoolEducation(
     education?.collegeEducationType || collegeEducationType
   );
+  const isInter =
+    education?.collegeEducationType === "Inter" ||
+    collegeEducationType === "Inter";
+
+  const currentEducationId =
+    education?.collegeEducationId ?? collegeEducationId ?? null;
+
   const apiFilters = {
-    educationId: education?.collegeEducationId ?? null,
+    educationId: currentEducationId,
     branchId: branch?.collegeBranchId ?? null,
     academicYearId: year?.collegeAcademicYearId ?? null,
     sectionId: section?.collegeSectionsId ?? null,
@@ -130,50 +135,38 @@ const AcademicPage = () => {
   const apiFiltersStr = JSON.stringify(apiFilters);
 
   useEffect(() => {
-    if (!adminCollegeId) return;
-    const timer = setTimeout(() => {
-      loadCardsOnly();
-    }, 150);
-
-    return () => clearTimeout(timer);
-  }, [adminCollegeId, currentPage, debouncedSearch, apiFiltersStr]);
-
-  const isEducationInitialized = useRef(false);
+    setCurrentPage(1);
+  }, [debouncedSearch, apiFiltersStr]);
 
   useEffect(() => {
-    if (!collegeEducationId || !selectEducation) return;
-    if (isEducationInitialized.current) return;
+    if (collegeEducationId && educations.length > 0 && !education) {
+      const assignedEdu = educations.find(
+        (e) => Number(e.collegeEducationId) === Number(collegeEducationId)
+      );
+      if (assignedEdu) {
+        selectEducation(assignedEdu);
+      }
+    }
+  }, [collegeEducationId, educations, education, selectEducation]);
 
-    selectEducation({
-      collegeEducationId,
-      collegeEducationType,
-    } as any);
-    isEducationInitialized.current = true;
-  }, [collegeEducationId, selectEducation, collegeEducationType]);
-
-  const loadCardsOnly = async () => {
-    if (!adminCollegeId) return;
-    try {
-      setLoading(true);
-
+  const { data: cardsQueryData, isLoading: isCardsLoading } = useQuery({
+    queryKey: ["adminAcademicsCards", adminCollegeId, currentPage, cardsPerPage, debouncedSearch, apiFiltersStr],
+    queryFn: async () => {
       const { data, totalCount } = await getAdminAcademicsCards(
-        adminCollegeId,
+        adminCollegeId!,
         currentPage,
         cardsPerPage,
         debouncedSearch,
-        JSON.parse(apiFiltersStr),
+        JSON.parse(apiFiltersStr)
       );
+      return { mappedCards: mapAcademicCards(data), totalCount };
+    },
+    enabled: !!adminCollegeId && !adminLoading,
+  });
 
-      setCards(mapAcademicCards(data));
-      setTotalRecords(totalCount);
-    } catch (error: any) {
-      toast.error(error?.message || "Unable to load academic records.");
-      setCards([]);
-      setTotalRecords(0);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const cards = cardsQueryData?.mappedCards || [];
+  const totalRecords = cardsQueryData?.totalCount || 0;
+  const loading = isCardsLoading || adminLoading;
 
   if (!mounted) return null;
 
@@ -219,9 +212,11 @@ const AcademicPage = () => {
           />
         </div>
 
-        <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap flex-1 gap-2 border border-gray-100">
+        <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap lg:flex-nowrap w-full lg:flex-1 gap-2 border border-gray-100">
           <FilterDropdown
             label="Education"
+            isLoading={adminLoading}
+            widthClassName="flex-1 min-w-0 md:min-w-[110px]"
             value={education?.collegeEducationId?.toString() ?? "All"}
             options={[
               "All",
@@ -244,9 +239,11 @@ const AcademicPage = () => {
             }}
           />
 
-          {!isSchool && (
+          {!isSchool && !isInter && (
             <FilterDropdown
               label={education?.collegeEducationType === "Inter" ? "Group" : "Branch"}
+              isLoading={adminLoading}
+              widthClassName="flex-1 min-w-0 md:min-w-[110px]"
               value={branch?.collegeBranchId?.toString() ?? "All"}
               disabled={!education}
               placeholder={education?.collegeEducationType === "Inter" ? "Select Group" : "Select Branch"}
@@ -275,6 +272,8 @@ const AcademicPage = () => {
 
           <FilterDropdown
             label="Year"
+            isLoading={adminLoading}
+            widthClassName="flex-1 min-w-0 md:min-w-[110px]"
             value={year?.collegeAcademicYearId?.toString() ?? "All"}
             placeholder="Select Year"
             disabled={isSchool ? !education : !branch}
@@ -297,6 +296,8 @@ const AcademicPage = () => {
 
           <FilterDropdown
             label="Section"
+            isLoading={adminLoading}
+            widthClassName="flex-1 min-w-0 md:min-w-[110px]"
             value={section?.collegeSectionsId?.toString() ?? "All"}
             placeholder="Select Section"
             disabled={!year}
@@ -317,6 +318,8 @@ const AcademicPage = () => {
 
           <FilterDropdown
             label="Subject"
+            isLoading={adminLoading}
+            widthClassName="flex-1 min-w-0 md:min-w-[110px]"
             value={subject?.collegeSubjectId?.toString() ?? "All"}
             placeholder="Select Subject"
             disabled={!section}
