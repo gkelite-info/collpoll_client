@@ -9,19 +9,21 @@ import ExecutiveCard from "./components/ExecutiveCard";
 import { ExecutiveShimmer, TabsShimmer } from "./components/ExecutiveShimmer";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchAllActiveWellbeingCategories } from "@/lib/helpers/wellbeingCategories/wellbeingCategoryAPI";
-import { fetchPaginatedWellbeingExecutives } from "@/lib/helpers/wellbeing/wellbeingExecutiveAPI";
+import {
+  fetchPaginatedWellbeingExecutives,
+  type WellbeingExecutiveListItem,
+} from "@/lib/helpers/wellbeing/wellbeingExecutiveAPI";
 import type { WellbeingCategoryWithSubs } from "@/lib/helpers/wellbeingCategories/types";
 import toast, { Toaster } from "react-hot-toast";
-
-const itemsPerPage = 9;
 
 export default function ExecutivesPage() {
   const { collegeId } = useUser();
   const [categories, setCategories] = useState<WellbeingCategoryWithSubs[]>([]);
   const [activeTab, setActiveTab] = useState<number | "All">("All");
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(9);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [executivesList, setExecutivesList] = useState<any[]>([]);
+  const [executivesList, setExecutivesList] = useState<WellbeingExecutiveListItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoadingExecutives, setIsLoadingExecutives] = useState(true);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
@@ -32,7 +34,7 @@ export default function ExecutivesPage() {
       setIsLoadingCategories(true);
       const data = await fetchAllActiveWellbeingCategories(collegeId);
       setCategories(data);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load categories");
     } finally {
       setIsLoadingCategories(false);
@@ -40,7 +42,7 @@ export default function ExecutivesPage() {
   }, [collegeId]);
 
   useEffect(() => {
-    loadCategories();
+    void Promise.resolve().then(loadCategories);
   }, [loadCategories]);
 
   const loadExecutives = useCallback(async () => {
@@ -56,15 +58,15 @@ export default function ExecutivesPage() {
       );
       setExecutivesList(executives);
       setTotalCount(count);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load executives");
     } finally {
       setIsLoadingExecutives(false);
     }
-  }, [collegeId, currentPage, activeTab]);
+  }, [collegeId, currentPage, activeTab, itemsPerPage]);
 
   useEffect(() => {
-    loadExecutives();
+    void Promise.resolve().then(loadExecutives);
   }, [loadExecutives]);
 
   const tabs = useMemo(() => {
@@ -139,9 +141,9 @@ export default function ExecutivesPage() {
               <div className="grid auto-rows-max grid-cols-1 items-start gap-4 overflow-visible pb-0.5 pr-1 sm:grid-cols-2 lg:overflow-y-auto lg:custom-scrollbar xl:grid-cols-3">
                 {executivesList.map((executive) => (
                   <ExecutiveCard
-                    key={executive.wellBeingId}
+                    key={`${executive.wellBeingId}-${executive.categoryId}`}
                     name={executive.name}
-                    email={executive.email}
+                    email={executive.email ?? ""}
                     category={getCategoryName(executive.categoryId)}
                     image={executive.image}
                   />
@@ -153,6 +155,11 @@ export default function ExecutivesPage() {
                 totalItems={totalCount}
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
+                itemsPerPageOptions={[6, 9, 12]}
+                onItemsPerPageChange={(value) => {
+                  setItemsPerPage(value);
+                  setCurrentPage(1);
+                }}
                 roundedBottom="rounded-b-md"
               />
             </>

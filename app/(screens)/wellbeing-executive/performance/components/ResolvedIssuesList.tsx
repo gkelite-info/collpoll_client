@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import type { Executive, Issue } from "../types";
 
-const RESOLVED_ISSUES_PER_PAGE = 10;
+const DEFAULT_RESOLVED_ISSUES_PER_PAGE = 10;
 
 function IssueCard({ issue }: { issue: Issue }) {
   return (
@@ -80,15 +80,17 @@ function IssueCard({ issue }: { issue: Issue }) {
 
 export default function ResolvedIssuesList({
   executive,
+  itemsPerPage = DEFAULT_RESOLVED_ISSUES_PER_PAGE,
 }: {
   executive: Executive;
+  itemsPerPage?: number;
 }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(executive.issues.length / RESOLVED_ISSUES_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(executive.issues.length / itemsPerPage));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const visibleIssues = executive.issues.slice(
-    (safeCurrentPage - 1) * RESOLVED_ISSUES_PER_PAGE,
-    safeCurrentPage * RESOLVED_ISSUES_PER_PAGE,
+    (safeCurrentPage - 1) * itemsPerPage,
+    safeCurrentPage * itemsPerPage,
   );
 
   return (
@@ -101,7 +103,7 @@ export default function ResolvedIssuesList({
           <Pagination
             currentPage={safeCurrentPage}
             totalItems={executive.issues.length}
-            itemsPerPage={RESOLVED_ISSUES_PER_PAGE}
+            itemsPerPage={itemsPerPage}
             onPageChange={setCurrentPage}
             roundedBottom="rounded-lg shadow-sm"
           />

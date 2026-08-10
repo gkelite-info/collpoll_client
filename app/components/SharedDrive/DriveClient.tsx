@@ -793,7 +793,7 @@ const DriveClient = () => {
           />
 
           {!loadingFiles && totalRecords > 0 && (
-            <div className="mt-4 mb-2">
+            <div className="mb-2 overflow-hidden rounded-b-2xl shadow-sm">
               <Pagination
                 currentPage={currentPage}
                 totalItems={totalRecords}

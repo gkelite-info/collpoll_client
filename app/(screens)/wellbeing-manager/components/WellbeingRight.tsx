@@ -35,6 +35,8 @@ type WellbeingRightProps = {
   isMobileDrawerOpen?: boolean;
   onCloseDrawer?: () => void;
   hideDefaultMobileContent?: boolean;
+  activeCalendarDate?: Date;
+  onCalendarDateSelect?: (date: Date) => void;
 };
 
 export default function WellbeingRight({
@@ -46,6 +48,8 @@ export default function WellbeingRight({
   isMobileDrawerOpen = false,
   onCloseDrawer,
   hideDefaultMobileContent = false,
+  activeCalendarDate,
+  onCalendarDateSelect,
 }: WellbeingRightProps) {
   const { collegeId, userId, role } = useUser();
   const [view, setView] = useState<"my" | "others">("others");
@@ -171,7 +175,7 @@ export default function WellbeingRight({
         <CourseScheduleCard isVisibile={false} fullWidth={true} />
       </div>
 
-      {showCalendar && <div className="shrink-0"><WorkWeekCalendar /></div>}
+      {showCalendar && <div className="shrink-0"><WorkWeekCalendar activeDate={activeCalendarDate} onDateSelect={onCalendarDateSelect} /></div>}
 
       <div className={`flex flex-col gap-4 shrink-0 ${children ? "mb-6 mt-3" : ""}`}>
          {children}

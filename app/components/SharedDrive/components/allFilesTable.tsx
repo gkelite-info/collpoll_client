@@ -72,7 +72,7 @@ export default function FilesTable({
 
       <div className="mt-2 overflow-hidden rounded-2xl bg-white shadow-sm max-md:bg-transparent max-md:shadow-none">
         {/* DESKTOP TABLE */}
-        <div className="hidden h-[520px] overflow-y-auto md:block">
+        <div className="hidden max-h-[520px] min-h-[150px] overflow-y-auto md:block">
           <table className="min-w-full table-auto text-left text-sm">
             <thead className="sticky top-0 z-10 bg-[#F8FAFC] text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
               <tr>
@@ -193,7 +193,7 @@ export default function FilesTable({
         </div>
 
         {/* MOBILE CARD*/}
-        <div className="flex min-h-[420px] flex-col gap-3 md:hidden">
+        <div className="flex min-h-[150px] flex-col gap-3 md:hidden">
           <div className="flex items-center gap-2 bg-white px-3 py-2.5 rounded-lg border border-gray-100 shadow-sm">
             <MagnifyingGlass size={16} className="text-[#94A3B8]" />
             <input

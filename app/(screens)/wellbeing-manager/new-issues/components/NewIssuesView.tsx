@@ -102,7 +102,7 @@ const defaultSummaryCards: IssueSummaryCards = {
     highestCategoryCount: 0,
 };
 
-const ITEMS_PER_PAGE = 10;
+const DEFAULT_ITEMS_PER_PAGE = 5;
 
 const getTodayDateKey = () => {
     const date = new Date();
@@ -356,17 +356,18 @@ export default function NewIssuesPageContent() {
     const [issueRows, setIssueRows] = useState<ManagerIssueTableItem[]>([]);
     const [issuesLoading, setIssuesLoading] = useState(true);
     const [page, setPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
 
     useEffect(() => {
         setPage(1);
     }, [selectedDateKey, selectedScope, selectedRole, selectedCategory]);
 
     useEffect(() => {
-        const totalPages = Math.max(1, Math.ceil(issueRows.length / ITEMS_PER_PAGE));
+        const totalPages = Math.max(1, Math.ceil(issueRows.length / itemsPerPage));
         if (page > totalPages) {
             setPage(totalPages);
         }
-    }, [issueRows.length, page]);
+    }, [issueRows.length, itemsPerPage, page]);
 
     const loadCategories = useCallback(async () => {
         if (!collegeId) {
@@ -422,7 +423,6 @@ export default function NewIssuesPageContent() {
                 `,
                 )
                 .eq("collegeId", collegeId)
-                .eq("IssueStatus", "pending")
                 .eq("isActive", true)
                 .eq("is_deleted", false)
                 .gte("createdAt", start)
@@ -445,27 +445,7 @@ export default function NewIssuesPageContent() {
 
                 return matchesVisibility && matchesScope && matchesRole && matchesCategory;
             });
-            const issueIds = rows.map((issue) => issue.wellbeingSupportIssueId);
-            const { data: jobsData, error: jobsError } = issueIds.length
-                ? await supabase
-                    .from("wellbeing_issue_jobs")
-                    .select("wellbeingIssueJobId, wellbeingSupportIssueId, wellBeingId, status, updatedAt")
-                    .in("wellbeingSupportIssueId", issueIds)
-                    .eq("isActive", true)
-                    .eq("is_deleted", false)
-                    .is("deletedAt", null)
-                    .order("updatedAt", { ascending: false })
-                : { data: [], error: null };
-
-            if (jobsError) throw jobsError;
-
-            const latestJobByIssueId = getLatestJobByIssueId(
-                (jobsData ?? []) as IssueJobRow[],
-            );
-            const openIssueRows = rows.filter((issue) => {
-                const latestJob = latestJobByIssueId.get(issue.wellbeingSupportIssueId);
-                return latestJob?.status !== "completed";
-            });
+            const openIssueRows = rows;
             const categoryNameById = await fetchCategoryNameMap(
                 openIssueRows.map((issue) => issue.categoryId),
             );
@@ -531,7 +511,6 @@ export default function NewIssuesPageContent() {
                 `,
                 )
                 .eq("collegeId", collegeId)
-                .eq("IssueStatus", "pending")
                 .eq("isActive", true)
                 .eq("is_deleted", false)
                 .gte("createdAt", start)
@@ -897,8 +876,8 @@ export default function NewIssuesPageContent() {
         ),
     }));
     const paginatedTableData = tableData.slice(
-        (page - 1) * ITEMS_PER_PAGE,
-        page * ITEMS_PER_PAGE,
+        (page - 1) * itemsPerPage,
+        page * itemsPerPage,
     );
 
     return (
@@ -1025,22 +1004,30 @@ export default function NewIssuesPageContent() {
                                     <p className="text-sm text-[#282828] font-medium">Latest reported complaints across campus</p>
                                 </div>
                             </div>
-                            <div className="p-2 sm:p-4">
+                            <div className="overflow-x-auto p-2 sm:p-4">
                                 <TableComponent
                                     columns={columns}
                                     tableData={paginatedTableData}
-                                    height="620px"
+                                    height="auto"
                                     isLoading={issuesLoading}
                                     tableClassName="min-w-[1280px]"
                                 />
                             </div>
-                            <Pagination
-                                currentPage={page}
-                                totalItems={issueRows.length}
-                                itemsPerPage={ITEMS_PER_PAGE}
-                                onPageChange={setPage}
-                                roundedBottom="rounded-b-2xl"
-                            />
+                            <div className="shrink-0 bg-white">
+                                <Pagination
+                                    currentPage={page}
+                                    totalItems={issueRows.length}
+                                    itemsPerPage={itemsPerPage}
+                                    onPageChange={setPage}
+                                    itemsPerPageOptions={[5, 10, 15]}
+                                    onItemsPerPageChange={(value) => {
+                                        setItemsPerPage(value);
+                                        setPage(1);
+                                    }}
+                                    alwaysShow
+                                    roundedBottom="rounded-b-2xl"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>

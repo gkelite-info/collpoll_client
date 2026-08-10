@@ -7,16 +7,19 @@ import {
   ModuleRegistry,
   type AgPolarChartOptions,
 } from "ag-charts-community";
-import { managerIssueBreakdown } from "../data";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-export default function ManagerIssueDonut() {
-  const total = managerIssueBreakdown[0]?.value ?? 0;
+export default function ManagerIssueDonut({
+  data,
+}: {
+  data: Array<{ type: string; value: number; color: string }>;
+}) {
+  const total = data.reduce((sum, item) => sum + item.value, 0);
 
   const options = useMemo<AgPolarChartOptions>(
     () => ({
-      data: managerIssueBreakdown,
+      data,
       background: { fill: "transparent" },
       padding: { top: 0, bottom: 0, left: 0, right: 0 },
       series: [
@@ -25,7 +28,7 @@ export default function ManagerIssueDonut() {
           angleKey: "value",
           innerRadiusRatio: 0.62,
           outerRadiusRatio: 0.88,
-          fills: managerIssueBreakdown.map((item) => item.color),
+          fills: data.map((item) => item.color),
           strokeWidth: 0,
           innerLabels: [
             {
@@ -44,7 +47,7 @@ export default function ManagerIssueDonut() {
       ],
       legend: { enabled: false },
     }),
-    [total],
+    [data, total],
   );
 
   return (
@@ -53,7 +56,7 @@ export default function ManagerIssueDonut() {
         <AgCharts options={options} style={{ height: "100%", width: "100%" }} />
       </div>
       <div className="flex w-[105px] flex-col gap-2">
-        {managerIssueBreakdown.map((item) => (
+        {data.map((item) => (
           <div key={item.type} className="flex items-center gap-2">
             <span
               className="h-2.5 w-2.5 shrink-0 rounded-full"

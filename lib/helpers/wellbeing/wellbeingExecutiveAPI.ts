@@ -100,7 +100,8 @@ type AssignedCategoryRow = {
   categoryId: number;
 };
 
-type WellbeingExecutiveListItem = {
+export type WellbeingExecutiveListItem = {
+  wellBeingId: number;
   id: number;
   name: string;
   email?: string;
@@ -708,6 +709,7 @@ export async function fetchWellbeingExecutives(collegeId: number) {
 
     const categoryIds = assignedByWellBeingId.get(row.wellBeingId) ?? [];
     return categoryIds.map((categoryId) => ({
+      wellBeingId: row.wellBeingId,
       id: row.userId,
       name: user?.fullName ?? "",
       staffId: employeeId ?? "",
@@ -1034,15 +1036,7 @@ export async function fetchPaginatedWellbeingExecutives(
     rows.map((row) => row.wellBeingId),
   );
 
-  const filteredRows = categoryId !== undefined && categoryId !== null
-    ? rows.filter((row) =>
-      (assignedByWellBeingId.get(row.wellBeingId) ?? []).includes(categoryId),
-    )
-    : rows;
-
-  const paginatedRows = filteredRows.slice(from, to + 1);
-
-  const executives = paginatedRows.flatMap((row): WellbeingExecutiveListItem[] => {
+  const executiveCards = rows.flatMap((row): WellbeingExecutiveListItem[] => {
     const user = getSingleRelation(row.users);
     const profile = user?.user_profile;
     const activeProfile = Array.isArray(profile)
@@ -1061,6 +1055,7 @@ export async function fetchPaginatedWellbeingExecutives(
       : categoryIds;
 
     return visibleCategoryIds.map((assignedCategoryId) => ({
+      wellBeingId: row.wellBeingId,
       id: row.userId,
       name: user?.fullName ?? "",
       email: user?.email ?? "",
@@ -1071,9 +1066,11 @@ export async function fetchPaginatedWellbeingExecutives(
     }));
   });
 
+  const executives = executiveCards.slice(from, to + 1);
+
   return {
     executives,
-    totalCount: filteredRows.length,
+    totalCount: executiveCards.length,
   };
 }
 

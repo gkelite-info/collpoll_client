@@ -1,16 +1,17 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { BuildingIcon, CaretDown, EyeIcon, RepeatIcon } from "@phosphor-icons/react";
 import { MdPictureAsPdf } from "react-icons/md";
 import TableComponent from "@/app/utils/table/table";
 import ReassignTicketModal from "../../components/ReassignTicketModal";
-import { collegeIssueRows, DashboardIssue, hostelIssueRows } from "./dashboardIssueData";
+import { Avatar } from "@/app/utils/Avatar";
+import type { DashboardIssue } from "./dashboardIssueData";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 const TABLE_HEIGHT = "286px";
-const DASHBOARD_ROW_LIMIT = 10;
+const DEFAULT_ITEMS_PER_PAGE = 5;
 
 type IssueTableCardProps = {
   title: string;
@@ -23,16 +24,12 @@ type IssueTableCardProps = {
 function StudentCell({ row }: { row: DashboardIssue }) {
   return (
     <div className="flex min-w-[250px] items-center gap-4 text-left">
-      <Image
-        src={row.studentImage}
-        alt={row.student}
-        width={48}
-        height={48}
-        className="h-12 w-12 rounded-full object-cover"
-      />
+      <Avatar src={row.studentImage || null} alt={row.student} size={48} />
       <div className="min-w-0">
         <p className="truncate text-[14px] font-bold text-[#282828]">{row.student}</p>
-        <p className="mt-1 truncate text-[12px] font-medium text-[#282828]">{row.meta}</p>
+        {row.meta ? (
+          <p className="mt-1 truncate text-[12px] font-medium text-[#282828]">{row.meta}</p>
+        ) : null}
       </div>
     </div>
   );
@@ -116,10 +113,18 @@ function IssueTableCard({
 }: IssueTableCardProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [selectedPriority, setSelectedPriority] = useState<DashboardIssue["priority"] | "All">("High");
-  const visibleRows = rows
-    .filter((row) => selectedPriority === "All" || row.priority === selectedPriority)
-    .slice(0, DASHBOARD_ROW_LIMIT);
+  const [selectedPriority, setSelectedPriority] = useState<DashboardIssue["priority"] | "All">("All");
+  const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
+  const filteredRows = rows.filter(
+    (row) => selectedPriority === "All" || row.priority === selectedPriority,
+  );
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / itemsPerPage));
+  const currentPage = Math.min(page, totalPages);
+  const visibleRows = filteredRows.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
 
   const columns = useMemo(
     () =>
@@ -172,9 +177,10 @@ function IssueTableCard({
             <span className="relative">
               <select
                 value={selectedPriority}
-                onChange={(event) =>
-                  setSelectedPriority(event.target.value as DashboardIssue["priority"] | "All")
-                }
+                onChange={(event) => {
+                  setSelectedPriority(event.target.value as DashboardIssue["priority"] | "All");
+                  setPage(1);
+                }}
                 className="h-8 cursor-pointer appearance-none rounded-full bg-[#E1F6EA] py-0 pl-4 pr-9 text-[13px] font-bold text-[#43C17A] outline-none"
               >
                 {["High", "Urgent", "Medium", "Low", "All"].map((priority) => (
@@ -199,8 +205,14 @@ function IssueTableCard({
         </div>
       </div>
 
-      {rows.length === 0 ? (
-        <EmptyTableState message={`No ${title.toLowerCase()} need attention right now.`} />
+      {filteredRows.length === 0 ? (
+        <EmptyTableState
+          message={
+            rows.length === 0
+              ? `No ${title.toLowerCase()} need attention right now.`
+              : `No ${selectedPriority.toLowerCase()} priority ${title.toLowerCase()} found.`
+          }
+        />
       ) : (
         <div className="overflow-x-auto">
           <div className={variant === "college" ? "min-w-[1040px]" : "min-w-[1180px]"}>
@@ -214,30 +226,57 @@ function IssueTableCard({
           </div>
         </div>
       )}
+      <Pagination
+        currentPage={currentPage}
+        totalItems={filteredRows.length}
+        itemsPerPage={itemsPerPage}
+        onPageChange={setPage}
+        itemsPerPageOptions={[5, 10, 15]}
+        onItemsPerPageChange={(value) => {
+          setItemsPerPage(value);
+          setPage(1);
+        }}
+        roundedBottom="rounded-b-2xl"
+        alwaysShow
+      />
     </section>
   );
 }
 
-export default function DashboardIssueTables() {
+export default function DashboardIssueTables({
+  collegeIssues,
+  hostelIssues,
+  showCollege = true,
+  showHostel = true,
+}: {
+  collegeIssues: DashboardIssue[];
+  hostelIssues: DashboardIssue[];
+  showCollege?: boolean;
+  showHostel?: boolean;
+}) {
   const [reassignModalTargetId, setReassignModalTargetId] = useState<string | null>(null);
 
   return (
     <>
       <div className="flex flex-col gap-3">
-        <IssueTableCard
-          title="College Issues"
-          description="Latest reported complaints across College"
-          rows={collegeIssueRows}
-          variant="college"
-          onReassign={setReassignModalTargetId}
-        />
-        <IssueTableCard
-          title="Hostel Issues"
-          description="Latest reported complaints across Hostel"
-          rows={hostelIssueRows}
-          variant="hostel"
-          onReassign={setReassignModalTargetId}
-        />
+        {showCollege && (
+          <IssueTableCard
+            title="College Issues"
+            description="Latest reported complaints across College"
+            rows={collegeIssues}
+            variant="college"
+            onReassign={setReassignModalTargetId}
+          />
+        )}
+        {showHostel && (
+          <IssueTableCard
+            title="Hostel Issues"
+            description="Latest reported complaints across Hostel"
+            rows={hostelIssues}
+            variant="hostel"
+            onReassign={setReassignModalTargetId}
+          />
+        )}
       </div>
       <ReassignTicketModal
         isOpen={reassignModalTargetId !== null}

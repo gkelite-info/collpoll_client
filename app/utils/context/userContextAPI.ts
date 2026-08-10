@@ -187,7 +187,7 @@ export async function fetchUserFullProfile(queryClient: QueryClient) {
     result.identifierId = empId ?? (rows[0]?.wellBeingId ? String(rows[0].wellBeingId) : null);
 
     const collegeWellBeingIds = rows
-      .filter((row) => row.registrationType === "college")
+      .filter((row) => row.registrationType !== "hostel")
       .map((row) => row.wellBeingId);
 
     if (!collegeWellBeingIds.length) {

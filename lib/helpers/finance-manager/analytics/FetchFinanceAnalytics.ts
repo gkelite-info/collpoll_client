@@ -34,6 +34,7 @@ export async function getBranchWiseCollection(
   educationId: number,
   year: string,
 ) {
+  const fallbackYears = [new Date().getFullYear().toString()];
   const { data: branches, error: branchError } = await supabase
     .from("college_branch")
     .select("collegeBranchId, collegeBranchCode")
@@ -42,7 +43,12 @@ export async function getBranchWiseCollection(
 
   if (branchError || !branches) {
     console.error("Error fetching branches:", branchError);
-    return { chartData: [], gridData: [], tableData: [] };
+    return {
+      chartData: [],
+      gridData: [],
+      tableData: [],
+      availableYears: fallbackYears,
+    };
   }
 
   const branchMap: Record<
@@ -68,7 +74,12 @@ export async function getBranchWiseCollection(
 
   const branchIds = branches.map((b) => b.collegeBranchId);
   if (branchIds.length === 0)
-    return { chartData: [], gridData: [], tableData: [] };
+    return {
+      chartData: [],
+      gridData: [],
+      tableData: [],
+      availableYears: fallbackYears,
+    };
 
   const { data: obligations, error: obError } = await supabase
     .from("student_fee_obligation")
