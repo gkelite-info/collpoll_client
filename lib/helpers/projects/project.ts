@@ -462,7 +462,9 @@ export async function fetchEnrichedProjectsByFaculty(
 }
 
 export async function fetchEnrichedProjectsByStudent(
-    studentId: number
+    studentId: number,
+    collegeSectionsId?: number | null,
+    subjectIds?: number[]
 ): Promise<EnrichedProject[]> {
 
     const { data: memberRows, error: memberError } = await supabase
@@ -470,11 +472,9 @@ export async function fetchEnrichedProjectsByStudent(
         .select("projectId")
         .eq("studentId", studentId);
 
-    if (memberError || !memberRows?.length) return [];
+    const teamProjectIds = memberRows ? memberRows.map((r) => r.projectId) : [];
 
-    const projectIds = memberRows.map((r) => r.projectId);
-
-    const { data: projectData, error: projectsError } = await supabase
+    let query = supabase
         .from("projects")
         .select(`
             projectId, 
@@ -489,32 +489,55 @@ export async function fetchEnrichedProjectsByStudent(
                 subjectName
             )
         `)
-        .in("projectId", projectIds)
         .is("deletedAt", null)
         .order("createdAt", { ascending: false });
 
+    const orConditions: string[] = [];
+    if (teamProjectIds.length > 0) {
+        orConditions.push(`projectId.in.(${teamProjectIds.join(",")})`);
+    }
+
+    if (subjectIds && subjectIds.length > 0) {
+        const subjectsStr = subjectIds.join(",");
+        if (collegeSectionsId) {
+            orConditions.push(`and(collegeSubjectId.in.(${subjectsStr}),or(collegeSectionsId.is.null,collegeSectionsId.eq.${collegeSectionsId}))`);
+        } else {
+            orConditions.push(`and(collegeSubjectId.in.(${subjectsStr}),collegeSectionsId.is.null)`);
+        }
+    }
+
+    if (orConditions.length === 0) {
+        return [];
+    }
+
+    query = query.or(orConditions.join(","));
+
+    const { data: projectData, error: projectsError } = await query;
+
     if (projectsError || !projectData?.length) return [];
+
+    const fetchedProjectIds = projectData.map(p => p.projectId);
 
     const [mentorsRes, teamRes, filesRes, submissionsRes] = await Promise.all([
         supabase
             .from("project_mentors")
             .select("projectId, facultyId")
-            .in("projectId", projectIds),
+            .in("projectId", fetchedProjectIds),
 
         supabase
             .from("project_team_members")
             .select("projectId, studentId")
-            .in("projectId", projectIds),
+            .in("projectId", fetchedProjectIds),
 
         supabase
             .from("project_files")
             .select("projectId, fileUrl")
-            .in("projectId", projectIds),
+            .in("projectId", fetchedProjectIds),
 
         supabase
             .from("student_project_submissions")
             .select("projectId, fileUrl, marksObtained")
-            .in("projectId", projectIds)
+            .in("projectId", fetchedProjectIds)
             .eq("studentId", studentId),
     ]);
 
@@ -731,4 +754,22 @@ export async function fetchAdminPendingStats(
     });
 
     return subjectStats;
+}
+
+export async function updateProjectDates(projectId: number, startDate: string | null, endDate: string | null) {
+    const { error } = await supabase
+        .from("projects")
+        .update({
+            startDate: startDate,
+            endDate: endDate,
+            updatedAt: new Date().toISOString()
+        })
+        .eq("projectId", projectId);
+
+    if (error) {
+        console.error("updateProjectDates error:", error);
+        return { success: false, error };
+    }
+
+    return { success: true };
 }

@@ -42,6 +42,7 @@ const Page = () => {
     collegeBranchCode,
     collegeAcademicYear,
     studentId,
+    collegeSectionsId,
     subjects: studentSubjects,
   } = useStudent();
   const [subjectFilter, setSubjectFilter] = useState<string | number>("All");
@@ -55,7 +56,12 @@ const Page = () => {
       if (!studentId) return;
       setIsLoading(true);
       try {
-        const enriched = await fetchEnrichedProjectsByStudent(studentId);
+        const subjectIds = studentSubjects.map(s => s.collegeSubjectId);
+        const enriched = await fetchEnrichedProjectsByStudent(
+          studentId, 
+          collegeSectionsId, 
+          subjectIds
+        );
 
         const mapped: ProjectCardProps[] = enriched.map((p) => {
           const today = new Date();
@@ -200,13 +206,15 @@ const Page = () => {
           <p className="text-lg font-semibold text-gray-600">
             {t("No projects found")}
           </p>
-          <p className="text-sm mt-1 max-w-[280px] text-center">
-            {subjectFilter !== "All" || statusFilter !== "All"
-              ? t("We couldnt find any projects for filter", {
-                subject: subjectFilter === "All" ? "" : subjectFilter,
-                status: statusFilter === "All" ? "" : statusFilter,
-              })
-              : t("Your faculty hasnt assigned any projects to you yet")}
+          <p className="text-sm mt-2">
+            {t("We couldnt find any projects for filter", {
+              subject:
+                subjectFilter === "All"
+                  ? "any subject"
+                  : studentSubjects.find((s) => s.collegeSubjectId === subjectFilter)
+                      ?.subjectName || String(subjectFilter),
+              status: statusFilter !== "All" ? statusFilter : "",
+            })}
           </p>
 
           {(subjectFilter !== "All" || statusFilter !== "All") && (
@@ -236,11 +244,6 @@ const Page = () => {
             totalItems={filteredProjects.length}
             itemsPerPage={itemsPerPage}
             onPageChange={setCurrentPage}
-            itemsPerPageOptions={[5, 10, 20, 50]}
-            onItemsPerPageChange={(items) => {
-              setItemsPerPage(items);
-              setCurrentPage(1);
-            }}
             alwaysShow
           />
         </div>

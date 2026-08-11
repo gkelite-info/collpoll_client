@@ -27,7 +27,7 @@ import ConfirmLogoutModal from "../modals/logoutModal";
 import { logoutUser } from "@/lib/helpers/logoutUser";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
-import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { isSchoolEducation, isStrictlySchoolAssigned, isStrictlySchoolOrInterAssigned } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type NavItem = {
   icon: (isActive: boolean) => ReactNode;
@@ -48,6 +48,8 @@ export default function AdminNavbar({ onClose }: AdminNavbarProps) {
   const [loading, setLoading] = useState(false);
 
   const { collegeEducationType, loading: contextLoading } = useUser();
+  const hideClubs = isStrictlySchoolAssigned(collegeEducationType);
+  const hidePlacements = isStrictlySchoolOrInterAssigned(collegeEducationType);
   const isSchool = isSchoolEducation(collegeEducationType);
 
   const items: NavItem[] = useMemo(() => {
@@ -140,10 +142,12 @@ export default function AdminNavbar({ onClose }: AdminNavbarProps) {
     ];
     
     return allItems.filter(item => {
-      if ((item.path === "/admin/clubs" || item.path === "/admin/placements" || item.path === "/admin/wellbeing") && (isSchool || contextLoading)) return false;
+      if (item.path === "/admin/clubs" && (hideClubs || contextLoading)) return false;
+      if (item.path === "/admin/placements" && (hidePlacements || contextLoading)) return false;
+      if (item.path === "/admin/wellbeing" && (isSchool || contextLoading)) return false;
       return true;
     });
-  }, [t, isSchool, contextLoading]);
+  }, [t, hideClubs, hidePlacements, isSchool, contextLoading]);
 
   useEffect(() => {
     const current = [...items]

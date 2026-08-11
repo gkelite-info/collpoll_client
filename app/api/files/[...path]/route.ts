@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient as createAuthClient } from "@/app/utils/supabase/server";
 
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ path: string[] }> }
 ) {
+    const authClient = await createAuthClient();
+    const {
+        data: { user },
+        error: authError,
+    } = await authClient.auth.getUser();
+
+    if (authError || !user) {
+        return new NextResponse("Unauthorized. You must be logged in to view this file.", { status: 401 });
+    }
+
     const resolvedParams = await params;
     const pathSegments = resolvedParams.path;
     const bucketAndFilePath = pathSegments.join("/");

@@ -92,7 +92,25 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
         setSelectedFacultyId(id);
     };
 
-    const isSchool = isSchoolEducation(facultyCtx?.faculty_edu_type);
+    useEffect(() => {
+        if (role !== "Faculty" && cardFaculties && cardFaculties.length === 1 && !selectedFacultyId) {
+            setSelectedFacultyId(cardFaculties[0].facultyId);
+        }
+    }, [cardFaculties, role, selectedFacultyId]);
+
+    const isSchool = selectedSubject?.educationType
+        ? isSchoolEducation(selectedSubject.educationType)
+        : isSchoolEducation(facultyCtx?.faculty_edu_type);
+
+    const checkIsInter = (type?: string | null) => {
+        if (!type) return false;
+        const normalized = type.trim().toLowerCase();
+        return normalized === "inter" || normalized === "intermediate";
+    };
+
+    const isInter = selectedSubject?.educationType
+        ? checkIsInter(selectedSubject.educationType)
+        : checkIsInter(facultyCtx?.faculty_edu_type);
 
     const effectiveId = selectedFacultyId || facultyCtx?.facultyId || facultyCtx?.adminId;
     const selectedFacultyData = cardFaculties.find(f => f.facultyId === selectedFacultyId);
@@ -176,7 +194,9 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
         if (!isLoading && subjects.length > 0 && !selectedSubject) {
             const targetSub = initialSubjectId
                 ? subjects.find(s => s.collegeSubjectId === initialSubjectId)
-                : subjects[0];
+                : (preselectedSubject
+                    ? (subjects.find(s => s.collegeSubjectId === preselectedSubject.subjectId) || subjects[0])
+                    : subjects[0]);
 
             if (targetSub) {
                 setSelectedSubject(targetSub);
@@ -190,10 +210,14 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
                 if (prev && availableSections.some(as => as.collegeSectionsId === prev)) {
                     return prev;
                 }
-                const targetSec = initialSectionId
-                    ? availableSections.find(as => as.collegeSectionsId === initialSectionId)
-                    : availableSections[0];
-                return targetSec ? targetSec.collegeSectionsId : availableSections[0].collegeSectionsId;
+                if (initialSectionId) {
+                    const targetSec = availableSections.find(as => as.collegeSectionsId === initialSectionId);
+                    if (targetSec) return targetSec.collegeSectionsId;
+                }
+                if (availableSections.length === 1) {
+                    return availableSections[0].collegeSectionsId;
+                }
+                return null;
             });
         } else {
             setSelectedSectionId(null);
@@ -482,7 +506,7 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
                         {!isSchool && (
                             <div>
                                 <label className="block text-base font-semibold text-[#282828] mb-2.5">
-                                    {facultyCtx?.faculty_edu_type === "Inter" ? "Group" : "Branch"}
+                                    {isInter ? "Group" : "Branch"}
                                 </label>
                                 <div className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 font-medium">
                                     {selectedSubject?.branchCode || "---"}
@@ -513,7 +537,7 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
                             />
                         </div>
 
-                        {!isSchool && (
+                        {!(isSchool || isInter) && (
                             <div>
                                 <label className="block text-base font-semibold text-[#282828] mb-2.5">Semester</label>
                                 <div className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 font-medium">

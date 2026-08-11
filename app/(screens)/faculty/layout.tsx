@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
-import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { isSchoolEducation, isStrictlySchoolAssigned, isStrictlySchoolOrInterAssigned, getRestrictedPlacementsToastMessage } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import toast from "react-hot-toast";
 
 export default function FacultyLayout({ children }: { children: React.ReactNode }) {
@@ -11,24 +11,29 @@ export default function FacultyLayout({ children }: { children: React.ReactNode 
   const router = useRouter();
   const { collegeEducationType, loading } = useUser();
   const isSchool = isSchoolEducation(collegeEducationType);
+  const hideClubs = isStrictlySchoolAssigned(collegeEducationType);
+  const hidePlacements = isStrictlySchoolOrInterAssigned(collegeEducationType);
 
-  const isBlockedPath = 
-    pathname === "/faculty/clubs" || 
-    pathname.startsWith("/faculty/clubs/") || 
-    pathname === "/faculty/wellbeing" ||
-    pathname.startsWith("/faculty/wellbeing/");
+  const isClubsPath = pathname === "/faculty/clubs" || pathname.startsWith("/faculty/clubs/");
+  const isPlacementsPath = pathname === "/faculty/placements" || pathname.startsWith("/faculty/placements/");
+  const isWellbeingPath = pathname === "/faculty/wellbeing" || pathname.startsWith("/faculty/wellbeing/");
 
   useEffect(() => {
     if (loading) return;
-    if (isSchool && isBlockedPath) {
-      toast.error("Schools do not have access to this module.", {
-        id: "school-feature-restricted",
-      });
+    
+    if (hideClubs && isClubsPath) {
+      toast.error("Schools do not have access to this module.", { id: "school-feature-restricted" });
+      router.replace("/faculty");
+    } else if (hidePlacements && isPlacementsPath) {
+      toast.error(getRestrictedPlacementsToastMessage(collegeEducationType), { id: "placement-feature-restricted" });
+      router.replace("/faculty");
+    } else if (isSchool && isWellbeingPath) {
+      toast.error("Schools do not have access to this module.", { id: "school-feature-restricted" });
       router.replace("/faculty");
     }
-  }, [isSchool, isBlockedPath, loading, router]);
+  }, [isSchool, hideClubs, hidePlacements, isClubsPath, isPlacementsPath, isWellbeingPath, loading, router, collegeEducationType]);
 
-  if (isBlockedPath && (loading || isSchool)) {
+  if (loading || (hideClubs && isClubsPath) || (hidePlacements && isPlacementsPath) || (isSchool && isWellbeingPath)) {
     return null;
   }
 

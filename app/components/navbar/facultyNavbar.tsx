@@ -25,7 +25,7 @@ import ConfirmLogoutModal from "../modals/logoutModal";
 import { logoutUser } from "@/lib/helpers/logoutUser";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
-import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { isSchoolEducation, isStrictlySchoolAssigned, isStrictlySchoolOrInterAssigned } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type NavItem = {
   icon: (isActive: boolean) => ReactNode;
@@ -46,6 +46,8 @@ export default function FacultyNavbar({ onClose }: FacultyNavbarProps) {
   const [loading, setLoading] = useState(false);
 
   const { collegeEducationType, loading: contextLoading } = useUser();
+  const hideClubs = isStrictlySchoolAssigned(collegeEducationType);
+  const hidePlacements = isStrictlySchoolOrInterAssigned(collegeEducationType);
   const isSchool = isSchoolEducation(collegeEducationType);
 
   const items: NavItem[] = useMemo(() => {
@@ -163,10 +165,12 @@ export default function FacultyNavbar({ onClose }: FacultyNavbarProps) {
     ];
 
     return allItems.filter(item => {
-      if ((item.path === "/faculty/clubs" || item.path === "/faculty/wellbeing") && (isSchool || contextLoading)) return false;
+      if (item.path === "/faculty/clubs" && (hideClubs || contextLoading)) return false;
+      if (item.path === "/faculty/placements" && (hidePlacements || contextLoading)) return false;
+      if (item.path === "/faculty/wellbeing" && (isSchool || contextLoading)) return false;
       return true;
     });
-  }, [t, isSchool, contextLoading]);
+  }, [t, hideClubs, hidePlacements, isSchool, contextLoading]);
 
   useEffect(() => {
     const current = [...items]

@@ -1,4 +1,16 @@
+import { createClient as createAuthClient } from "@/app/utils/supabase/server";
+
 export async function GET(req: Request) {
+  const authClient = await createAuthClient();
+  const {
+      data: { user },
+      error: authError,
+  } = await authClient.auth.getUser();
+
+  if (authError || !user) {
+      return new Response("Unauthorized. You must be logged in.", { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const url = searchParams.get("url");
 

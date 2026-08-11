@@ -166,7 +166,7 @@ export const useAddProjectForm = ({
       }
       return await fetchFacultyYears(resolvedFacultyId);
     },
-    enabled: !!resolvedFacultyId,
+    enabled: !!resolvedFacultyId && (isSchool || !!formData.branch),
     staleTime: 1000 * 60 * 5,
   });
 
@@ -397,8 +397,18 @@ export const useAddProjectForm = ({
   const handleAddDomain = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && domainInput.trim()) {
       e.preventDefault();
-      if (!formData.domain.includes(domainInput.trim())) {
-        handleChange("domain", [...formData.domain, domainInput.trim()]);
+      
+      const newDomains = domainInput
+        .split(",")
+        .map((d) => d.trim())
+        .filter((d) => d !== "");
+
+      const uniqueNewDomains = newDomains.filter(
+        (d) => !formData.domain.includes(d)
+      );
+
+      if (uniqueNewDomains.length > 0) {
+        handleChange("domain", [...formData.domain, ...uniqueNewDomains]);
       }
       setDomainInput("");
     }
@@ -412,11 +422,16 @@ export const useAddProjectForm = ({
   };
 
   const handleSaveProject = async () => {
-    const pendingDomain = domainInput.trim();
-    const domainValues =
-      pendingDomain && !formData.domain.includes(pendingDomain)
-        ? [...formData.domain, pendingDomain]
-        : formData.domain;
+    const pendingDomains = domainInput
+      .split(",")
+      .map((d) => d.trim())
+      .filter((d) => d !== "");
+
+    const uniquePendingDomains = pendingDomains.filter(
+      (d) => !formData.domain.includes(d)
+    );
+
+    const domainValues = [...formData.domain, ...uniquePendingDomains];
 
     if (!formData.title.trim()) {
       toast.error("Project title is required.");
@@ -459,11 +474,11 @@ export const useAddProjectForm = ({
       return;
     }
     if (!formData.endDate) {
-      toast.error("Please select an end date.");
+      toast.error("Please select an to date.");
       return;
     }
-    if (new Date(formData.endDate) <= new Date(formData.startDate)) {
-      toast.error("End date must be after start date.");
+    if (new Date(formData.endDate) < new Date(formData.startDate)) {
+      toast.error("To date must be greater than or equal to from date.");
       return;
     }
     if (!resolvedCollegeId) {
@@ -517,12 +532,27 @@ export const useAddProjectForm = ({
         queryClient.invalidateQueries({ queryKey: ["projects"] });
         toast.success("Project and all details saved!", { id: loadingToast });
 
-        if (isAdmin) {
-          onCancel();
-        } else {
-          router.push("/faculty/projects");
-          router.refresh();
-        }
+        // Clear form immediately for instant UX feedback
+        setFormData({
+          title: "",
+          description: "",
+          year: "",
+          subject: "",
+          section: "",
+          domain: [],
+          marks: "",
+          startDate: "",
+          endDate: "",
+          mentorIds: [],
+          studentIds: [],
+          fileUrls: [],
+          files: [],
+        });
+        setDomainInput("");
+        setSelectedMentors([]);
+        setSelectedStudents([]);
+
+        onCancel();
       } else {
         toast.error("Project saved, but some team/mentor data failed.", {
           id: loadingToast,

@@ -1,7 +1,7 @@
 "use client";
 
 import { ProjectCardProps } from "@/lib/projectTypes/project";
-import { CaretLeft } from "@phosphor-icons/react";
+import { CaretLeft, PencilSimple, Trash } from "@phosphor-icons/react";
 import { Avatar } from "@/app/utils/Avatar";
 import { getSecureAttachmentUrl } from "@/lib/helpers/projects/projectFiles";
 
@@ -9,6 +9,8 @@ type ProjectCardListProps = {
   data: ProjectCardProps[];
   onViewDetails: (project: ProjectCardProps) => void;
   role?: string;
+  onEdit?: (project: ProjectCardProps) => void;
+  onDelete?: (project: ProjectCardProps) => void;
 };
 
 const MemberAvatar = ({
@@ -34,6 +36,8 @@ export const ProjectCard = ({
   data,
   onViewDetails,
   role,
+  onEdit,
+  onDelete,
 }: ProjectCardListProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -44,19 +48,39 @@ export const ProjectCard = ({
         >
           <div className="flex justify-between items-start gap-3">
             <div className="min-w-0 flex-1">
-              <h2 className="max-w-full overflow-x-auto whitespace-nowrap pb-1 text-lg md:text-xl font-bold text-[#1f2933] [scrollbar-color:#CBD5E1_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-track]:bg-transparent">
+              <h2 className="w-full max-w-full overflow-x-auto whitespace-nowrap pb-1 text-lg md:text-xl font-bold text-[#1f2933] [scrollbar-color:#CBD5E1_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-track]:bg-transparent">
                 {project.title}
               </h2>
               <p className="text-sm text-[#4b5563] mt-1 line-clamp-2 md:truncate md:max-w-md whitespace-normal">
                 {project.description}
               </p>
             </div>
-            <button
-              className="shrink-0 w-auto cursor-pointer rounded-full bg-[#22c55e] hover:bg-[#1fa951] transition-colors px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold text-white shadow-sm flex items-center justify-center"
-              onClick={() => onViewDetails(project)}
-            >
-              View Details
-            </button>
+            <div className="flex items-center gap-2">
+              {role === "faculty" && onEdit && onDelete && (
+                <>
+                  <button
+                    onClick={() => onEdit(project)}
+                    className="p-1.5 md:p-2 bg-blue-50 text-blue-500 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors cursor-pointer shadow-sm"
+                    title="Edit Dates"
+                  >
+                    <PencilSimple size={18} weight="bold" />
+                  </button>
+                  <button
+                    onClick={() => onDelete(project)}
+                    className="p-1.5 md:p-2 bg-red-50 text-red-500 hover:text-red-600 hover:bg-red-100 rounded-full transition-colors cursor-pointer shadow-sm"
+                    title="Delete Project"
+                  >
+                    <Trash size={18} weight="bold" />
+                  </button>
+                </>
+              )}
+              <button
+                className="shrink-0 w-auto cursor-pointer rounded-full bg-[#22c55e] hover:bg-[#1fa951] transition-colors px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold text-white shadow-sm flex items-center justify-center"
+                onClick={() => onViewDetails(project)}
+              >
+                View Details
+              </button>
+            </div>
           </div>
 
           <div className="space-y-2 mt-3 text-sm">
@@ -213,7 +237,7 @@ export const ProjectDetailsModal = ({
             <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-2">
               Description
             </h2>
-            <p className="text-sm md:text-base text-gray-700 leading-relaxed">
+            <p className="text-sm md:text-base text-gray-700 leading-relaxed whitespace-pre-wrap">
               {project.description || "No description provided."}
             </p>
           </section>
@@ -255,18 +279,25 @@ export const ProjectDetailsModal = ({
                 <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-2">
                   Team Members
                 </h2>
-                <div className="flex">
+                <div className="flex flex-col gap-3">
                   {project.teamMembers.length > 0 ? (
-                    project.teamMembers
-                      .slice(0, 5)
-                      .map((member, i) => (
-                        <MemberAvatar
-                          key={i}
-                          image={member.image}
-                          name={member.name}
-                          index={i}
+                    project.teamMembers.map((member, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <Avatar
+                          src={member.image}
+                          alt={member.name}
+                          size={40}
                         />
-                      ))
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {member.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Student / Team Member
+                          </p>
+                        </div>
+                      </div>
+                    ))
                   ) : (
                     <span className="text-gray-400 text-xs italic">
                       No members assigned
