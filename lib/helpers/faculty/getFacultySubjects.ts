@@ -38,6 +38,9 @@ export async function getFacultySubjects(params: {
       ),
       college_semester(
       collegeSemester
+      ),
+      college_education(
+      collegeEducationType
       )
     `,
     )
@@ -208,9 +211,16 @@ export async function getFacultySubjects(params: {
         collegeSemesterId: s.collegeSemesterId,
       });
 
+      const educationData = Array.isArray(s.college_education)
+        ? s.college_education[0]
+        : s.college_education;
+        
+      const educationType = educationData?.collegeEducationType;
+
       return {
         collegeId,
         collegeEducationId: s.collegeEducationId,
+        educationType,
         collegeBranchId: s.collegeBranchId,
         branchCode: branchCode || "-",
         collegeAcademicYearId: s.collegeAcademicYearId,

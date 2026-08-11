@@ -7,6 +7,10 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { FaPlus } from "react-icons/fa6";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { deactivateProject } from "@/lib/helpers/projects/project";
+import ConfirmDeleteModal from "../../admin/calendar/components/ConfirmDeleteModal";
+import EditProjectDatesModal from "./EditProjectDatesModal";
 import AddProjectForm from "./addProjectForm";
 import { fetchEnrichedProjectsByFaculty } from "@/lib/helpers/projects/project";
 import { ProjectCardProps } from "@/lib/projectTypes/project";
@@ -44,6 +48,27 @@ function useDebounce<T>(value: T, delay: number): T {
 const Page = () => {
   const [selectedProject, setSelectedProject] =
     useState<ProjectCardProps | null>(null);
+  const [projectToEdit, setProjectToEdit] = useState<ProjectCardProps | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<ProjectCardProps | null>(null);
+
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: async (projectId: number) => {
+      const { success } = await deactivateProject(projectId);
+      if (!success) throw new Error("Failed to delete project");
+      return true;
+    },
+    onSuccess: () => {
+      toast.success("Project deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      setProjectToDelete(null);
+    },
+    onError: () => {
+      toast.error("Failed to delete project");
+    },
+  });
+
   const { college_branch, collegeAcademicYear, faculty_edu_type, facultyId, loading: facultyLoading } =
     useFaculty();
   const { loading: userLoading } = useUser();
@@ -479,12 +504,14 @@ const Page = () => {
           <ProjectCard
             data={mappedProjects}
             onViewDetails={(project) => setSelectedProject(project)}
-            role="Faculty"
+            role="faculty"
+            onEdit={(project) => setProjectToEdit(project)}
+            onDelete={(project) => setProjectToDelete(project)}
           />
         )}
       </div>
       
-      <div className="mt-1">
+      <div className="mt-3">
         <Pagination
             currentPage={page}
             totalItems={totalItems}
@@ -504,6 +531,31 @@ const Page = () => {
               router.push(window.location.pathname);
           }}
           onViewSubmissions={handleViewSubmissions}
+        />
+      )}
+
+      {projectToDelete && (
+        <ConfirmDeleteModal
+          open={!!projectToDelete}
+          onCancel={() => setProjectToDelete(null)}
+          onConfirm={() => {
+            if (projectToDelete.projectId) {
+              deleteMutation.mutate(projectToDelete.projectId);
+            }
+          }}
+          isDeleting={deleteMutation.isPending}
+          title="Delete Project"
+          name="Project"
+          itemName={projectToDelete.title}
+          customDescription="Are you sure you want to permanently delete this project? All associated data will be removed."
+        />
+      )}
+
+      {projectToEdit && (
+        <EditProjectDatesModal
+          isOpen={!!projectToEdit}
+          onClose={() => setProjectToEdit(null)}
+          project={projectToEdit}
         />
       )}
     </main>

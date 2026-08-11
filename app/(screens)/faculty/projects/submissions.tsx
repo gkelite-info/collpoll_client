@@ -114,30 +114,55 @@ export default function StudentSubmissions() {
         </a>
       ),
       marks: (
-        <button
-          onClick={() => {
-            setSelectedSubmission({
-              id: item.studentProjectSubmissionId,
-              name: user?.fullName || "Unknown Student",
-              rollNo: pinNumber || "N/A",
-              submittedOn: item.updatedAt
-                ? format(new Date(item.updatedAt), "dd/MM/yyyy")
-                : "N/A",
-              totalMarks: item.projects?.marks || 0,
-              obtainedMarks: item.marksObtained,
-            });
-            setIsModalOpen(true);
-          }}
-          className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
-            item.marksObtained !== null && item.marksObtained !== undefined
-              ? "bg-[#16a34a] text-white hover:bg-green-700"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-          }`}
-        >
-          {item.marksObtained !== null && item.marksObtained !== undefined
-            ? `${item.marksObtained} / ${item.projects?.marks || 0}`
-            : "Add Marks"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              setSelectedSubmission({
+                id: item.studentProjectSubmissionId,
+                name: user?.fullName || "Unknown Student",
+                rollNo: pinNumber || "N/A",
+                submittedOn: item.updatedAt
+                  ? format(new Date(item.updatedAt), "dd/MM/yyyy")
+                  : "N/A",
+                totalMarks: item.projects?.marks || 0,
+                obtainedMarks: item.marksObtained,
+                projectId: parsedProjectId,
+              });
+              setIsModalOpen(true);
+            }}
+            className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors cursor-pointer ${
+              item.marksObtained !== null && item.marksObtained !== undefined
+                ? "bg-[#16a34a] text-white hover:bg-green-700"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            {item.marksObtained !== null && item.marksObtained !== undefined
+              ? `${item.marksObtained} / ${item.projects?.marks || 0}`
+              : "Add Marks"}
+          </button>
+          
+          {item.marksObtained !== null && item.marksObtained !== undefined && (
+            <button
+              onClick={() => {
+                setSelectedSubmission({
+                  id: item.studentProjectSubmissionId,
+                  name: user?.fullName || "Unknown Student",
+                  rollNo: pinNumber || "N/A",
+                  submittedOn: item.updatedAt
+                    ? format(new Date(item.updatedAt), "dd/MM/yyyy")
+                    : "N/A",
+                  totalMarks: item.projects?.marks || 0,
+                  obtainedMarks: item.marksObtained,
+                  projectId: parsedProjectId,
+                });
+                setIsModalOpen(true);
+              }}
+              className="text-gray-500 hover:text-green-600 text-sm font-semibold underline cursor-pointer"
+            >
+              Edit
+            </button>
+          )}
+        </div>
       ),
     };
   });

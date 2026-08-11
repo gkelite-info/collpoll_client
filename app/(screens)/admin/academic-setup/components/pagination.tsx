@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { Listbox, Transition } from "@headlessui/react";
 import { CaretDown, Check } from "@phosphor-icons/react";
 interface PaginationProps {
@@ -26,6 +26,13 @@ export function Pagination({
   disabled,
   alwaysShow
 }: PaginationProps) {
+  const [dropdownPosition, setDropdownPosition] = useState<"top" | "bottom">("bottom");
+
+  const checkPosition = (e: React.MouseEvent | React.PointerEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    setDropdownPosition(spaceBelow < 250 ? "top" : "bottom");
+  };
   if (totalItems <= itemsPerPage && !alwaysShow) return null;
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -63,7 +70,11 @@ export function Pagination({
                 <Listbox value={itemsPerPage} onChange={onItemsPerPageChange} disabled={disabled}>
                   {({ open }) => (
                     <>
-                      <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-white py-1.5 pl-3 pr-8 text-left border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 sm:text-sm">
+                      <Listbox.Button 
+                        onPointerDown={checkPosition}
+                        onClick={checkPosition}
+                        className="relative w-full cursor-pointer rounded-lg bg-white py-1.5 pl-3 pr-8 text-left border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 sm:text-sm"
+                      >
                         <span className="block truncate text-gray-700 font-medium">{itemsPerPage}</span>
                         <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400">
                           <CaretDown
@@ -80,7 +91,9 @@ export function Pagination({
                         leaveFrom="opacity-100"
                         leaveTo="opacity-0"
                       >
-                        <Listbox.Options className="absolute bottom-full mb-1 max-h-60 w-full overflow-auto rounded-lg bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-20">
+                        <Listbox.Options 
+                          className={`absolute ${dropdownPosition === "top" ? "bottom-full mb-1" : "top-full mt-1"} max-h-60 w-full overflow-auto rounded-lg bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50`}
+                        >
                           {itemsPerPageOptions.map((option) => (
                             <Listbox.Option
                               key={option}

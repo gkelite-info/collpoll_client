@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { supabase } from "@/lib/supabaseClient";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
@@ -148,7 +148,7 @@ const AddProjectForm = ({
             value: y.id.toString(),
           }))}
           onChange={(val) => handleChange("year", val)}
-          disabled={isYearsLoading || years.length <= 1}
+          disabled={isYearsLoading || years.length <= 1 || (!isSchool && !formData.branch)}
         />
 
         <FilterDropdown
@@ -189,6 +189,12 @@ const AddProjectForm = ({
             />
           );
         })()}
+      </div>
+
+      <div className="mb-6 bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg max-w-5xl mx-auto shadow-sm">
+        <p className="text-amber-800 text-sm">
+          <strong className="font-semibold">Note:</strong> Once the project is created, only the <strong>From Date</strong> and <strong>To Date</strong> can be edited. All other details (Title, Description, Team, Mentors) will be permanently locked. Please review carefully before submitting.
+        </p>
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-8 max-w-5xl mx-auto">
@@ -412,6 +418,7 @@ const AddProjectForm = ({
             <input
               type="date"
               value={formData.endDate}
+              min={formData.startDate || undefined}
               onChange={(e) => handleChange("endDate", e.target.value)}
               className="w-full border rounded-md px-2 py-1.5 text-[#282828] focus:outline-green-600"
             />
@@ -500,7 +507,7 @@ const AddProjectForm = ({
           <button
             type="button"
             onClick={handleSaveProject}
-            className="flex-1 bg-[#43C17A] text-white py-3 rounded-md font-semibold transition-colors cursor-pointer"
+            className={`flex-1 bg-[#43C17A] text-white py-3 rounded-md font-semibold transition-colors ${loading ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-[#3ba868]'}`}
             disabled={loading}
           >
             {loading ? "Saving.." : "Save"}
@@ -508,7 +515,8 @@ const AddProjectForm = ({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 border border-gray-300 text-gray-600 py-3 rounded-md font-semibold hover:bg-gray-50 cursor-pointer"
+            className={`flex-1 border border-gray-300 text-gray-600 py-3 rounded-md font-semibold transition-colors ${loading ? 'cursor-not-allowed opacity-70 bg-gray-100' : 'hover:bg-gray-50 cursor-pointer'}`}
+            disabled={loading}
           >
             Cancel
           </button>
