@@ -4,6 +4,7 @@ import { CaretDown } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/app/utils/Avatar";
 import { useUser } from "@/app/utils/context/UserContext";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import {
   EmployeeLeaveTagFetchRole,
   EmployeeLeaveTaggedRole,
@@ -98,24 +99,25 @@ const getStaffRoleOrder = (isSchool: boolean): EmployeeLeaveTaggedRole[] => {
   return order;
 };
 
-type EmployeeLeaveRoutingFieldsProps = {
-  value: EmployeeLeaveTagSelection[];
-  onChange: (value: EmployeeLeaveTagSelection[]) => void;
-  requesterRole?: string | null;
-  collegeIdOverride?: number | null;
-};
-
 export default function EmployeeLeaveRoutingFields({
   value,
   onChange,
   requesterRole,
   collegeIdOverride,
-}: EmployeeLeaveRoutingFieldsProps) {
+}: {
+  value: EmployeeLeaveTagSelection[];
+  onChange: (value: EmployeeLeaveTagSelection[]) => void;
+  requesterRole?: string | null;
+  collegeIdOverride?: number | null;
+}) {
   const { collegeId, collegeEducationType, role, userId } = useUser();
   const isSchool = isSchoolEducation(collegeEducationType);
   const effectiveCollegeId = collegeIdOverride ?? collegeId;
   const effectiveRole = requesterRole ?? role;
   const tagRoles = getRequiredEmployeeLeaveTagRoles(effectiveRole);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [openDropdownRole, setOpenDropdownRole] = useState<EmployeeLeaveTagFetchRole | null>(null);
 
   if (!effectiveCollegeId || !tagRoles.length) return null;
 
@@ -133,9 +135,8 @@ export default function EmployeeLeaveRoutingFields({
 
   return (
     <div
-      className={`grid grid-cols-1 gap-3 ${
-        tagRoles.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"
-      }`}
+      ref={containerRef}
+      className={`relative grid grid-cols-1 gap-3 sm:grid-cols-3`}
     >
       {tagRoles.map((taggedRole) => (
         <EmployeeLeaveTagSelect
@@ -163,10 +164,23 @@ export default function EmployeeLeaveRoutingFields({
               : value.find((tag) => tag.taggedRole === taggedRole) ?? null
           }
           onChange={(option) => handleTagChange(taggedRole, option)}
+          isOpen={openDropdownRole === taggedRole}
+          onToggle={() => setOpenDropdownRole(openDropdownRole === taggedRole ? null : taggedRole)}
+          onClose={() => setOpenDropdownRole(null)}
+          containerRef={containerRef}
         />
       ))}
     </div>
   );
+}
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
 }
 
 function EmployeeLeaveTagSelect({
@@ -177,6 +191,10 @@ function EmployeeLeaveTagSelect({
   taggedRole,
   value,
   onChange,
+  isOpen,
+  onToggle,
+  onClose,
+  containerRef,
 }: {
   collegeId: number;
   isSchool: boolean;
@@ -185,144 +203,61 @@ function EmployeeLeaveTagSelect({
   taggedRole: EmployeeLeaveTagFetchRole;
   value: EmployeeLeaveTagSelection | null;
   onChange: (value: EmployeeLeaveTagOption | null) => void;
+  isOpen: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  containerRef: React.RefObject<HTMLDivElement | null>;
 }) {
-  const [options, setOptions] = useState<EmployeeLeaveTagOption[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const containerRef = useRef<HTMLLabelElement | null>(null);
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
   const tagRoleLabels = useMemo(() => getTagRoleLabels(isSchool), [isSchool]);
   const staffRoleOrder = useMemo(() => getStaffRoleOrder(isSchool), [isSchool]);
 
   useEffect(() => {
-    let isActive = true;
-
-    const loadOptions = async () => {
-      setIsLoading(true);
-      try {
-        const nextOptions = await fetchEmployeeLeaveTagOptions({
-          collegeId,
-          taggedRole,
-          collegeEducationType,
-          excludeUserId,
-        });
-        if (isActive) setOptions(nextOptions);
-      } catch (error) {
-        console.error(`Failed to load ${taggedRole} leave tag options:`, error);
-        if (isActive) setOptions([]);
-      } finally {
-        if (isActive) setIsLoading(false);
-      }
-    };
-
-    loadOptions();
-    return () => {
-      isActive = false;
-    };
-  }, [
-    collegeEducationType,
-    collegeId,
-    excludeUserId,
-    taggedRole,
-  ]);
-
-  useEffect(() => {
     if (!isOpen) return;
-
     const handlePointerDown = (event: PointerEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) {
-        setIsOpen(false);
+        onClose();
         setSearchQuery("");
       }
     };
-
     document.addEventListener("pointerdown", handlePointerDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [isOpen]);
-
-  const selectedOption = useMemo(
-    () =>
-      value
-        ? options.find(
-            (option) =>
-              option.taggedRole === value.taggedRole &&
-              option.taggedUserId === value.taggedUserId,
-          ) ?? null
-        : null,
-    [options, value],
-  );
-
-  const filteredOptions = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return options;
-
-    return options.filter((option) => {
-      const searchableText = [
-        option.label,
-        option.roleLabel,
-        tagRoleLabels[option.taggedRole],
-        String(option.taggedUserId),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      return searchableText.includes(query);
-    });
-  }, [options, searchQuery]);
-
-  const groupedOptions = useMemo(() => {
-    if (taggedRole !== "AllStaff") {
-      return [{ role: taggedRole, options: filteredOptions }];
-    }
-
-    return staffRoleOrder
-      .map((role) => ({
-        role,
-        options: filteredOptions.filter((option) => option.taggedRole === role),
-      }))
-      .filter((group) => group.options.length > 0);
-  }, [filteredOptions, taggedRole]);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [isOpen, containerRef, onClose]);
 
   return (
-    <label
-      ref={containerRef}
-      className="relative flex flex-col gap-2 text-sm font-semibold text-[#282828]"
-    >
-      <span>
-        Tag <span className="text-[#FF2020]">*</span>
-      </span>
-      <button
-        type="button"
-        disabled={isLoading}
-        onClick={() => setIsOpen((open) => !open)}
-        className={`flex h-11 w-full cursor-pointer items-center justify-between rounded border border-[#CFCFCF] bg-white px-4 text-left text-sm outline-none focus:border-[#43C17A] ${
-          selectedOption ? "text-[#525252]" : "text-[#9CA3AF]"
-        } disabled:cursor-wait disabled:opacity-70`}
-      >
-        <span className="min-w-0 truncate">
-          {isLoading
-            ? "Loading..."
-            : selectedOption?.label ?? tagRoleLabels[taggedRole]}
+    <>
+      <label className="flex flex-col gap-2 text-sm font-semibold text-[#282828]">
+        <span>
+          Tag <span className="text-[#FF2020]">*</span>
         </span>
-        <CaretDown
-          size={16}
-          className={`shrink-0 text-[#9CA3AF] transition-transform ${
-            isOpen ? "rotate-180" : ""
+        <button
+          type="button"
+          onClick={onToggle}
+          className={`flex h-11 w-full cursor-pointer items-center justify-between rounded border border-[#CFCFCF] bg-white px-4 text-left text-sm outline-none focus:border-[#43C17A] ${
+            value ? "text-[#525252]" : "text-[#9CA3AF]"
           }`}
-        />
-      </button>
+        >
+          <span className="min-w-0 truncate">
+            {value ? (value as any).label ?? "Selected" : tagRoleLabels[taggedRole]}
+          </span>
+          <CaretDown
+            size={16}
+            className={`shrink-0 text-[#9CA3AF] transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+      </label>
 
-      {isOpen && !isLoading && (
-        <div className="absolute left-0 right-0 top-[72px] z-50 overflow-hidden rounded border border-[#CFCFCF] bg-white shadow-lg">
+      {isOpen && (
+        <div className="absolute top-[72px] left-0 right-0 z-[100] mt-1 overflow-hidden rounded border border-[#CFCFCF] bg-white shadow-lg">
           <button
             type="button"
             onClick={() => {
               onChange(null);
-              setIsOpen(false);
+              onClose();
               setSearchQuery("");
             }}
             className="flex h-10 w-full cursor-pointer items-center bg-[#1F6FD6] px-4 text-left text-sm font-semibold text-white"
@@ -339,50 +274,236 @@ function EmployeeLeaveTagSelect({
               autoFocus
             />
           </div>
-          <div className="custom-scrollbar max-h-60 overflow-y-auto">
-            {groupedOptions.map((group) => (
-              <div key={group.role}>
-                {taggedRole === "AllStaff" && (
-                  <div className="sticky top-0 z-10 bg-[#F3F4F6] px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-[#525252]">
-                    {tagRoleLabels[group.role]}
-                  </div>
-                )}
-                {group.options.map((option) => (
-                  <button
-                    key={`${option.taggedRole}-${option.taggedUserId}`}
-                    type="button"
-                    onClick={() => {
-                      onChange(option);
-                      setIsOpen(false);
-                      setSearchQuery("");
-                    }}
-                    className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-left text-sm text-[#282828] hover:bg-gray-50"
-                  >
-                    <Avatar
-                      src={option.profileUrl}
-                      alt={option.label}
-                      size={30}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold">
-                        {option.label}
-                      </span>
-                      <span className="block truncate text-xs font-medium text-[#6B7280]">
-                        {option.roleLabel ?? tagRoleLabels[option.taggedRole]}
-                      </span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ))}
-            {!filteredOptions.length && (
-              <div className="px-4 py-3 text-sm font-medium text-[#9CA3AF]">
-                No users found
-              </div>
+          <div className="max-h-64 overflow-y-auto custom-scrollbar">
+            {taggedRole === "AllStaff" ? (
+              staffRoleOrder.map((role) => (
+                <RoleSectionGroup
+                  key={role}
+                  role={role}
+                  collegeId={collegeId}
+                  excludeUserId={excludeUserId}
+                  collegeEducationType={collegeEducationType}
+                  searchQuery={debouncedSearch}
+                  tagRoleLabels={tagRoleLabels}
+                  onSelect={(option) => {
+                    onChange({ ...option, label: option.label });
+                    onClose();
+                    setSearchQuery("");
+                  }}
+                />
+              ))
+            ) : (
+              <SingleRoleGroup
+                role={taggedRole}
+                collegeId={collegeId}
+                excludeUserId={excludeUserId}
+                collegeEducationType={collegeEducationType}
+                searchQuery={debouncedSearch}
+                tagRoleLabels={tagRoleLabels}
+                onSelect={(option) => {
+                  onChange({ ...option, label: option.label });
+                  onClose();
+                  setSearchQuery("");
+                }}
+              />
             )}
           </div>
         </div>
       )}
-    </label>
+    </>
+  );
+}
+
+function SingleRoleGroup({
+  role,
+  collegeId,
+  excludeUserId,
+  collegeEducationType,
+  searchQuery,
+  tagRoleLabels,
+  onSelect,
+}: {
+  role: EmployeeLeaveTagFetchRole;
+  collegeId: number;
+  excludeUserId: number | null;
+  collegeEducationType: string | null;
+  searchQuery: string;
+  tagRoleLabels: Record<string, string>;
+  onSelect: (option: EmployeeLeaveTagOption) => void;
+}) {
+  const limit = 10;
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+    queryKey: ["leaveTags", role, collegeId, searchQuery],
+    queryFn: ({ pageParam = 1 }) =>
+      fetchEmployeeLeaveTagOptions({
+        collegeId,
+        taggedRole: role,
+        collegeEducationType,
+        excludeUserId,
+        page: pageParam,
+        limit,
+        searchQuery,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => (lastPage.length >= limit ? allPages.length + 1 : undefined),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const options = useMemo(() => data?.pages.flat() ?? [], [data]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop <= clientHeight + 50 && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="custom-scrollbar">
+        <UserOptionShimmer />
+        <UserOptionShimmer />
+        <UserOptionShimmer />
+        <UserOptionShimmer />
+        <UserOptionShimmer />
+      </div>
+    );
+  }
+
+  if (options.length === 0) {
+    return <div className="px-4 py-3 text-sm font-medium text-[#9CA3AF]">No users found</div>;
+  }
+
+  return (
+    <div className="custom-scrollbar" onScroll={handleScroll}>
+      {options.map((option) => (
+        <UserOptionButton
+          key={`${option.taggedRole}-${option.taggedUserId}`}
+          option={option}
+          tagRoleLabels={tagRoleLabels}
+          onSelect={onSelect}
+        />
+      ))}
+      {isFetchingNextPage && <UserOptionShimmer />}
+    </div>
+  );
+}
+
+function RoleSectionGroup({
+  role,
+  collegeId,
+  excludeUserId,
+  collegeEducationType,
+  searchQuery,
+  tagRoleLabels,
+  onSelect,
+}: {
+  role: EmployeeLeaveTaggedRole;
+  collegeId: number;
+  excludeUserId: number | null;
+  collegeEducationType: string | null;
+  searchQuery: string;
+  tagRoleLabels: Record<string, string>;
+  onSelect: (option: EmployeeLeaveTagOption) => void;
+}) {
+  const limit = 10;
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+    queryKey: ["leaveTags", role, collegeId, searchQuery],
+    queryFn: ({ pageParam = 1 }) =>
+      fetchEmployeeLeaveTagOptions({
+        collegeId,
+        taggedRole: role,
+        collegeEducationType,
+        excludeUserId,
+        page: pageParam,
+        limit,
+        searchQuery,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => (lastPage.length >= limit ? allPages.length + 1 : undefined),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const options = useMemo(() => data?.pages.flat() ?? [], [data]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop <= clientHeight + 50 && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="border-b border-[#E5E7EB] last:border-b-0">
+        <div className="sticky top-0 z-10 bg-[#F3F4F6] px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-[#525252]">
+          {tagRoleLabels[role]}
+        </div>
+        <div className="custom-scrollbar max-h-48 overflow-hidden">
+          <UserOptionShimmer />
+          <UserOptionShimmer />
+          <UserOptionShimmer />
+        </div>
+      </div>
+    );
+  }
+  
+  if (options.length === 0) return null;
+
+  return (
+    <div className="border-b border-[#E5E7EB] last:border-b-0">
+      <div className="sticky top-0 z-10 bg-[#F3F4F6] px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-[#525252]">
+        {tagRoleLabels[role]}
+      </div>
+      <div className="custom-scrollbar max-h-48 overflow-y-auto" onScroll={handleScroll}>
+        {options.map((option) => (
+          <UserOptionButton
+            key={`${option.taggedRole}-${option.taggedUserId}`}
+            option={option}
+            tagRoleLabels={tagRoleLabels}
+            onSelect={onSelect}
+          />
+        ))}
+        {isFetchingNextPage && <UserOptionShimmer />}
+      </div>
+    </div>
+  );
+}
+
+function UserOptionButton({
+  option,
+  tagRoleLabels,
+  onSelect,
+}: {
+  option: EmployeeLeaveTagOption;
+  tagRoleLabels: Record<string, string>;
+  onSelect: (option: EmployeeLeaveTagOption) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(option)}
+      className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-left text-sm text-[#282828] hover:bg-gray-50"
+    >
+      <Avatar src={option.profileUrl} alt={option.label} size={30} />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-semibold">{option.label}</span>
+        <span className="block truncate text-xs font-medium text-[#6B7280]">
+          {option.roleLabel ?? tagRoleLabels[option.taggedRole]}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function UserOptionShimmer() {
+  return (
+    <div className="flex w-full items-center gap-3 px-4 py-2">
+      <div className="h-[30px] w-[30px] shrink-0 animate-pulse rounded-full bg-gray-200" />
+      <div className="flex-1 space-y-1.5">
+        <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200" />
+        <div className="h-3 w-1/2 animate-pulse rounded bg-gray-200" />
+      </div>
+    </div>
   );
 }

@@ -59,41 +59,7 @@ export default function FacultyDashRight() {
 
 
 
-  const { data: announcements = [], isLoading: isAnnouncementsLoading, refetch: refetchAnnouncements } = useQuery({
-    queryKey: ["collegeAnnouncements", collegeId, userId, role, view],
-    queryFn: async () => {
-      if (!collegeId || !userId || !role) return [];
 
-      const res = await fetchCollegeAnnouncements({
-        collegeId,
-        userId,
-        role,
-        view,
-        page: 1,
-        limit: 20,
-      });
-
-      return res.data.map((item: any) => ({
-        collegeAnnouncementId: item.collegeAnnouncementId,
-        title: item.title,
-        date: item.date,
-        createdAt: item.createdAt,
-        type: item.type,
-        targetRoles: item.targetRoles,
-        image: typeIcons[item.type] || "/clip.png",
-        imgHeight: "h-10",
-        cardBg: "#E8F8EF",
-        imageBg: "#D3F1E0",
-        professor:
-          view === "my"
-            ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
-            : `By ${formatRole(item.createdByRole)}`,
-      }));
-    },
-    enabled: !!collegeId && !!userId && !!role && !facultyLoading,
-    staleTime: 5 * 60 * 1000,
-    placeholderData: keepPreviousData,
-  });
 
   const saveTaskMutation = useMutation({
     mutationFn: async (payload: {
@@ -141,7 +107,7 @@ export default function FacultyDashRight() {
   };
 
   const isTasksLoading = facultyLoading || (!facultyId || !collegeSubjectId);
-  const isAnnouncementsLoadingFinal = facultyLoading || (!collegeId || !userId || !role) || isAnnouncementsLoading;
+  const isAnnouncementsLoadingFinal = facultyLoading || (!collegeId || !userId || !role);
 
   return (
     <div className="hidden h-full min-h-0 flex-col overflow-hidden p-2 pb-4 md:flex md:w-[35%] lg:w-[32%]">
@@ -186,7 +152,7 @@ export default function FacultyDashRight() {
           currentView={view}
           isLoading={isAnnouncementsLoadingFinal}
           onViewChange={(v) => setView(v as "my" | "others")}
-          refreshAnnouncements={async () => { await refetchAnnouncements(); }}
+          refreshAnnouncements={async () => { await queryClient.invalidateQueries({ queryKey: ["announcementsInfinite"] }); }}
         />
       </div>
     </div>

@@ -77,7 +77,13 @@ export default function StudentLeaveDetailsModal({
     if (isOpen && leaveData) {
       loadInitialHistory();
       setupRealtime();
-      markMessagesAsRead(leaveData.id, "STUDENT");
+      markMessagesAsRead(leaveData.id, "STUDENT").then(() => {
+        channelRef.current?.send({
+          type: "broadcast",
+          event: "read_receipt",
+          payload: { readerRole: "STUDENT", readerId: currentStudentId },
+        });
+      });
     }
     return () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current);
@@ -164,7 +170,13 @@ export default function StudentLeaveDetailsModal({
                 if (prev.some((m) => m.chatId === newMsg.chatId)) return prev;
                 return [...prev, newMsg];
               });
-              markMessagesAsRead(leaveData.id, "STUDENT");
+              markMessagesAsRead(leaveData.id, "STUDENT").then(() => {
+                channelRef.current?.send({
+                  type: "broadcast",
+                  event: "read_receipt",
+                  payload: { readerRole: "STUDENT", readerId: currentStudentId },
+                });
+              });
               setTimeout(() => scrollToBottom(), 100);
             }
           }
@@ -205,6 +217,18 @@ export default function StudentLeaveDetailsModal({
         if (payload.payload.role !== "STUDENT") {
           setIsTyping(payload.payload.isTyping);
           setTimeout(() => scrollToBottom(), 100);
+        }
+      })
+      .on("broadcast", { event: "read_receipt" }, (payload) => {
+        // Faculty read our messages — mark all Student-sent messages as read in local state
+        if (payload.payload.readerRole !== "STUDENT") {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.senderRole === "STUDENT" && !m.isRead
+                ? { ...m, isRead: true }
+                : m
+            )
+          );
         }
       })
       .subscribe();

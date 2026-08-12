@@ -25,8 +25,9 @@ import {
   Trash,
   X,
 } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
-import toast from "react-hot-toast";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { toast } from "react-hot-toast";
+import { useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import type { FinanceLeaveRequest } from "../data";
 
 const statusClassMap: Record<FinanceLeaveRequest["status"], string> = {
@@ -48,18 +49,10 @@ export default function LeaveRequestDetailsModal({
 }: LeaveRequestDetailsModalProps) {
   const { userId, collegeEducationType } = useUser();
   const isSchool = isSchoolEducation(collegeEducationType);
-  const [messages, setMessages] = useState<EmployeeLeaveChatMessage[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isSending, setIsSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const [editingText, setEditingText] = useState("");
   const [isUpdatingMessage, setIsUpdatingMessage] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [messageIdToDelete, setMessageIdToDelete] = useState<number | null>(
     null,
@@ -68,21 +61,66 @@ export default function LeaveRequestDetailsModal({
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedMessageIds, setSelectedMessageIds] = useState<number[]>([]);
   const [isBulkDelete, setIsBulkDelete] = useState(false);
+  const [newMessage, setNewMessage] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
+  const queryClient = useQueryClient();
   const requestId = request?.employeeLeaveRequestId;
   const senderRole = "EMPLOYEE";
+
+  const {
+    data: chatHistoryData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage: isLoadingMore,
+    isLoading: isInitialLoading,
+  } = useInfiniteQuery({
+    queryKey: ["employeeLeaveChat", requestId],
+    queryFn: ({ pageParam = 1 }) => fetchEmployeeLeaveChatHistory(requestId!, pageParam as number, LIMIT),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: any, allPages: any) => lastPage.length >= LIMIT ? allPages.length + 1 : undefined,
+    enabled: !!requestId,
+    staleTime: 0,
+  });
+
+  const messages = useMemo(() => {
+    if (!chatHistoryData) return [];
+    const flattened = [...chatHistoryData.pages].reverse().flat();
+    const seen = new Set();
+    const uniqueMessages = [];
+    for (const msg of flattened) {
+      if (!seen.has(msg.chatId)) {
+        seen.add(msg.chatId);
+        uniqueMessages.push(msg);
+      }
+    }
+    return uniqueMessages;
+  }, [chatHistoryData]);
+
+  useEffect(() => {
+    if (messages.length > 0 && chatHistoryData?.pages.length === 1) {
+      setTimeout(() => scrollToBottom(), 100);
+    }
+  }, [chatHistoryData]);
 
   useEffect(() => {
     if (!request || !requestId) return;
 
-    loadInitialHistory();
     setupRealtime();
-    markEmployeeLeaveMessagesAsRead(requestId, senderRole);
+    markEmployeeLeaveMessagesAsRead(requestId, senderRole, Number(userId)).then(() => {
+      // Broadcast read receipt so the sender sees blue ticks instantly
+      channelRef.current?.send({
+        type: "broadcast",
+        event: "read_receipt",
+        payload: { readerUserId: Number(userId) },
+      });
+    });
 
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -92,59 +130,22 @@ export default function LeaveRequestDetailsModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestId]);
 
-  const loadInitialHistory = async () => {
-    if (!requestId) return;
-
-    setIsInitialLoading(true);
-    try {
-      const history = await fetchEmployeeLeaveChatHistory(requestId, 1, LIMIT);
-      setMessages(history);
-      setPage(1);
-      setHasMore(history.length === LIMIT);
-      setTimeout(scrollToBottom, 100);
-    } catch (error) {
-      console.error("Employee leave chat history error:", error);
-      toast.error("Failed to load chat history");
-    } finally {
-      setIsInitialLoading(false);
-    }
-  };
-
   const loadMoreMessages = async () => {
-    if (!requestId || isLoadingMore || !hasMore) return;
+    if (!requestId || isLoadingMore || !hasNextPage) return;
 
-    setIsLoadingMore(true);
     try {
       const container = chatContainerRef.current;
       const prevScrollHeight = container?.scrollHeight || 0;
-      const nextPage = page + 1;
-      const olderMessages = await fetchEmployeeLeaveChatHistory(
-        requestId,
-        nextPage,
-        LIMIT,
-      );
-
-      if (olderMessages.length > 0) {
-        setMessages((prev) => {
-          const nextMessages = olderMessages.filter(
-            (message) => !prev.some((item) => item.chatId === message.chatId),
-          );
-          return [...nextMessages, ...prev];
-        });
-        setPage(nextPage);
-        setHasMore(olderMessages.length === LIMIT);
-        requestAnimationFrame(() => {
-          if (container) {
-            container.scrollTop = container.scrollHeight - prevScrollHeight;
-          }
-        });
-      } else {
-        setHasMore(false);
-      }
+      
+      await fetchNextPage();
+      
+      requestAnimationFrame(() => {
+        if (container) {
+          container.scrollTop = container.scrollHeight - prevScrollHeight;
+        }
+      });
     } catch (error) {
       console.error("Employee leave older chat error:", error);
-    } finally {
-      setIsLoadingMore(false);
     }
   };
 
@@ -166,7 +167,7 @@ export default function LeaveRequestDetailsModal({
         async (payload) => {
           if (
             payload.new.senderRole === senderRole &&
-            payload.new.senderUserId === userId
+            payload.new.senderUserId === Number(userId)
           ) {
             return;
           }
@@ -176,13 +177,21 @@ export default function LeaveRequestDetailsModal({
           );
           if (!newMsg) return;
 
-          setMessages((prev) => {
-            if (prev.some((message) => message.chatId === newMsg.chatId)) {
-              return prev;
-            }
-            return [...prev, newMsg];
+          queryClient.setQueryData(["employeeLeaveChat", requestId], (oldData: any) => {
+            if (!oldData || !oldData.pages || oldData.pages.length === 0) return oldData;
+            const newPages = [...oldData.pages];
+            if (newPages[0].some((m: any) => m.chatId === newMsg.chatId)) return oldData;
+            newPages[0] = [...newPages[0], newMsg];
+            return { ...oldData, pages: newPages };
           });
-          markEmployeeLeaveMessagesAsRead(requestId, senderRole);
+          
+          await markEmployeeLeaveMessagesAsRead(requestId, senderRole, Number(userId));
+          // Broadcast read receipt so the sender sees blue ticks instantly
+          channelRef.current?.send({
+            type: "broadcast",
+            event: "read_receipt",
+            payload: { readerUserId: Number(userId) },
+          });
           setTimeout(scrollToBottom, 100);
         },
       )
@@ -194,28 +203,8 @@ export default function LeaveRequestDetailsModal({
           table: "employee_leave_request_chats",
           filter: `employeeLeaveRequestId=eq.${requestId}`,
         },
-        async (payload) => {
-          if (payload.new.is_deleted) {
-            setMessages((prev) =>
-              prev.filter(
-                (message) =>
-                  message.chatId !== payload.new.employeeLeaveRequestChatId,
-              ),
-            );
-            return;
-          }
-
-          const updatedMsg = await fetchSingleEmployeeLeaveChatMessage(
-            payload.new.employeeLeaveRequestChatId,
-          );
-
-          setMessages((prev) =>
-            prev.map((message) =>
-              message.chatId === payload.new.employeeLeaveRequestChatId
-                ? updatedMsg ?? { ...message, isRead: true }
-                : message,
-            ),
-          );
+        async () => {
+          queryClient.invalidateQueries({ queryKey: ["employeeLeaveChat", requestId] });
         },
       )
       .on(
@@ -227,18 +216,39 @@ export default function LeaveRequestDetailsModal({
           filter: `employeeLeaveRequestId=eq.${requestId}`,
         },
         (payload) => {
-          setMessages((prev) =>
-            prev.filter(
-              (message) =>
-                message.chatId !== payload.old.employeeLeaveRequestChatId,
-            ),
-          );
+          queryClient.setQueryData(["employeeLeaveChat", requestId], (oldData: any) => {
+            if (!oldData || !oldData.pages) return oldData;
+            return {
+              ...oldData,
+              pages: oldData.pages.map((page: any[]) => 
+                page.filter((m: any) => m.chatId !== payload.old.employeeLeaveRequestChatId)
+              )
+            };
+          });
         },
       )
       .on("broadcast", { event: "typing" }, (payload) => {
         if (payload.payload.role !== senderRole) {
           setIsTyping(payload.payload.isTyping);
           setTimeout(scrollToBottom, 100);
+        }
+      })
+      .on("broadcast", { event: "read_receipt" }, (payload) => {
+        // Another user read our messages — mark all our sent messages as read in cache
+        if (payload.payload.readerUserId !== Number(userId)) {
+          queryClient.setQueryData(["employeeLeaveChat", requestId], (oldData: any) => {
+            if (!oldData || !oldData.pages) return oldData;
+            return {
+              ...oldData,
+              pages: oldData.pages.map((page: any[]) =>
+                page.map((m: any) =>
+                  m.senderUserId === Number(userId) && !m.isRead
+                    ? { ...m, isRead: true }
+                    : m
+                )
+              ),
+            };
+          });
         }
       })
       .subscribe();
@@ -297,11 +307,11 @@ export default function LeaveRequestDetailsModal({
       });
 
       if (savedMessage) {
-        setMessages((prev) => {
-          if (prev.some((message) => message.chatId === savedMessage.chatId)) {
-            return prev;
-          }
-          return [...prev, savedMessage];
+        queryClient.setQueryData(["employeeLeaveChat", requestId], (oldData: any) => {
+            if (!oldData || !oldData.pages) return oldData;
+            const newPages = [...oldData.pages];
+            newPages[0] = [...newPages[0], savedMessage];
+            return { ...oldData, pages: newPages };
         });
       }
 
@@ -346,11 +356,15 @@ export default function LeaveRequestDetailsModal({
       });
 
       if (updatedMessage) {
-        setMessages((prev) =>
-          prev.map((message) =>
-            message.chatId === chatId ? updatedMessage : message,
-          ),
-        );
+        queryClient.setQueryData(["employeeLeaveChat", requestId], (oldData: any) => {
+            if (!oldData || !oldData.pages) return oldData;
+            return {
+              ...oldData,
+              pages: oldData.pages.map((page: any[]) =>
+                page.map((m: any) => m.chatId === editingMessageId ? { ...m, message: editingText } : m)
+              )
+            };
+        });
       }
       cancelEditingMessage();
     } catch (error) {
@@ -384,9 +398,15 @@ export default function LeaveRequestDetailsModal({
           senderRole,
         });
 
-        setMessages((prev) =>
-          prev.filter((message) => !deletedIds.includes(message.chatId)),
-        );
+        queryClient.setQueryData(["employeeLeaveChat", requestId], (oldData: any) => {
+          if (!oldData || !oldData.pages) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: any[]) => 
+              page.filter((m: any) => !deletedIds.includes(m.chatId))
+            )
+          };
+        });
         if (editingMessageId && deletedIds.includes(editingMessageId)) {
           cancelEditingMessage();
         }
@@ -410,9 +430,15 @@ export default function LeaveRequestDetailsModal({
           senderUserId: Number(userId),
           senderRole,
         });
-        setMessages((prev) =>
-          prev.filter((message) => message.chatId !== deletedChatId),
-        );
+        queryClient.setQueryData(["employeeLeaveChat", requestId], (oldData: any) => {
+          if (!oldData || !oldData.pages) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: any[]) => 
+              page.filter((m: any) => m.chatId !== deletedChatId)
+            )
+          };
+        });
         if (editingMessageId === messageIdToDelete) cancelEditingMessage();
         setMessageIdToDelete(null);
       }

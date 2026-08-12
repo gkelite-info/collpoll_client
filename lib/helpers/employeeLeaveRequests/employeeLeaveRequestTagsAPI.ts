@@ -28,21 +28,30 @@ type FetchEmployeeLeaveTagOptionsParams = {
   taggedRole: EmployeeLeaveTagFetchRole;
   collegeEducationType?: string | null;
   excludeUserId?: number | null;
+  page?: number;
+  limit?: number;
+  searchQuery?: string;
 };
 
 export type EmployeeLeaveTagFetchRole = EmployeeLeaveTaggedRole | "AllStaff";
 
 const mapUsersToOptions = (
-  rows: { userId: number; fullName: string | null; profileUrl?: string | null }[],
+  rows: { userId: number; fullName?: string | null; profileUrl?: string | null; users?: any; user_profile?: any }[],
   taggedRole: EmployeeLeaveTaggedRole,
 ) =>
-  rows.map((row) => ({
-    taggedUserId: row.userId,
-    taggedRole,
-    label: row.fullName?.trim() || `User ${row.userId}`,
-    roleLabel: tagRoleLabels[taggedRole],
-    profileUrl: row.profileUrl ?? null,
-  }));
+  rows.map((row) => {
+    // Handle both direct users table rows and joined rows
+    const fullName = row.users?.fullName || row.fullName;
+    let profileUrl = row.users?.user_profile?.[0]?.profileUrl ?? row.users?.user_profile?.profileUrl ?? row.user_profile?.[0]?.profileUrl ?? row.user_profile?.profileUrl ?? row.profileUrl ?? null;
+    
+    return {
+      taggedUserId: row.userId,
+      taggedRole,
+      label: fullName?.trim() || `User ${row.userId}`,
+      roleLabel: tagRoleLabels[taggedRole],
+      profileUrl,
+    };
+  });
 
 const tagRoleLabels: Record<EmployeeLeaveTaggedRole, string> = {
   Admin: "Admin",
@@ -164,48 +173,67 @@ async function fetchRegisteredUserOptions(
   collegeId: number,
   taggedRole: "CollegeHr" | "CollegeAdmin",
   excludeUserId?: number | null,
+  page = 1,
+  limit = 10,
+  searchQuery = ""
 ) {
-  const { data: registrations, error: registrationError } = await supabase
-    .from(table)
-    .select("userId")
-    .eq("collegeId", collegeId)
-    .eq("isActive", true)
-    .eq("is_deleted", false)
-    .is("deletedAt", null);
+  const fromOffset = (page - 1) * limit;
+  const toOffset = fromOffset + limit - 1;
 
-  if (registrationError) throw registrationError;
-
-  const userIds = Array.from(
-    new Set((registrations ?? []).map((row) => row.userId as number)),
-  ).filter((userId) => userId !== excludeUserId);
-  if (!userIds.length) return [];
-
-  const { data: users, error: usersError } = await supabase
+  let query = supabase
     .from("users")
-    .select("userId, fullName")
-    .in("userId", userIds)
+    .select(`
+      userId,
+      fullName,
+      user_profile ( profileUrl ),
+      ${table}!inner(userId)
+    `)
     .eq("collegeId", collegeId)
     .eq("isActive", true)
     .eq("is_deleted", false)
     .is("deletedAt", null)
-    .order("fullName", { ascending: true });
+    .eq(`${table}.collegeId`, collegeId)
+    .eq(`${table}.isActive`, true)
+    .eq(`${table}.is_deleted`, false)
+    .is(`${table}.deletedAt`, null);
 
-  if (usersError) throw usersError;
+  if (excludeUserId) query = query.neq("userId", excludeUserId);
+  if (searchQuery) query = query.ilike("fullName", `%${searchQuery}%`);
 
-  return mapUsersToOptions(await attachProfileUrls(users ?? []), taggedRole);
+  const { data, error } = await query
+    .order("fullName", { ascending: true })
+    .range(fromOffset, toOffset);
+
+  if (error) throw error;
+  return mapUsersToOptions(data || [], taggedRole);
 }
+
 
 async function fetchFacultyOptions(
   collegeId: number,
   collegeEducationType?: string | null,
   excludeUserId?: number | null,
+  page = 1,
+  limit = 10,
+  searchQuery = ""
 ) {
+  const fromOffset = (page - 1) * limit;
+  const toOffset = fromOffset + limit - 1;
   let query = supabase
-    .from("faculty")
-    .select("userId, fullName")
+    .from("users")
+    .select(`
+      userId,
+      fullName,
+      user_profile ( profileUrl ),
+      faculty!inner(userId, collegeEducationId)
+    `)
     .eq("collegeId", collegeId)
     .eq("isActive", true)
-    .is("deletedAt", null);
+    .eq("is_deleted", false)
+    .is("deletedAt", null)
+    .eq("faculty.collegeId", collegeId)
+    .eq("faculty.isActive", true)
+    .is("faculty.deletedAt", null);
 
   if (collegeEducationType) {
     const educationTypeNames = collegeEducationType
@@ -228,24 +256,30 @@ async function fetchFacultyOptions(
 
     if (!educationIds.length) return [];
 
-    query = query.in("collegeEducationId", educationIds);
+    query = query.in("faculty.collegeEducationId", educationIds);
   }
 
-  if (excludeUserId) {
-    query = query.neq("userId", excludeUserId);
-  }
+  if (excludeUserId) query = query.neq("userId", excludeUserId);
+  if (searchQuery) query = query.ilike("fullName", `%${searchQuery}%`);
 
-  const { data, error } = await query.order("fullName", { ascending: true });
+  const { data, error } = await query
+    .order("fullName", { ascending: true })
+    .range(fromOffset, toOffset);
+
   if (error) throw error;
-
-  return mapUsersToOptions(await attachProfileUrls(data ?? []), "Faculty");
+  return mapUsersToOptions(data || [], "Faculty");
 }
 
 async function fetchAdminOptions(
   collegeId: number,
   collegeEducationType?: string | null,
   excludeUserId?: number | null,
+  page = 1,
+  limit = 10,
+  searchQuery = ""
 ) {
+  const fromOffset = (page - 1) * limit;
+  const toOffset = fromOffset + limit - 1;
   if (!collegeEducationType?.trim()) return [];
 
   let collegeEducationId: number | null = null;
@@ -284,37 +318,51 @@ async function fetchAdminOptions(
   );
 
   let query = supabase
-    .from("admins")
-    .select("userId, fullName")
+    .from("users")
+    .select(`
+      userId,
+      fullName,
+      user_profile ( profileUrl ),
+      admins!admins_userId_fkey!inner(userId, collegeEducationId, adminId)
+    `)
     .eq("collegeId", collegeId)
+    .eq("isActive", true)
     .eq("is_deleted", false)
-    .is("deletedAt", null);
+    .is("deletedAt", null)
+    .eq("admins.collegeId", collegeId)
+    .eq("admins.is_deleted", false)
+    .is("admins.deletedAt", null);
 
-  if (excludeUserId) {
-    query = query.neq("userId", excludeUserId);
-  }
+  if (excludeUserId) query = query.neq("userId", excludeUserId);
+  if (searchQuery) query = query.ilike("fullName", `%${searchQuery}%`);
 
   const filters = [`collegeEducationId.eq.${collegeEducationId}`];
   if (mappedAdminIds.length) {
     filters.push(`adminId.in.(${mappedAdminIds.join(",")})`);
   }
-  query = query.or(filters.join(","));
+  query = query.or(filters.join(","), { foreignTable: "admins" });
 
-  const { data, error } = await query.order("fullName", { ascending: true });
+  const { data, error } = await query
+    .order("fullName", { ascending: true })
+    .range(fromOffset, toOffset);
+
   if (error) throw error;
-
-  return mapUsersToOptions(await attachProfileUrls(data ?? []), "Admin");
+  return mapUsersToOptions(data || [], "Admin");
 }
 
 async function fetchFinanceManagerOptions(
   collegeId: number,
   excludeUserId?: number | null,
+  page = 1,
+  limit = 10,
+  searchQuery = ""
 ) {
   const params = new URLSearchParams({ collegeId: String(collegeId) });
 
-  if (excludeUserId) {
-    params.set("excludeUserId", String(excludeUserId));
-  }
+  if (excludeUserId) params.set("excludeUserId", String(excludeUserId));
+  if (searchQuery) params.set("searchQuery", searchQuery);
+  params.set("page", String(page));
+  params.set("limit", String(limit));
 
   const response = await fetch(
     `/api/employee-leave-tags/finance-managers?${params.toString()}`,
@@ -334,74 +382,35 @@ async function fetchFinanceManagerOptions(
 async function fetchAccountantOptions(
   collegeId: number,
   excludeUserId?: number | null,
+  page = 1,
+  limit = 10,
+  searchQuery = ""
 ) {
-  const { data: registrations, error: registrationError } = await supabase
-    .from("accountants")
-    .select("userId")
-    .eq("collegeId", collegeId)
-    .eq("isActive", true)
-    .eq("is_deleted", false)
-    .is("deletedAt", null);
-
-  if (registrationError) throw registrationError;
-
-  const registeredUserIds = Array.from(
-    new Set((registrations ?? []).map((row) => row.userId as number)),
-  ).filter((userId) => userId && userId !== excludeUserId);
-
-  const optionByUserId = new Map<number, EmployeeLeaveTagOption>();
-
-  if (registeredUserIds.length) {
-    let registeredUsersQuery = supabase
-      .from("users")
-      .select("userId, fullName")
-      .in("userId", registeredUserIds)
-      .eq("collegeId", collegeId)
-      .eq("isActive", true)
-      .eq("is_deleted", false)
-      .is("deletedAt", null);
-
-    if (excludeUserId) {
-      registeredUsersQuery = registeredUsersQuery.neq("userId", excludeUserId);
-    }
-
-    const { data, error } = await registeredUsersQuery.order("fullName", {
-      ascending: true,
-    });
-
-    if (error) throw error;
-
-    mapUsersToOptions(await attachProfileUrls(data ?? []), "Accountant").forEach(
-      (option) => optionByUserId.set(option.taggedUserId, option),
-    );
-  }
-
+  const fromOffset = (page - 1) * limit;
+  const toOffset = fromOffset + limit - 1;
   let roleUsersQuery = supabase
     .from("users")
-    .select("userId, fullName")
+    .select(`
+      userId,
+      fullName,
+      user_profile ( profileUrl )
+    `)
     .eq("collegeId", collegeId)
     .eq("role", "Accountant")
     .eq("isActive", true)
     .eq("is_deleted", false)
     .is("deletedAt", null);
 
-  if (excludeUserId) {
-    roleUsersQuery = roleUsersQuery.neq("userId", excludeUserId);
-  }
+  if (excludeUserId) roleUsersQuery = roleUsersQuery.neq("userId", excludeUserId);
+  if (searchQuery) roleUsersQuery = roleUsersQuery.ilike("fullName", `%${searchQuery}%`);
 
-  const { data, error } = await roleUsersQuery.order("fullName", {
-    ascending: true,
-  });
+  const { data, error } = await roleUsersQuery
+    .order("fullName", { ascending: true })
+    .range(fromOffset, toOffset);
 
   if (error) throw error;
 
-  mapUsersToOptions(await attachProfileUrls(data ?? []), "Accountant").forEach(
-    (option) => optionByUserId.set(option.taggedUserId, option),
-  );
-
-  return Array.from(optionByUserId.values()).sort((first, second) =>
-    first.label.localeCompare(second.label),
-  );
+  return mapUsersToOptions(data || [], "Accountant");
 }
 
 const mergeUniqueTagOptions = (options: EmployeeLeaveTagOption[]) =>
@@ -422,75 +431,12 @@ const toEmployeeLeaveTagDbRole = (
 async function fetchAllStaffOptions(
   collegeId: number,
   excludeUserId?: number | null,
+  page = 1,
+  limit = 10,
+  searchQuery = ""
 ) {
-  let query = supabase
-    .from("users")
-    .select("userId, fullName, role")
-    .eq("collegeId", collegeId)
-    .eq("isActive", true)
-    .eq("is_deleted", false)
-    .is("deletedAt", null)
-    .not(
-      "role",
-      "in",
-      "(Student,Parent,CollegeHr,CollegeAdmin,HR,Hr)",
-    );
-
-  if (excludeUserId) {
-    query = query.neq("userId", excludeUserId);
-  }
-
-  const { data, error } = await query.order("fullName", { ascending: true });
-
-  if (error) throw error;
-
-  const usersWithProfiles = await attachProfileUrls(
-    ((data ?? []) as { userId: number; fullName: string | null; role: string | null }[])
-      .map((user) => ({
-        userId: user.userId,
-        fullName: user.fullName,
-        role: user.role,
-      })),
-  );
-
-  const userRoleOptions = usersWithProfiles
-    .map<EmployeeLeaveTagOption | null>((user) => {
-      const roleKey = normalizeUserRoleKey(user.role);
-      if (allStaffExcludedRoleKeys.has(roleKey)) return null;
-
-      const taggedRole = getTaggedRoleFromUserRole(user.role);
-      if (!taggedRole) return null;
-      if (allStaffExcludedTaggedRoles.has(taggedRole)) return null;
-
-      return {
-        taggedUserId: user.userId,
-        taggedRole,
-        label: user.fullName?.trim() || `User ${user.userId}`,
-        roleLabel: tagRoleLabels[taggedRole],
-        profileUrl: user.profileUrl,
-      } satisfies EmployeeLeaveTagOption;
-    })
-    .filter((option): option is EmployeeLeaveTagOption => Boolean(option));
-
-  const accountantOptions = await fetchAccountantOptions(
-    collegeId,
-    excludeUserId,
-  );
-  const options = mergeUniqueTagOptions([
-    ...userRoleOptions,
-    ...accountantOptions,
-  ]);
-
-  return options.sort((first, second) => {
-    const firstRoleIndex = staffRoleOrder.indexOf(first.taggedRole);
-    const secondRoleIndex = staffRoleOrder.indexOf(second.taggedRole);
-
-    if (firstRoleIndex !== secondRoleIndex) {
-      return firstRoleIndex - secondRoleIndex;
-    }
-
-    return first.label.localeCompare(second.label);
-  });
+  // Not used directly when UI renders per-role groups, but kept for compatibility
+  return [];
 }
 
 export async function fetchEmployeeLeaveTagOptions({
@@ -498,63 +444,63 @@ export async function fetchEmployeeLeaveTagOptions({
   taggedRole,
   collegeEducationType,
   excludeUserId,
+  page,
+  limit,
+  searchQuery
 }: FetchEmployeeLeaveTagOptionsParams): Promise<EmployeeLeaveTagOption[]> {
   if (taggedRole === "Admin") {
-    return fetchAdminOptions(collegeId, collegeEducationType, excludeUserId);
+    return fetchAdminOptions(collegeId, collegeEducationType, excludeUserId, page, limit, searchQuery);
   }
 
   if (taggedRole === "Faculty") {
-    return fetchFacultyOptions(collegeId, collegeEducationType, excludeUserId);
+    return fetchFacultyOptions(collegeId, collegeEducationType, excludeUserId, page, limit, searchQuery);
   }
 
   if (taggedRole === "CollegeHr") {
-    return fetchRegisteredUserOptions(
-      "college_hr",
-      collegeId,
-      taggedRole,
-      excludeUserId,
-    );
+    return fetchRegisteredUserOptions("college_hr", collegeId, taggedRole, excludeUserId, page, limit, searchQuery);
   }
 
   if (taggedRole === "CollegeAdmin") {
-    return fetchRegisteredUserOptions(
-      "college_admin",
-      collegeId,
-      taggedRole,
-      excludeUserId,
-    );
+    return fetchRegisteredUserOptions("college_admin", collegeId, taggedRole, excludeUserId, page, limit, searchQuery);
   }
 
   if (taggedRole === "FinanceManager") {
-    return fetchFinanceManagerOptions(collegeId, excludeUserId);
+    return fetchFinanceManagerOptions(collegeId, excludeUserId, page, limit, searchQuery);
   }
 
   if (taggedRole === "Accountant") {
-    return fetchAccountantOptions(collegeId, excludeUserId);
+    return fetchAccountantOptions(collegeId, excludeUserId, page, limit, searchQuery);
   }
 
   if (taggedRole === "AllStaff") {
-    return fetchAllStaffOptions(collegeId, excludeUserId);
+    return fetchAllStaffOptions(collegeId, excludeUserId, page, limit, searchQuery);
   }
+
+  const fromOffset = ((page || 1) - 1) * (limit || 10);
+  const toOffset = fromOffset + (limit || 10) - 1;
 
   let query = supabase
     .from("users")
-    .select("userId, fullName")
+    .select(`
+      userId,
+      fullName,
+      user_profile ( profileUrl )
+    `)
     .eq("collegeId", collegeId)
     .eq("role", taggedRole)
     .eq("isActive", true)
     .eq("is_deleted", false)
     .is("deletedAt", null);
 
-  if (excludeUserId) {
-    query = query.neq("userId", excludeUserId);
-  }
+  if (excludeUserId) query = query.neq("userId", excludeUserId);
+  if (searchQuery) query = query.ilike("fullName", `%${searchQuery}%`);
 
-  const { data, error } = await query.order("fullName", { ascending: true });
+  const { data, error } = await query
+    .order("fullName", { ascending: true })
+    .range(fromOffset, toOffset);
 
   if (error) throw error;
-
-  return mapUsersToOptions(await attachProfileUrls(data ?? []), taggedRole);
+  return mapUsersToOptions(data || [], taggedRole);
 }
 
 export async function saveEmployeeLeaveRequestTags(
