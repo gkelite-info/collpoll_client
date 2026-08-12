@@ -41,6 +41,7 @@ export async function fetchStudentLeavesForFaculty(
   limit: number,
   statusFilter: string,
   searchQuery: string,
+  dateFilter?: string,
 ) {
   try {
     let query = supabase
@@ -55,7 +56,9 @@ export async function fetchStudentLeavesForFaculty(
           college_branch ( collegeBranchCode ),
          student_academic_history (
             isCurrent,
-            college_semester ( collegeSemester )
+            college_semester ( collegeSemester ),
+            college_academic_year ( collegeAcademicYear ),
+            college_sections ( collegeSections )
           ),
           student_pins ( pinNumber ),
           users:userId (
@@ -78,6 +81,12 @@ export async function fetchStudentLeavesForFaculty(
 
     if (searchQuery.trim() !== "") {
       query = query.ilike("description", `%${searchQuery.trim()}%`);
+    }
+
+    if (dateFilter) {
+      query = query
+        .gte("createdAt", `${dateFilter}T00:00:00.000Z`)
+        .lt("createdAt", `${dateFilter}T23:59:59.999Z`);
     }
 
     const from = (page - 1) * limit;
@@ -114,6 +123,12 @@ export async function fetchStudentLeavesForFaculty(
         ? `${semNumber}${getOrdinalSuffix(semNumber)} Semester`
         : "N/A";
 
+      const yearObj = currentHistory?.college_academic_year;
+      const yearStr = Array.isArray(yearObj) ? yearObj[0]?.collegeAcademicYear : yearObj?.collegeAcademicYear;
+      
+      const secObj = currentHistory?.college_sections;
+      const secStr = Array.isArray(secObj) ? secObj[0]?.collegeSections : secObj?.collegeSections;
+
       const pinNumber = Array.isArray(student?.student_pins)
         ? student?.student_pins[0]?.pinNumber
         : student?.student_pins?.pinNumber;
@@ -130,10 +145,7 @@ export async function fetchStudentLeavesForFaculty(
 
       const attachmentPaths = l.attachment ? l.attachment.split(",") : [];
       const attachments = attachmentPaths.map((path: string) => {
-        const { data: urlData } = supabase.storage
-          .from("leave-request-attachments")
-          .getPublicUrl(path.trim());
-        return urlData.publicUrl;
+        return `/api/files/leave-request-attachments/${path.trim()}`;
       });
 
       return {
@@ -143,6 +155,8 @@ export async function fetchStudentLeavesForFaculty(
         name: userObj?.fullName || "Unknown Student",
         branch: branch?.collegeBranchCode || "N/A",
         semester: semString,
+        year: yearStr || "N/A",
+        section: secStr || "N/A",
         fromDate: sDate.toLocaleDateString("en-GB"),
         toDate: eDate.toLocaleDateString("en-GB"),
         days: String(days).padStart(2, "0"),
@@ -220,6 +234,7 @@ export async function fetchFacultyLeaves(
   limit: number,
   statusFilter: string,
   searchQuery: string,
+  dateFilter?: string
 ) {
   try {
     const scope = await getFacultyEmployeeLeaveScope(facultyId);
@@ -234,6 +249,7 @@ export async function fetchFacultyLeaves(
       page,
       pageSize: limit,
       search: searchQuery,
+      date: dateFilter,
     });
 
     const mappedData = data.map((leave) => {
@@ -244,7 +260,7 @@ export async function fetchFacultyLeaves(
         employeeLeaveRequestId: leave.employeeLeaveRequestId,
         employeeId: leave.employee?.employeeId ?? String(leave.employeeId),
         name: leave.user?.fullName ?? "Faculty",
-        role: titleCase(leave.role),
+        role: formatRole(leave.employee?.employeeType || leave.role),
         photo: leave.user?.profileUrl ?? "",
         requestedDate: formatLeaveDate(leave.createdAt.slice(0, 10)),
         fromDate: formatLeaveDate(leave.leaveFromDate),
@@ -269,6 +285,7 @@ export async function fetchFacultyTaggedLeaves(
   limit: number,
   statusFilter: string,
   searchQuery: string,
+  dateFilter?: string
 ) {
   try {
     const scope = await getFacultyEmployeeLeaveScope(facultyId);
@@ -282,6 +299,7 @@ export async function fetchFacultyTaggedLeaves(
       page,
       pageSize: limit,
       search: searchQuery,
+      date: dateFilter,
     });
 
     const mappedData = data.map((leave) => {
@@ -292,7 +310,7 @@ export async function fetchFacultyTaggedLeaves(
         employeeLeaveRequestId: leave.employeeLeaveRequestId,
         employeeId: leave.employee?.employeeId ?? String(leave.employeeId),
         name: leave.user?.fullName ?? "Employee",
-        role: titleCase(leave.role),
+        role: formatRole(leave.employee?.employeeType || leave.role),
         photo: leave.user?.profileUrl ?? "",
         requestedDate: formatLeaveDate(leave.createdAt.slice(0, 10)),
         fromDate: formatLeaveDate(leave.leaveFromDate),
@@ -373,3 +391,37 @@ const titleCase = (value: string) =>
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join(" ");
+
+const formatRole = (value: string) => {
+  if (!value) return "Employee";
+  const normalized = value.toLowerCase().trim();
+  const exactRoleMap: Record<string, string> = {
+    admin: "Admin",
+    faculty: "Faculty",
+    finance: "Finance Executive",
+    financeexecutive: "Finance Executive",
+    financemanager: "Finance Manager",
+    accountant: "Accountant",
+    collegehr: "HR",
+    hr: "HR",
+    collegeadmin: "College Admin",
+    placementofficer: "Placement Officer",
+    placementemployee: "Placement Officer",
+    wellbeingexecutive: "Wellbeing Executive",
+    wellbeingmanager: "Wellbeing Manager",
+    wellbeing: "Wellbeing",
+    hod: "HOD",
+    student: "Student",
+    parent: "Parent",
+  };
+  
+  if (exactRoleMap[normalized]) return exactRoleMap[normalized];
+
+  return value
+    .replace(/([A-Z])/g, ' $1')
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ")
+    .trim();
+};

@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
+import { RightPageShimmer } from "@/app/components/shimmers/LeaveRequestsShimmer";
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -243,6 +244,10 @@ export default function LeavesRight() {
       imageBg: "#C9DEFF",
     },
   ];
+
+  if (!userId || !studentId) {
+    return <RightPageShimmer className="w-full lg:w-[32%] p-2 max-lg:hidden" />;
+  }
 
   return (
     <>

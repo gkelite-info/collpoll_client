@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState, useMemo } from "react";
+import { Suspense, useEffect, useState, useMemo, useRef } from "react";
 import {
   Users,
   User,
@@ -12,8 +12,10 @@ import {
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
 import toast from "react-hot-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter, useSearchParams } from "next/navigation";
 
-import { Pagination } from "@/app/(screens)/faculty/assignments/components/pagination";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 import { useUser } from "@/app/utils/context/UserContext";
 import { getFacultyIdByUserId } from "@/lib/helpers/faculty/facultyAPI";
@@ -27,6 +29,7 @@ import {
   fetchFacultyTaggedLeaves,
   fetchFacultyTaggedLeaveCounts,
 } from "@/lib/helpers/faculty/leave request/facultyLeaveAPI";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import FacultyRequestLeaveModal from "./modal/RequestLeaveModal";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { ConfirmStatusModal } from "./modal/ConfirmStatusModal";
@@ -34,6 +37,7 @@ import FacultyLeaveDetailsModal from "./modal/facultyLeaveStatusModal";
 import { Avatar } from "@/app/utils/Avatar";
 import EmployeeLeaveDetailsModal from "@/app/(screens)/finance-manager/leave-request/components/LeaveRequestDetailsModal";
 import type { FinanceLeaveRequest } from "@/app/(screens)/finance-manager/leave-request/data";
+import { LeaveCardsShimmer, LeavePageShimmer } from "@/app/components/shimmers/LeaveRequestsShimmer";
 
 const STUDENT_COLUMNS = [
   { title: "S.No", key: "sNo" },
@@ -114,33 +118,71 @@ type FacultyLeaveTableRow = {
   role?: string;
   requestedDate?: string;
   branch?: string;
+  semester?: string;
+  year?: string;
+  section?: string;
   attachments?: string[];
 };
 
 function FacultyLeavesContent() {
   const { userId, collegeEducationType } = useUser();
   const [facultyId, setFacultyId] = useState<number | null>(null);
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const tabQuery = searchParams.get("tab");
+  const initialMainTab = ["students", "my_leaves", "tagged"].includes(tabQuery as string)
+    ? (tabQuery as "students" | "my_leaves" | "tagged")
+    : "students";
 
   const [mainTab, setMainTab] = useState<
     "students" | "my_leaves" | "tagged"
-  >("students");
+  >(initialMainTab);
   const [activeTab, setActiveTab] = useState<LeaveStatusTab>("all");
 
   const [searchQuery, setSearchQuery] = useState("");
+  
+  const isSchool = isSchoolEducation(collegeEducationType);
+  const isInter = collegeEducationType?.toUpperCase().includes("INTER");
+
+  const dynamicStudentColumns = useMemo(() => {
+    return STUDENT_COLUMNS.flatMap((col) => {
+      if (col.key === "branch") {
+        if (isSchool) {
+          return [
+            { title: "Year", key: "year" },
+            { title: "Section", key: "section" }
+          ];
+        }
+        if (isInter) {
+          return [
+            { title: "Group", key: "branch" },
+            { title: "Year", key: "year" },
+            { title: "Section", key: "section" }
+          ];
+        }
+        
+        return [
+          { title: "Branch", key: "branch" },
+          { title: "Year", key: "year" },
+          { title: "Sem", key: "semester" },
+          { title: "Section", key: "section" }
+        ];
+      }
+      return [col];
+    }).filter(Boolean) as typeof STUDENT_COLUMNS;
+  }, [isSchool, isInter]);
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filterDate, setFilterDate] = useState("");
+  const [debouncedFilterDate, setDebouncedFilterDate] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   const [page, setPage] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const [tableData, setTableData] = useState<FacultyLeaveTableRow[]>([]);
-  const [counts, setCounts] = useState({
-    all: 0,
-    approved: 0,
-    pending: 0,
-    rejected: 0,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const itemsPerPage = 10;
+  const itemsPerPage = 20;
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -157,10 +199,11 @@ function FacultyLeavesContent() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
+      setDebouncedFilterDate(filterDate);
       setPage(1);
     }, 500);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, filterDate]);
 
   useEffect(() => {
     if (!userId) return;
@@ -169,118 +212,94 @@ function FacultyLeavesContent() {
       .catch(() => toast.error("Faculty context not found"));
   }, [userId]);
 
-  const loadData = useCallback(async () => {
-    if (!facultyId) return;
-    setIsLoading(true);
-    try {
+  const { data: countsData = { all: 0, approved: 0, pending: 0, rejected: 0 }, isLoading: isCountsLoading } = useQuery({
+    queryKey: ["facultyLeaveCounts", facultyId, mainTab],
+    queryFn: async () => {
+      if (!facultyId) return { all: 0, approved: 0, pending: 0, rejected: 0 };
+      if (mainTab === "students") return fetchStudentLeaveCounts(facultyId);
+      if (mainTab === "tagged") return fetchFacultyTaggedLeaveCounts(facultyId);
+      return fetchFacultyLeaveCounts(facultyId);
+    },
+    enabled: !!facultyId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  const { data: leavesData = { data: [], totalCount: 0 }, isLoading } = useQuery({
+    queryKey: ["facultyLeaves", facultyId, mainTab, activeTab, debouncedSearch, debouncedFilterDate, page],
+    queryFn: async () => {
+      if (!facultyId) return { data: [], totalCount: 0 };
       if (mainTab === "students") {
-        const [tableRes, countRes] = await Promise.all([
-          fetchStudentLeavesForFaculty(
-            facultyId,
-            page,
-            itemsPerPage,
-            activeTab,
-            debouncedSearch,
-          ),
-          fetchStudentLeaveCounts(facultyId),
-        ]);
-        setTableData(tableRes.data);
-        setTotalItems(tableRes.totalCount);
-        setCounts(countRes);
+        return fetchStudentLeavesForFaculty(facultyId, page, itemsPerPage, activeTab, debouncedSearch, debouncedFilterDate);
+      } else if (mainTab === "tagged") {
+        return fetchFacultyTaggedLeaves(facultyId, page, itemsPerPage, activeTab, debouncedSearch, debouncedFilterDate);
       } else {
-        if (mainTab === "tagged") {
-          const [tableRes, countRes] = await Promise.all([
-            fetchFacultyTaggedLeaves(
-              facultyId,
-              page,
-              itemsPerPage,
-              activeTab,
-              debouncedSearch,
-            ),
-            fetchFacultyTaggedLeaveCounts(facultyId),
-          ]);
-          setTableData(tableRes.data);
-          setTotalItems(tableRes.totalCount);
-          setCounts(countRes);
-          return;
-        }
-
-        const [tableRes, countRes] = await Promise.all([
-          fetchFacultyLeaves(
-            facultyId,
-            page,
-            itemsPerPage,
-            activeTab,
-            debouncedSearch,
-          ),
-          fetchFacultyLeaveCounts(facultyId),
-        ]);
-        setTableData(tableRes.data);
-        setTotalItems(tableRes.totalCount);
-        setCounts(countRes);
+        return fetchFacultyLeaves(facultyId, page, itemsPerPage, activeTab, debouncedSearch, debouncedFilterDate);
       }
-    } catch {
-      toast.error("Failed to load data");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeTab, debouncedSearch, facultyId, mainTab, page]);
+    },
+    enabled: !!facultyId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    loadData();
-    setEditingRows(new Set());
-  }, [loadData]);
+  const tableData = leavesData.data as FacultyLeaveTableRow[];
+  const totalItems = leavesData.totalCount;
+  const counts = countsData;
 
   const handleTabChange = (tabId: LeaveStatusTab) => {
     setActiveTab(tabId);
     setPage(1);
   };
 
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ leaveId, action }: { leaveId: number; action: "Approved" | "Rejected" }) => {
+      return updateStudentLeaveStatus(leaveId, action);
+    },
+    onSuccess: (data, variables) => {
+      toast.success(`Leave ${variables.action}!`, { id: "status-update-success" });
+      queryClient.invalidateQueries({ queryKey: ["facultyLeaveCounts"] });
+      queryClient.invalidateQueries({ queryKey: ["facultyLeaves"] });
+    },
+    onError: (error, variables) => {
+      toast.error(`Failed to ${variables.action.toLowerCase()} leave. Please try again later.`, { id: "status-update-error" });
+    },
+  });
+
+  const submitLeaveMutation = useMutation({
+    mutationFn: async (formData: FacultyLeaveFormData) => {
+      if (!facultyId) throw new Error("Faculty ID missing");
+      return submitFacultyLeaveRequest(facultyId, formData);
+    },
+    onSuccess: () => {
+      toast.success("Leave request submitted successfully!", { id: "submit-leave-success" });
+      setIsModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["facultyLeaveCounts"] });
+      queryClient.invalidateQueries({ queryKey: ["facultyLeaves"] });
+    },
+    onError: () => {
+      toast.error("Failed to submit request. Please try again later.", { id: "submit-leave-error" });
+    }
+  });
+
   const executeStatusChange = async () => {
     const { leaveId, action } = confirmModal;
     if (!leaveId || !action) return;
 
-    setTableData((prev) =>
-      prev.map((l) =>
-        l.id === leaveId ? { ...l, status: action.toLowerCase() } : l,
-      ),
-    );
-
-    setEditingRows((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(leaveId);
-      return newSet;
-    });
-
-    setConfirmModal({ isOpen: false, leaveId: null, action: null });
-
     try {
-      await updateStudentLeaveStatus(leaveId, action);
-      toast.success(`Leave ${action}!`);
-      if (facultyId) {
-        const newCounts = await fetchStudentLeaveCounts(facultyId);
-        setCounts(newCounts);
-      }
-    } catch {
-      toast.error(`Failed to ${action.toLowerCase()} leave`);
-      loadData();
+      await updateStatusMutation.mutateAsync({ leaveId, action });
+      setEditingRows((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(leaveId);
+        return newSet;
+      });
+      setConfirmModal({ isOpen: false, leaveId: null, action: null });
+    } catch (e) {
+      // Error is handled by onError in useMutation
     }
   };
 
   const handleMyLeaveSubmit = async (formData: FacultyLeaveFormData) => {
-    if (!facultyId) return;
-    try {
-      await submitFacultyLeaveRequest(facultyId, formData);
-      toast.success("Leave request submitted successfully!");
-      setIsModalOpen(false);
-      loadData();
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to submit request. Please try again.",
-      );
-    }
+    await submitLeaveMutation.mutateAsync(formData);
   };
 
   const finalTableData = useMemo(() => {
@@ -347,6 +366,9 @@ function FacultyLeavesContent() {
             <span className="font-medium whitespace-nowrap">{item.name}</span>
           ),
           branch: item.branch,
+          year: item.year,
+          semester: item.semester,
+          section: item.section,
           action:
             item.status === "pending" || isEditing ? (
               <div className="flex items-center justify-center gap-2">
@@ -551,6 +573,16 @@ function FacultyLeavesContent() {
     },
   ] as const;
 
+  useEffect(() => {
+    if (!isLoading && !isCountsLoading && facultyId) {
+      setIsFirstLoad(false);
+    }
+  }, [isLoading, isCountsLoading, facultyId]);
+
+  if (!userId || !facultyId || isFirstLoad) {
+    return <LeavePageShimmer />;
+  }
+
   return (
     <>
       <style>{`
@@ -595,6 +627,9 @@ function FacultyLeavesContent() {
                       setMainTab(tab.id);
                       setPage(1);
                       setEditingRows(new Set());
+                      const params = new URLSearchParams(searchParams.toString());
+                      params.set("tab", tab.id);
+                      router.replace(`?${params.toString()}`, { scroll: false });
                     }}
                     className={`cursor-pointer text-left transition-colors ${mainTab === tab.id
                       ? "text-[#43C17A]"
@@ -625,25 +660,29 @@ function FacultyLeavesContent() {
           )}
         </div>
 
-        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-          {cards.map((card) => {
-            const isActive = activeTab === card.id;
-            return (
-              <CardComponent
-                key={card.id}
-                isActive={isActive}
-                style={`w-full cursor-pointer transition-all duration-300 ${isActive ? card.activeColor : card.inactiveColor}`}
-                icon={card.icon}
-                value={card.value}
-                label={card.label}
-                iconBgColor={isActive ? card.iconBgActive : card.iconBgInactive}
-                iconColor="#FFFFFF"
-                textSize={isActive ? "text-white" : "text-[#282828]"}
-                onClick={() => handleTabChange(card.id)}
-              />
-            );
-          })}
-        </div>
+        {isCountsLoading ? (
+          <LeaveCardsShimmer />
+        ) : (
+          <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+            {cards.map((card) => {
+              const isActive = activeTab === card.id;
+              return (
+                <CardComponent
+                  key={card.id}
+                  isActive={isActive}
+                  style={`w-full cursor-pointer transition-all duration-300 ${isActive ? card.activeColor : card.inactiveColor}`}
+                  icon={card.icon}
+                  value={card.value}
+                  label={card.label}
+                  iconBgColor={isActive ? card.iconBgActive : card.iconBgInactive}
+                  iconColor="#FFFFFF"
+                  textSize={isActive ? "text-white" : "text-[#282828]"}
+                  onClick={() => handleTabChange(card.id)}
+                />
+              );
+            })}
+          </div>
+        )}
 
         <div className="flex flex-col items-center justify-between gap-2 py-3 sm:flex-row">
           <div className="relative flex w-full max-w-full items-center sm:max-w-[300px]">
@@ -660,11 +699,32 @@ function FacultyLeavesContent() {
             />
           </div>
 
-          <div className="flex items-center gap-2 bg-[#DAE9E1] px-4 py-1.5 rounded-md ">
-            <CalendarIcon size={18} className="text-[#43C17A]" weight="fill" />
-            <span className="text-[#43C17A] font-bold text-sm tracking-wide cursor-pointer">
-              {new Date().toLocaleDateString("en-GB")}
+          <div 
+            onClick={() => dateInputRef.current?.showPicker()}
+            className="flex items-center gap-2 bg-[#DAE9E1] px-4 py-1.5 rounded-md relative cursor-pointer group hover:bg-[#C2DECE] transition-colors"
+          >
+            <CalendarIcon size={18} className="text-[#43C17A] pointer-events-none" weight="fill" />
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full pointer-events-none"
+            />
+            <span className="text-[#43C17A] font-bold text-sm tracking-wide pointer-events-none">
+              {filterDate ? new Date(filterDate).toLocaleDateString("en-GB") : new Date().toLocaleDateString("en-GB")}
             </span>
+            {filterDate && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFilterDate("");
+                }}
+                className="ml-2 cursor-pointer text-[#43C17A] hover:text-[#2d8f58] transition-colors z-10"
+              >
+                ×
+              </button>
+            )}
           </div>
         </div>
 
@@ -672,7 +732,7 @@ function FacultyLeavesContent() {
           <TableComponent
             columns={
               mainTab === "students"
-                ? STUDENT_COLUMNS.map((col) => col.key === "branch" ? { ...col, title: collegeEducationType === "Inter" ? "Group" : "Branch" } : col)
+                ? dynamicStudentColumns
                 : mainTab === "tagged"
                   ? TAGGED_LEAVES_COLUMNS
                   : MY_LEAVES_COLUMNS
@@ -683,16 +743,16 @@ function FacultyLeavesContent() {
           />
         </div>
 
-        {!isLoading && totalItems > itemsPerPage && (
-          <div className="mt-4">
-            <Pagination
-              currentPage={page}
-              totalItems={totalItems}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setPage}
-            />
-          </div>
-        )}
+        <div className="mt-2">
+          <Pagination
+            currentPage={page}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setPage}
+            alwaysShow={true}
+            roundedBottom="rounded-xl"
+          />
+        </div>
 
         <FacultyRequestLeaveModal
           isOpen={isModalOpen}
@@ -707,6 +767,7 @@ function FacultyLeavesContent() {
             setConfirmModal({ isOpen: false, leaveId: null, action: null })
           }
           onConfirm={executeStatusChange}
+          isLoading={updateStatusMutation.isPending}
         />
       </div>
       <FacultyLeaveDetailsModal
@@ -725,13 +786,7 @@ function FacultyLeavesContent() {
 
 export default function FacultyLeavesLeft() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex justify-center items-center w-full py-10">
-          <Loader />
-        </div>
-      }
-    >
+    <Suspense fallback={<LeavePageShimmer />}>
       <FacultyLeavesContent />
     </Suspense>
   );

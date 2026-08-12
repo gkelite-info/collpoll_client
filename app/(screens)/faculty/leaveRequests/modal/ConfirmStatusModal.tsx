@@ -3,11 +3,13 @@ export function ConfirmStatusModal({
   action,
   onClose,
   onConfirm,
+  isLoading,
 }: {
   isOpen: boolean;
   action: "Approved" | "Rejected" | null;
   onClose: () => void;
   onConfirm: () => void;
+  isLoading?: boolean;
 }) {
   if (!isOpen) return null;
   const isApprove = action === "Approved";
@@ -25,19 +27,31 @@ export function ConfirmStatusModal({
         <div className="flex gap-3 justify-end mt-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+            disabled={isLoading}
+            className={`px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 transition-colors ${
+              isLoading
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-gray-50 cursor-pointer"
+            }`}
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className={`px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors cursor-pointer ${
+            disabled={isLoading}
+            className={`px-4 py-2 flex items-center justify-center rounded-lg text-white text-sm font-medium transition-colors min-w-[120px] ${
+              isLoading ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
+            } ${
               isApprove
-                ? "bg-[#43C17A] hover:bg-[#3ba869]"
+                ? isLoading
+                  ? "bg-[#43C17A]"
+                  : "bg-[#43C17A] hover:bg-[#3ba869]"
+                : isLoading
+                ? "bg-[#FF4B4B]"
                 : "bg-[#FF4B4B] hover:bg-[#e64343]"
             }`}
           >
-            Yes, {isApprove ? "Approve" : "Reject"}
+            {isLoading ? "Processing..." : `Yes, ${isApprove ? "Approve" : "Reject"}`}
           </button>
         </div>
       </div>

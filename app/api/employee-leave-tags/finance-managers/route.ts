@@ -22,6 +22,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const collegeId = Number(searchParams.get("collegeId"));
     const excludeUserId = Number(searchParams.get("excludeUserId"));
+    const searchQuery = searchParams.get("searchQuery") || "";
+    const page = Number(searchParams.get("page")) || 1;
+    const limit = Number(searchParams.get("limit")) || 10;
 
     if (!collegeId) {
       return NextResponse.json(
@@ -82,7 +85,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ options: [] });
     }
 
-    const { data: users, error: usersError } = await supabaseAdmin
+    let usersQuery = supabaseAdmin
       .from("users")
       .select("userId, fullName")
       .in("userId", userIds)
@@ -90,8 +93,17 @@ export async function GET(request: NextRequest) {
       .eq("role", "FinanceManager")
       .eq("isActive", true)
       .eq("is_deleted", false)
-      .is("deletedAt", null)
-      .order("fullName", { ascending: true });
+      .is("deletedAt", null);
+
+    if (searchQuery) {
+      usersQuery = usersQuery.ilike("fullName", `%${searchQuery}%`);
+    }
+
+    const fromOffset = (page - 1) * limit;
+    const toOffset = fromOffset + limit - 1;
+    usersQuery = usersQuery.range(fromOffset, toOffset).order("fullName", { ascending: true });
+
+    const { data: users, error: usersError } = await usersQuery;
 
     if (usersError) throw usersError;
 

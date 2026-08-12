@@ -70,27 +70,27 @@ export default function FacultyRequestLeaveModal({
     e.preventDefault();
 
     if (!formData.leaveType) {
-      toast.error("Please select a leave type.");
+      toast.error("Please select a leave type.", { id: "req-leave-type" });
       return;
     }
 
     if (!formData.startDate || !formData.endDate) {
-      toast.error("Please select the leave dates.");
+      toast.error("Please select the leave dates.", { id: "req-leave-dates" });
       return;
     }
 
     if (formData.endDate < formData.startDate) {
-      toast.error("End date cannot be before start date.");
+      toast.error("End date cannot be before start date.", { id: "req-leave-dates-invalid" });
       return;
     }
 
     if (!formData.description.trim()) {
-      toast.error("Please enter a description.");
+      toast.error("Please enter a description.", { id: "req-leave-desc" });
       return;
     }
 
     if (!hasRequiredEmployeeLeaveTags(role, formData.tags)) {
-      toast.error("Please select all required tagged users.");
+      toast.error("Please select all required tagged users.", { id: "req-leave-tags" });
       return;
     }
 
@@ -105,8 +105,8 @@ export default function FacultyRequestLeaveModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="custom-scrollbar relative max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-md bg-white p-6 shadow-2xl">
-        <div className="flex items-center justify-between">
+      <div className="custom-scrollbar relative max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-md bg-white shadow-2xl">
+        <div className="sticky top-0 z-20 flex items-center justify-between bg-white px-6 py-4 border-b border-gray-100 shadow-sm">
           <h2 className="text-xl font-semibold text-[#282828]">Request Leave</h2>
           <button
             onClick={handleClose}
@@ -117,7 +117,8 @@ export default function FacultyRequestLeaveModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
+        <div className="p-6">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-[#282828]">
               Leave Type
@@ -183,7 +184,7 @@ export default function FacultyRequestLeaveModal({
               Leave Date
               <RequiredMark />
             </label>
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="flex flex-col gap-1">
                 <span className="text-[11px] font-semibold text-[#282828]">
                   Start Date
@@ -226,15 +227,15 @@ export default function FacultyRequestLeaveModal({
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             <label className="text-sm font-semibold text-[#282828]">
               Description
               <RequiredMark />
             </label>
             <textarea
               required
-              rows={5}
-              maxLength={255}
+              rows={7}
+              maxLength={1000}
               value={formData.description}
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
@@ -242,6 +243,11 @@ export default function FacultyRequestLeaveModal({
               placeholder="Provide a short explanation for your leave request............"
               className="w-full resize-none rounded border border-[#CFCFCF] px-4 py-3 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
             />
+            <div className="flex justify-end">
+              <span className="text-[11px] text-gray-400 font-medium">
+                {formData.description.length}/1000
+              </span>
+            </div>
           </div>
 
           <div className="mt-1 grid grid-cols-2 gap-3">
@@ -276,6 +282,7 @@ export default function FacultyRequestLeaveModal({
             </button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   );

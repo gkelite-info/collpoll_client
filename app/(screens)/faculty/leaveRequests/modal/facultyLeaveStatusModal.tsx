@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useQueryClient, useInfiniteQuery, useMutation } from "@tanstack/react-query";
 import {
   X,
   Paperclip,
@@ -18,6 +19,8 @@ import {
 } from "@/lib/helpers/student/leave request/leaveChatAPI";
 import toast from "react-hot-toast";
 import { Avatar } from "@/app/utils/Avatar";
+import { useUser } from "@/app/utils/context/UserContext";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 interface FacultyLeaveDetailsModalProps {
   isOpen: boolean;
@@ -32,17 +35,17 @@ export default function FacultyLeaveDetailsModal({
   leaveData,
   currentFacultyId,
 }: FacultyLeaveDetailsModalProps) {
-  const [messages, setMessages] = useState<any[]>([]);
+  const { collegeEducationType } = useUser();
+  const isSchool = isSchoolEducation(collegeEducationType);
+  const isInter = collegeEducationType?.toUpperCase().includes("INTER");
+  
+  const queryClient = useQueryClient();
   const [newMessage, setNewMessage] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const LIMIT = 10;
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -50,71 +53,75 @@ export default function FacultyLeaveDetailsModal({
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const channelRef = useRef<any>(null);
 
+  const {
+    data: chatHistoryData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: isInitialLoading
+  } = useInfiniteQuery({
+    queryKey: ["leaveChat", leaveData?.id],
+    queryFn: ({ pageParam = 1 }) => fetchLeaveChatHistory(leaveData.id, pageParam, LIMIT),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => lastPage.length >= LIMIT ? allPages.length + 1 : undefined,
+    enabled: isOpen && !!leaveData?.id,
+    staleTime: 0,
+  });
+
+  const messages = useMemo(() => {
+    if (!chatHistoryData) return [];
+    const flattened = [...chatHistoryData.pages].reverse().flat();
+    const seen = new Set();
+    const uniqueMessages = [];
+    for (const msg of flattened) {
+      if (!seen.has(msg.chatId)) {
+        seen.add(msg.chatId);
+        uniqueMessages.push(msg);
+      }
+    }
+    return uniqueMessages;
+  }, [chatHistoryData]);
+
+  // Initial scroll to bottom
+  useEffect(() => {
+    if (messages.length > 0 && chatHistoryData?.pages.length === 1) {
+      setTimeout(() => scrollToBottom(), 100);
+    }
+  }, [chatHistoryData]);
+
   useEffect(() => {
     if (isOpen && leaveData) {
-      loadInitialHistory();
       setupRealtime();
-      markMessagesAsRead(leaveData.id, "FACULTY");
+      markMessagesAsRead(leaveData.id, "FACULTY").then(() => {
+        // Broadcast read receipt so the sender sees blue ticks instantly
+        channelRef.current?.send({
+          type: "broadcast",
+          event: "read_receipt",
+          payload: { readerRole: "FACULTY", readerId: currentFacultyId },
+        });
+      });
     }
     return () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current);
     };
   }, [isOpen, leaveData]);
 
-  const loadInitialHistory = async () => {
-    setIsInitialLoading(true);
-    try {
-      const history = await fetchLeaveChatHistory(leaveData.id, 1, LIMIT);
-      setMessages(history);
-      setPage(1);
-      setHasMore(history.length === LIMIT);
-      setTimeout(() => scrollToBottom(), 100);
-    } catch (err) {
-      toast.error("Failed to load chat history");
-    } finally {
-      setIsInitialLoading(false);
-    }
-  };
-
-  const loadMoreMessages = async () => {
-    if (isLoadingMore || !hasMore) return;
-    setIsLoadingMore(true);
-    try {
-      const container = chatContainerRef.current;
-      const prevScrollHeight = container?.scrollHeight || 0;
-      const nextPage = page + 1;
-      const olderMessages = await fetchLeaveChatHistory(
-        leaveData.id,
-        nextPage,
-        LIMIT,
-      );
-
-      if (olderMessages.length > 0) {
-        setMessages((prev) => {
-          const newMsgs = olderMessages.filter(
-            (o) => !prev.some((p) => p.chatId === o.chatId),
-          );
-          return [...newMsgs, ...prev];
-        });
-        setPage(nextPage);
-        setHasMore(olderMessages.length === LIMIT);
-        requestAnimationFrame(() => {
-          if (container)
-            container.scrollTop = container.scrollHeight - prevScrollHeight;
-        });
-      } else {
-        setHasMore(false);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
-
   const handleScroll = () => {
-    if (chatContainerRef.current?.scrollTop === 0) loadMoreMessages();
+    if (chatContainerRef.current?.scrollTop === 0 && hasNextPage && !isFetchingNextPage) {
+      const container = chatContainerRef.current;
+      const prevScrollHeight = container.scrollHeight;
+      
+      fetchNextPage().then(() => {
+        requestAnimationFrame(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight - prevScrollHeight;
+          }
+        });
+      });
+    }
   };
+
+
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -137,11 +144,20 @@ export default function FacultyLeaveDetailsModal({
           if (payload.new.senderRole !== "FACULTY") {
             const newMsg = await fetchSingleChatMessage(payload.new.chatId);
             if (newMsg) {
-              setMessages((prev) => {
-                if (prev.some((m) => m.chatId === newMsg.chatId)) return prev;
-                return [...prev, newMsg];
+              queryClient.setQueryData(["leaveChat", leaveData.id], (oldData: any) => {
+                if (!oldData || !oldData.pages || oldData.pages.length === 0) return oldData;
+                const newPages = [...oldData.pages];
+                if (newPages[0].some((m: any) => m.chatId === newMsg.chatId)) return oldData;
+                newPages[0] = [...newPages[0], newMsg];
+                return { ...oldData, pages: newPages };
               });
-              markMessagesAsRead(leaveData.id, "FACULTY");
+              await markMessagesAsRead(leaveData.id, "FACULTY");
+              // Broadcast read receipt so the sender sees blue ticks instantly
+              channelRef.current?.send({
+                type: "broadcast",
+                event: "read_receipt",
+                payload: { readerRole: "FACULTY", readerId: currentFacultyId },
+              });
               setTimeout(() => scrollToBottom(), 100);
             }
           }
@@ -155,12 +171,32 @@ export default function FacultyLeaveDetailsModal({
           table: "leave_request_chats",
           filter: `studentLeaveId=eq.${leaveData.id}`,
         },
-        () => setMessages((prev) => prev.map((m) => ({ ...m, isRead: true }))),
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: ["leaveChat", leaveData.id] });
+        },
       )
       .on("broadcast", { event: "typing" }, (payload) => {
         if (payload.payload.role !== "FACULTY") {
           setIsTyping(payload.payload.isTyping);
           setTimeout(() => scrollToBottom(), 100);
+        }
+      })
+      .on("broadcast", { event: "read_receipt" }, (payload) => {
+        // Another user read our messages — mark all Faculty-sent messages as read in cache
+        if (payload.payload.readerRole !== "FACULTY") {
+          queryClient.setQueryData(["leaveChat", leaveData.id], (oldData: any) => {
+            if (!oldData || !oldData.pages) return oldData;
+            return {
+              ...oldData,
+              pages: oldData.pages.map((page: any[]) =>
+                page.map((m: any) =>
+                  m.senderRole === "FACULTY" && !m.isRead
+                    ? { ...m, isRead: true }
+                    : m
+                )
+              ),
+            };
+          });
         }
       })
       .subscribe();
@@ -189,6 +225,43 @@ export default function FacultyLeaveDetailsModal({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const sendMessageMutation = useMutation({
+    mutationFn: (payload: { msgText: string; fileObj: File | null }) => {
+      return sendLeaveChatMessage({
+        studentLeaveId: leaveData.id,
+        message: payload.msgText,
+        file: payload.fileObj || undefined,
+        senderId: currentFacultyId,
+        senderRole: "FACULTY",
+      });
+    },
+    onSuccess: (savedMsg) => {
+      if (savedMsg) {
+        queryClient.setQueryData(["leaveChat", leaveData.id], (oldData: any) => {
+          if (!oldData || !oldData.pages || oldData.pages.length === 0) return oldData;
+          const newPages = [...oldData.pages];
+          if (newPages[0].some((m: any) => m.chatId === savedMsg.chatId)) return oldData;
+          newPages[0] = [...newPages[0], savedMsg];
+          return { ...oldData, pages: newPages };
+        });
+      }
+      channelRef.current?.send({
+        type: "broadcast",
+        event: "typing",
+        payload: { role: "FACULTY", isTyping: false },
+      });
+      setTimeout(() => scrollToBottom(), 50);
+    },
+    onError: (err, variables) => {
+      toast.error("Failed to send message. Please try again later.", { id: "send-msg-error" });
+      setNewMessage(variables.msgText);
+      setSelectedFile(variables.fileObj);
+    },
+    onSettled: () => {
+      setIsSending(false);
+    }
+  });
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() && !selectedFile) return;
@@ -201,33 +274,7 @@ export default function FacultyLeaveDetailsModal({
     setIsSending(true);
     setTimeout(() => scrollToBottom(), 50);
 
-    try {
-      const savedMsg = await sendLeaveChatMessage({
-        studentLeaveId: leaveData.id,
-        message: msgText,
-        file: fileObj || undefined,
-        senderId: currentFacultyId,
-        senderRole: "FACULTY",
-      });
-      if (savedMsg) {
-        setMessages((prev) => {
-          if (prev.some((m) => m.chatId === savedMsg.chatId)) return prev;
-          return [...prev, savedMsg];
-        });
-      }
-      channelRef.current?.send({
-        type: "broadcast",
-        event: "typing",
-        payload: { role: "FACULTY", isTyping: false },
-      });
-      setTimeout(() => scrollToBottom(), 50);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to send message");
-      setNewMessage(msgText);
-      setSelectedFile(fileObj);
-    } finally {
-      setIsSending(false);
-    }
+    sendMessageMutation.mutate({ msgText, fileObj });
   };
 
   const formatChatTime = (dateStr: string) => {
@@ -277,18 +324,38 @@ export default function FacultyLeaveDetailsModal({
             <div className="w-full flex flex-col gap-1 text-[11px]">
               <div className="flex justify-between border-b border-gray-100 pb-1">
                 <span className="text-gray-500">Education</span>
-                <span className="font-semibold text-[#282828]">B.Tech</span>
+                <span className="font-semibold text-[#282828]">{collegeEducationType || "B.Tech"}</span>
               </div>
+
+              {!isSchool && (
+                <div className="flex justify-between border-b border-gray-100 pb-1">
+                  <span className="text-gray-500">{isInter ? "Group" : "Branch"}</span>
+                  <span className="font-semibold text-[#282828] truncate max-w-[80px] text-right">
+                    {leaveData.branch || "-"}
+                  </span>
+                </div>
+              )}
+
               <div className="flex justify-between border-b border-gray-100 pb-1">
-                <span className="text-gray-500">Branch</span>
+                <span className="text-gray-500">Year</span>
                 <span className="font-semibold text-[#282828] truncate max-w-[80px] text-right">
-                  {leaveData.branch}
+                  {leaveData.year || "-"}
                 </span>
               </div>
+
+              {!isSchool && !isInter && (
+                <div className="flex justify-between border-b border-gray-100 pb-1">
+                  <span className="text-gray-500">Semester</span>
+                  <span className="font-semibold text-[#282828]">
+                    {leaveData.semester || "-"}
+                  </span>
+                </div>
+              )}
+
               <div className="flex justify-between">
-                <span className="text-gray-500">Semester</span>
-                <span className="font-semibold text-[#282828]">
-                  {leaveData.semester}
+                <span className="text-gray-500">Section</span>
+                <span className="font-semibold text-[#282828] truncate max-w-[80px] text-right">
+                  {leaveData.section || "-"}
                 </span>
               </div>
             </div>
@@ -343,7 +410,7 @@ export default function FacultyLeaveDetailsModal({
                 <span className="text-gray-400 text-[9px] uppercase tracking-wide">
                   Reason
                 </span>
-                <p className="text-gray-600 italic text-[10px] leading-snug line-clamp-3 hover:line-clamp-none">
+                <p className="text-gray-600 italic text-[10px] leading-snug whitespace-pre-wrap">
                   "{leaveData.description}"
                 </p>
               </div>
@@ -397,7 +464,7 @@ export default function FacultyLeaveDetailsModal({
               </div>
             ) : (
               <>
-                {isLoadingMore && (
+                {isFetchingNextPage && (
                   <div className="text-center text-[10px] text-gray-400 py-1">
                     Loading older messages...
                   </div>

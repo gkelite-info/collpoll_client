@@ -23,6 +23,7 @@ import {
   fetchStudentLeaveCounts,
 } from "@/lib/helpers/student/leave request/studentLeaveAPI";
 import StudentLeaveDetailsModal from "./modal/LeaveRequestDetailsModal";
+import { LeavePageShimmer } from "@/app/components/shimmers/LeaveRequestsShimmer";
 import { useTranslations } from "next-intl";
 
 const formatDateKey = (dateKey: string) =>
@@ -249,6 +250,10 @@ function LeaveLeftContent() {
       iconBgInactive: "#FF4242",
     },
   ] as const;
+
+  if (!userId || !studentId) {
+    return <LeavePageShimmer />;
+  }
 
   return (
     <>

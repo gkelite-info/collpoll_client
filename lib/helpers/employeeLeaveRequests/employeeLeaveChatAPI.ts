@@ -328,13 +328,29 @@ export async function deleteEmployeeLeaveChatMessages(payload: {
 
 export async function markEmployeeLeaveMessagesAsRead(
   employeeLeaveRequestId: number,
-  receiverRole: EmployeeLeaveChatSenderRole,
+  _receiverRole: EmployeeLeaveChatSenderRole,
+  receiverUserId?: number,
+  receiverCollegeHrId?: number,
 ) {
-  await supabase
+  // Mark all unread messages as read, EXCEPT the ones sent by the current user.
+  // We simply exclude messages where the current user is the sender.
+  let query = supabase
     .from("employee_leave_request_chats")
     .update({ isRead: true, updatedAt: new Date().toISOString() })
     .eq("employeeLeaveRequestId", employeeLeaveRequestId)
     .eq("is_deleted", false)
-    .neq("senderRole", receiverRole)
     .eq("isRead", false);
+
+  // Exclude the current user's own messages from being marked
+  if (receiverUserId) {
+    query = query.neq("senderUserId", receiverUserId);
+  }
+  if (receiverCollegeHrId) {
+    query = query.neq("senderCollegeHrId", receiverCollegeHrId);
+  }
+
+  const { error } = await query;
+  if (error) {
+    console.error("markEmployeeLeaveMessagesAsRead error:", error);
+  }
 }
