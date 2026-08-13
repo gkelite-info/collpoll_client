@@ -9,6 +9,7 @@ type FacultyStudentProgressScope = {
   collegeId: number;
   collegeEducationId: number;
   collegeBranchId: number;
+  isSchool?: boolean;
   academicYearIds: number[];
   sectionIds: number[];
   subjectIds: number[];
@@ -406,12 +407,34 @@ const computeProgressPercent = (
   weights: ProgressWeights,
   percentages: {
     attendancePercentage: number;
+    hasAttendanceData: boolean;
     assignmentPercentage: number | null;
     quizPercentage: number | null;
     discussionPercentage: number | null;
   },
 ) => {
   const weightedComponents: WeightedProgressComponent[] = [];
+  const configuredWeight =
+    weights.attendance +
+    weights.assignments +
+    weights.quiz +
+    weights.discussion;
+
+  if (configuredWeight <= 0) {
+    const availablePercentages = [
+      percentages.hasAttendanceData ? percentages.attendancePercentage : null,
+      percentages.assignmentPercentage,
+      percentages.quizPercentage,
+      percentages.discussionPercentage,
+    ].filter((value): value is number => value !== null);
+
+    return availablePercentages.length
+      ? Math.round(
+          availablePercentages.reduce((sum, value) => sum + value, 0) /
+            availablePercentages.length,
+        )
+      : 0;
+  }
 
   if (weights.attendance > 0) {
     weightedComponents.push({
@@ -620,9 +643,15 @@ async function resolveFacultyStudentProgressScope(
     .from("students")
     .select("studentId")
     .eq("collegeId", scope.collegeId)
-    .eq("collegeEducationId", scope.collegeEducationId)
     .eq("isActive", true)
     .is("deletedAt", null);
+
+  if (!scope.isSchool) {
+    studentQuery1 = studentQuery1.eq(
+      "collegeEducationId",
+      scope.collegeEducationId,
+    );
+  }
 
   if (scope.collegeBranchId > 0) {
     studentQuery1 = studentQuery1.eq("collegeBranchId", scope.collegeBranchId);
@@ -677,7 +706,7 @@ export async function getFacultyStudentProgressSummary(
     return buildEmptySummary(scope);
   }
 
-  const { data: historyRows, error: historyError } = await supabase
+  let academicHistoryQuery = supabase
     .from("student_academic_history")
     .select(
       `
@@ -698,8 +727,19 @@ export async function getFacultyStudentProgressSummary(
     )
     .eq("isCurrent", true)
     .is("deletedAt", null)
-    .in("collegeAcademicYearId", scope.academicYearIds)
-    .in("collegeSectionsId", scope.sectionIds);
+    .in("collegeAcademicYearId", scope.academicYearIds);
+
+  // A school class roster is registered year-wise. Subject and section are
+  // still used below to calculate progress, but must not remove a student
+  // from the selected class when no subject activity exists yet.
+  if (!scope.isSchool) {
+    academicHistoryQuery = academicHistoryQuery.in(
+      "collegeSectionsId",
+      scope.sectionIds,
+    );
+  }
+
+  const { data: historyRows, error: historyError } = await academicHistoryQuery;
 
   if (historyError) throw historyError;
 
@@ -765,9 +805,15 @@ export async function getFacultyStudentProgressSummary(
     .select("studentId, userId")
     .in("studentId", candidateStudentIds)
     .eq("collegeId", scope.collegeId)
-    .eq("collegeEducationId", scope.collegeEducationId)
     .eq("isActive", true)
     .is("deletedAt", null);
+
+  if (!scope.isSchool) {
+    studentQuery2 = studentQuery2.eq(
+      "collegeEducationId",
+      scope.collegeEducationId,
+    );
+  }
 
   if (scope.collegeBranchId > 0) {
     studentQuery2 = studentQuery2.eq("collegeBranchId", scope.collegeBranchId);
@@ -798,11 +844,11 @@ export async function getFacultyStudentProgressSummary(
       studentId,
       status,
       markedAt,
-      calendar_event:calendarEventId (
+      calendar_event:calendar_event (
         facultyId,
         subject
       ),
-      bulk_event:bulkCalendarEventId (
+      bulk_event:bulk_calendar_events (
         facultyId,
         subject
       )
@@ -821,11 +867,11 @@ export async function getFacultyStudentProgressSummary(
       studentId,
       status,
       markedAt,
-      calendar_event:calendarEventId (
+      calendar_event:calendar_event (
         facultyId,
         subject
       ),
-      bulk_event:bulkCalendarEventId (
+      bulk_event:bulk_calendar_events (
         facultyId,
         subject
       )
@@ -1259,6 +1305,7 @@ export async function getFacultyStudentProgressSummary(
       const progressWeights = buildProgressWeightsFromConfigs(matchedWeightageConfigs);
       const progressPercent = computeProgressPercent(progressWeights, {
         attendancePercentage,
+        hasAttendanceData: attendance.conducted > 0,
         assignmentPercentage,
         quizPercentage,
         discussionPercentage,
@@ -1268,8 +1315,8 @@ export async function getFacultyStudentProgressSummary(
         studentId,
         userId: student.userId,
         profileUrl: profileByUserId.get(student.userId) ?? null,
-        rollNo: pinByStudentId.get(studentId) ?? "N/A",
-        studentName: userNameById.get(student.userId) ?? "Unknown Student",
+        rollNo: pinByStudentId.get(studentId) || "-",
+        studentName: userNameById.get(student.userId) || "-",
         attendancePercentage,
         attendedClasses: attendance.attended,
         conductedClasses: attendance.conducted,
@@ -1473,6 +1520,7 @@ export async function getFacultyStudentProgressSummary(
                     sum +
                     computeProgressPercent(progressWeights, {
                       attendancePercentage,
+                      hasAttendanceData: conductedClasses > 0,
                       assignmentPercentage,
                       quizPercentage,
                       discussionPercentage,

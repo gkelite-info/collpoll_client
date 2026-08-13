@@ -17,6 +17,7 @@ type FacultyStudentProgressDetailsScope = {
   collegeId: number;
   collegeEducationId: number;
   collegeBranchId: number;
+  isSchool?: boolean;
   academicYearIds: number[];
   sectionIds: number[];
   subjectIds: number[];
@@ -406,7 +407,7 @@ export async function getFacultyStudentProgressDetails(
   if (pinError) throw pinError;
   if (!pinRow?.studentId) return null;
 
-  const { data: studentRow, error: studentError } = await supabase
+  let studentQuery = supabase
     .from("students")
     .select(
       `
@@ -423,10 +424,15 @@ export async function getFacultyStudentProgressDetails(
     .eq("studentId", pinRow.studentId)
     .eq("collegeId", scope.collegeId)
     .eq("collegeEducationId", scope.collegeEducationId)
-    .eq("collegeBranchId", scope.collegeBranchId)
     .eq("isActive", true)
-    .is("deletedAt", null)
-    .maybeSingle<StudentProfileLookupRow>();
+    .is("deletedAt", null);
+
+  if (!scope.isSchool) {
+    studentQuery = studentQuery.eq("collegeBranchId", scope.collegeBranchId);
+  }
+
+  const { data: studentRow, error: studentError } =
+    await studentQuery.maybeSingle<StudentProfileLookupRow>();
 
   if (studentError) throw studentError;
   if (!studentRow) return null;
@@ -483,10 +489,16 @@ export async function getFacultyStudentProgressDetails(
     .eq("facultyId", scope.facultyId)
     .eq("collegeId", scope.collegeId)
     .eq("collegeEducationId", scope.collegeEducationId)
-    .eq("collegeBranchId", scope.collegeBranchId)
     .eq("collegeSectionsId", historyRow.collegeSectionsId)
     .in("collegeSubjectId", scope.subjectIds)
     .is("deletedAt", null);
+
+  if (!scope.isSchool) {
+    weightageQuery = weightageQuery.eq(
+      "collegeBranchId",
+      scope.collegeBranchId,
+    );
+  }
 
   if (historyRow.collegeSemesterId === null) {
     weightageQuery = weightageQuery.is("collegeSemesterId", null);
@@ -494,6 +506,33 @@ export async function getFacultyStudentProgressDetails(
     weightageQuery = weightageQuery.eq(
       "collegeSemesterId",
       historyRow.collegeSemesterId,
+    );
+  }
+
+  let subjectsQuery = supabase
+    .from("college_subjects")
+    .select("collegeSubjectId, subjectName, subjectKey")
+    .in("collegeSubjectId", scope.subjectIds)
+    .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
+    .eq("collegeEducationId", scope.collegeEducationId)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  let assignmentsQuery = supabase
+    .from("assignments")
+    .select("assignmentId, subjectId, topicName, submissionDeadlineInt, marks, status")
+    .eq("createdBy", scope.facultyId)
+    .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
+    .eq("collegeSectionsId", historyRow.collegeSectionsId)
+    .in("subjectId", scope.subjectIds)
+    .eq("is_deleted", false)
+    .neq("status", "Cancelled");
+
+  if (!scope.isSchool) {
+    subjectsQuery = subjectsQuery.eq("collegeBranchId", scope.collegeBranchId);
+    assignmentsQuery = assignmentsQuery.eq(
+      "collegeBranchId",
+      scope.collegeBranchId,
     );
   }
 
@@ -535,14 +574,14 @@ export async function getFacultyStudentProgressDetails(
       .select(
         `
         status,
-        calendar_event:calendarEventId (
+        calendar_event:calendar_event (
           subject,
           facultyId,
           type,
           date,
           is_deleted
         ),
-        bulk_event:bulkCalendarEventId (
+        bulk_event:bulk_calendar_events (
           subject,
           facultyId,
           type,
@@ -555,27 +594,8 @@ export async function getFacultyStudentProgressDetails(
       .is("deletedAt", null)
       .lte("markedAt", today)
       .returns<AttendanceRecordRow[]>(),
-      supabase
-        .from("college_subjects")
-        .select("collegeSubjectId, subjectName, subjectKey")
-        .in("collegeSubjectId", scope.subjectIds)
-        .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
-        .eq("collegeBranchId", scope.collegeBranchId)
-      .eq("collegeEducationId", scope.collegeEducationId)
-      .eq("isActive", true)
-      .is("deletedAt", null)
-      .returns<SubjectRow[]>(),
-    supabase
-      .from("assignments")
-      .select("assignmentId, subjectId, topicName, submissionDeadlineInt, marks, status")
-      .eq("createdBy", scope.facultyId)
-      .eq("collegeBranchId", scope.collegeBranchId)
-      .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
-      .eq("collegeSectionsId", historyRow.collegeSectionsId)
-      .in("subjectId", scope.subjectIds)
-      .eq("is_deleted", false)
-      .neq("status", "Cancelled")
-      .returns<AssignmentRow[]>(),
+    subjectsQuery.returns<SubjectRow[]>(),
+    assignmentsQuery.returns<AssignmentRow[]>(),
     supabase
       .from("discussion_forum")
       .select("discussionId, title, deadline, createdAt, createdBy")
@@ -1057,7 +1077,9 @@ export async function getFacultyStudentProgressDetails(
         : "N/A",
     studentProfile: {
       name: user?.fullName ?? "Unknown Student",
-      department: scope.departmentLabel ?? "N/A",
+      department: scope.isSchool
+        ? getFirst(historyRow.college_academic_year)?.collegeAcademicYear ?? "N/A"
+        : scope.departmentLabel ?? "N/A",
       studentId: pinRow.pinNumber,
       phone: user?.mobile ?? "N/A",
       email: user?.email ?? "N/A",

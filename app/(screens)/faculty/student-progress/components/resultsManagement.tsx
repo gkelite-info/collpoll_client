@@ -18,6 +18,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { fetchStudentsWithProfile } from "@/lib/helpers/faculty/fetchStudents";
 import { supabase } from "@/lib/supabaseClient";
 import * as XLSX from "xlsx";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export default function ResultsManagement() {
   const router = useRouter();
@@ -26,13 +27,14 @@ export default function ResultsManagement() {
 
   const { sections, faculty_subject, collegeAcademicYears, college_branch, collegeId, collegeEducationId, collegeBranchId } = useFaculty();
   const { identifierId, collegeEducationType } = useUser();
+  const isSchool = isSchoolEducation(collegeEducationType);
 
   const [selectedSection, setSelectedSection] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [schedules, setSchedules] = useState<any[]>([]);
   const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
   const [uploadStatuses, setUploadStatuses] = useState<Record<string, "UPLOADED" | "NOT UPLOADED">>({});
-  const itemsPerPage = 10;
 
   const downloadExcelTemplate = () => {
     const wsData = [
@@ -216,12 +218,18 @@ export default function ResultsManagement() {
   }, [filteredSections, collegeAcademicYears, college_branch, collegeBranchId, studentCounts, uploadStatuses, schedules]);
 
   const sectionOptions = useMemo(() => {
-    const uniqueSections = Array.from(new Set(dynamicClasses.map((c) => c.section)));
+    const uniqueSections = Array.from(
+      new Set(
+        filteredSections
+          .map((section) => section.college_sections?.collegeSections)
+          .filter((section): section is string => !!section),
+      ),
+    );
     return [
       { label: "All Sections", value: "all" },
       ...uniqueSections.map(s => ({ label: `Section ${s}`, value: s }))
     ];
-  }, [dynamicClasses]);
+  }, [filteredSections]);
 
   const filteredData = useMemo(() => {
     let data = dynamicClasses;
@@ -234,7 +242,7 @@ export default function ResultsManagement() {
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredData.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredData, currentPage]);
+  }, [filteredData, currentPage, itemsPerPage]);
 
   const handleSectionChange = (value: string) => {
     setSelectedSection(value);
@@ -265,8 +273,10 @@ export default function ResultsManagement() {
     params.set("year", row.year);
     params.set("section", row.section);
     params.set("students", String(row.students));
-    params.set("branch", row.branch);
-    params.set("branchId", String(collegeBranchId || ""));
+    if (!isSchool) {
+      params.set("branch", row.branch);
+      params.set("branchId", String(collegeBranchId || ""));
+    }
     params.set("subject", assignedSubject);
     params.set("sectionId", String(row.sectionId));
     params.set("academicYearId", String(row.academicYearId));
@@ -426,9 +436,11 @@ export default function ResultsManagement() {
                 <th scope="col" className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
                   Exam Type
                 </th>
-                <th scope="col" className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  {collegeEducationType === "Inter" ? "Group" : "Branch"}
-                </th>
+                {!isSchool && (
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    {collegeEducationType === "Inter" ? "Group" : "Branch"}
+                  </th>
+                )}
                 <th scope="col" className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
                   Year
                 </th>
@@ -453,9 +465,11 @@ export default function ResultsManagement() {
                     <td className="px-6 py-4 whitespace-nowrap text-center text-xs md:text-sm font-semibold text-gray-800">
                       {row.examType}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center text-xs md:text-sm font-semibold text-gray-700">
-                      {row.branch}
-                    </td>
+                    {!isSchool && (
+                      <td className="px-6 py-4 whitespace-nowrap text-center text-xs md:text-sm font-semibold text-gray-700">
+                        {row.branch}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-center text-xs md:text-sm font-semibold text-gray-700">
                       {row.year}
                     </td>
@@ -515,7 +529,7 @@ export default function ResultsManagement() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">
+                  <td colSpan={isSchool ? 6 : 7} className="px-6 py-10 text-center text-sm text-gray-500">
                     No classes found matching the criteria.
                   </td>
                 </tr>
@@ -529,7 +543,13 @@ export default function ResultsManagement() {
           totalItems={filteredData.length}
           itemsPerPage={itemsPerPage}
           onPageChange={setCurrentPage}
+          itemsPerPageOptions={[5, 10, 20, 50]}
+          onItemsPerPageChange={(items) => {
+            setItemsPerPage(items);
+            setCurrentPage(1);
+          }}
           roundedBottom="rounded-b-2xl"
+          alwaysShow
         />
       </div>
     </div>

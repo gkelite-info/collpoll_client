@@ -7,11 +7,12 @@ import { StudentDataTable } from "./studentDataTable";
 import TopFivePerformers from "./topFivePerformers";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import CardComponent, { CardProps } from "./stuPerfCards";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { getFacultyStudentProgressSummary } from "@/lib/helpers/faculty/studentProgress/getFacultyStudentProgressSummary";
 import { StudentProgressPageSkeleton } from "../shimmer/StudentProgressSkeleton";
 import { FaChevronDown } from "react-icons/fa6";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 const cardData: CardProps[] = [
   {
@@ -74,7 +75,6 @@ export default function StudentProgressOverview() {
     facultyId,
     faculty_edu_type,
     sections,
-    collegeAcademicYear,
     collegeAcademicYears,
   } = useFaculty();
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -85,12 +85,125 @@ export default function StudentProgressOverview() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedYearId, setSelectedYearId] = useState<number | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
-  const rowsPerPage = 10;
+  const lastSummaryRequestKeyRef = useRef("");
+  const summaryRequestSequenceRef = useRef(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  useEffect(() => {
-    setSelectedSectionId(null);
-  }, [selectedYearId]);
+  const isSchool = useMemo(
+    () =>
+      faculty_edu_type
+        ?.split(",")
+        .some((educationType) => isSchoolEducation(educationType)) ?? false,
+    [faculty_edu_type],
+  );
+  const effectiveCollegeBranchId = isSchool ? 0 : collegeBranchId;
+
+  const registeredSubjects = useMemo(() => {
+    const subjectRows = sections.filter(
+      (section) =>
+        !selectedYearId || section.collegeAcademicYearId === selectedYearId,
+    );
+
+    return Array.from(
+      new Map(
+        subjectRows
+          .filter((section) => section.faculty_subject)
+          .map((section) => [
+            section.collegeSubjectId,
+            {
+              subjectId: section.collegeSubjectId,
+              subjectName: section.faculty_subject!.subjectName,
+            },
+          ]),
+      ).values(),
+    );
+  }, [sections, selectedYearId]);
+
+  const registeredSections = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          sections
+            .filter(
+              (section) =>
+                (!selectedYearId ||
+                  section.collegeAcademicYearId === selectedYearId) &&
+                (!selectedSubjectId ||
+                  section.collegeSubjectId === selectedSubjectId),
+            )
+            .map((section) => [section.collegeSectionsId, section]),
+        ).values(),
+      ),
+    [sections, selectedYearId, selectedSubjectId],
+  );
+
+  const schoolScopeRows = useMemo(
+    () =>
+      sections.filter(
+        (section) =>
+          (!selectedYearId ||
+            section.collegeAcademicYearId === selectedYearId) &&
+          (!selectedSubjectId ||
+            section.collegeSubjectId === selectedSubjectId) &&
+          (!selectedSectionId ||
+            section.collegeSectionsId === selectedSectionId),
+      ),
+    [sections, selectedYearId, selectedSubjectId, selectedSectionId],
+  );
+
+  const scopedAcademicYearIds = useMemo(
+    () =>
+      isSchool
+        ? Array.from(
+            new Set(schoolScopeRows.map((row) => row.collegeAcademicYearId)),
+          )
+        : selectedYearId
+          ? [selectedYearId]
+          : academicYearIds,
+    [isSchool, schoolScopeRows, selectedYearId, academicYearIds],
+  );
+  const scopedSubjectIds = useMemo(
+    () =>
+      isSchool
+        ? Array.from(new Set(schoolScopeRows.map((row) => row.collegeSubjectId)))
+        : subjectIds,
+    [isSchool, schoolScopeRows, subjectIds],
+  );
+  const scopedSectionIds = useMemo(
+    () =>
+      isSchool
+        ? Array.from(new Set(schoolScopeRows.map((row) => row.collegeSectionsId)))
+        : selectedSectionId
+          ? [selectedSectionId]
+          : sectionIds,
+    [isSchool, schoolScopeRows, selectedSectionId, sectionIds],
+  );
+  const scopedSubjectLabel = isSchool
+    ? registeredSubjects
+        .filter(
+          (subject) =>
+            !selectedSubjectId || subject.subjectId === selectedSubjectId,
+        )
+        .map((subject) => subject.subjectName)
+        .join(", ") || "N/A"
+    : faculty_subject.map((subject) => subject.subjectName).join(", ") || "N/A";
+  const summaryRequestKey = JSON.stringify([
+    facultyLoading,
+    collegeId,
+    facultyId,
+    collegeEducationId,
+    effectiveCollegeBranchId,
+    college_branch,
+    currentPage,
+    rowsPerPage,
+    debouncedSearchQuery,
+    scopedAcademicYearIds,
+    scopedSectionIds,
+    scopedSubjectIds,
+    scopedSubjectLabel,
+  ]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -103,16 +216,23 @@ export default function StudentProgressOverview() {
 
   useEffect(() => {
     if (facultyLoading) return;
+    if (lastSummaryRequestKeyRef.current === summaryRequestKey) return;
 
-    if (!collegeId || !facultyId || !collegeEducationId || collegeBranchId === undefined) {
-      setSummary(defaultSummary);
-      setSummaryLoading(false);
-      return;
-    }
-
-    let mounted = true;
+    lastSummaryRequestKeyRef.current = summaryRequestKey;
+    const requestSequence = ++summaryRequestSequenceRef.current;
 
     const loadSummary = async () => {
+      if (
+        !collegeId ||
+        !facultyId ||
+        !collegeEducationId ||
+        effectiveCollegeBranchId === undefined
+      ) {
+        setSummary(defaultSummary);
+        setSummaryLoading(false);
+        return;
+      }
+
       setSummaryLoading(true);
 
       try {
@@ -120,57 +240,36 @@ export default function StudentProgressOverview() {
           facultyId,
           collegeId,
           collegeEducationId,
-          collegeBranchId: collegeBranchId ?? 0,
-          academicYearIds: selectedYearId ? [selectedYearId] : academicYearIds,
-          sectionIds: selectedSectionId ? [selectedSectionId] : sectionIds,
-          subjectIds,
+          collegeBranchId: effectiveCollegeBranchId ?? 0,
+          isSchool,
+          academicYearIds: scopedAcademicYearIds,
+          sectionIds: scopedSectionIds,
+          subjectIds: scopedSubjectIds,
           departmentLabel: college_branch,
-          subjectLabel:
-            faculty_subject.map((subject) => subject.subjectName).join(", ") ||
-            "N/A",
+          subjectLabel: scopedSubjectLabel,
           page: currentPage,
           pageSize: rowsPerPage,
           searchQuery: debouncedSearchQuery,
         });
 
-        if (mounted) {
+        if (requestSequence === summaryRequestSequenceRef.current) {
           setSummary(data);
           setHasLoadedOnce(true);
         }
       } catch (error) {
         console.error("Failed to load faculty student progress summary", error);
-        if (mounted) {
+        if (requestSequence === summaryRequestSequenceRef.current) {
           setSummary(defaultSummary);
         }
       } finally {
-        if (mounted) {
+        if (requestSequence === summaryRequestSequenceRef.current) {
           setSummaryLoading(false);
         }
       }
     };
 
     loadSummary();
-
-    return () => {
-      mounted = false;
-    };
-  }, [
-    facultyLoading,
-    collegeId,
-    facultyId,
-    collegeEducationId,
-    collegeBranchId,
-    academicYearIds,
-    sectionIds,
-    subjectIds,
-    faculty_subject,
-    college_branch,
-    currentPage,
-    rowsPerPage,
-    debouncedSearchQuery,
-    selectedYearId,
-    selectedSectionId,
-  ]);
+  });
 
   const subtitleParts = [summary.yearLabel, summary.sectionLabel]
     .filter((value) => value && value !== "N/A")
@@ -198,11 +297,6 @@ export default function StudentProgressOverview() {
           score: student.progressPercent,
         })),
     [summary.topPerformerRows],
-  );
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(summary.tableTotalCount / rowsPerPage),
   );
 
   const shouldShowSkeleton =
@@ -237,25 +331,50 @@ export default function StudentProgressOverview() {
 
       <div className="w-full max-w-5xl mb-4 overflow-x-auto scrollbar-hide pb-1">
         <div className="flex gap-3 md:gap-4 w-max items-center">
-          <div className="flex items-center gap-1.5">
-            <span className="text-gray-600 text-xs md:text-sm font-medium shrink-0">
-              {faculty_edu_type === "Inter" ? "Group" : "Branch"}
-            </span>
-            <span className="bg-[#43C17A1C] text-[#43C17A] px-3 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0">
-              {summary.departmentLabel}
-            </span>
-          </div>
+          {!isSchool && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-600 text-xs md:text-sm font-medium shrink-0">
+                {faculty_edu_type === "Inter" ? "Group" : "Branch"}
+              </span>
+              <span className="bg-[#43C17A1C] text-[#43C17A] px-3 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0">
+                {summary.departmentLabel}
+              </span>
+            </div>
+          )}
 
-          <div className="flex items-center gap-1.5">
+          <div className={`flex items-center gap-1.5 ${isSchool ? "order-2" : ""}`}>
             <span className="text-gray-600 text-xs md:text-sm font-medium shrink-0">
               Subject :
             </span>
-            <span className="bg-[#43C17A1C] text-[#43C17A] px-3 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0">
-              {summary.subjectLabel}
-            </span>
+            {isSchool ? (
+              <div className="relative">
+                <select
+                  className="bg-[#43C17A1C] text-[#43C17A] pl-3 pr-7 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0 outline-none cursor-pointer appearance-none"
+                  value={selectedSubjectId ?? ""}
+                  onChange={(e) => {
+                    setSelectedSubjectId(
+                      e.target.value ? Number(e.target.value) : null,
+                    );
+                    setSelectedSectionId(null);
+                  }}
+                >
+                  <option value="">All</option>
+                  {registeredSubjects.map((subject) => (
+                    <option key={subject.subjectId} value={subject.subjectId}>
+                      {subject.subjectName}
+                    </option>
+                  ))}
+                </select>
+                <FaChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] md:text-xs text-[#43C17A] pointer-events-none" />
+              </div>
+            ) : (
+              <span className="bg-[#43C17A1C] text-[#43C17A] px-3 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0">
+                {summary.subjectLabel}
+              </span>
+            )}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className={`flex items-center gap-1.5 ${isSchool ? "order-1" : ""}`}>
             <span className="text-gray-600 text-xs md:text-sm font-medium shrink-0">
               Year :
             </span>
@@ -263,10 +382,16 @@ export default function StudentProgressOverview() {
               <select
                 className="bg-[#43C17A1C] text-[#43C17A] pl-3 pr-7 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0 outline-none cursor-pointer appearance-none"
                 value={selectedYearId ?? ""}
-                onChange={(e) => setSelectedYearId(e.target.value ? Number(e.target.value) : null)}
+                onChange={(e) => {
+                  setSelectedYearId(
+                    e.target.value ? Number(e.target.value) : null,
+                  );
+                  setSelectedSubjectId(null);
+                  setSelectedSectionId(null);
+                }}
               >
                 <option value="">All</option>
-                {collegeAcademicYears?.map((y: any) => (
+                {collegeAcademicYears?.map((y) => (
                   <option key={y.collegeAcademicYearId} value={y.collegeAcademicYearId}>
                     {y.collegeAcademicYear}
                   </option>
@@ -276,7 +401,7 @@ export default function StudentProgressOverview() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className={`flex items-center gap-1.5 ${isSchool ? "order-3" : ""}`}>
             <span className="text-gray-600 text-xs md:text-sm font-medium shrink-0">
               Sec :
             </span>
@@ -287,11 +412,14 @@ export default function StudentProgressOverview() {
                 onChange={(e) => setSelectedSectionId(e.target.value ? Number(e.target.value) : null)}
               >
                 <option value="">All</option>
-                {Array.from(new Map(
-                  sections
-                    ?.filter((s: any) => selectedYearId ? s.collegeAcademicYearId === selectedYearId : true)
-                    .map((s: any) => [s.collegeSectionsId, s])
-                ).values()).map((s: any) => (
+                {(isSchool
+                  ? registeredSections
+                  : Array.from(new Map(
+                      sections
+                        ?.filter((s) => selectedYearId ? s.collegeAcademicYearId === selectedYearId : true)
+                        .map((s) => [s.collegeSectionsId, s] as const)
+                    ).values())
+                ).map((s) => (
                   <option key={s.collegeSectionsId} value={s.collegeSectionsId}>
                     {s.college_sections?.collegeSections}
                   </option>
@@ -308,7 +436,13 @@ export default function StudentProgressOverview() {
           {cardData.map((item, index) => (
             <CardComponent
               key={index}
-              value={item.value}
+              value={
+                index === 0
+                  ? String(summary.totalStudents)
+                  : index === 1
+                    ? String(summary.presentToday)
+                    : String(summary.lowAttendance)
+              }
               label={item.label}
               icon={item.icon}
               bgColor={item.bgColor}
@@ -328,9 +462,13 @@ export default function StudentProgressOverview() {
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
           currentPage={currentPage}
-          totalPages={totalPages}
           totalRecords={summary.tableTotalCount}
+          rowsPerPage={rowsPerPage}
           onPageChange={setCurrentPage}
+          onRowsPerPageChange={(items) => {
+            setRowsPerPage(items);
+            setCurrentPage(1);
+          }}
         />
         <div className="mt-4 md:mt-5 grid gap-4 pb-4 lg:grid-cols-[360px_minmax(0,1fr)] items-stretch">
           <div className="w-full h-full flex flex-col min-h-[300px]">

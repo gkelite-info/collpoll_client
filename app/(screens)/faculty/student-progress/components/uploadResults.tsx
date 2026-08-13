@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabaseClient";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export default function UploadResults() {
   const router = useRouter();
@@ -64,8 +65,20 @@ export default function UploadResults() {
     collegeId,
     collegeBranchId,
     college_branch,
+    faculty_edu_type,
     sections: facultySections
   } = useFaculty();
+  const isSchoolFromCookie =
+    typeof document !== "undefined" &&
+    document.cookie
+      .split("; ")
+      .some((cookie) => cookie === "isSchool=true");
+  const isSchool =
+    isSchoolEducation(collegeEducationType) ||
+    faculty_edu_type
+      ?.split(",")
+      .some((educationType) => isSchoolEducation(educationType)) === true ||
+    isSchoolFromCookie;
 
   const branchParam = searchParams.get("branch") || college_branch || "N/A";
   const yearParam = searchParams.get("year") || "N/A";
@@ -99,14 +112,22 @@ export default function UploadResults() {
 
       let targetSubjectId = facultySections.find(s => s.faculty_subject?.subjectName === subjectParam)?.collegeSubjectId;
 
-      if (!targetSubjectId && formData.branchId) {
-        const { data: subData } = await supabase
+      if (!targetSubjectId && (isSchool || formData.branchId)) {
+        let subjectQuery = supabase
           .from("college_subjects")
           .select("collegeSubjectId")
           .eq("subjectName", subjectParam)
-          .eq("collegeBranchId", Number(formData.branchId))
-          .is("deletedAt", null)
-          .maybeSingle();
+          .eq("collegeAcademicYearId", Number(formData.academicYearId))
+          .is("deletedAt", null);
+
+        if (!isSchool) {
+          subjectQuery = subjectQuery.eq(
+            "collegeBranchId",
+            Number(formData.branchId),
+          );
+        }
+
+        const { data: subData } = await subjectQuery.maybeSingle();
         targetSubjectId = subData?.collegeSubjectId;
       }
 
@@ -132,7 +153,7 @@ export default function UploadResults() {
     if (collegeId && formData.sectionId && formData.academicYearId) {
       checkExistingResults();
     }
-  }, [collegeId, formData.sectionId, formData.academicYearId, subjectParam, facultySections, formData.branchId, examTypeParam, searchParams]);
+  }, [collegeId, formData.sectionId, formData.academicYearId, subjectParam, facultySections, formData.branchId, examTypeParam, searchParams, isSchool]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -240,13 +261,21 @@ export default function UploadResults() {
         let targetSubjectId = facultySections.find(s => s.faculty_subject?.subjectName === subjectParam)?.collegeSubjectId;
 
         if (!targetSubjectId) {
-          const { data: subData } = await supabase
+          let subjectQuery = supabase
             .from("college_subjects")
             .select("collegeSubjectId")
             .eq("subjectName", subjectParam)
-            .eq("collegeBranchId", Number(formData.branchId))
-            .is("deletedAt", null)
-            .maybeSingle();
+            .eq("collegeAcademicYearId", yearIdNum)
+            .is("deletedAt", null);
+
+          if (!isSchool) {
+            subjectQuery = subjectQuery.eq(
+              "collegeBranchId",
+              Number(formData.branchId),
+            );
+          }
+
+          const { data: subData } = await subjectQuery.maybeSingle();
           targetSubjectId = subData?.collegeSubjectId;
         }
 
@@ -351,10 +380,10 @@ export default function UploadResults() {
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Exam Type</span>
               <p className="text-sm font-extrabold text-gray-800 mt-1 truncate">{examTypeParam}</p>
             </div>
-            <div className="bg-[#F8F9FA] border border-gray-200 rounded-xl p-4 flex flex-col justify-center shadow-sm">
+            {!isSchool && <div className="bg-[#F8F9FA] border border-gray-200 rounded-xl p-4 flex flex-col justify-center shadow-sm">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{collegeEducationType === "Inter" ? "Group" : "Branch"}</span>
               <p className="text-sm font-extrabold text-gray-800 mt-1 truncate">{branchParam}</p>
-            </div>
+            </div>}
             <div className="bg-[#F8F9FA] border border-gray-200 rounded-xl p-4 flex flex-col justify-center shadow-sm">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Academic Year</span>
               <p className="text-sm font-extrabold text-gray-800 mt-1 truncate">{yearParam}</p>
@@ -365,7 +394,7 @@ export default function UploadResults() {
             </div>
           </div>
 
-          {parsedSemesterId ? (
+          {!isSchool && (parsedSemesterId ? (
             <div className="bg-[#E6FBEA] text-[#007A48] border border-[#d2f7da] rounded-xl p-3 text-xs font-semibold flex items-center gap-2 shadow-sm">
               <div className="w-1.5 h-1.5 rounded-full bg-[#007A48]"></div>
               Target Semester: Semester {parsedSemesterId}
@@ -375,7 +404,7 @@ export default function UploadResults() {
               <div className="w-1.5 h-1.5 rounded-full bg-[#FF9800]"></div>
               Semester is not explicitly specified for this exam schedule. Defaulting to general results mapping.
             </div>
-          )}
+          ))}
         </div>
 
         <div className="border-t border-gray-150 my-6"></div>
@@ -445,7 +474,7 @@ export default function UploadResults() {
             onClick={handleSubmit}
             className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-[#43C17A] hover:bg-[#38A166] text-white font-semibold text-sm transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
             disabled={
-              !formData.branchId ||
+              (!isSchool && !formData.branchId) ||
               !formData.academicYearId ||
               (parsedSemesterId && !formData.semesterId) ||
               !formData.sectionId ||
