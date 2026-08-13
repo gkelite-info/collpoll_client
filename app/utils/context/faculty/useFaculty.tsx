@@ -71,7 +71,8 @@ export const FacultyProvider = ({ children }: { children: React.ReactNode }) => 
         queryKey: ["facultyContext", userId],
         queryFn: () => fetchFacultyContext(userId!),
         enabled: !!userId && role === "Faculty" && !userLoading,
-        staleTime: 5 * 60 * 1000,
+        staleTime: 0,
+        refetchOnMount: "always",
     });
 
     const isLoading = userLoading || queryLoading || (!!userId && role === "Faculty" && !facultyData && !error);

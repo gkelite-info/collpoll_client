@@ -9,6 +9,7 @@ import { upsertFacultyAssignment } from "@/lib/helpers/faculty/assignment/upsert
 import FormSkeleton from "../shimmer/FormSkeleton";
 import { useRouter } from "next/navigation";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type Props = {
   initialData?: Assignment | null;
@@ -38,6 +39,16 @@ export default function AssignmentForm({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { faculty_edu_type } = useFaculty();
+  const isSchoolFromCookie =
+    typeof document !== "undefined" &&
+    document.cookie
+      .split("; ")
+      .some((cookie) => cookie === "isSchool=true");
+  const isSchool =
+    faculty_edu_type
+      ?.split(",")
+      .some((educationType) => isSchoolEducation(educationType)) === true ||
+    isSchoolFromCookie;
   const [sectionSelect, setSectionSelect] = useState("");
 
   const [form, setForm] = useState({
@@ -153,7 +164,7 @@ export default function AssignmentForm({
   }, [availableBranches, form.branchId]);
 
   const availableSections = useMemo(() => {
-    if (!form.subjectId || !form.branchId || !form.yearId) return [];
+    if (!form.subjectId || (!isSchool && !form.branchId) || !form.yearId) return [];
     const map = new Map();
 
     facultySections
@@ -161,7 +172,7 @@ export default function AssignmentForm({
         const sectionObj = getSafe(s.college_sections);
         return (
           s.collegeSubjectId === Number(form.subjectId) &&
-          sectionObj?.collegeBranchId === Number(form.branchId) &&
+          (isSchool || sectionObj?.collegeBranchId === Number(form.branchId)) &&
           s.collegeAcademicYearId === Number(form.yearId) // Filter by the selected year
         );
       })
@@ -174,10 +185,10 @@ export default function AssignmentForm({
         }
       });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [facultySections, form.subjectId, form.branchId, form.yearId]);
+  }, [facultySections, form.subjectId, form.branchId, form.yearId, isSchool]);
 
   const availableYears = useMemo(() => {
-    if (!form.subjectId || !form.branchId) return [];
+    if (!form.subjectId || (!isSchool && !form.branchId)) return [];
     const map = new Map();
 
     facultySections
@@ -185,7 +196,7 @@ export default function AssignmentForm({
         const sectionObj = getSafe(s.college_sections);
         return (
           s.collegeSubjectId === Number(form.subjectId) &&
-          sectionObj?.collegeBranchId === Number(form.branchId)
+          (isSchool || sectionObj?.collegeBranchId === Number(form.branchId))
         );
       })
       .forEach((s) => {
@@ -197,7 +208,7 @@ export default function AssignmentForm({
         }
       });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [facultySections, form.subjectId, form.branchId]);
+  }, [facultySections, form.subjectId, form.branchId, isSchool]);
 
   // ==========================================
   // FIX: ROBUST PRE-SUBMISSION VALIDATION
@@ -231,7 +242,7 @@ export default function AssignmentForm({
       return false;
     }
 
-    if (!form.branchId) {
+    if (!isSchool && !form.branchId) {
       toast.error(
         `Please select a ${faculty_edu_type === "Inter" ? "Group" : "Branch"}.`,
       );
@@ -291,7 +302,7 @@ export default function AssignmentForm({
           topicName: form.topicName.trim(),
           dateAssigned: form.fromDate,
           submissionDeadline: form.toDate,
-          collegeBranchId: form.branchId,
+          collegeBranchId: isSchool ? null : form.branchId,
           collegeSectionsId: sectionId,
           collegeAcademicYearId: form.yearId,
           marks: form.totalMarks,
@@ -434,7 +445,7 @@ export default function AssignmentForm({
           </div>
 
           <div className="flex gap-4">
-            <div className="mb-4 flex-1">
+            {!isSchool && <div className="mb-4 flex-1">
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 {faculty_edu_type === "Inter" ? "Group" : "Branch"}
               </label>
@@ -465,7 +476,7 @@ export default function AssignmentForm({
                   ))}
                 </select>
               )}
-            </div>
+            </div>}
 
             <div className="mb-4 flex-1">
               <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -474,7 +485,7 @@ export default function AssignmentForm({
               <select
                 value={form.yearId}
                 required
-                disabled={!form.branchId}
+                disabled={!form.subjectId || (!isSchool && !form.branchId)}
                 onChange={(e) =>
                   setForm({
                     ...form,

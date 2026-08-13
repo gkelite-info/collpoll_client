@@ -13,6 +13,7 @@ import { getUpcomingClasses } from "@/lib/helpers/faculty/attendance/getClasses"
 import { getFacultyDashboardStats } from "@/lib/helpers/faculty/dashboard/getFacultyDashboardStats";
 import SubjectPills from "./SubjectPills";
 import SubjectPillsShimmer from "./SubjectPillsShimmer";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export default function FacultyDashLeft() {
   const { userId, fullName, gender, loading: userLoading } = useUser();
@@ -28,8 +29,14 @@ export default function FacultyDashLeft() {
     collegeBranchId,
     academicYearIds,
     sectionIds,
-    subjectIds
+    subjectIds,
+    faculty_edu_type,
   } = useFaculty();
+
+  const isSchool =
+    faculty_edu_type
+      ?.split(",")
+      .some((educationType) => isSchoolEducation(educationType)) ?? false;
 
   const uniqueSubjectsCount = new Set(sections?.map(s => s.collegeSubjectId)).size;
   const isSingleSubject = uniqueSubjectsCount === 1;
@@ -52,6 +59,7 @@ export default function FacultyDashLeft() {
     academicYearIds: activeSection?.collegeAcademicYearId ? [activeSection.collegeAcademicYearId] : academicYearIds,
     sectionIds: activeSectionId ? [activeSectionId] : sectionIds,
     subjectIds: activeSubjectId ? [activeSubjectId] : subjectIds,
+    isSchool,
   }, !userLoading && !facultyLoading);
 
   const studentsPerformance = performanceData?.pages.flatMap(page => page.students) || [];

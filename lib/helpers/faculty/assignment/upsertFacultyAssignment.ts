@@ -23,7 +23,12 @@ export const upsertFacultyAssignment = async (payload: any) => {
       topicName: topicName,
       dateAssignedInt: convertToInt(dateAssigned),
       submissionDeadlineInt: convertToInt(submissionDeadline),
-      collegeBranchId: Number(collegeBranchId),
+      collegeBranchId:
+        collegeBranchId === null ||
+        collegeBranchId === undefined ||
+        collegeBranchId === ""
+          ? null
+          : Number(collegeBranchId),
       collegeAcademicYearId: Number(collegeAcademicYearId),
       collegeSectionsId: Number(collegeSectionsId),
       marks: Number(marks),

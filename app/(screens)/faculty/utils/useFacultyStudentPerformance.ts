@@ -9,6 +9,7 @@ export type UseFacultyStudentPerformanceParams = {
   academicYearIds: number[];
   sectionIds: number[];
   subjectIds: number[];
+  isSchool: boolean;
 };
 
 export const useFacultyStudentPerformance = (
@@ -25,6 +26,7 @@ export const useFacultyStudentPerformance = (
       params.academicYearIds.join(","),
       params.sectionIds.join(","),
       params.subjectIds.join(","),
+      params.isSchool,
     ],
     queryFn: async ({ pageParam = 1 }) => {
       if (
@@ -44,6 +46,7 @@ export const useFacultyStudentPerformance = (
         academicYearIds: params.academicYearIds,
         sectionIds: params.sectionIds,
         subjectIds: params.subjectIds,
+        isSchool: params.isSchool,
         page: pageParam,
         pageSize: 10,
       });
@@ -61,6 +64,7 @@ export const useFacultyStudentPerformance = (
       !!params.collegeId &&
       !!params.collegeEducationId &&
       params.subjectIds.length > 0,
+    refetchOnMount: "always",
     staleTime: 10 * 60 * 1000, // 10 minutes (computationally expensive)
     gcTime: 15 * 60 * 1000, // 15 minutes
   });

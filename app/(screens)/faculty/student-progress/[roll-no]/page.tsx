@@ -15,6 +15,7 @@ import ChatWindow from "./components/chatWindow";
 import AttendanceSummaryCard from "./components/attendanceSummaryCard";
 import AcademicPerformance from "@/app/(screens)/admin/student-progress/[roll-no]/components/academicPerformanceChart";
 import { StudentProgressDetailsSkeleton } from "../shimmer/StudentProgressSkeleton";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type StudentProgressDetails = Awaited<
   ReturnType<typeof getFacultyStudentProgressDetails>
@@ -85,7 +86,18 @@ export default function StudentProgressDetailsPage() {
     sectionIds,
     subjectIds,
     facultyId,
+    faculty_edu_type,
   } = useFaculty();
+  const isSchoolFromEducation =
+    faculty_edu_type
+      ?.split(",")
+      .some((educationType) => isSchoolEducation(educationType)) ?? false;
+  const isSchoolFromCookie =
+    typeof document !== "undefined" &&
+    document.cookie
+      .split("; ")
+      .some((cookie) => cookie === "isSchool=true");
+  const isSchool = isSchoolFromEducation || isSchoolFromCookie;
 
   const [activeChatParent, setActiveChatParent] = useState<Parent | null>(null);
   const [details, setDetails] =
@@ -95,24 +107,24 @@ export default function StudentProgressDetailsPage() {
   useEffect(() => {
     if (facultyLoading) return;
 
-    if (
-      !rollNo ||
-      !collegeId ||
-      !collegeEducationId ||
-      !collegeBranchId ||
-      !facultyId ||
-      !academicYearIds.length ||
-      !sectionIds.length ||
-      !subjectIds.length
-    ) {
-      setDetails(emptyDetails);
-      setDetailsLoading(false);
-      return;
-    }
-
     let mounted = true;
 
     const loadDetails = async () => {
+      if (
+        !rollNo ||
+        !collegeId ||
+        !collegeEducationId ||
+        (!isSchool && !collegeBranchId) ||
+        !facultyId ||
+        !academicYearIds.length ||
+        !sectionIds.length ||
+        !subjectIds.length
+      ) {
+        setDetails(emptyDetails);
+        setDetailsLoading(false);
+        return;
+      }
+
       setDetailsLoading(true);
 
       try {
@@ -121,7 +133,8 @@ export default function StudentProgressDetailsPage() {
           facultyId,
           collegeId,
           collegeEducationId,
-          collegeBranchId,
+          collegeBranchId: isSchool ? 0 : (collegeBranchId ?? 0),
+          isSchool,
           academicYearIds,
           sectionIds,
           subjectIds,
@@ -159,6 +172,7 @@ export default function StudentProgressDetailsPage() {
     sectionIds,
     subjectIds,
     college_branch,
+    isSchool,
   ]);
 
   if (detailsLoading) {
@@ -182,7 +196,7 @@ export default function StudentProgressDetailsPage() {
       : 0;
 
   return (
-    <div className="relative min-h-screen bg-[#F5F7FA] p-3 md:p-6 font-sans">
+    <div className="relative min-h-screen bg-transparent p-3 md:p-6 font-sans">
       <section className="mb-4 md:mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
           <button
@@ -194,18 +208,18 @@ export default function StudentProgressDetailsPage() {
             <CaretLeft size={18} weight="bold" />
           </button>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          {!isSchool && <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-gray-600 text-xs md:text-sm font-medium">
               Department:
             </span>
             <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
               {details.departmentLabel}
             </span>
-          </div>
+          </div>}
 
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-gray-600 text-xs md:text-sm font-medium">
-              Year:
+              {isSchool ? "Class:" : "Year:"}
             </span>
             <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
               {details.yearLabel}
@@ -221,14 +235,14 @@ export default function StudentProgressDetailsPage() {
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          {!isSchool && <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-gray-600 text-xs md:text-sm font-medium">
               Sem:
             </span>
             <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
               {details.semesterLabel}
             </span>
-          </div>
+          </div>}
         </div>
 
         <article className="hidden lg:flex justify-end">

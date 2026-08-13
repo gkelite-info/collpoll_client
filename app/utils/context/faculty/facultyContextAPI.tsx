@@ -192,8 +192,14 @@ export async function fetchFacultyContext(userId: number) {
         mobile: faculty.mobile,
         role: faculty.role,
         collegeId: faculty.collegeId,
-        collegeEducationId: faculty.collegeEducationId,
-        collegeBranchId: faculty.collegeBranchId,
+        collegeEducationId:
+            faculty.collegeEducationId ??
+            sections.find(section => section.collegeEducationId != null)?.collegeEducationId ??
+            null,
+        collegeBranchId:
+            faculty.collegeBranchId ??
+            sections.find(section => section.collegeBranchId != null)?.collegeBranchId ??
+            null,
         college_branch: branchCodes.join(", ") || null,
         faculty_edu_type: eduTypes.join(", ") || null,
         gender: faculty.gender,

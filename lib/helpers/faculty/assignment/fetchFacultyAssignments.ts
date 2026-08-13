@@ -47,13 +47,12 @@ export const fetchFacultyAssignments = async (
 
     const enrichedData = await Promise.all(
       (data || []).map(async (assignment: any) => {
-        const { count: expectedStudentsCount, error: stuError } = await supabase
+        let studentCountQuery = supabase
           .from("students")
           .select(
             "studentId, student_academic_history!inner(collegeAcademicYearId, collegeSectionsId)",
             { count: "exact", head: true },
           )
-          .eq("collegeBranchId", assignment.collegeBranchId)
           .eq(
             "student_academic_history.collegeAcademicYearId",
             assignment.collegeAcademicYearId,
@@ -63,10 +62,33 @@ export const fetchFacultyAssignments = async (
             assignment.collegeSectionsId,
           )
           .eq("student_academic_history.isCurrent", true)
-          .eq("isActive", true);
+          .is("student_academic_history.deletedAt", null)
+          .eq("isActive", true)
+          .is("deletedAt", null);
 
-        if (stuError)
-          console.error("Error fetching student count:", stuError.message);
+        if (
+          assignment.collegeBranchId !== null &&
+          assignment.collegeBranchId !== undefined &&
+          Number(assignment.collegeBranchId) > 0
+        ) {
+          studentCountQuery = studentCountQuery.eq(
+            "collegeBranchId",
+            assignment.collegeBranchId,
+          );
+        }
+
+        const { count: expectedStudentsCount, error: stuError } =
+          await studentCountQuery;
+
+        if (stuError) {
+          console.error("Error fetching student count:", {
+            message: stuError.message,
+            code: stuError.code,
+            details: stuError.details,
+            hint: stuError.hint,
+            assignmentId: assignment.assignmentId,
+          });
+        }
 
         const actualSubmissionsCount =
           assignment.submissions_count?.[0]?.count || 0;

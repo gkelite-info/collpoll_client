@@ -1,6 +1,4 @@
 import {
-  CaretLeftIcon,
-  CaretRight,
   MagnifyingGlass,
   X,
 } from "@phosphor-icons/react";
@@ -9,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import type { FacultyStudentProgressRow } from "@/lib/helpers/faculty/studentProgress/getFacultyStudentProgressSummary";
 import { Avatar } from "@/app/utils/Avatar";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 const getProgressColor = (progress: number): string => {
   if (progress >= 90) return "#43C17A";
@@ -59,9 +58,10 @@ type StudentDataTableProps = {
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
   currentPage: number;
-  totalPages: number;
   totalRecords: number;
+  rowsPerPage: number;
   onPageChange: (page: number) => void;
+  onRowsPerPageChange: (items: number) => void;
 };
 
 const formatScore = (obtained: number, total: number) =>
@@ -78,9 +78,10 @@ export function StudentDataTable({
   searchQuery,
   onSearchQueryChange,
   currentPage,
-  totalPages,
   totalRecords,
+  rowsPerPage,
   onPageChange,
+  onRowsPerPageChange,
 }: StudentDataTableProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -272,64 +273,16 @@ export function StudentDataTable({
           </div>
         </div>
 
-        {totalPages > 1 ? (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4 border-t border-gray-100 px-4 py-3 md:py-4">
-            <p className="text-xs md:text-sm text-[#6B7280]">
-              Showing page {currentPage} of {totalPages} ({totalRecords}{" "}
-              records)
-            </p>
-
-            <div className="flex items-center gap-1.5 md:gap-2">
-              <button
-                type="button"
-                onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className={`flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-md md:rounded-lg border ${
-                  currentPage === 1
-                    ? "cursor-not-allowed border-gray-200 text-gray-300"
-                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <CaretLeftIcon size={16} weight="bold" />
-              </button>
-
-              <div className="flex items-center gap-1 overflow-x-auto max-w-[150px] md:max-w-none scrollbar-hide">
-                {Array.from(
-                  { length: totalPages },
-                  (_, index) => index + 1,
-                ).map((page) => (
-                  <button
-                    key={page}
-                    type="button"
-                    onClick={() => onPageChange(page)}
-                    className={`h-8 min-w-8 md:h-9 md:min-w-9 rounded-md md:rounded-lg px-2 md:px-3 text-xs md:text-sm font-semibold shrink-0 ${
-                      currentPage === page
-                        ? "bg-[#16284F] text-white"
-                        : "border border-gray-300 text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  onPageChange(Math.min(totalPages, currentPage + 1))
-                }
-                disabled={currentPage === totalPages}
-                className={`flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-md md:rounded-lg border ${
-                  currentPage === totalPages
-                    ? "cursor-not-allowed border-gray-200 text-gray-300"
-                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <CaretRight size={16} weight="bold" />
-              </button>
-            </div>
-          </div>
-        ) : null}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalRecords}
+          itemsPerPage={rowsPerPage}
+          onPageChange={onPageChange}
+          itemsPerPageOptions={[5, 10, 20, 50]}
+          onItemsPerPageChange={onRowsPerPageChange}
+          roundedBottom="rounded-b-2xl"
+          alwaysShow
+        />
       </div>
     </div>
   );
