@@ -14,6 +14,7 @@ export interface Department {
   year?: string;
   facultyCount?: number;
   facultyList?: any[];
+  collegeEducationId?: number;
 }
 
 const AssignmentCard = ({
@@ -27,11 +28,16 @@ const AssignmentCard = ({
   year = "2",
   facultyCount = 0,
   facultyList = [],
+  collegeEducationId,
 }: Department) => {
   const router = useRouter();
 
   const handleViewDetails = () => {
-    router.push(`/admin/assignments/${encodeURIComponent(name)}?year=${year}`);
+    const query = new URLSearchParams({ year });
+    if (collegeEducationId) {
+      query.set("educationId", collegeEducationId.toString());
+    }
+    router.push(`/admin/assignments/${encodeURIComponent(name)}?${query.toString()}`);
   };
 
   const maxAvatars = 5;

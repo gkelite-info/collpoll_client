@@ -52,12 +52,12 @@ export default function TopFivePerformers({ performers }: TopPerformersProps) {
     .slice(0, 5);
 
   return (
-    <div className="w-full overflow-hidden rounded-xl bg-white p-5 font-sans shadow-sm">
+    <div className="flex h-[364px] w-full flex-col overflow-hidden rounded-xl bg-white p-5 font-sans shadow-sm">
       <h2 className="mb-1 text-[18px] font-bold text-gray-900">
         Top 5 Performers
       </h2>
 
-      <div className="mt-2 flex flex-col">
+      <div className="custom-scrollbar mt-2 min-h-0 flex-1 overflow-y-auto pr-1">
         {visiblePerformers.length ? (
           visiblePerformers.map((performer) => (
             <PerformerRow key={performer.id} performer={performer} />

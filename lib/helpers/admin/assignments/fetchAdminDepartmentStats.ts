@@ -173,6 +173,7 @@ export async function fetchAdminAllEducationStats(
           (item: { id: string | number; [key: string]: unknown }) => ({
           ...item,
           id: `${educationId}-${item.id}`,
+          collegeEducationId: educationId,
           }),
         ),
       };
@@ -435,6 +436,7 @@ async function executeFetch(
         issuesRaised: 0,
         facultyCount: uniqueFaculty.length,
         facultyList: uniqueFaculty,
+        collegeEducationId,
       };
     });
 

@@ -14,11 +14,6 @@ import {
 
 import type { Formatter } from "recharts/types/component/DefaultTooltipContent";
 
-const performanceFormatter = (value: any, name: any) => [
-  `${value ?? 0}%`,
-  name,
-];
-
 type PerformanceTrendChartProps = {
   data: AdminStudentProgressTrendPoint[];
 };
@@ -26,10 +21,19 @@ type PerformanceTrendChartProps = {
 export default function PerformanceTrendChart({
   data,
 }: PerformanceTrendChartProps) {
-  const chartData = data.length ? data : [{ month: "N/A", value: 0 }];
+  const sourceData = data.length
+    ? data
+    : [{ month: "N/A", value: 0, isElapsed: true }];
+  const chartData = sourceData.map((point) => ({
+    ...point,
+    // Recharts does not render a shape or label for an exact zero. Reserve a
+    // tiny visible height for elapsed zero-value months; labels/tooltips still
+    // use the real value.
+    displayValue: point.isElapsed && point.value === 0 ? 1 : point.value,
+  }));
 
   return (
-    <div className="w-full rounded-xl bg-white p-4 font-sans shadow-sm">
+    <div className="h-[364px] w-full rounded-xl bg-white p-4 font-sans shadow-sm">
       <h2 className="mb-4 text-lg font-bold text-[#282828]">
         Performance Trend
       </h2>
@@ -73,11 +77,14 @@ export default function PerformanceTrendChart({
                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                 fontSize: "12px",
               }}
-              formatter={performanceFormatter}
+              formatter={(_value, name, item) => [
+                `${item?.payload?.value ?? 0}%`,
+                name,
+              ]}
             />
 
             <Bar
-              dataKey="value"
+              dataKey="displayValue"
               maxBarSize={50}
               radius={[12, 12, 12, 12]}
               background={{ fill: "#EFF9EB", radius: 12 }}
@@ -87,14 +94,14 @@ export default function PerformanceTrendChart({
               ))}
 
               <LabelList
-                dataKey="value"
+                dataKey="displayValue"
                 position="top"
                 content={(props: any) => {
-                  const { x, y, width, value } = props;
-                  const numericValue =
-                    typeof value === "number" ? value : Number(value ?? 0);
+                  const { x, y, width, index } = props;
+                  const point = chartData[Number(index)];
+                  const numericValue = point?.value ?? 0;
 
-                  if (!numericValue) {
+                  if (!point?.isElapsed) {
                     return null;
                   }
 
@@ -121,7 +128,7 @@ export default function PerformanceTrendChart({
                         fontSize={fontSize}
                         fontWeight="800"
                       >
-                        {`${value}%`}
+                        {`${numericValue}%`}
                       </text>
                     </g>
                   );

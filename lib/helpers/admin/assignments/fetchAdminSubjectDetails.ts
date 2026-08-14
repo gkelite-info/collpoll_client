@@ -6,24 +6,41 @@ export async function fetchAdminSubjectDetails(
   yearName: string,
   page: number = 1,
   limit: number = 10,
+  collegeEducationId?: number,
+  subjectFilter: string = "All",
+  facultyFilter: string = "All",
 ) {
   try {
-    const { data: branchData } = await supabase
+    let branchQuery = supabase
       .from("college_branch")
       .select("collegeBranchId")
       .eq("collegeBranchCode", branchCode)
-      .eq("collegeId", collegeId)
-      .maybeSingle();
+      .eq("collegeId", collegeId);
 
-    const { data: yearData } = await supabase
+    if (collegeEducationId) {
+      branchQuery = branchQuery.eq("collegeEducationId", collegeEducationId);
+    }
+
+    const { data: branchData } = await branchQuery.maybeSingle();
+
+    let yearQuery = supabase
       .from("college_academic_year")
       .select("collegeAcademicYearId")
       .eq("collegeAcademicYear", yearName)
-      .eq("collegeId", collegeId)
-      .eq("collegeBranchId", branchData?.collegeBranchId)
-      .maybeSingle();
+      .eq("collegeId", collegeId);
 
-    if (!branchData || !yearData)
+    if (collegeEducationId) {
+      yearQuery = yearQuery.eq("collegeEducationId", collegeEducationId);
+    }
+    if (branchData?.collegeBranchId) {
+      yearQuery = yearQuery.eq("collegeBranchId", branchData.collegeBranchId);
+    }
+
+    const { data: yearData } = await yearQuery.maybeSingle();
+
+    // School education types do not have a branch row; their class is stored as
+    // the academic year. College flows still require the existing branch match.
+    if ((!branchData && !collegeEducationId) || !yearData)
       return { data: [], count: 0, error: "Invalid Branch or Year" };
 
     const { data: rawSections, error: fetchError } = await supabase
@@ -59,11 +76,61 @@ export async function fetchAdminSubjectDetails(
     });
 
     const uniquePairs = Array.from(groupedMap.values());
-    const totalCount = uniquePairs.length;
+    const subjectOptions = [
+      "All",
+      ...Array.from(
+        new Set(
+          uniquePairs
+            .map((item: any) => {
+              const subject = Array.isArray(item.college_subjects)
+                ? item.college_subjects[0]
+                : item.college_subjects;
+              return subject?.subjectName;
+            })
+            .filter(Boolean),
+        ),
+      ).sort((a, b) => String(a).localeCompare(String(b))),
+    ];
+    const facultyOptions = [
+      "All",
+      ...Array.from(
+        new Set(
+          uniquePairs
+            .filter((item: any) => {
+              if (subjectFilter === "All") return true;
+              const subject = Array.isArray(item.college_subjects)
+                ? item.college_subjects[0]
+                : item.college_subjects;
+              return subject?.subjectName === subjectFilter;
+            })
+            .map((item: any) => {
+              const faculty = Array.isArray(item.faculty)
+                ? item.faculty[0]
+                : item.faculty;
+              return faculty?.fullName;
+            })
+            .filter(Boolean),
+        ),
+      ).sort((a, b) => String(a).localeCompare(String(b))),
+    ];
+
+    const filteredPairs = uniquePairs.filter((item: any) => {
+      const subject = Array.isArray(item.college_subjects)
+        ? item.college_subjects[0]
+        : item.college_subjects;
+      const faculty = Array.isArray(item.faculty)
+        ? item.faculty[0]
+        : item.faculty;
+      return (
+        (subjectFilter === "All" || subject?.subjectName === subjectFilter) &&
+        (facultyFilter === "All" || faculty?.fullName === facultyFilter)
+      );
+    });
+    const totalCount = filteredPairs.length;
 
     const from = (page - 1) * limit;
     const to = from + limit;
-    const paginatedPairs = uniquePairs.slice(from, to);
+    const paginatedPairs = filteredPairs.slice(from, to);
 
     const subjectIds = [...new Set(paginatedPairs.map(p => p.collegeSubjectId))];
     const facultyIds = [...new Set(paginatedPairs.map(p => p.facultyId))];
@@ -121,9 +188,21 @@ export async function fetchAdminSubjectDetails(
       };
     });
 
-    return { data: result, count: totalCount, error: null };
+    return {
+      data: result,
+      count: totalCount,
+      subjectOptions,
+      facultyOptions,
+      error: null,
+    };
   } catch (err: any) {
     console.error("Admin Subject Fetch Error:", err);
-    return { data: [], count: 0, error: err.message };
+    return {
+      data: [],
+      count: 0,
+      subjectOptions: ["All"],
+      facultyOptions: ["All"],
+      error: err.message,
+    };
   }
 }

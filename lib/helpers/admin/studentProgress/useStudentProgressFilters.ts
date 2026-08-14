@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import type {
   StudentProgressBranch,
+  StudentProgressFaculty,
   StudentProgressSection,
   StudentProgressSemester,
   StudentProgressSubject,
@@ -11,6 +12,7 @@ import type {
 } from "./studentProgressDropdowns";
 import {
   fetchStudentProgressBranches,
+  fetchStudentProgressFaculty,
   fetchStudentProgressSections,
   fetchStudentProgressSemesters,
   fetchStudentProgressSubjects,
@@ -20,23 +22,29 @@ import {
 type StudentProgressFiltersArgs = {
   collegeId: number | null;
   collegeEducationId: number | null;
+  isSchool?: boolean;
 };
+
+const EMPTY_NUMBER_IDS: number[] = [];
 
 export function useStudentProgressFilters({
   collegeId,
   collegeEducationId,
+  isSchool = false,
 }: StudentProgressFiltersArgs) {
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [yearsLoading, setYearsLoading] = useState(false);
   const [semestersLoading, setSemestersLoading] = useState(false);
   const [sectionsLoading, setSectionsLoading] = useState(false);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
+  const [facultyLoading, setFacultyLoading] = useState(false);
 
   const [branches, setBranches] = useState<StudentProgressBranch[]>([]);
   const [years, setYears] = useState<StudentProgressYear[]>([]);
   const [semesters, setSemesters] = useState<StudentProgressSemester[]>([]);
   const [sections, setSections] = useState<StudentProgressSection[]>([]);
   const [subjects, setSubjects] = useState<StudentProgressSubject[]>([]);
+  const [faculty, setFaculty] = useState<StudentProgressFaculty[]>([]);
 
   const [selectedBranch, setSelectedBranch] =
     useState<StudentProgressBranch | null>(null);
@@ -49,6 +57,8 @@ export function useStudentProgressFilters({
     useState<StudentProgressSection | null>(null);
   const [selectedSubject, setSelectedSubject] =
     useState<StudentProgressSubject | null>(null);
+  const [selectedFaculty, setSelectedFaculty] =
+    useState<StudentProgressFaculty | null>(null);
 
   const activeBranchIds = useMemo(
     () =>
@@ -89,6 +99,48 @@ export function useStudentProgressFilters({
         : subjects.map((subject) => subject.collegeSubjectId),
     [selectedSubject, subjects],
   );
+  const sectionSubjectIds = isSchool ? activeSubjectIds : EMPTY_NUMBER_IDS;
+  const subjectSectionIds = isSchool ? EMPTY_NUMBER_IDS : activeSectionIds;
+  const activeFacultyIds = useMemo(
+    () => selectedFaculty ? [selectedFaculty.facultyId] : faculty.map((item) => item.facultyId),
+    [faculty, selectedFaculty],
+  );
+
+  useEffect(() => {
+    if (!isSchool || !collegeId || !collegeEducationId || !selectedSubject || !selectedSection) {
+      setFaculty([]);
+      setSelectedFaculty(null);
+      return;
+    }
+
+    let mounted = true;
+    setFacultyLoading(true);
+    fetchStudentProgressFaculty(
+      collegeId,
+      collegeEducationId,
+      activeYearIds,
+      [selectedSubject.collegeSubjectId],
+      [selectedSection.collegeSectionsId],
+    )
+      .then((data) => {
+        if (!mounted) return;
+        setFaculty(data);
+        setSelectedFaculty((current) =>
+          current && data.some((item) => item.facultyId === current.facultyId)
+            ? current
+            : null,
+        );
+      })
+      .catch((error) => {
+        console.error("Failed to load student progress faculty", error);
+        if (mounted) setFaculty([]);
+      })
+      .finally(() => {
+        if (mounted) setFacultyLoading(false);
+      });
+
+    return () => { mounted = false; };
+  }, [activeYearIds, collegeEducationId, collegeId, isSchool, selectedSection, selectedSubject]);
 
   useEffect(() => {
     if (!collegeId || !collegeEducationId) return;
@@ -180,6 +232,7 @@ export function useStudentProgressFilters({
       activeBranchIds,
       activeYearIds,
       activeSemesterIds,
+      sectionSubjectIds,
     )
       .then((data) => {
         if (!mounted) return;
@@ -202,8 +255,10 @@ export function useStudentProgressFilters({
     activeBranchIds,
     activeSemesterIds,
     activeYearIds,
+    sectionSubjectIds,
     collegeEducationId,
     collegeId,
+    isSchool,
   ]);
 
   useEffect(() => {
@@ -218,7 +273,8 @@ export function useStudentProgressFilters({
       activeBranchIds,
       activeYearIds,
       activeSemesterIds,
-      activeSectionIds,
+      subjectSectionIds,
+      isSchool,
     )
       .then((data) => {
         if (!mounted) return;
@@ -239,11 +295,12 @@ export function useStudentProgressFilters({
     };
   }, [
     activeBranchIds,
-    activeSectionIds,
+    subjectSectionIds,
     activeSemesterIds,
     activeYearIds,
     collegeEducationId,
     collegeId,
+    isSchool,
   ]);
 
   const selectBranch = (branch: StudentProgressBranch | null) => {
@@ -252,6 +309,7 @@ export function useStudentProgressFilters({
     setSelectedSemester(null);
     setSelectedSection(null);
     setSelectedSubject(null);
+    setSelectedFaculty(null);
   };
 
   const selectYear = (year: StudentProgressYear | null) => {
@@ -259,21 +317,30 @@ export function useStudentProgressFilters({
     setSelectedSemester(null);
     setSelectedSection(null);
     setSelectedSubject(null);
+    setSelectedFaculty(null);
   };
 
   const selectSemester = (semester: StudentProgressSemester | null) => {
     setSelectedSemester(semester);
     setSelectedSection(null);
     setSelectedSubject(null);
+    setSelectedFaculty(null);
   };
 
   const selectSection = (section: StudentProgressSection | null) => {
     setSelectedSection(section);
-    setSelectedSubject(null);
+    if (!isSchool) setSelectedSubject(null);
+    setSelectedFaculty(null);
   };
 
   const selectSubject = (subject: StudentProgressSubject | null) => {
     setSelectedSubject(subject);
+    if (isSchool) setSelectedSection(null);
+    setSelectedFaculty(null);
+  };
+
+  const selectFaculty = (item: StudentProgressFaculty | null) => {
+    setSelectedFaculty(item);
   };
 
   const rawFiltersLoading =
@@ -282,12 +349,14 @@ export function useStudentProgressFilters({
     semestersLoading ||
     sectionsLoading ||
     subjectsLoading;
+    // faculty options are part of the dependent school filter chain.
+  const filtersOrFacultyLoading = rawFiltersLoading || facultyLoading;
 
   const [filtersLoading, setFiltersLoading] = useState(true);
 
   useEffect(() => {
     let timeout: NodeJS.Timeout;
-    if (rawFiltersLoading) {
+    if (filtersOrFacultyLoading) {
       setFiltersLoading(true);
     } else {
       timeout = setTimeout(() => {
@@ -295,7 +364,7 @@ export function useStudentProgressFilters({
       }, 100);
     }
     return () => clearTimeout(timeout);
-  }, [rawFiltersLoading]);
+  }, [filtersOrFacultyLoading]);
 
   return {
     filtersLoading,
@@ -304,20 +373,24 @@ export function useStudentProgressFilters({
     semesters,
     sections,
     subjects,
+    faculty,
     selectedBranch,
     selectedYear,
     selectedSemester,
     selectedSection,
     selectedSubject,
+    selectedFaculty,
     activeBranchIds,
     activeYearIds,
     activeSemesterIds,
     activeSectionIds,
     activeSubjectIds,
+    activeFacultyIds,
     selectBranch,
     selectYear,
     selectSemester,
     selectSection,
     selectSubject,
+    selectFaculty,
   };
 }

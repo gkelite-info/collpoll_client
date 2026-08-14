@@ -18,10 +18,12 @@ export default function AdminSubjectAssignmentPage() {
       : null;
   const facultyId = Number(decryptedFacultyId ?? facultyIdParam);
 
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  // Do not silently filter the initial assignment list to today's date.
+  // A date filter is applied only after the admin selects a calendar date.
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
 
   return (
-    <main className="flex w-full min-h-screen bg-[#F4F4F4]">
+    <main className="flex h-[calc(100vh-100px)] w-full overflow-hidden bg-[#F4F4F4]">
       <AssignmentsLeft
         subjectId={subjectId}
         facultyId={facultyId}

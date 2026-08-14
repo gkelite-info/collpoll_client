@@ -7,7 +7,7 @@ import PerformanceTrendChart from "./components/performanceTrendChart";
 import { StudentDataTable } from "./components/studentDataTable";
 import TopFivePerformers from "./components/topFivePerformers";
 import CardComponent from "@/app/utils/card";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ValueShimmer } from "@/app/components/shimmers/valueShimmer";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
@@ -154,12 +154,55 @@ const StudentPerformancePageSkeleton = () => (
   </main>
 );
 
+const StudentProgressDataSkeleton = () => (
+  <div aria-label="Loading student progress data" className="animate-pulse">
+    <article className="mb-4 grid gap-3 lg:grid-cols-[68%_32%]">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="h-[170px] rounded-[20px] bg-gray-200" />
+        ))}
+      </div>
+      <div className="h-[250px] rounded-[20px] bg-gray-100" />
+    </article>
+    <div className="overflow-hidden rounded-[20px] bg-white shadow-sm">
+      <div className="flex gap-5 border-b border-gray-100 px-6 py-6">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <div key={index} className="h-5 flex-1 rounded bg-gray-100" />
+        ))}
+      </div>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div key={index} className="flex gap-5 border-b border-gray-50 px-6 py-5">
+          {Array.from({ length: 8 }).map((__, column) => (
+            <div key={column} className="h-5 flex-1 rounded bg-gray-100" />
+          ))}
+        </div>
+      ))}
+    </div>
+    <div className="mt-5 grid gap-4 pb-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+      <div className="h-[300px] rounded-[20px] bg-gray-100" />
+      <div className="h-[300px] rounded-[20px] bg-gray-100" />
+    </div>
+  </div>
+);
+
 export default function Page() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeView = getSearchView(searchParams.get("view"));
   const selectedResultId = searchParams.get("resultId");
+  const requestedEducationId = Number(searchParams.get("educationId")) || null;
+  const requestedYearId = Number(searchParams.get("yearId")) || null;
+  const requestedSubjectId = Number(searchParams.get("subjectId")) || null;
+  const requestedSectionId = Number(searchParams.get("sectionId")) || null;
+  const requestedFacultyId = Number(searchParams.get("facultyId")) || null;
+  const restoredFiltersRef = useRef({
+    education: false,
+    year: false,
+    subject: false,
+    section: false,
+    faculty: false,
+  });
   const {
     loading: adminLoading,
     collegeId,
@@ -199,32 +242,92 @@ export default function Page() {
     semesters,
     sections,
     subjects,
+    faculty,
     selectedBranch,
     selectedYear,
     selectedSemester,
     selectedSection,
     selectedSubject,
+    selectedFaculty,
     activeBranchIds,
     activeYearIds,
     activeSemesterIds,
     activeSectionIds,
     activeSubjectIds,
+    activeFacultyIds,
     selectBranch,
     selectYear,
     selectSemester,
     selectSection,
     selectSubject,
+    selectFaculty,
   } = useStudentProgressFilters({
     collegeId,
     collegeEducationId: currentEducationId,
+    isSchool,
   });
+
+  useEffect(() => {
+    if (
+      !restoredFiltersRef.current.education &&
+      requestedEducationId &&
+      educations.length
+    ) {
+      const requested = educations.find((item) => item.collegeEducationId === requestedEducationId);
+      if (requested) selectEducation(requested);
+      restoredFiltersRef.current.education = true;
+    }
+  }, [currentEducationId, educations, requestedEducationId]);
+
+  useEffect(() => {
+    if (!restoredFiltersRef.current.year && requestedYearId && years.length) {
+      selectYear(years.find((item) => item.collegeAcademicYearId === requestedYearId) ?? null);
+      restoredFiltersRef.current.year = true;
+    }
+  }, [requestedYearId, selectedYear, years]);
+
+  useEffect(() => {
+    if (
+      !restoredFiltersRef.current.subject &&
+      requestedSubjectId &&
+      (!requestedYearId || !!selectedYear) &&
+      subjects.length
+    ) {
+      selectSubject(subjects.find((item) => item.collegeSubjectId === requestedSubjectId) ?? null);
+      restoredFiltersRef.current.subject = true;
+    }
+  }, [requestedSubjectId, selectedSubject, subjects]);
+
+  useEffect(() => {
+    if (
+      !restoredFiltersRef.current.section &&
+      requestedSectionId &&
+      (!requestedSubjectId || !!selectedSubject) &&
+      sections.length
+    ) {
+      selectSection(sections.find((item) => item.collegeSectionsId === requestedSectionId) ?? null);
+      restoredFiltersRef.current.section = true;
+    }
+  }, [requestedSectionId, sections, selectedSection]);
+
+  useEffect(() => {
+    if (
+      !restoredFiltersRef.current.faculty &&
+      requestedFacultyId &&
+      (!requestedSectionId || !!selectedSection) &&
+      faculty.length
+    ) {
+      selectFaculty(faculty.find((item) => item.facultyId === requestedFacultyId) ?? null);
+      restoredFiltersRef.current.faculty = true;
+    }
+  }, [faculty, requestedFacultyId, selectedFaculty]);
 
   const isYearEnabled = isSchool ? !!currentEducationId : !!selectedBranch;
   const isSemesterEnabled = isSchool ? false : (!!selectedYear && currentEducationType !== "Inter");
   const isSectionEnabled = isSchool
-    ? !!selectedYear
+    ? !!selectedYear && subjects.length > 0
     : (currentEducationType === "Inter" ? !!selectedYear : !!selectedSemester);
-  const isSubjectEnabled = !!selectedSection;
+  const isSubjectEnabled = isSchool ? !!selectedYear : !!selectedSection;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -243,6 +346,7 @@ export default function Page() {
     selectedSemester,
     selectedSection,
     selectedSubject,
+    selectedFaculty,
   ]);
 
   useEffect(() => {
@@ -255,6 +359,7 @@ export default function Page() {
       !activeSectionIds.length
     ) {
       setSummary(defaultSummary);
+      setHasLoadedOnce(true);
       setSummaryLoading(false);
       return;
     }
@@ -268,11 +373,13 @@ export default function Page() {
         const data = await getAdminStudentProgressSummary({
           collegeId,
           collegeEducationId: currentEducationId,
+          isSchool,
           collegeBranchIds: activeBranchIds,
           academicYearIds: activeYearIds,
           semesterIds: activeSemesterIds,
           sectionIds: activeSectionIds,
           subjectIds: activeSubjectIds,
+          facultyIds: activeFacultyIds,
           departmentLabel: selectedBranch?.collegeBranchCode ?? "ALL",
           subjectLabel: selectedSubject?.subjectName ?? "ALL",
           page: currentPage,
@@ -306,16 +413,23 @@ export default function Page() {
     filtersLoading,
     collegeId,
     currentEducationId,
+    isSchool,
     activeBranchIds,
     activeYearIds,
     activeSemesterIds,
     activeSectionIds,
     activeSubjectIds,
+    activeFacultyIds,
     selectedBranch,
     selectedSubject,
+    selectedFaculty,
     currentPage,
     debouncedSearchQuery,
   ]);
+
+  useEffect(() => {
+    if (hasLoadedOnce && filtersLoading) setSummaryLoading(true);
+  }, [filtersLoading, hasLoadedOnce]);
 
   const cardData = [
     {
@@ -379,6 +493,7 @@ export default function Page() {
   const detailQuery = new URLSearchParams(
     Object.entries({
       educationType: currentEducationType ?? "",
+      educationId: currentEducationId?.toString() ?? "",
       branchId: selectedBranch?.collegeBranchId?.toString() ?? "",
       branch: selectedBranch?.collegeBranchCode ?? "ALL",
       yearId: selectedYear?.collegeAcademicYearId?.toString() ?? "",
@@ -389,6 +504,8 @@ export default function Page() {
       section: selectedSection?.collegeSections ?? "ALL",
       subjectId: selectedSubject?.collegeSubjectId?.toString() ?? "",
       subject: selectedSubject?.subjectName ?? "ALL",
+      facultyId: selectedFaculty?.facultyId?.toString() ?? "",
+      faculty: selectedFaculty?.fullName ?? "ALL",
     }).filter(([, value]) => value !== ""),
   ).toString();
 
@@ -439,9 +556,11 @@ export default function Page() {
     router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
   };
 
-  const shouldShowSkeleton =
-    adminLoading ||
-    (!hasLoadedOnce && (filtersLoading || summaryLoading));
+  // Keep the page shell and filters mounted while dropdown-dependent data is
+  // loading. Only the initial admin context uses the full-page skeleton.
+  const shouldShowSkeleton = adminLoading;
+  const dynamicDataLoading =
+    !hasLoadedOnce || filtersLoading || summaryLoading;
 
   if (shouldShowSkeleton) {
     return <StudentPerformancePageSkeleton />;
@@ -621,7 +740,7 @@ export default function Page() {
             />
           )}
 
-          <FilterDropdown
+          {!isSchool && <FilterDropdown
             label="Section"
             value={selectedSection?.collegeSectionsId?.toString() ?? "All"}
             placeholder="All"
@@ -649,7 +768,7 @@ export default function Page() {
                   (section) => String(section.collegeSectionsId) === value,
                 )?.collegeSections ?? value
             }
-          />
+          />}
 
           <FilterDropdown
             label="Subject"
@@ -679,6 +798,62 @@ export default function Page() {
                   ?.subjectName ?? value
             }
           />
+
+          {isSchool && <FilterDropdown
+            label="Section"
+            value={selectedSection?.collegeSectionsId?.toString() ?? "All"}
+            placeholder="All"
+            disabled={!isSectionEnabled}
+            options={[
+              "All",
+              ...sections.map((section) => String(section.collegeSectionsId)),
+            ]}
+            onChange={(value) => {
+              if (value === "All") {
+                selectSection(null);
+                return;
+              }
+
+              const section = sections.find(
+                (item) => item.collegeSectionsId === Number(value),
+              );
+              selectSection(section ?? null);
+            }}
+            widthClassName="w-full"
+            displayModifier={(value) =>
+              value === "All"
+                ? "All"
+                : sections.find(
+                  (section) => String(section.collegeSectionsId) === value,
+                )?.collegeSections ?? value
+            }
+          />}
+
+          {isSchool && (
+            <FilterDropdown
+              label="Faculty"
+              value={selectedFaculty?.facultyId?.toString() ?? "All"}
+              placeholder="All"
+              disabled={!selectedSection || faculty.length === 0}
+              options={["All", ...faculty.map((item) => String(item.facultyId))]}
+              onChange={(value) => {
+                if (value === "All") {
+                  selectFaculty(null);
+                  return;
+                }
+                selectFaculty(
+                  faculty.find((item) => item.facultyId === Number(value)) ?? null,
+                );
+              }}
+              widthClassName="w-full"
+              displayModifier={(value) =>
+                value === "All"
+                  ? "All"
+                  : faculty.find((item) => String(item.facultyId) === value)
+                    ?.fullName ?? value
+              }
+            />
+          )}
         </div>
 
       </div>
@@ -705,6 +880,9 @@ export default function Page() {
       </article> */}
 
 
+      {dynamicDataLoading ? (
+        <StudentProgressDataSkeleton />
+      ) : (<>
       <article className="mb-4 grid items-start gap-2 lg:grid-cols-[68%_32%]">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           {cardData.map((item, index) => (
@@ -750,6 +928,7 @@ export default function Page() {
           </div>
         </div>
       </section>
+      </>)}
     </main>
   );
 }

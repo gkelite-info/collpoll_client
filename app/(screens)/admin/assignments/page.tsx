@@ -3,7 +3,7 @@ import {
   MagnifyingGlass,
 } from "@phosphor-icons/react";
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   fetchAdminAllEducationStats,
   fetchAdminDepartmentStats,
@@ -24,21 +24,28 @@ import { AssignmentPageShimmer } from "./components/shimmers/AssignmentPageShimm
 import { Pagination } from "../academic-setup/components/pagination";
 import { FilterDropdown } from "../academics/components/filterDropdown";
 
-// FilterDropdown removed as we will use inline selects matching Calendar UI
-let rememberedEducationId = "All";
-
 const AssignmentPage = () => {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const activeTab = searchParams.get("tab") || "assignments";
 
-  const [search, setSearch] = useState("");
-  const [deptFilter, setDeptFilter] = useState("All");
-  const [yearFilter, setYearFilter] = useState("All");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [deptFilter, setDeptFilter] = useState(
+    searchParams.get("branch") || "All",
+  );
+  const [yearFilter, setYearFilter] = useState(
+    searchParams.get("classYear") || "All",
+  );
+  const savedPage = Number(searchParams.get("assignmentsPage"));
+  const [currentPage, setCurrentPage] = useState(
+    Number.isInteger(savedPage) && savedPage > 0 ? savedPage : 1,
+  );
   const [loading, setLoading] = useState(true);
   const [dataList, setDataList] = useState<any[]>([]);
   const { collegeId, collegeEducationType: defaultEducationType } = useAdmin();
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(
+    searchParams.get("search") || "",
+  );
   const [totalRecords, setTotalRecords] = useState(0);
   const [uniqueDepts, setUniqueDepts] = useState<string[]>(["All"]);
   const [uniqueYears, setUniqueYears] = useState<string[]>(["All"]);
@@ -47,7 +54,7 @@ const AssignmentPage = () => {
 
   const [educations, setEducations] = useState<any[]>([]);
   const [educationFilter, setEducationFilter] = useState(
-    rememberedEducationId,
+    searchParams.get("education") || "All",
   );
 
   useEffect(() => {
@@ -75,6 +82,13 @@ const AssignmentPage = () => {
     activeEducation?.collegeEducationType ??
     (educationFilter === "All" ? "" : defaultEducationType);
   const isSchool = isSchoolEducation(currentEducationType);
+  const isSchoolContext =
+    isSchool ||
+    (educationFilter === "All" &&
+      educations.length > 0 &&
+      educations.every((education) =>
+        isSchoolEducation(education.collegeEducationType),
+      ));
   const isInter = currentEducationType === "Inter";
   const isWaitingForEducation =
     !userId || !collegeId || educations.length === 0;
@@ -86,8 +100,20 @@ const AssignmentPage = () => {
   }, [search]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, deptFilter, yearFilter, educationFilter]);
+    const query = new URLSearchParams();
+    if (activeTab !== "assignments") query.set("tab", activeTab);
+    if (educationFilter !== "All") query.set("education", educationFilter);
+    if (deptFilter !== "All") query.set("branch", deptFilter);
+    if (yearFilter !== "All") query.set("classYear", yearFilter);
+    if (debouncedSearch) query.set("search", debouncedSearch);
+    if (currentPage > 1) query.set("assignmentsPage", currentPage.toString());
+
+    const queryString = query.toString();
+    router.replace(
+      queryString ? `/admin/assignments?${queryString}` : "/admin/assignments",
+      { scroll: false },
+    );
+  }, [activeTab, educationFilter, deptFilter, yearFilter, debouncedSearch, currentPage, router]);
 
   useEffect(() => {
     if (!userId || !collegeId || educations.length === 0) return;
@@ -171,7 +197,10 @@ const AssignmentPage = () => {
             type="text"
             placeholder="Search here......"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
             className="w-full text-black h-11 pl-5 pr-12 rounded-full bg-[#EAEAEA] text-sm outline-none"
           />
           <MagnifyingGlass
@@ -186,10 +215,10 @@ const AssignmentPage = () => {
             label="Education Type"
             value={educationFilter}
             onChange={(val) => {
-              rememberedEducationId = val;
               setEducationFilter(val);
               setDeptFilter("All");
               setYearFilter("All");
+              setCurrentPage(1);
             }}
             options={["All", ...educations.map((e) => e.collegeEducationId.toString())]}
             displayModifier={(val) => {
@@ -199,19 +228,25 @@ const AssignmentPage = () => {
             }}
           />
 
-          {!isSchool && (
+          {!isSchoolContext && (
             <FilterDropdown
               label={isInter ? "Group" : "Branch"}
               value={deptFilter}
-              onChange={setDeptFilter}
+              onChange={(value) => {
+                setDeptFilter(value);
+                setCurrentPage(1);
+              }}
               options={uniqueDepts}
             />
           )}
 
           <FilterDropdown
-            label={isSchool ? "Class" : "Year"}
+            label={isSchoolContext ? "Class" : "Year"}
             value={yearFilter}
-            onChange={setYearFilter}
+            onChange={(value) => {
+              setYearFilter(value);
+              setCurrentPage(1);
+            }}
             options={uniqueYears}
           />
         </div>
