@@ -9,6 +9,22 @@ import AttendanceStatusCardShimmer from "../shimmers/AttendanceStatusCardShimmer
 import AttendanceTableShimmer from "../shimmers/AttendanceTableShimmer";
 import { getAttendanceData } from "@/lib/helpers/myAttendance/getAttendanceData";
 import { getAttendanceMonthlyStats } from "@/lib/helpers/myAttendance/getAttendanceMonthlyStats";
+import { getFacultyAssignedSubjects } from "@/lib/helpers/faculty/getFacultyAssignedSubjects";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+
+type SubjectOption = {
+  id: number;
+  name: string;
+  academicYearIds: number[];
+};
+
+type AssignedSubjectRow = {
+  college_subjects:
+    | { collegeSubjectId: number; subjectName: string }
+    | Array<{ collegeSubjectId: number; subjectName: string }>
+    | null;
+  collegeAcademicYearId: number;
+};
 
 const mockProfile: FacultyProfile = {
   name: "Harsha Sharma",
@@ -52,6 +68,7 @@ const AttendancePage = () => {
 
   const { facultyId, email, collegeBranchCode, profilePhoto, mobile, fullName, dateOfJoining,
     professionalExperienceYears, collegeEducationType, userId, identifierId } = useUser()
+  const { collegeAcademicYears, collegeAcademicYear } = useFaculty();
   const [profile, setProfile] = useState<FacultyProfile | null>(null);
   const [infoLoading, setInfoLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -66,8 +83,45 @@ const AttendancePage = () => {
   const [rawStats, setRawStats] = useState<AttendanceStats | null>(null);
   const [allMonthRecords, setAllMonthRecords] = useState<AttendanceRecord[]>([]);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
+  const [subjects, setSubjects] = useState<SubjectOption[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<number | null>(null);
 
   const itemsPerPage = 15
+
+  useEffect(() => {
+    if (!facultyId) return;
+
+    getFacultyAssignedSubjects({ facultyId })
+      .then((rows) => {
+        const uniqueSubjects = new Map<number, SubjectOption>();
+        (rows as AssignedSubjectRow[]).forEach((row) => {
+          const subject = Array.isArray(row.college_subjects)
+            ? row.college_subjects[0]
+            : row.college_subjects;
+          if (subject?.collegeSubjectId && subject?.subjectName) {
+            const existing = uniqueSubjects.get(subject.collegeSubjectId);
+            if (existing) {
+              if (!existing.academicYearIds.includes(row.collegeAcademicYearId)) {
+                existing.academicYearIds.push(row.collegeAcademicYearId);
+              }
+            } else {
+              uniqueSubjects.set(subject.collegeSubjectId, {
+                id: subject.collegeSubjectId,
+                name: subject.subjectName,
+                academicYearIds: [row.collegeAcademicYearId],
+              });
+            }
+          }
+        });
+        setSubjects(
+          Array.from(uniqueSubjects.values()).sort((a, b) =>
+            a.name.localeCompare(b.name),
+          ),
+        );
+      })
+      .catch(() => setSubjects([]));
+  }, [facultyId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -180,6 +234,8 @@ const AttendancePage = () => {
           year: selectedYear,
           page: currentPage,
           limit: itemsPerPage,
+          subjectId: selectedSubjectId ?? undefined,
+          academicYearId: selectedAcademicYearId ?? undefined,
         });
 
         setRecords(res.records);
@@ -194,7 +250,14 @@ const AttendancePage = () => {
     };
 
     fetchAttendance();
-  }, [userId, selectedMonth, selectedYear, currentPage]);
+  }, [
+    userId,
+    selectedMonth,
+    selectedYear,
+    currentPage,
+    selectedAcademicYearId,
+    selectedSubjectId,
+  ]);
 
   useEffect(() => {
     if (!facultyId || !identifierId) return;
@@ -228,6 +291,7 @@ const AttendancePage = () => {
           <FacultyInfoCard
             profile={{ ...profile, collegeEducationType }}
             loading={false}
+            academicYear={collegeAcademicYear}
           />
         }
         {(statsLoading || !stats) ? <AttendanceStatusCardShimmer /> : <AttendanceStatusCard stats={stats} />}
@@ -250,6 +314,25 @@ const AttendancePage = () => {
           totalItems={totalItems}
           currentPage={currentPage}
           onPageChange={setCurrentPage}
+          academicYears={collegeAcademicYears.map((item) => ({
+            id: item.collegeAcademicYearId,
+            name: item.collegeAcademicYear,
+          }))}
+          selectedAcademicYearId={selectedAcademicYearId}
+          onAcademicYearChange={(academicYearId) => {
+            setSelectedAcademicYearId(academicYearId);
+            setSelectedSubjectId(null);
+            setCurrentPage(1);
+          }}
+          subjects={subjects.filter(
+            (subject) =>
+              !selectedAcademicYearId || subject.academicYearIds.includes(selectedAcademicYearId),
+          )}
+          selectedSubjectId={selectedSubjectId}
+          onSubjectChange={(subjectId) => {
+            setSelectedSubjectId(subjectId);
+            setCurrentPage(1);
+          }}
           onMonthYearChange={(m, y) => {
             setSelectedMonth(m);
             setSelectedYear(y);

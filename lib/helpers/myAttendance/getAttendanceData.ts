@@ -8,6 +8,8 @@ export interface AttendanceQueryParams {
     year: number;
     page?: number;
     limit?: number;
+    subjectId?: number;
+    academicYearId?: number;
 }
 
 export async function getAttendanceData({
@@ -16,12 +18,20 @@ export async function getAttendanceData({
     year,
     page = 1,
     limit = 15,
+    subjectId,
+    academicYearId,
 }: AttendanceQueryParams) {
     try {
         const monthName = MONTH_MAP[month - 1] || "JAN";
         
         // Use the centralized optimized dashboard data fetcher
-        const { records } = await fetchFullAttendanceDashboardData(userId, monthName, year.toString());
+        const { records } = await fetchFullAttendanceDashboardData(
+            userId,
+            monthName,
+            year.toString(),
+            subjectId,
+            academicYearId,
+        );
         
         const from = (page - 1) * limit;
         const to = from + limit;

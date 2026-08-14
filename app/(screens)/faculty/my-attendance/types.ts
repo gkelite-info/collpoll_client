@@ -40,6 +40,7 @@ export interface AnalyticsFacultyProfile {
   leavesTaken: number;
   workingDays: number;
   collegeEducationType? : string;
+  academicYear?: string | null;
 }
 
 export interface ChartDataPoint {
