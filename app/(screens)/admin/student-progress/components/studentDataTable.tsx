@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  CaretLeftIcon,
-  CaretRight,
   MagnifyingGlass,
   X,
 } from "@phosphor-icons/react";
@@ -11,6 +9,7 @@ import { usePathname } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { Cell, Pie, PieChart } from "recharts";
 import { Avatar } from "@/app/utils/Avatar";
+import { Pagination } from "../../academic-setup/components/pagination";
 
 import type { AdminStudentProgressRow } from "@/lib/helpers/admin/studentProgress/getAdminStudentProgressSummary";
 
@@ -78,7 +77,6 @@ export function StudentDataTable({
   searchQuery,
   onSearchQueryChange,
   currentPage,
-  totalPages,
   totalRecords,
   onPageChange,
   detailQuery = "",
@@ -121,8 +119,8 @@ export function StudentDataTable({
         </h2>
       </div>
 
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-xl">
-        <div className="max-h-125 overflow-y-auto">
+      <div className="flex h-[500px] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl">
+        <div className="custom-scrollbar min-h-0 flex-1 overflow-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="sticky top-0 z-10 bg-[#F1F3F2]">
               <tr>
@@ -237,6 +235,15 @@ export function StudentDataTable({
                       <td className="whitespace-nowrap px-4 py-1 text-sm font-medium">
                         <Link
                           href={href}
+                          onClick={() => {
+                            if (detailQuery) {
+                              window.history.replaceState(
+                                window.history.state,
+                                "",
+                                `${pathname}?${detailQuery}`,
+                              );
+                            }
+                          }}
                           className="text-gray-500 transition-colors hover:text-gray-800"
                         >
                           View
@@ -261,60 +268,15 @@ export function StudentDataTable({
           </table>
         </div>
 
-        {totalPages > 1 ? (
-          <div className="flex items-center justify-between gap-4 border-t border-gray-100 px-4 py-4">
-            <p className="text-sm text-[#6B7280]">
-              Showing page {currentPage} of {totalPages} ({totalRecords} records)
-            </p>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg border ${
-                  currentPage === 1
-                    ? "cursor-not-allowed border-gray-200 text-gray-300"
-                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <CaretLeftIcon size={16} weight="bold" />
-              </button>
-
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-                (page) => (
-                  <button
-                    key={page}
-                    type="button"
-                    onClick={() => onPageChange(page)}
-                    className={`h-9 min-w-9 rounded-lg px-3 text-sm font-semibold ${
-                      currentPage === page
-                        ? "bg-[#16284F] text-white"
-                        : "border border-gray-300 text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ),
-              )}
-
-              <button
-                type="button"
-                onClick={() =>
-                  onPageChange(Math.min(totalPages, currentPage + 1))
-                }
-                disabled={currentPage === totalPages}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg border ${
-                  currentPage === totalPages
-                    ? "cursor-not-allowed border-gray-200 text-gray-300"
-                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <CaretRight size={16} weight="bold" />
-              </button>
-            </div>
-          </div>
-        ) : null}
+        <div className="shrink-0">
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalRecords}
+            itemsPerPage={10}
+            onPageChange={onPageChange}
+            alwaysShow
+          />
+        </div>
       </div>
     </div>
   );

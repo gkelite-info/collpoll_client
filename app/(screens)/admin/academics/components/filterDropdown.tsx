@@ -88,7 +88,7 @@ export const FilterDropdown = ({
             width: Math.max(140, rect.width),
             zIndex: 9999
           }}
-          className="filter-dropdown-menu bg-white rounded-[12px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 overflow-hidden py-1 max-h-60 overflow-y-auto"
+          className="filter-dropdown-menu custom-scrollbar bg-white rounded-[12px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 py-1 max-h-60 overflow-y-auto"
         >
           {finalOptions.map((opt, index) => {
             const isSelected = String(opt) === String(selectedValue);

@@ -160,7 +160,7 @@ export default function AssignmentsRight({ facultyId, collegeSubjectId, selected
 
   return (
     <>
-      <div className="w-[32%] p-2 flex flex-col">
+      <div className="h-full w-[32%] overflow-y-auto p-2 flex flex-col">
         <CourseScheduleCard isVisibile={false} />
         <WorkWeekCalendar 
           activeDate={selectedDate}

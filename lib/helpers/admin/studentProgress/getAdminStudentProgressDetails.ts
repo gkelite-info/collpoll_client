@@ -20,6 +20,8 @@ type AdminStudentProgressDetailsScope = {
   semesterIds: number[];
   sectionIds: number[];
   subjectIds: number[];
+  facultyIds?: number[];
+  isSchool?: boolean;
   departmentLabel?: string | null;
 };
 
@@ -101,6 +103,22 @@ type AttendanceRecordRow = {
         facultyId: number | null;
         type: string | null;
         date: string | null;
+        is_deleted: boolean | null;
+      }[]
+    | null;
+  bulk_event:
+    | {
+        subject: number | null;
+        facultyId: number | null;
+        type: string | null;
+        fromDate: string | null;
+        is_deleted: boolean | null;
+      }
+    | {
+        subject: number | null;
+        facultyId: number | null;
+        type: string | null;
+        fromDate: string | null;
         is_deleted: boolean | null;
       }[]
     | null;
@@ -479,12 +497,25 @@ export async function getAdminStudentProgressDetails(
   if (historyError) throw historyError;
   if (!historyRow) return null;
 
+  let sectionMatches = scope.sectionIds.includes(historyRow.collegeSectionsId);
+  if (!sectionMatches && scope.isSchool) {
+    const { data: selectedSectionRows, error: selectedSectionsError } = await supabase
+      .from("college_sections")
+      .select("collegeSections")
+      .in("collegeSectionsId", scope.sectionIds);
+    if (selectedSectionsError) throw selectedSectionsError;
+    const selectedNames = new Set(
+      (selectedSectionRows ?? []).map((row) => row.collegeSections),
+    );
+    sectionMatches = selectedNames.has(getFirst(historyRow.college_sections)?.collegeSections ?? "");
+  }
+
   if (
     !scope.academicYearIds.includes(historyRow.collegeAcademicYearId) ||
     (scope.semesterIds.length > 0 &&
       historyRow.collegeSemesterId !== null &&
       !scope.semesterIds.includes(historyRow.collegeSemesterId)) ||
-    !scope.sectionIds.includes(historyRow.collegeSectionsId)
+    !sectionMatches
   ) {
     return null;
   }
@@ -519,6 +550,9 @@ export async function getAdminStudentProgressDetails(
 
   if (scope.subjectIds.length) {
     facultySectionsQuery = facultySectionsQuery.in("collegeSubjectId", scope.subjectIds);
+  }
+  if (scope.facultyIds?.length) {
+    facultySectionsQuery = facultySectionsQuery.in("facultyId", scope.facultyIds);
   }
 
   if (historyRow.collegeAcademicYearId === null) {
@@ -564,6 +598,9 @@ export async function getAdminStudentProgressDetails(
 
   if (scope.subjectIds.length) {
     weightageQuery = weightageQuery.in("collegeSubjectId", scope.subjectIds);
+  }
+  if (scope.facultyIds?.length) {
+    weightageQuery = weightageQuery.in("facultyId", scope.facultyIds);
   }
 
   if (historyRow.collegeSectionsId === null) {
@@ -621,6 +658,9 @@ export async function getAdminStudentProgressDetails(
   if (scope.subjectIds.length) {
     assignmentsQuery = assignmentsQuery.in("subjectId", scope.subjectIds);
   }
+  if (scope.facultyIds?.length) {
+    assignmentsQuery = assignmentsQuery.in("createdBy", scope.facultyIds);
+  }
 
   if (historyRow.collegeAcademicYearId === null) {
     assignmentsQuery = assignmentsQuery.is("collegeAcademicYearId", null);
@@ -642,6 +682,9 @@ export async function getAdminStudentProgressDetails(
 
   if (scope.subjectIds.length) {
     quizzesQuery = quizzesQuery.in("collegeSubjectId", scope.subjectIds);
+  }
+  if (scope.facultyIds?.length) {
+    quizzesQuery = quizzesQuery.in("facultyId", scope.facultyIds);
   }
 
   if (historyRow.collegeAcademicYearId === null) {
@@ -695,11 +738,18 @@ export async function getAdminStudentProgressDetails(
       .select(
         `
         status,
-        calendar_event:calendarEventId (
+        calendar_event:calendar_event (
           subject,
           facultyId,
           type,
           date,
+          is_deleted
+        ),
+        bulk_event:bulk_calendar_events (
+          subject,
+          facultyId,
+          type,
+          fromDate,
           is_deleted
         )
       `,
@@ -843,7 +893,10 @@ export async function getAdminStudentProgressDetails(
 
   const relevantAttendance = ((attendanceResult.data ?? []) as AttendanceRecordRow[]).filter(
     (record) => {
-      const event = getFirst(record.calendar_event);
+      const singleEvent = getFirst(record.calendar_event);
+      const bulkEvent = getFirst(record.bulk_event);
+      const event = singleEvent || bulkEvent;
+      const eventDate = singleEvent ? singleEvent.date : bulkEvent?.fromDate;
 
       return (
         !!event &&
@@ -853,8 +906,8 @@ export async function getAdminStudentProgressDetails(
         scope.subjectIds.includes(event.subject) &&
         event.type === "class" &&
         event.is_deleted === false &&
-        !!event.date &&
-        event.date <= today &&
+        !!eventDate &&
+        eventDate <= today &&
         !isCancelledStatus(record.status) &&
         isConductedStatus(record.status)
       );
@@ -868,7 +921,7 @@ export async function getAdminStudentProgressDetails(
   const attendanceBySubject = new Map<number, { attended: number; total: number }>();
 
   for (const record of relevantAttendance) {
-    const event = getFirst(record.calendar_event);
+    const event = getFirst(record.calendar_event) || getFirst(record.bulk_event);
     if (!event?.subject) continue;
 
     const subjectStats = attendanceBySubject.get(event.subject) ?? {

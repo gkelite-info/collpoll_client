@@ -12,6 +12,7 @@ import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagi
 import { DiscussionDeptCardSkeleton } from "../components/shimmers/DiscussionDeptCardSkeleton";
 import { DiscussionCourseCardSkeleton } from "../components/shimmers/courseCardSkeleton";
 import { useUser } from "@/app/utils/context/UserContext";
+import { FilterDropdown } from "../../academics/components/filterDropdown";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -23,45 +24,76 @@ const DepartmentSubjectPage = () => {
 
   const departmentId = decodeURIComponent(params.departmentId as string);
   const year = searchParams.get("year") || "1";
+  const educationIdParam = searchParams.get("educationId");
+  const educationId = educationIdParam ? Number(educationIdParam) : undefined;
+  const savedPage = Number(searchParams.get("detailsPage"));
 
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(
+    Number.isInteger(savedPage) && savedPage > 0 ? savedPage : 1,
+  );
   const [totalCount, setTotalCount] = useState(0);
+  const [subjectFilter, setSubjectFilter] = useState(
+    searchParams.get("subject") || "All",
+  );
+  const [facultyFilter, setFacultyFilter] = useState(
+    searchParams.get("faculty") || "All",
+  );
+  const [subjectOptions, setSubjectOptions] = useState<string[]>(["All"]);
+  const [facultyOptions, setFacultyOptions] = useState<string[]>(["All"]);
+
+  const persistFilters = (
+    subject: string,
+    faculty: string,
+    page: number,
+  ) => {
+    const query = new URLSearchParams(searchParams.toString());
+    if (subject === "All") query.delete("subject");
+    else query.set("subject", subject);
+    if (faculty === "All") query.delete("faculty");
+    else query.set("faculty", faculty);
+    if (page === 1) query.delete("detailsPage");
+    else query.set("detailsPage", page.toString());
+    router.replace(
+      `/admin/assignments/${encodeURIComponent(departmentId)}?${query.toString()}`,
+      { scroll: false },
+    );
+  };
 
   useEffect(() => {
     if (!userId) return;
     const loadData = async () => {
       try {
-        if (currentPage === 1 && courses.length === 0) {
-          setLoading(true);
-        } else {
-          setIsFetchingMore(true);
-        }
+        setLoading(true);
 
         const adminCtx = await fetchAdminContext(userId);
 
-        const { data, count } = await fetchAdminSubjectDetails(
+        const { data, count, subjectOptions, facultyOptions } =
+          await fetchAdminSubjectDetails(
           adminCtx.collegeId,
           departmentId,
           year,
           currentPage,
           ITEMS_PER_PAGE,
+          educationId,
+          subjectFilter,
+          facultyFilter,
         );
 
         setCourses(data || []);
         setTotalCount(count || 0);
+        setSubjectOptions(subjectOptions || ["All"]);
+        setFacultyOptions(facultyOptions || ["All"]);
       } catch (err) {
         console.error("Fetch Error:", err);
       } finally {
         setLoading(false);
-        setIsFetchingMore(false);
       }
     };
 
     loadData();
-  }, [departmentId, year, currentPage, userId]);
+  }, [departmentId, year, currentPage, userId, educationId, subjectFilter, facultyFilter]);
 
   return (
     <div className="flex flex-col m-4 relative min-h-[calc(100vh-120px)]">
@@ -90,6 +122,32 @@ const DepartmentSubjectPage = () => {
         </div>
       </div>
 
+      <div className="mb-5 flex justify-end">
+        <div className="flex flex-wrap gap-4 rounded-xl border border-gray-100 bg-white px-4 py-2 shadow-sm">
+          <FilterDropdown
+            label="Subject"
+            value={subjectFilter}
+            onChange={(value) => {
+              setSubjectFilter(value);
+              setFacultyFilter("All");
+              setCurrentPage(1);
+              persistFilters(value, "All", 1);
+            }}
+            options={subjectOptions}
+          />
+          <FilterDropdown
+            label="Faculty"
+            value={facultyFilter}
+            onChange={(value) => {
+              setFacultyFilter(value);
+              setCurrentPage(1);
+              persistFilters(subjectFilter, value, 1);
+            }}
+            options={facultyOptions}
+          />
+        </div>
+      </div>
+
       <div className="flex flex-col flex-1 relative">
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
@@ -102,15 +160,9 @@ const DepartmentSubjectPage = () => {
           </div>
         ) : (
           <>
-            {isFetchingMore && (
-              <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center backdrop-blur-[1px] rounded-lg">
-                <div className="w-8 h-8 border-4 border-[#43C17A] border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            )}
-
             {courses.length === 0 ? (
               <div className="bg-white p-20 rounded-xl text-center text-gray-400 border border-dashed">
-                No active subjects found for this branch and year.
+                No active subjects found for this class or branch and year.
               </div>
             ) : (
               <>
@@ -126,7 +178,10 @@ const DepartmentSubjectPage = () => {
                       currentPage={currentPage}
                       totalItems={totalCount}
                       itemsPerPage={ITEMS_PER_PAGE}
-                      onPageChange={setCurrentPage}
+                      onPageChange={(page) => {
+                        setCurrentPage(page);
+                        persistFilters(subjectFilter, facultyFilter, page);
+                      }}
                       alwaysShow
                     />
                   </div>

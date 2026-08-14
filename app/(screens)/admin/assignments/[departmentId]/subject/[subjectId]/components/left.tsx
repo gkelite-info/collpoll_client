@@ -130,7 +130,7 @@ export default function AssignmentsLeft({
           Reviewing assignments created by the instructor.
         </p>
       </div>
-      <div className="h-[114.6vh] overflow-y-auto pr-1 pb-4">
+      <div className="flex-1 min-h-0 overflow-y-auto pr-1 pb-4">
         {isLoading ? (
           <>
             <AdminAssignmentCardShimmer />
@@ -151,13 +151,15 @@ export default function AssignmentsLeft({
         )}
       </div>
       {!isLoading && totalCount > 0 && (
-        <Pagination
-          currentPage={page}
-          totalItems={totalCount}
-          itemsPerPage={pageSize}
-          onPageChange={(p: number) => setPage(p)}
-          alwaysShow
-        />
+        <div className="shrink-0">
+          <Pagination
+            currentPage={page}
+            totalItems={totalCount}
+            itemsPerPage={pageSize}
+            onPageChange={(p: number) => setPage(p)}
+            alwaysShow
+          />
+        </div>
       )}
     </div>
   );

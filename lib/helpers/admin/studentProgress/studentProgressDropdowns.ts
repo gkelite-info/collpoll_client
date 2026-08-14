@@ -27,6 +27,73 @@ export type StudentProgressSubject = {
   collegeSemesterId: number | null;
 };
 
+export type StudentProgressFaculty = {
+  facultyId: number;
+  fullName: string;
+};
+
+export async function fetchStudentProgressFaculty(
+  collegeId: number,
+  collegeEducationId: number,
+  academicYearIds: number[],
+  subjectIds: number[],
+  sectionIds: number[],
+) {
+  if (!academicYearIds.length || !subjectIds.length || !sectionIds.length) return [];
+
+  const { data: selectedSections, error: selectedSectionsError } = await supabase
+    .from("college_sections")
+    .select("collegeSections")
+    .in("collegeSectionsId", sectionIds);
+  if (selectedSectionsError) throw selectedSectionsError;
+
+  const sectionNames = Array.from(
+    new Set((selectedSections ?? []).map((row) => row.collegeSections).filter(Boolean)),
+  );
+  if (!sectionNames.length) return [];
+
+  const { data: matchingSections, error: matchingSectionsError } = await supabase
+    .from("college_sections")
+    .select("collegeSectionsId")
+    .eq("collegeId", collegeId)
+    .eq("collegeEducationId", collegeEducationId)
+    .in("collegeAcademicYearId", academicYearIds)
+    .in("collegeSections", sectionNames);
+  if (matchingSectionsError) throw matchingSectionsError;
+
+  const matchingSectionIds = (matchingSections ?? []).map(
+    (row) => row.collegeSectionsId,
+  );
+  if (!matchingSectionIds.length) return [];
+
+  const { data: registrations, error: registrationsError } = await supabase
+    .from("faculty_sections")
+    .select("facultyId")
+    .eq("collegeEducationId", collegeEducationId)
+    .in("collegeAcademicYearId", academicYearIds)
+    .in("collegeSubjectId", subjectIds)
+    .in("collegeSectionsId", matchingSectionIds)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+  if (registrationsError) throw registrationsError;
+
+  const facultyIds = Array.from(
+    new Set((registrations ?? []).map((row) => row.facultyId)),
+  );
+  if (!facultyIds.length) return [];
+
+  const { data, error } = await supabase
+    .from("faculty")
+    .select("facultyId, fullName")
+    .in("facultyId", facultyIds)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("fullName", { ascending: true });
+  if (error) throw error;
+
+  return (data ?? []) as StudentProgressFaculty[];
+}
+
 export async function fetchStudentProgressBranches(
   collegeId: number,
   collegeEducationId: number,
@@ -98,9 +165,82 @@ export async function fetchStudentProgressSections(
   collegeBranchIds: number[],
   academicYearIds: number[],
   semesterIds: number[],
+  subjectIds: number[] = [],
 ) {
   if (!academicYearIds.length) {
     return [];
+  }
+
+  // School flow: faculty registration is the source of truth for which
+  // sections are registered for a class + subject combination.
+  if (subjectIds.length) {
+    const { data: registrationRows, error: registrationError } = await supabase
+      .from("faculty_sections")
+      .select(`
+        collegeSectionsId,
+        collegeEducationId,
+        college_sections:collegeSectionsId (
+          collegeSectionsId,
+          collegeSections,
+          collegeId,
+          collegeEducationId,
+          isActive,
+          deletedAt
+        )
+      `)
+      .eq("collegeEducationId", collegeEducationId)
+      .in("collegeAcademicYearId", academicYearIds)
+      .in("collegeSubjectId", subjectIds)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    if (registrationError) throw registrationError;
+
+    const registeredSectionNames = new Set<string>();
+    (registrationRows ?? []).forEach((row: any) => {
+      const section = Array.isArray(row.college_sections)
+        ? row.college_sections[0]
+        : row.college_sections;
+      if (
+        !section ||
+        section.collegeId !== collegeId ||
+        section.collegeEducationId !== collegeEducationId
+      ) {
+        return;
+      }
+      if (section.collegeSections) {
+        registeredSectionNames.add(section.collegeSections);
+      }
+    });
+
+    if (!registeredSectionNames.size) return [];
+
+    // A faculty registration can still reference a soft-deleted section after
+    // Academic Setup recreates the same named section. Resolve that registered
+    // name to its current active row so downstream student queries use the
+    // valid section ID.
+    const { data: activeSectionRows, error: activeSectionsError } =
+      await supabase
+        .from("college_sections")
+        .select("collegeSectionsId, collegeSections")
+        .eq("collegeId", collegeId)
+        .eq("collegeEducationId", collegeEducationId)
+        .in("collegeAcademicYearId", academicYearIds)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .order("collegeSections", { ascending: true });
+
+    if (activeSectionsError) throw activeSectionsError;
+
+    return (activeSectionRows ?? [])
+      .filter((section) => registeredSectionNames.has(section.collegeSections))
+      .map((section) => ({
+        collegeSectionsId: section.collegeSectionsId,
+        collegeSections: section.collegeSections,
+      }))
+      .sort((a, b) =>
+      a.collegeSections.localeCompare(b.collegeSections),
+      );
   }
 
   let historyQuery = supabase
@@ -126,9 +266,35 @@ export async function fetchStudentProgressSections(
     ),
   );
 
-  if (!sectionIds.length) {
+  if (!sectionIds.length && !subjectIds.length) {
     return [];
   }
+
+  let eligibleSectionIds = sectionIds;
+  if (subjectIds.length) {
+    const { data: facultySectionRows, error: facultySectionError } =
+      await supabase
+        .from("faculty_sections")
+        .select("collegeSectionsId")
+        .in("collegeSubjectId", subjectIds)
+        .in("collegeAcademicYearId", academicYearIds)
+        .eq("isActive", true)
+        .is("deletedAt", null);
+
+    if (facultySectionError) throw facultySectionError;
+    // School sections are assigned through faculty_sections. The
+    // college_sections row itself may not carry the class/year relation, so
+    // use the same source as the faculty Student Progress screen.
+    eligibleSectionIds = Array.from(
+      new Set(
+        (facultySectionRows ?? [])
+          .map((row) => row.collegeSectionsId)
+          .filter((value): value is number => typeof value === "number"),
+      ),
+    );
+  }
+
+  if (!eligibleSectionIds.length) return [];
 
   let query = supabase
     .from("college_sections")
@@ -137,14 +303,14 @@ export async function fetchStudentProgressSections(
     .eq("collegeEducationId", collegeEducationId)
     .eq("isActive", true)
     .is("deletedAt", null)
-    .in("collegeSectionsId", sectionIds)
+    .in("collegeSectionsId", eligibleSectionIds)
     .order("collegeSections", { ascending: true });
 
   if (collegeBranchIds.length) {
     query = query.in("collegeBranchId", collegeBranchIds);
   }
 
-  if (academicYearIds.length) {
+  if (academicYearIds.length && !subjectIds.length) {
     query = query.in("collegeAcademicYearId", academicYearIds);
   }
 
@@ -161,17 +327,24 @@ export async function fetchStudentProgressSubjects(
   academicYearIds: number[],
   semesterIds: number[],
   sectionIds: number[],
+  allowWithoutSections: boolean = false,
 ) {
-  if (!sectionIds.length) {
+  if (!sectionIds.length && !allowWithoutSections) {
     return [];
   }
 
   let facultySectionsQuery = supabase
     .from("faculty_sections")
     .select("collegeSubjectId")
-    .in("collegeSectionsId", sectionIds)
     .eq("isActive", true)
     .is("deletedAt", null);
+
+  if (sectionIds.length) {
+    facultySectionsQuery = facultySectionsQuery.in(
+      "collegeSectionsId",
+      sectionIds,
+    );
+  }
 
   if (academicYearIds.length) {
     facultySectionsQuery = facultySectionsQuery.in(

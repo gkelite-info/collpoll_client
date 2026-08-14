@@ -250,6 +250,7 @@ export default function DashboardLayout() {
   const semesterId = parseId(searchParams.get("semesterId"));
   const sectionId = parseId(searchParams.get("sectionId"));
   const subjectId = parseId(searchParams.get("subjectId"));
+  const facultyId = parseId(searchParams.get("facultyId"));
 
   const branchLabel =
     searchParams.get("branch") ??
@@ -263,24 +264,29 @@ export default function DashboardLayout() {
     semesters,
     sections,
     subjects,
+    faculty,
     selectedBranch,
     selectedYear,
     selectedSemester,
     selectedSection,
     selectedSubject,
+    selectedFaculty,
     activeBranchIds,
     activeYearIds,
     activeSemesterIds,
     activeSectionIds,
     activeSubjectIds,
+    activeFacultyIds,
     selectBranch,
     selectYear,
     selectSemester,
     selectSection,
     selectSubject,
+    selectFaculty,
   } = useStudentProgressFilters({
     collegeId,
     collegeEducationId,
+    isSchool,
   });
 
   useEffect(() => {
@@ -319,6 +325,13 @@ export default function DashboardLayout() {
   }, [selectSubject, selectedSubject, subjectId, subjects]);
 
   useEffect(() => {
+    if (facultyId && faculty.length && !selectedFaculty) {
+      const item = faculty.find((entry) => entry.facultyId === facultyId);
+      if (item) selectFaculty(item);
+    }
+  }, [faculty, facultyId, selectFaculty, selectedFaculty]);
+
+  useEffect(() => {
     if (adminLoading || filtersLoading) return;
 
     if (
@@ -349,6 +362,8 @@ export default function DashboardLayout() {
           semesterIds: activeSemesterIds,
           sectionIds: activeSectionIds,
           subjectIds: activeSubjectIds,
+          facultyIds: activeFacultyIds,
+          isSchool,
           departmentLabel: selectedBranch?.collegeBranchCode ?? branchLabel ?? "ALL",
         });
 
@@ -383,6 +398,7 @@ export default function DashboardLayout() {
     activeSemesterIds,
     activeSectionIds,
     activeSubjectIds,
+    activeFacultyIds,
     selectedBranch,
     branchLabel,
   ]);
@@ -408,7 +424,7 @@ export default function DashboardLayout() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => router.back()}
+              onClick={() => router.push(`/admin/student-progress?${searchParams.toString()}`)}
               aria-label="Go back"
               className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-[#F3F4F6] text-[#282828] transition-colors hover:bg-[#E5E7EB]"
             >
