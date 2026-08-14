@@ -25,6 +25,12 @@ interface Props {
   onPageChange?: (page: number) => void;
   onMonthYearChange?: (month: number, year: number) => void;
   loading?: boolean;
+  academicYears?: Array<{ id: number; name: string }>;
+  selectedAcademicYearId?: number | null;
+  onAcademicYearChange?: (academicYearId: number | null) => void;
+  subjects?: Array<{ id: number; name: string }>;
+  selectedSubjectId?: number | null;
+  onSubjectChange?: (subjectId: number | null) => void;
 }
 
 const months = [
@@ -59,6 +65,12 @@ const AttendanceTable: React.FC<Props> = ({
   onPageChange,
   onMonthYearChange,
   loading = false,
+  academicYears = [],
+  selectedAcademicYearId = null,
+  onAcademicYearChange,
+  subjects = [],
+  selectedSubjectId = null,
+  onSubjectChange,
 }) => {
   const { dateOfJoining } = useUser();
   const [isMonthOpen, setIsMonthOpen] = useState(false);
@@ -143,7 +155,39 @@ const AttendanceTable: React.FC<Props> = ({
           {title || "Attendance Table"}
         </h2>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
+          {onAcademicYearChange && (
+            <select
+              value={selectedAcademicYearId ?? ""}
+              onChange={(event) => onAcademicYearChange(event.target.value ? Number(event.target.value) : null)}
+              disabled={loading}
+              aria-label="Filter by academic year"
+              className={`bg-[#43C17A] text-white px-3 py-1.5 rounded font-medium text-[12.5px] shadow-sm outline-none max-w-[180px] ${loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            >
+              <option value="" className="bg-white text-gray-700">All Years</option>
+              {academicYears.map((academicYear) => (
+                <option key={academicYear.id} value={academicYear.id} className="bg-white text-gray-700">
+                  {academicYear.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {onSubjectChange && (
+            <select
+              value={selectedSubjectId ?? ""}
+              onChange={(event) => onSubjectChange(event.target.value ? Number(event.target.value) : null)}
+              disabled={loading}
+              aria-label="Filter classes taken by subject"
+              className={`bg-[#43C17A] text-white px-3 py-1.5 rounded font-medium text-[12.5px] shadow-sm outline-none max-w-[190px] ${loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            >
+              <option value="" className="bg-white text-gray-700">All Subjects</option>
+              {subjects.map((subject) => (
+                <option key={subject.id} value={subject.id} className="bg-white text-gray-700">
+                  {subject.name}
+                </option>
+              ))}
+            </select>
+          )}
           <div className="relative">
             <button
               onClick={() => {

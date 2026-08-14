@@ -10,6 +10,7 @@ import MeetingCard from "../../finance/meetings/components/MeetingCard";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import MeetingCardShimmer from "@/app/utils/shimmers/MeetingCardShimmer";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 type MeetingType = 'upcoming' | 'previous';
 type MeetingCategory = 'Faculty';
@@ -46,6 +47,7 @@ export default function FacultyMeetingsPage() {
     const [meetings, setMeetings] = useState<Meeting[]>([]);
 
     const { role } = useUser();
+    const { isSchool } = useInstitutionTerminology();
     const { facultyId, collegeBranchId, sectionIds, academicYearIds } = useFaculty();
 
     const updateFilter = (key: string, value: string) => {
@@ -165,7 +167,12 @@ export default function FacultyMeetingsPage() {
                                 />
                             ) : meetings.length > 0 ? (
                                 meetings.map((meeting) => (
-                                    <MeetingCard key={meeting.id} data={meeting} role={role} />
+                                    <MeetingCard
+                                        key={meeting.id}
+                                        data={meeting}
+                                        role={role}
+                                        isSchoolView={isSchool}
+                                    />
                                 ))
                             ) : (
                                 <div className="col-span-full py-20 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">

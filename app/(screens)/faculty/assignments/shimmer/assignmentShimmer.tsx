@@ -2,24 +2,23 @@ export default function AssignmentSkeleton() {
   return (
     <div className="w-full mb-3">
       {/* Desktop View */}
-      <div className="hidden md:flex bg-white relative w-full h-[170px] rounded-xl items-center p-3 gap-3 border border-gray-100 shadow-sm overflow-hidden">
+      <div className="hidden md:flex bg-white relative w-full min-h-[170px] rounded-xl items-stretch p-3 gap-3 border border-gray-100 shadow-sm overflow-hidden">
         {/* Shimmer Effect Wrapper */}
         <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent z-20 pointer-events-none" />
 
         {/* Image Placeholder */}
-        <div className="h-[139px] w-[145px] rounded-lg bg-gray-200 animate-pulse shrink-0" />
+        <div className="min-h-[146px] w-[145px] rounded-lg bg-gray-200 animate-pulse shrink-0" />
 
         {/* Content Section */}
-        <div className="flex-1 flex flex-col justify-between h-[139px] z-10">
+        <div className="flex-1 flex flex-col justify-between min-h-[146px] min-w-0 z-10">
           <div className="w-full flex justify-between">
             {/* Text Lines */}
             <div className="w-[60%] flex flex-col gap-3">
               <div className="h-6 w-3/4 bg-gray-200 rounded animate-pulse" />
               <div className="space-y-2">
                 <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
-                <div className="h-4 w-5/6 bg-gray-200 rounded animate-pulse" />
               </div>
-              <div className="flex items-center gap-2 mt-4">
+              <div className="flex items-center gap-2 mt-3">
                 <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse" />
                 <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
               </div>

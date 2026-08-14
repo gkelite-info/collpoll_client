@@ -25,6 +25,7 @@ export default function MeetingCard({
   role,
   category,
   onEdit,
+  isSchoolView,
 }: {
   // data: Meeting;
   data: any;
@@ -32,10 +33,11 @@ export default function MeetingCard({
   role: string | null;
   category?: string | null;
   onEdit?: (meeting: number, sectionId: number | null) => void;
+  isSchoolView?: boolean;
 }) {
   const t = useTranslations("Meetings.parent");
   const { collegeEducationType } = useUser();
-  const isSchool = isSchoolEducation(collegeEducationType);
+  const isSchool = isSchoolView ?? isSchoolEducation(collegeEducationType);
   const [fromTime, toTime] = data.timeRange.split(" - ");
   const formattedTimeRange = `${formatToAMPM(fromTime)} - ${formatToAMPM(toTime)}`;
   const [isModalOpen, setIsModalOpen] = useState(false);

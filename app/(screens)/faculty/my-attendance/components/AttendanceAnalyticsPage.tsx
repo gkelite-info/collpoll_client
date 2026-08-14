@@ -15,6 +15,23 @@ import AttendanceTableShimmer from "../shimmers/AttendanceTableShimmer";
 import AttendancePerformanceChartShimmer from "../shimmers/AttendancePerformanceChartShimmer";
 import AnalyticsFacultyInfoShimmer from "../shimmers/AnalyticsFacultyInfoShimmer";
 import { getAttendanceMonthlyStats } from "@/lib/helpers/myAttendance/getAttendanceMonthlyStats";
+import { getFacultyAssignedSubjects } from "@/lib/helpers/faculty/getFacultyAssignedSubjects";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
+
+type AnalyticsSubjectOption = {
+  id: number;
+  name: string;
+  academicYearIds: number[];
+};
+
+type AssignedSubjectRow = {
+  collegeAcademicYearId: number;
+  college_subjects:
+    | { collegeSubjectId: number; subjectName: string }
+    | Array<{ collegeSubjectId: number; subjectName: string }>
+    | null;
+};
 
 const mockProfile: AnalyticsFacultyProfile = {
   name: "",
@@ -29,6 +46,8 @@ const mockProfile: AnalyticsFacultyProfile = {
 const AttendanceAnalyticsPage = () => {
 
   const { userId, collegeBranchCode, fullName, facultyId, collegeEducationType, professionalExperienceYears, identifierId } = useUser();
+  const { collegeAcademicYears, collegeAcademicYear } = useFaculty();
+  const { isSchool } = useInstitutionTerminology();
   const [profile, setProfile] = useState<AnalyticsFacultyProfile | null>(null);
   const [infoLoading, setInfoLoading] = useState(true);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -37,6 +56,10 @@ const AttendanceAnalyticsPage = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [subjects, setSubjects] = useState<AnalyticsSubjectOption[]>([]);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<number | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const attendanceQueryKey = `${currentPage}:${selectedAcademicYearId ?? "all"}:${selectedSubjectId ?? "all"}`;
   
   const [tableLoading, setTableLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
@@ -45,6 +68,34 @@ const AttendanceAnalyticsPage = () => {
   const [workingDaysLoading, setWorkingDaysLoading] = useState(true);
   const [leavesTaken, setLeavesTaken] = useState(0);
   const itemsPerPage = 15;
+
+  useEffect(() => {
+    if (!facultyId) return;
+    getFacultyAssignedSubjects({ facultyId })
+      .then((rows) => {
+        const uniqueSubjects = new Map<number, AnalyticsSubjectOption>();
+        (rows as AssignedSubjectRow[]).forEach((row) => {
+          const subject = Array.isArray(row.college_subjects)
+            ? row.college_subjects[0]
+            : row.college_subjects;
+          if (!subject?.collegeSubjectId || !subject.subjectName) return;
+          const existing = uniqueSubjects.get(subject.collegeSubjectId);
+          if (existing) {
+            if (!existing.academicYearIds.includes(row.collegeAcademicYearId)) {
+              existing.academicYearIds.push(row.collegeAcademicYearId);
+            }
+          } else {
+            uniqueSubjects.set(subject.collegeSubjectId, {
+              id: subject.collegeSubjectId,
+              name: subject.subjectName,
+              academicYearIds: [row.collegeAcademicYearId],
+            });
+          }
+        });
+        setSubjects(Array.from(uniqueSubjects.values()).sort((a, b) => a.name.localeCompare(b.name)));
+      })
+      .catch(() => setSubjects([]));
+  }, [facultyId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -81,6 +132,7 @@ const AttendanceAnalyticsPage = () => {
         department: collegeBranchCode || "",
         employeeId: identifierId,
         collegeEducationType: collegeEducationType || "",
+        academicYear: collegeAcademicYear,
         experience: professionalExperienceYears ? `${professionalExperienceYears} ${Number(professionalExperienceYears) > 1 ? 'years' : 'year'} ` : "—",
         workingDays,
         leavesTaken
@@ -89,7 +141,7 @@ const AttendanceAnalyticsPage = () => {
     } finally {
       setInfoLoading(false)
     }
-  }, [facultyId, collegeBranchCode, fullName, collegeEducationType, workingDays, leavesTaken]);
+  }, [facultyId, collegeBranchCode, fullName, collegeEducationType, collegeAcademicYear, workingDays, leavesTaken]);
 
   useEffect(() => {
     if (!userId) return;
@@ -99,7 +151,9 @@ const AttendanceAnalyticsPage = () => {
       month: selectedMonth,
       year: selectedYear,
       page: currentPage,
-      limit: itemsPerPage
+      limit: itemsPerPage,
+      academicYearId: selectedAcademicYearId ?? undefined,
+      subjectId: selectedSubjectId ?? undefined,
     })
       .then(res => {
         setRecords(res.records);
@@ -112,7 +166,7 @@ const AttendanceAnalyticsPage = () => {
         setInitialLoad(false);
       });
 
-  }, [userId, selectedMonth, selectedYear, currentPage]);
+  }, [userId, selectedMonth, selectedYear, attendanceQueryKey]);
 
   useEffect(() => {
     if (!userId) return;
@@ -132,7 +186,7 @@ const AttendanceAnalyticsPage = () => {
         {infoLoading || workingDaysLoading || !profile ? (
           <AnalyticsFacultyInfoShimmer />
         ) : (
-          <AnalyticsFacultyInfo profile={profile} />
+          <AnalyticsFacultyInfo profile={profile} isSchool={isSchool} />
         )}
       </div>
       {chartLoading ?
@@ -156,6 +210,25 @@ const AttendanceAnalyticsPage = () => {
           totalItems={totalItems}
           currentPage={currentPage}
           onPageChange={setCurrentPage}
+          academicYears={collegeAcademicYears.map((item) => ({
+            id: item.collegeAcademicYearId,
+            name: item.collegeAcademicYear,
+          }))}
+          selectedAcademicYearId={selectedAcademicYearId}
+          onAcademicYearChange={(academicYearId) => {
+            setSelectedAcademicYearId(academicYearId);
+            setSelectedSubjectId(null);
+            setCurrentPage(1);
+          }}
+          subjects={subjects.filter(
+            (subject) =>
+              !selectedAcademicYearId || subject.academicYearIds.includes(selectedAcademicYearId),
+          )}
+          selectedSubjectId={selectedSubjectId}
+          onSubjectChange={(subjectId) => {
+            setSelectedSubjectId(subjectId);
+            setCurrentPage(1);
+          }}
           onMonthYearChange={(m, y) => {
             setSelectedMonth(m);
             setSelectedYear(y);

@@ -3,10 +3,11 @@ import { AnalyticsFacultyProfile } from "../types";
 
 interface Props {
   profile: AnalyticsFacultyProfile;
+  isSchool: boolean;
 }
 
-const AnalyticsFacultyInfo: FC<Props> = ({ profile }) => {
-  const isInter = ["Inter"].includes(profile.collegeEducationType!)
+const AnalyticsFacultyInfo: FC<Props> = ({ profile, isSchool }) => {
+  const isInter = ["Inter"].includes(profile.collegeEducationType!);
   return (
     <div className="w-full mb-5 text-[14px]">
       <h2 className="text-[#282828] font-bold text-[17px] mb-4">
@@ -19,8 +20,12 @@ const AnalyticsFacultyInfo: FC<Props> = ({ profile }) => {
           <span className="text-[#525252]">{profile.name}</span>
         </div>
         <div>
-          <span className="font-semibold text-[#282828]">{isInter ? "Group" : "Branch"} : </span>
-          <span className="text-[#525252]">{profile.department}</span>
+          <span className="font-semibold text-[#282828]">
+            {isSchool ? "Year" : isInter ? "Group" : "Branch"} :{" "}
+          </span>
+          <span className="text-[#525252]">
+            {isSchool ? profile.academicYear || "—" : profile.department}
+          </span>
         </div>
         <div>
           <span className="font-semibold text-[#282828]">Employee ID : </span>

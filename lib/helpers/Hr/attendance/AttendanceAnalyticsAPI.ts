@@ -32,7 +32,13 @@ function formatTime(timeStr: string | null) {
   return `${String(hour).padStart(2, "0")}:${m} ${ampm}`;
 }
 
-export async function fetchFullAttendanceDashboardData(userId: number, monthName: string, yearStr: string) {
+export async function fetchFullAttendanceDashboardData(
+  userId: number,
+  monthName: string,
+  yearStr: string,
+  subjectId?: number,
+  academicYearId?: number,
+) {
   const year = parseInt(yearStr);
   const monthNum = MONTH_MAP[monthName.toUpperCase()];
   if (!monthNum) throw new Error("Invalid month");
@@ -80,14 +86,14 @@ export async function fetchFullAttendanceDashboardData(userId: number, monthName
     const [ { data: attData }, { data: singleEvents } ] = await Promise.all([
       adminSupabase
         .from("attendance_record")
-        .select("markedAt, calendarEventId, bulkCalendarEventId")
+        .select("markedAt, calendarEventId, bulkCalendarEventId, event:calendar_event(subject, calendar_event_section(collegeAcademicYearId, isActive, deletedAt)), bulk_event:bulk_calendar_events(subject, bulk_calendar_event_sections(collegeAcademicYearId, isActive, deletedAt))")
         .eq("facultyMark", facultyId)
         .gte("markedAt", monthStartDate)
         .lte("markedAt", monthEndDate)
         .is("deletedAt", null),
       adminSupabase
         .from("faculty_class_sessions")
-        .select("calendarEventId, calendar_event!inner(date)")
+        .select("calendarEventId, calendar_event!inner(date, subject, calendar_event_section(collegeAcademicYearId, isActive, deletedAt))")
         .eq("facultyId", facultyId)
         .eq("is_deleted", false)
         .eq("status", "accepted")
@@ -99,6 +105,24 @@ export async function fetchFullAttendanceDashboardData(userId: number, monthName
 
     if (attData) {
       for (const row of attData) {
+        const event = row.event as unknown as {
+          subject?: number;
+          calendar_event_section?: Array<{ collegeAcademicYearId?: number; isActive?: boolean; deletedAt?: string | null }>;
+        } | null;
+        const bulkEvent = row.bulk_event as unknown as {
+          subject?: number;
+          bulk_calendar_event_sections?: Array<{ collegeAcademicYearId?: number; isActive?: boolean; deletedAt?: string | null }>;
+        } | null;
+        const eventSubject = event?.subject;
+        const bulkEventSubject = bulkEvent?.subject;
+        if (subjectId && eventSubject !== subjectId && bulkEventSubject !== subjectId) continue;
+        const eventMatchesYear = event?.calendar_event_section?.some(
+          (section) => section.collegeAcademicYearId === academicYearId && section.isActive !== false && !section.deletedAt,
+        );
+        const bulkEventMatchesYear = bulkEvent?.bulk_calendar_event_sections?.some(
+          (section) => section.collegeAcademicYearId === academicYearId && section.isActive !== false && !section.deletedAt,
+        );
+        if (academicYearId && !eventMatchesYear && !bulkEventMatchesYear) continue;
         if (!dailyEvents.has(row.markedAt)) dailyEvents.set(row.markedAt, new Set());
         if (row.calendarEventId) dailyEvents.get(row.markedAt)!.add(`c_${row.calendarEventId}`);
         if (row.bulkCalendarEventId) dailyEvents.get(row.markedAt)!.add(`b_${row.bulkCalendarEventId}`);
@@ -107,7 +131,16 @@ export async function fetchFullAttendanceDashboardData(userId: number, monthName
 
     if (singleEvents) {
       for (const session of singleEvents as any[]) {
-        const date = session.calendar_event?.date;
+        const calendarEvent = Array.isArray(session.calendar_event)
+          ? session.calendar_event[0]
+          : session.calendar_event;
+        const date = calendarEvent?.date;
+        if (subjectId && calendarEvent?.subject !== subjectId) continue;
+        const sessionMatchesYear = calendarEvent?.calendar_event_section?.some(
+          (section: { collegeAcademicYearId?: number; isActive?: boolean; deletedAt?: string | null }) =>
+            section.collegeAcademicYearId === academicYearId && section.isActive !== false && !section.deletedAt,
+        );
+        if (academicYearId && !sessionMatchesYear) continue;
         if (date) {
           if (!dailyEvents.has(date)) dailyEvents.set(date, new Set());
           if (session.calendarEventId) dailyEvents.get(date)!.add(`c_${session.calendarEventId}`);

@@ -9,6 +9,7 @@ import { fetchFacultyAssignments } from "@/lib/helpers/faculty/assignment/fetchF
 import { deleteFacultyAssignment } from "@/lib/helpers/faculty/assignment/deleteFacultyAssignment";
 import AssignmentSkeleton from "../shimmer/assignmentShimmer";
 import { Pagination } from "./pagination";
+import { Pagination as AssignmentPagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import FacultyQuizCard from "./facultyQuizCard";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
@@ -85,7 +86,11 @@ function AssignmentsLeftContent() {
   const [view, setView] = useState<"list" | "add" | "edit">("list");
   const [editing, setEditing] = useState<Assignment | null>(null);
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const [assignmentPages, setAssignmentPages] = useState({
+    active: 1,
+    previous: 1,
+  });
+  const currentPage = assignmentPages[activeView];
   const [totalCount, setTotalCount] = useState(0);
 
   const [quizCurrentPage, setQuizCurrentPage] = useState(1);
@@ -288,7 +293,7 @@ function AssignmentsLeftContent() {
     if (tab === "quiz") params.set("quizView", "active");
     if (tab === "discussion") params.set("discussionView", "active");
 
-    setCurrentPage(1);
+    setAssignmentPages({ active: 1, previous: 1 });
     setQuizCurrentPage(1);
     setDiscussionCurrentPage(1);
     setLabCurrentPage(1);
@@ -298,7 +303,6 @@ function AssignmentsLeftContent() {
   const handleAssignmentViewChange = (tab: "active" | "previous") => {
     if (activeView === tab) return;
     setIsLoading(true);
-    setCurrentPage(1);
     const params = new URLSearchParams(searchParams.toString());
     params.set("view", tab);
     router.push(`${pathname}?${params.toString()}`);
@@ -388,7 +392,7 @@ function AssignmentsLeftContent() {
   const handlePageChange = (page: number) => {
     if (page === currentPage) return;
     setIsFetchingMore(true);
-    setCurrentPage(page);
+    setAssignmentPages((pages) => ({ ...pages, [activeView]: page }));
   };
 
   const handleDeleteDiscussion = async () => {
@@ -420,7 +424,10 @@ function AssignmentsLeftContent() {
     toast.success("Assignment deleted");
 
     if (assignments.length === 1 && currentPage > 1) {
-      setCurrentPage((prev) => prev - 1);
+      setAssignmentPages((pages) => ({
+        ...pages,
+        [activeView]: pages[activeView] - 1,
+      }));
     } else {
       fetchAssignments();
     }
@@ -918,7 +925,7 @@ function AssignmentsLeftContent() {
                   No assignments found.
                 </div>
               ) : (
-                <>
+                <div className="relative w-full">
                   {isFetchingMore && (
                     <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center backdrop-blur-[1px] rounded-lg">
                       <div className="w-8 h-8 border-4 border-[#43C17A] border-t-transparent rounded-full animate-spin"></div>
@@ -935,15 +942,17 @@ function AssignmentsLeftContent() {
                     onDelete={handleDelete}
                   />
 
-                  {totalCount > ITEMS_PER_PAGE && (
-                    <Pagination
+                  {totalCount > 0 && (
+                    <AssignmentPagination
                       currentPage={currentPage}
                       totalItems={totalCount}
                       itemsPerPage={ITEMS_PER_PAGE}
                       onPageChange={handlePageChange}
+                      disabled={isFetchingMore}
+                      alwaysShow
                     />
                   )}
-                </>
+                </div>
               ))}
 
             {activeTab === "quiz" && (
