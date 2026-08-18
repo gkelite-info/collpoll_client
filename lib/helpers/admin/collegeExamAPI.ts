@@ -15,6 +15,7 @@ export interface ExamScheduleInput {
   collegeBranchId: number | null;
   academicYear: string | null;
   collegeSectionsId: number | null;
+  collegeSectionIds?: number[];
   collegeSemesterId: number | null;
   examType: string;
   fromDate: string | null;
@@ -92,8 +93,9 @@ export async function createExamSchedule(
   schedule: ExamScheduleInput,
   subjects: ExamSubjectInput[]
 ): Promise<number> {
+  const { collegeSectionIds = [], ...scheduleFields } = schedule;
   const schedulePayload = {
-    ...schedule,
+    ...scheduleFields,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -110,6 +112,16 @@ export async function createExamSchedule(
   }
 
   const scheduleId = data.collegeExamScheduleId;
+
+  if (collegeSectionIds.length > 0) {
+    const { error: sectionsError } = await supabase
+      .from("college_exam_schedule_sections")
+      .insert(collegeSectionIds.map((collegeSectionsId) => ({
+        collegeExamScheduleId: scheduleId,
+        collegeSectionsId,
+      })));
+    if (sectionsError) throw sectionsError;
+  }
 
   if (subjects.length > 0) {
     const subjectRows = subjects.map((sub) => ({
@@ -164,7 +176,11 @@ export async function fetchExamSchedules(
       college_education ( collegeEducationType ),
       college_branch ( collegeBranchCode ),
       college_semester ( collegeSemester ),
-      college_sections ( collegeSections )
+      college_sections ( collegeSections ),
+      college_exam_schedule_sections (
+        collegeSectionsId,
+        college_sections ( collegeSections )
+      )
     `, { count: 'exact' })
     .eq("collegeId", collegeId)
     .is("deletedAt", null);
@@ -248,8 +264,9 @@ export async function updateExamSchedule(
   schedule: ExamScheduleInput,
   subjects: any[]
 ): Promise<void> {
+  const { collegeSectionIds = [], ...scheduleFields } = schedule;
   const schedulePayload = {
-    ...schedule,
+    ...scheduleFields,
     updatedAt: new Date().toISOString(),
   };
 
@@ -261,6 +278,22 @@ export async function updateExamSchedule(
   if (scheduleError) {
     console.error("Error updating exam schedule:", scheduleError);
     throw scheduleError;
+  }
+
+  const { error: deleteSectionsError } = await supabase
+    .from("college_exam_schedule_sections")
+    .delete()
+    .eq("collegeExamScheduleId", scheduleId);
+  if (deleteSectionsError) throw deleteSectionsError;
+
+  if (collegeSectionIds.length > 0) {
+    const { error: sectionsError } = await supabase
+      .from("college_exam_schedule_sections")
+      .insert(collegeSectionIds.map((collegeSectionsId) => ({
+        collegeExamScheduleId: scheduleId,
+        collegeSectionsId,
+      })));
+    if (sectionsError) throw sectionsError;
   }
 
   const { error: deleteError } = await supabase

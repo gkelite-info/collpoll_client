@@ -53,7 +53,7 @@ export default function ExamsPage() {
   const [branchSelect, setBranchSelect] = useState<number | null>(null);
   const [yearSelect, setYearSelect] = useState<string>("2nd Year");
   const [semesterSelect, setSemesterSelect] = useState<number | null>(null);
-  const [sectionSelect, setSectionSelect] = useState<number | null>(null);
+  const [sectionSelect, setSectionSelect] = useState<number[]>([]);
   const [examTypeSelect, setExamTypeSelect] = useState<string>("Select");
   const [scheduleTitle, setScheduleTitle] = useState("");
   const [isCustomExamType, setIsCustomExamType] = useState(false);
@@ -145,7 +145,12 @@ export default function ExamsPage() {
     setBranchSelect(row.collegeBranchId);
     setYearSelect(row.academicYear || "1st Year");
     setSemesterSelect(row.collegeSemesterId);
-    setSectionSelect(row.collegeSectionsId);
+    const mappedSections = row.college_exam_schedule_sections?.map(
+      (item: any) => item.collegeSectionsId,
+    ) || [];
+    setSectionSelect(mappedSections.length > 0
+      ? mappedSections
+      : row.collegeSectionsId ? [row.collegeSectionsId] : []);
     setFromDate(row.fromDate || "");
     setToDate(row.toDate || "");
 
@@ -346,7 +351,7 @@ export default function ExamsPage() {
       setSemesters([]);
       setSemesterSelect(null);
       setSections([]);
-      setSectionSelect(null);
+      setSectionSelect([]);
       return;
     }
 
@@ -370,9 +375,9 @@ export default function ExamsPage() {
       .then((secList) => {
         setSections(secList);
         if (secList.length > 0) {
-          setSectionSelect(secList[0].collegeSectionsId);
+          setSectionSelect([secList[0].collegeSectionsId]);
         } else {
-          setSectionSelect(null);
+          setSectionSelect([]);
         }
       })
       .catch((err) => console.error("Error fetching sections:", err));
@@ -447,6 +452,10 @@ export default function ExamsPage() {
       toast.error("Please select an Education Type.");
       return;
     }
+    if (!showDateRangePicker && sectionSelect.length === 0) {
+      toast.error("Please select at least one section.");
+      return;
+    }
     const isInter = educations.find((e) => e.collegeEducationId === educationSelect)?.collegeEducationType === "Inter";
     if (!showDateRangePicker && !isSchool && (branchSelect === null || (!isInter && semesterSelect === null))) {
       toast.error(isInter ? "Please select a group." : "Please select branch and semester.");
@@ -483,7 +492,8 @@ export default function ExamsPage() {
         collegeEducationId: educationSelect || 0,
         collegeBranchId: (showDateRangePicker || isSchool) ? null : branchSelect,
         academicYear: showDateRangePicker ? null : yearSelect,
-        collegeSectionsId: showDateRangePicker ? null : sectionSelect,
+        collegeSectionsId: showDateRangePicker ? null : sectionSelect[0] ?? null,
+        collegeSectionIds: showDateRangePicker ? [] : sectionSelect,
         collegeSemesterId: (showDateRangePicker || isInter || isSchool) ? null : semesterSelect,
         examType: finalExamType,
         fromDate: showDateRangePicker ? fromDate : null,
@@ -515,7 +525,7 @@ export default function ExamsPage() {
       setBranchSelect(null);
       setYearSelect("1st Year");
       setSemesterSelect(null);
-      setSectionSelect(null);
+      setSectionSelect([]);
       if (educations.length > 0) {
         setEducationSelect(educations[0].collegeEducationId);
         setPrevSchedulesEduSelect(educations[0].collegeEducationId);

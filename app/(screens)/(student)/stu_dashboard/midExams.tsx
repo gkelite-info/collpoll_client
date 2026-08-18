@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 type MidExamsProps = {
   onBack: () => void;
@@ -32,6 +33,9 @@ type ExamSchedule = {
   fromDate: string | null;
   toDate: string | null;
   isActive: boolean;
+  college_exam_schedule_sections?: Array<{
+    collegeSectionsId: number;
+  }>;
 };
 
 type ExamSubject = {
@@ -45,6 +49,9 @@ type ExamSubject = {
 
 const normalizeSubjectName = (value: string | null | undefined) =>
   (value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+const normalizeAcademicYear = (value: string | null | undefined) =>
+  (value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 
 const formatExamDate = (value: string | null | undefined) => {
   if (!value) return "Not scheduled";
@@ -63,7 +70,7 @@ export default function MidExams({ onBack }: MidExamsProps) {
   const routedScheduleId = Number(searchParams.get("scheduleId")) || null;
   const routedTab = searchParams.get("tab");
   const t = useTranslations("Dashboard.student");
-  const { identifierId, fullName, profilePhoto } = useUser();
+  const { identifierId, fullName, profilePhoto, loading: userLoading } = useUser();
   const {
     userId,
     studentId,
@@ -78,6 +85,7 @@ export default function MidExams({ onBack }: MidExamsProps) {
     collegeBranchCode,
     collegeBranchType,
     collegeEducationType,
+    loading: studentLoading,
   } = useStudent();
 
   const [loading, setLoading] = useState(true);
@@ -100,6 +108,12 @@ export default function MidExams({ onBack }: MidExamsProps) {
   const [scheduleItemsPerPage, setScheduleItemsPerPage] = useState(4);
   const [subjectPage, setSubjectPage] = useState(1);
   const [subjectItemsPerPage, setSubjectItemsPerPage] = useState(5);
+  const normalizedEducationType = (collegeEducationType || "").trim().toLowerCase();
+  const isSchool =
+    isSchoolEducation(collegeEducationType) ||
+    isSchoolEducation(collegeBranchCode) ||
+    isSchoolEducation(collegeBranchType) ||
+    normalizedEducationType.includes("school");
 
   const [scale, setScale] = useState(1);
   const [collegeName, setCollegeName] = useState("St. Xavier's College of Excellence");
@@ -176,27 +190,47 @@ export default function MidExams({ onBack }: MidExamsProps) {
   }, [collegeName]);
 
   useEffect(() => {
-    if (!collegeId || !collegeEducationId || !userId) return;
+    if (userLoading || studentLoading) return;
+    if (!collegeId || !collegeEducationId || !userId) {
+      setSchedules([]);
+      setLoading(false);
+      return;
+    }
 
     const loadInitialData = async () => {
       try {
         setLoading(true);
 
-        const { data: scheduleData, error: scheduleError } = await supabase
-          .from("college_exam_schedules")
-          .select("*")
-          .eq("collegeId", collegeId)
-          .eq("collegeEducationId", collegeEducationId)
-          .eq("isActive", true)
-          .is("deletedAt", null);
-
-        if (scheduleError) throw scheduleError;
+        const scheduleResponse = await fetch("/api/student/exam-schedules", {
+          cache: "no-store",
+        });
+        const scheduleResult = await scheduleResponse.json();
+        if (!scheduleResponse.ok) {
+          throw new Error(scheduleResult.error || "Unable to fetch exam schedules");
+        }
+        const scheduleData = (scheduleResult.schedules || []) as ExamSchedule[];
 
         const filtered = (scheduleData || []).filter((s) => {
+          if (
+            s.academicYear &&
+            normalizeAcademicYear(s.academicYear) !== normalizeAcademicYear(collegeAcademicYear)
+          ) return false;
+
+          // School schedules are class/year based. Branch, semester, and section
+          // are intentionally not used to exclude a matching class schedule.
+          if (isSchool) return true;
+
+          const scheduleSectionIds = s.college_exam_schedule_sections?.map(
+            (item: { collegeSectionsId: number }) => item.collegeSectionsId,
+          ) || (s.collegeSectionsId ? [s.collegeSectionsId] : []);
+          if (
+            scheduleSectionIds.length > 0 &&
+            (collegeSectionsId === null || !scheduleSectionIds.includes(collegeSectionsId))
+          ) return false;
+
+          // Preserve the existing college branch/semester filtering.
           if (s.collegeBranchId && s.collegeBranchId !== collegeBranchId) return false;
-          if (s.academicYear && s.academicYear !== collegeAcademicYear) return false;
           if (s.collegeSemesterId && s.collegeSemesterId !== collegeSemesterId) return false;
-          if (s.collegeSectionsId && s.collegeSectionsId !== collegeSectionsId) return false;
           return true;
         });
 
@@ -219,7 +253,7 @@ export default function MidExams({ onBack }: MidExamsProps) {
     };
 
     loadInitialData();
-  }, [collegeId, collegeEducationId, collegeBranchId, collegeAcademicYear, collegeSemesterId, collegeSectionsId, userId]);
+  }, [collegeId, collegeEducationId, collegeBranchId, collegeAcademicYear, collegeSemesterId, collegeSectionsId, userId, userLoading, studentLoading, isSchool]);
 
   useEffect(() => {
     if (!selectedSchedule || !studentId) return;
@@ -233,7 +267,7 @@ export default function MidExams({ onBack }: MidExamsProps) {
           .select("*")
           .eq("collegeId", collegeId)
           .eq("collegeEducationId", collegeEducationId)
-          .eq("collegeBranchId", collegeBranchId)
+          .filter("collegeBranchId", collegeBranchId === null ? "is" : "eq", collegeBranchId)
           .eq("collegeAcademicYearId", collegeAcademicYearId)
           .is("deletedAt", null);
 
@@ -1075,7 +1109,11 @@ export default function MidExams({ onBack }: MidExamsProps) {
         </div>
       ) : schedules.length === 0 ? (
         <div className="bg-white rounded-xl p-8 w-full text-center border border-gray-200 shadow-sm">
-          <p className="text-gray-500 font-medium text-sm">No exam schedules available for your branch/semester.</p>
+          <p className="text-gray-500 font-medium text-sm">
+            {isSchool
+              ? "No exam schedules available for your class/year."
+              : "No exam schedules available for your branch/semester."}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">

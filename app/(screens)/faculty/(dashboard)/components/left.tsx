@@ -1,7 +1,7 @@
 "use client";
 
 import CardComponent from "@/app/utils/card";
-import { Chalkboard, ClockAfternoon, UsersThree, BookOpen } from "@phosphor-icons/react";
+import { Laptop, Clock, UsersThree, BookOpen } from "@phosphor-icons/react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import StudentPerformanceCard from "../../utils/studentPerformanceCard";
 import UpcomingClasses from "../../utils/upcomingClasses";
@@ -109,26 +109,26 @@ export default function FacultyDashLeft() {
   const cardData = [
     {
       style: "bg-[#E2DAFF]",
-      icon: <Chalkboard size={32} weight="fill" color="#714EF2" />,
-      value: isDataLoading ? <div className="h-6 w-16 bg-white/50 animate-pulse rounded"></div> : `${pad(stats.acceptedClasses)}/${pad(stats.totalClasses)}`,
+      icon: <Laptop size={32} weight="fill" color="#714EF2" />,
+      value: isDataLoading ? <div className="h-6 w-16 bg-white/50 animate-pulse rounded"></div> : pad(stats.totalClasses),
       label: "Total Classes",
     },
     {
       style: "bg-[#FFEDDA]",
       icon: <UsersThree size={32} weight="fill" color="#FFBB70" />,
-      value: isDataLoading ? <div className="h-6 w-16 bg-white/50 animate-pulse rounded"></div> : `${pad(stats.presentStudents)}/${pad(stats.totalStudents)}`,
+      value: isDataLoading ? <div className="h-6 w-16 bg-white/50 animate-pulse rounded"></div> : pad(stats.totalStudents),
       label: "Total Students",
     },
     {
       style: "bg-[#E6FBEA]",
       icon: <BookOpen size={32} weight="fill" color="#74FF8F" />,
-      value: isDataLoading ? <div className="h-6 w-16 bg-white/50 animate-pulse rounded"></div> : `${pad(stats.completedLessons)}/${pad(stats.totalLessons)}`,
+      value: isDataLoading ? <div className="h-6 w-16 bg-white/50 animate-pulse rounded"></div> : pad(stats.totalLessons),
       label: "Total Lessons",
     },
     {
       style: "bg-[#CEE6FF]",
-      icon: <ClockAfternoon size={32} weight="fill" color="#60AEFF" />,
-      value: isDataLoading ? <div className="h-6 w-16 bg-white/50 animate-pulse rounded"></div> : `${pad(stats.acceptedHours)}/${pad(stats.totalHours)}`,
+      icon: <Clock size={32} weight="fill" color="#60AEFF" />,
+      value: isDataLoading ? <div className="h-6 w-16 bg-white/50 animate-pulse rounded"></div> : pad(stats.totalHours),
       label: "Total Hours",
     },
   ];

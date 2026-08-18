@@ -225,7 +225,18 @@ export async function saveLabManual(
 ) {
     const now = getIndianTimestamp();
 
-    const manualData: any = {
+    const manualData: {
+        labTitle: string;
+        description?: string;
+        pdfUrl: string;
+        collegeSubjectId: number;
+        collegeAcademicYearId: number;
+        collegeSectionsId: number;
+        updatedAt: string;
+        createdAt?: string;
+        facultyId?: number;
+        adminId?: number;
+    } = {
         labTitle: payload.labTitle.trim(),
         description: payload.description?.trim(),
         pdfUrl: payload.pdfUrl,
@@ -294,6 +305,17 @@ export async function getLabManualPublicUrl(path: string) {
         return null;
     }
     return data.signedUrl;
+}
+
+export async function deleteLabManualFile(path: string) {
+    const { error } = await supabase.storage
+        .from("faculty_lab_manuals")
+        .remove([path]);
+
+    if (error) {
+        console.error("Error deleting lab manual file:", error);
+        throw error;
+    }
 }
 
 

@@ -227,7 +227,7 @@ export async function getStudentProgressData(userId: number) {
   let subjectsQuery = supabase
     .from("college_subjects")
     .select("collegeSubjectId, subjectName, subjectKey")
-    .eq("collegeBranchId", studentContext.collegeBranchId)
+    .filter("collegeBranchId", studentContext.collegeBranchId === null ? "is" : "eq", studentContext.collegeBranchId)
     .is("deletedAt", null);
 
   if (studentContext.collegeSemesterId !== null) {
@@ -481,7 +481,7 @@ export async function getStudentProgressData(userId: number) {
       status
     `,
     )
-    .eq("collegeBranchId", studentContext.collegeBranchId)
+    .filter("collegeBranchId", studentContext.collegeBranchId === null ? "is" : "eq", studentContext.collegeBranchId)
     .eq("is_deleted", false)
     .neq("status", "Cancelled");
 
@@ -649,7 +649,7 @@ export async function getStudentProgressData(userId: number) {
     )
     .eq("collegeId", studentContext.collegeId)
     .eq("collegeEducationId", studentContext.collegeEducationId)
-    .eq("collegeBranchId", studentContext.collegeBranchId)
+    .filter("collegeBranchId", studentContext.collegeBranchId === null ? "is" : "eq", studentContext.collegeBranchId)
     .in("collegeSubjectId", semesterSubjectIds)
     .is("deletedAt", null);
 
@@ -787,7 +787,9 @@ export async function getStudentProgressData(userId: number) {
           rollNo: studentPinRow.pinNumber,
           collegeId: studentContext.collegeId,
           collegeEducationId: studentContext.collegeEducationId,
-          collegeBranchIds: [studentContext.collegeBranchId],
+          collegeBranchIds: studentContext.collegeBranchId 
+            ? [studentContext.collegeBranchId] 
+            : [],
           academicYearIds: studentContext.collegeAcademicYearId
             ? [studentContext.collegeAcademicYearId]
             : [],

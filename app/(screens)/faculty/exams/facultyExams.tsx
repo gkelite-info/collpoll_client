@@ -17,6 +17,7 @@ import {
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
 import FacultyDashRight from "@/app/(screens)/faculty/(dashboard)/components/right";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 type ExamSchedule = {
   collegeExamScheduleId: number;
@@ -31,6 +32,12 @@ type ExamSchedule = {
   fromDate: string | null;
   toDate: string | null;
   isActive: boolean;
+  college_exam_schedule_sections?: Array<{
+    collegeSectionsId: number;
+    college_sections?: { collegeSections: string } | null;
+  }>;
+  college_sections?: { collegeSections: string } | null;
+  college_exam_schedule_subjects?: Array<{ examDate: string | null }>;
 };
 
 type EnrollmentRecord = {
@@ -54,6 +61,9 @@ export default function FacultyExamsPage() {
   const [schedules, setSchedules] = useState<ExamSchedule[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<ExamSchedule | null>(null);
   const [enrollmentCounts, setEnrollmentCounts] = useState<Record<number, number>>({});
+  const [actualEnrollmentCounts, setActualEnrollmentCounts] = useState<Record<number, number>>({});
+  const [schedulePage, setSchedulePage] = useState(1);
+  const scheduleItemsPerPage = 4;
 
   const [studentsCohort, setStudentsCohort] = useState<any[]>([]);
   const [examEnrollments, setExamEnrollments] = useState<any[]>([]);
@@ -69,13 +79,49 @@ export default function FacultyExamsPage() {
       try {
         setLoading(true);
 
-        const { data: scheduleData, error: scheduleError } = await supabase
+        let { data: scheduleData, error: scheduleError } = await supabase
           .from("college_exam_schedules")
-          .select("*")
+          .select(`
+            *,
+            college_sections ( collegeSections ),
+            college_exam_schedule_sections (
+              collegeSectionsId,
+              college_sections ( collegeSections )
+            )
+          `)
           .eq("collegeId", collegeId)
           .is("deletedAt", null);
 
-        if (scheduleError) throw scheduleError;
+        // Keep the screen working before the multi-section migration is applied.
+        if (scheduleError) {
+          const legacyResult = await supabase
+            .from("college_exam_schedules")
+            .select("*, college_sections ( collegeSections )")
+            .eq("collegeId", collegeId)
+            .is("deletedAt", null);
+          scheduleData = legacyResult.data;
+          scheduleError = legacyResult.error;
+        }
+
+        if (scheduleError) throw new Error(scheduleError.message || "Unable to fetch exam schedules");
+
+        const scheduleIds = (scheduleData || []).map(
+          (schedule) => schedule.collegeExamScheduleId,
+        );
+        if (scheduleIds.length > 0) {
+          const { data: subjectDateData } = await supabase
+            .from("college_exam_schedule_subjects")
+            .select("collegeExamScheduleId, examDate")
+            .in("collegeExamScheduleId", scheduleIds)
+            .is("deletedAt", null);
+
+          scheduleData = (scheduleData || []).map((schedule) => ({
+            ...schedule,
+            college_exam_schedule_subjects: (subjectDateData || []).filter(
+              (subject) => subject.collegeExamScheduleId === schedule.collegeExamScheduleId,
+            ),
+          }));
+        }
 
         const filtered = (scheduleData || []).filter((s) => {
           if (s.collegeEducationId && s.collegeEducationId !== collegeEducationId) return false;
@@ -85,29 +131,100 @@ export default function FacultyExamsPage() {
 
         setSchedules(filtered);
 
-        const { data: enrollmentData, error: enrollError } = await supabase
-          .from("student_exam_enrollments")
-          .select("collegeExamScheduleId, studentId")
+        const { data: cohortData, error: cohortError } = await supabase
+          .from("students")
+          .select(`
+            studentId,
+            collegeEducationId,
+            collegeBranchId,
+            student_academic_history!inner (
+              collegeSectionsId,
+              collegeAcademicYearId,
+              collegeSemesterId,
+              isCurrent
+            )
+          `)
+          .eq("collegeId", collegeId)
+          .eq("isActive", true)
+          .is("deletedAt", null)
+          .eq("student_academic_history.isCurrent", true);
+
+        if (cohortError) throw cohortError;
+
+        const { data: academicYearData, error: academicYearError } = await supabase
+          .from("college_academic_year")
+          .select("collegeAcademicYearId, collegeAcademicYear")
+          .eq("collegeId", collegeId)
           .is("deletedAt", null);
 
-        if (enrollError) throw enrollError;
+        if (academicYearError) throw academicYearError;
 
         const counts: Record<number, number> = {};
-        const uniqueEnrolls = new Map<number, Set<number>>();
-        enrollmentData?.forEach((row: any) => {
-          const schId = row.collegeExamScheduleId;
-          const stuId = row.studentId;
-          if (!uniqueEnrolls.has(schId)) {
-            uniqueEnrolls.set(schId, new Set());
-          }
-          uniqueEnrolls.get(schId)!.add(stuId);
-        });
+        const academicYearIds = new Map(
+          (academicYearData || []).map((year) => [
+            year.collegeAcademicYear,
+            year.collegeAcademicYearId,
+          ]),
+        );
 
-        uniqueEnrolls.forEach((stus, schId) => {
-          counts[schId] = stus.size;
+        filtered.forEach((schedule) => {
+          const scheduleYearId = schedule.academicYear
+            ? academicYearIds.get(schedule.academicYear)
+            : undefined;
+
+          const scheduleSectionIds = schedule.college_exam_schedule_sections?.map(
+            (item: { collegeSectionsId: number }) => item.collegeSectionsId,
+          ) || (schedule.collegeSectionsId ? [schedule.collegeSectionsId] : []);
+          const matchingStudentIds = new Set<number>();
+          (cohortData || []).forEach((student: any) => {
+            if (student.collegeEducationId !== schedule.collegeEducationId) return;
+            if (schedule.collegeBranchId && student.collegeBranchId !== schedule.collegeBranchId) return;
+
+            const histories = Array.isArray(student.student_academic_history)
+              ? student.student_academic_history
+              : student.student_academic_history
+                ? [student.student_academic_history]
+                : [];
+
+            const matchesSchedule = histories.some((history: any) =>
+              history.isCurrent === true &&
+              (!schedule.collegeSemesterId || history.collegeSemesterId === schedule.collegeSemesterId) &&
+              (scheduleSectionIds.length === 0 || scheduleSectionIds.includes(history.collegeSectionsId)) &&
+              (!scheduleYearId || history.collegeAcademicYearId === scheduleYearId)
+            );
+
+            if (matchesSchedule) matchingStudentIds.add(student.studentId);
+          });
+
+          counts[schedule.collegeExamScheduleId] = matchingStudentIds.size;
         });
 
         setEnrollmentCounts(counts);
+
+        // Fetch actual enrollments to show enrolled / total
+        if (scheduleIds.length > 0) {
+          const { data: allEnrollments, error: enrollErr } = await supabase
+            .from("student_exam_enrollments")
+            .select("collegeExamScheduleId, studentId")
+            .in("collegeExamScheduleId", scheduleIds)
+            .eq("isActive", true)
+            .is("deletedAt", null);
+            
+          if (!enrollErr && allEnrollments) {
+            const actualCounts: Record<number, Set<number>> = {};
+            allEnrollments.forEach((e: any) => {
+              if (!actualCounts[e.collegeExamScheduleId]) {
+                actualCounts[e.collegeExamScheduleId] = new Set();
+              }
+              actualCounts[e.collegeExamScheduleId].add(e.studentId);
+            });
+            const actualCountsFormatted: Record<number, number> = {};
+            Object.keys(actualCounts).forEach(k => {
+              actualCountsFormatted[Number(k)] = actualCounts[Number(k)].size;
+            });
+            setActualEnrollmentCounts(actualCountsFormatted);
+          }
+        }
       } catch (err) {
         console.error("Failed to load faculty schedules", err);
         toast.error("Failed to load exam schedules.");
@@ -177,8 +294,11 @@ export default function FacultyExamsPage() {
         if (selectedSchedule.collegeSemesterId) {
           studentQuery = studentQuery.eq("student_academic_history.collegeSemesterId", selectedSchedule.collegeSemesterId);
         }
-        if (selectedSchedule.collegeSectionsId) {
-          studentQuery = studentQuery.eq("student_academic_history.collegeSectionsId", selectedSchedule.collegeSectionsId);
+        const selectedSectionIds = selectedSchedule.college_exam_schedule_sections?.map(
+          (item) => item.collegeSectionsId,
+        ) || (selectedSchedule.collegeSectionsId ? [selectedSchedule.collegeSectionsId] : []);
+        if (selectedSectionIds.length > 0) {
+          studentQuery = studentQuery.in("student_academic_history.collegeSectionsId", selectedSectionIds);
         }
 
         let academicYearIdToFilter = null;
@@ -269,6 +389,15 @@ export default function FacultyExamsPage() {
   }, [searchedStudents, currentPage]);
 
   const totalPages = Math.ceil(searchedStudents.length / itemsPerPage) || 1;
+  const paginatedSchedules = useMemo(() => {
+    const startIndex = (schedulePage - 1) * scheduleItemsPerPage;
+    return schedules.slice(startIndex, startIndex + scheduleItemsPerPage);
+  }, [schedulePage, schedules]);
+
+  useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(schedules.length / scheduleItemsPerPage));
+    if (schedulePage > lastPage) setSchedulePage(lastPage);
+  }, [schedulePage, schedules.length]);
 
   const handleExportExcel = () => {
     if (!selectedSchedule || searchedStudents.length === 0) return;
@@ -315,16 +444,23 @@ export default function FacultyExamsPage() {
     }
   };
 
-  const formattedFromDate = selectedSchedule?.fromDate
-    ? new Date(selectedSchedule.fromDate).toLocaleDateString("en-US", {
+  const subjectDates = (selectedSchedule?.college_exam_schedule_subjects || [])
+    .map((subject) => subject.examDate)
+    .filter((date): date is string => Boolean(date))
+    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+  const effectiveFromDate = selectedSchedule?.fromDate || subjectDates[0] || null;
+  const effectiveToDate = selectedSchedule?.toDate || subjectDates[subjectDates.length - 1] || effectiveFromDate;
+
+  const formattedFromDate = effectiveFromDate
+    ? new Date(effectiveFromDate).toLocaleDateString("en-US", {
       day: "numeric",
       month: "long",
       year: "numeric",
     })
     : "-";
 
-  const formattedToDate = selectedSchedule?.toDate
-    ? new Date(selectedSchedule.toDate).toLocaleDateString("en-US", {
+  const formattedToDate = effectiveToDate
+    ? new Date(effectiveToDate).toLocaleDateString("en-US", {
       day: "numeric",
       month: "long",
       year: "numeric",
@@ -401,11 +537,11 @@ export default function FacultyExamsPage() {
                 <div className="overflow-x-auto w-full flex-1">
                   <table className="w-full text-left border-collapse min-w-[700px]">
                     <thead>
-                      <tr className="bg-gray-50/70 border-b border-gray-100 text-gray-700 text-xs font-bold uppercase tracking-wider">
+                      <tr className="bg-gray-50/70 border-b border-gray-100 text-gray-700 text-xs font-bold uppercase tracking-wider whitespace-nowrap">
                         <th className="py-4 px-6 w-20 text-center">S.No</th>
                         <th className="py-4 px-6">Student Details</th>
-                        <th className="py-4 px-6 w-44">Roll Number</th>
-                        <th className="py-4 px-6 w-48">Enrolled Date</th>
+                        <th className="py-4 px-6">Roll Number</th>
+                        <th className="py-4 px-6">Enrolled Date</th>
                         <th className="py-4 px-6 w-32 text-center">Status</th>
                       </tr>
                     </thead>
@@ -543,16 +679,22 @@ export default function FacultyExamsPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-4 w-full">
-                {schedules.map((sch) => {
-                  const formattedFrom = sch.fromDate
-                    ? new Date(sch.fromDate).toLocaleDateString("en-US", {
+                {paginatedSchedules.map((sch) => {
+                  const subjectDates = (sch.college_exam_schedule_subjects || [])
+                    .map((subject) => subject.examDate)
+                    .filter((date): date is string => Boolean(date))
+                    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+                  const effectiveFromDate = sch.fromDate || subjectDates[0] || null;
+                  const effectiveToDate = sch.toDate || subjectDates[subjectDates.length - 1] || effectiveFromDate;
+                  const formattedFrom = effectiveFromDate
+                    ? new Date(effectiveFromDate).toLocaleDateString("en-US", {
                       day: "numeric",
                       month: "short",
                       year: "numeric",
                     })
                     : "-";
-                  const formattedTo = sch.toDate
-                    ? new Date(sch.toDate).toLocaleDateString("en-US", {
+                  const formattedTo = effectiveToDate
+                    ? new Date(effectiveToDate).toLocaleDateString("en-US", {
                       day: "numeric",
                       month: "short",
                       year: "numeric",
@@ -560,6 +702,11 @@ export default function FacultyExamsPage() {
                     : "-";
 
                   const totalEnrolled = enrollmentCounts[sch.collegeExamScheduleId] || 0;
+                  const sectionNames = sch.college_exam_schedule_sections
+                    ?.map((item) => item.college_sections?.collegeSections)
+                    .filter(Boolean) || (sch.college_sections?.collegeSections
+                      ? [sch.college_sections.collegeSections]
+                      : []);
 
                   return (
                     <div
@@ -581,23 +728,48 @@ export default function FacultyExamsPage() {
                             {formattedFrom} – {formattedTo}
                           </span>
                         </div>
+                        {(sch.academicYear || sectionNames.length > 0) && (
+                          <div className="flex items-center gap-2 mt-2 flex-wrap text-[11px] font-semibold">
+                            {sch.academicYear && (
+                              <span className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-600">
+                                Year: {sch.academicYear}
+                              </span>
+                            )}
+                            {sectionNames.length > 0 && (
+                              <span className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-600">
+                                Sections: {sectionNames.join(", ")}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-50">
                         <div className="flex flex-col">
                           <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Enrollments</span>
-                          <span className="text-gray-700 font-bold text-sm">{totalEnrolled} Students</span>
+                          <span className="text-gray-700 font-bold text-sm">{(actualEnrollmentCounts[sch.collegeExamScheduleId] || 0)} / {totalEnrolled} Students</span>
                         </div>
                         <button
                           onClick={() => setSelectedSchedule(sch)}
-                          className="bg-[#43C17A] hover:bg-[#35a868] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm"
+                          disabled={sch.toDate ? new Date(sch.toDate).setHours(23, 59, 59, 999) < new Date().getTime() : false}
+                          className={`text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm ${sch.toDate && new Date(sch.toDate).setHours(23, 59, 59, 999) < new Date().getTime() ? "bg-gray-300 cursor-not-allowed" : "bg-[#43C17A] hover:bg-[#35a868] cursor-pointer"}`}
                         >
-                          View Enrollments
+                          {sch.toDate && new Date(sch.toDate).setHours(23, 59, 59, 999) < new Date().getTime() ? "Closed" : "View Enrollments"}
                         </button>
                       </div>
                     </div>
                   );
                 })}
+                <div className="lg:col-span-2 xl:col-span-2">
+                  <Pagination
+                    currentPage={schedulePage}
+                    totalItems={schedules.length}
+                    itemsPerPage={scheduleItemsPerPage}
+                    onPageChange={setSchedulePage}
+                    alwaysShow
+                    roundedBottom="rounded-xl"
+                  />
+                </div>
               </div>
             )}
           </>

@@ -1,7 +1,8 @@
 "use client";
 
 import { TrashIcon, PencilSimpleLine } from "@phosphor-icons/react";
-import { useState } from "react";
+import toast from "react-hot-toast";
+import { getLabManualPublicUrl } from "@/lib/helpers/faculty/facultyLabManualHelper";
 
 export interface LabManual {
   labId: number;
@@ -11,6 +12,7 @@ export interface LabManual {
   description?: string;
   fileName: string;
   fileSize: number;
+  pdfUrl?: string;
   fileUrl?: string;
   uploadedAt: string;
 }
@@ -43,7 +45,28 @@ export default function FacultyLabCard({
   onDelete,
   onEdit,
 }: FacultyLabCardProps) {
-  const [showConfirm, setShowConfirm] = useState(false);
+  const handleView = async () => {
+    if (!data.pdfUrl) {
+      if (data.fileUrl) window.open(data.fileUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    const previewWindow = window.open("", "_blank");
+    try {
+      const signedUrl = await getLabManualPublicUrl(data.pdfUrl);
+      if (!signedUrl) throw new Error("Unable to generate PDF URL");
+
+      if (previewWindow) {
+        previewWindow.opener = null;
+        previewWindow.location.href = signedUrl;
+      } else {
+        window.open(signedUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch {
+      previewWindow?.close();
+      toast.error("Failed to open lab manual");
+    }
+  };
 
   return (
     <div className="w-full bg-white border border-gray-200 rounded-xl p-3.5 md:p-4 shadow-sm hover:shadow-md hover:border-emerald-500/30 transition-all duration-200 group flex flex-col md:flex-row md:items-center gap-3 md:gap-4 relative overflow-hidden">
@@ -99,12 +122,11 @@ export default function FacultyLabCard({
         </span>
 
         <div className="flex items-center gap-2">
-          {data.fileUrl && (
-            <a
-              href={data.fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 text-xs font-bold hover:bg-emerald-500 hover:text-white transition-colors border border-emerald-100 hover:border-emerald-500"
+          {(data.pdfUrl || data.fileUrl) && (
+            <button
+              type="button"
+              onClick={handleView}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 text-xs font-bold hover:bg-emerald-500 hover:text-white transition-colors border border-emerald-100 hover:border-emerald-500 cursor-pointer"
             >
               <svg
                 width="14"
@@ -120,48 +142,25 @@ export default function FacultyLabCard({
                 <circle cx="12" cy="12" r="3" />
               </svg>
               <span>View</span>
-            </a>
+            </button>
           )}
 
-          {onEdit && !showConfirm && (
+          {onEdit && (
             <button
               onClick={() => onEdit(data)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-500 hover:text-white transition-colors border border-blue-100 hover:border-blue-500 md:opacity-0 md:group-hover:opacity-100"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-500 hover:text-white transition-colors border border-blue-100 hover:border-blue-500 md:opacity-0 md:group-hover:opacity-100 cursor-pointer"
             >
               <PencilSimpleLine size={16} weight="bold" />
             </button>
           )}
 
-          {onDelete && !showConfirm && (
+          {onDelete && (
             <button
-              onClick={() => setShowConfirm(true)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-500 hover:text-white transition-colors border border-red-100 hover:border-red-500 md:opacity-0 md:group-hover:opacity-100"
+              onClick={() => onDelete(data.labId)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-500 hover:text-white transition-colors border border-red-100 hover:border-red-500 md:opacity-0 md:group-hover:opacity-100 cursor-pointer"
             >
               <TrashIcon size={16} weight="bold" />
             </button>
-          )}
-
-          {showConfirm && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-2.5 py-1.5 absolute md:relative right-3 bottom-3 md:right-auto md:bottom-auto shadow-sm md:shadow-none animate-in fade-in zoom-in-95 duration-200">
-              <span className="text-[10px] font-black text-red-600 uppercase tracking-wide">
-                Delete?
-              </span>
-              <button
-                onClick={() => {
-                  onDelete?.(data.labId);
-                  setShowConfirm(false);
-                }}
-                className="bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded hover:bg-red-600 transition-colors cursor-pointer"
-              >
-                YES
-              </button>
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="text-gray-500 text-[10px] font-bold px-1.5 hover:text-gray-800 transition-colors cursor-pointer"
-              >
-                NO
-              </button>
-            </div>
           )}
         </div>
       </div>

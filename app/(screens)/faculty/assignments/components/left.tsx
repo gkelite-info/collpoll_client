@@ -13,7 +13,6 @@ import { Pagination as AssignmentPagination } from "@/app/(screens)/admin/academ
 import FacultyQuizCard from "./facultyQuizCard";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
-import { CaretLeftIcon, CaretRight } from "@phosphor-icons/react";
 import FacultyDiscussionCard from "./facultyDiscussionCard";
 import FacultyDiscussionForm from "./facultyDiscussionForm";
 import FacultyDiscussionSubmissions from "./facultyDiscussionSubmissions";
@@ -25,6 +24,7 @@ import {
 } from "@/lib/helpers/discussionForum/discussionForumAPI";
 import FacultyDiscussionShimmer from "../shimmer/discussionShimmer";
 import ConfirmDeleteModal from "./confirmDeleteModal";
+import CalendarConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import FacultyQuizForm from "./facultyQuizForm";
 import FacultyAddQuestions from "./FacultyAddQuizQuestions";
 import FacultyQuizResumeBanner from "./FacultyQuizResumeBanner";
@@ -37,7 +37,7 @@ import {
 import FacultyQuizShimmer from "../shimmer/FacultyQuizShimmer";
 import FacultyQuizSubmissions from "./quizSubmissions";
 import FacultyLabForm from "./facultyLabForm";
-import { deleteLabManual, fetchLabManualsForStaff, getLabManualPublicUrl } from "@/lib/helpers/faculty/facultyLabManualHelper";
+import { deleteLabManual, fetchLabManualsForStaff } from "@/lib/helpers/faculty/facultyLabManualHelper";
 import FacultyLabCard from "./FacultyLabCard";
 
 export interface Assignment {
@@ -245,9 +245,7 @@ function AssignmentsLeftContent() {
         pageSize: ITEMS_PER_PAGE,
       });
 
-      const formatted = await Promise.all(
-        response.data.map(async (lab: any) => {
-          const fileUrl = await getLabManualPublicUrl(lab.pdfUrl);
+      const formatted = response.data.map((lab: any) => {
           return {
             labId: lab.labManualId,
             labTitle: lab.labTitle,
@@ -262,11 +260,9 @@ function AssignmentsLeftContent() {
             description: lab.description,
             fileName: lab.pdfUrl.split("/").pop(),
             fileSize: lab.fileSize,
-            fileUrl: fileUrl,
             uploadedAt: lab.createdAt,
           };
-        })
-      );
+        });
 
       setLabs(formatted);
       setLabTotalCount(response.totalCount || 0);
@@ -1143,53 +1139,13 @@ function AssignmentsLeftContent() {
                         onEdit={handleEditLab}
                       />
                     ))}
-                    {labTotalCount > ITEMS_PER_PAGE && (
-                      <div className="flex justify-end items-center gap-3 mt-6 mb-4">
-                        <button
-                          onClick={() =>
-                            setLabCurrentPage((p) => Math.max(1, p - 1))
-                          }
-                          disabled={labCurrentPage === 1}
-                          className={`w-10 h-10 flex items-center justify-center rounded-lg border ${labCurrentPage === 1
-                            ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                            : "border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer"
-                            }`}
-                        >
-                          <CaretLeftIcon size={18} weight="bold" />
-                        </button>
-
-                        {[...Array(Math.ceil(labTotalCount / ITEMS_PER_PAGE))].map((_, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setLabCurrentPage(i + 1)}
-                            className={`w-10 h-10 rounded-lg font-semibold cursor-pointer ${labCurrentPage === i + 1
-                              ? "bg-[#16284F] text-white"
-                              : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-                              }`}
-                          >
-                            {i + 1}
-                          </button>
-                        ))}
-
-                        <button
-                          onClick={() =>
-                            setLabCurrentPage((p) =>
-                              Math.min(Math.ceil(labTotalCount / ITEMS_PER_PAGE), p + 1),
-                            )
-                          }
-                          disabled={
-                            labCurrentPage ===
-                            Math.ceil(labTotalCount / ITEMS_PER_PAGE)
-                          }
-                          className={`w-10 h-10 flex items-center justify-center rounded-lg border ${labCurrentPage === Math.ceil(labTotalCount / ITEMS_PER_PAGE)
-                            ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                            : "border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer"
-                            }`}
-                        >
-                          <CaretRight size={18} weight="bold" />
-                        </button>
-                      </div>
-                    )}
+                    <AssignmentPagination
+                      currentPage={labCurrentPage}
+                      totalItems={labTotalCount}
+                      itemsPerPage={ITEMS_PER_PAGE}
+                      onPageChange={setLabCurrentPage}
+                      alwaysShow
+                    />
                   </>
                 )}
               </div>
@@ -1214,12 +1170,16 @@ function AssignmentsLeftContent() {
         name="quiz"
       />
 
-      <ConfirmDeleteModal
+      <CalendarConfirmDeleteModal
         open={!!deleteLabId}
         onConfirm={executeDeleteLab}
         onCancel={() => setDeleteLabId(null)}
         isDeleting={isDeletingLab}
         name="lab manual"
+        title="Delete"
+        confirmText="Yes, Delete"
+        loadingText="Deleting..."
+        actionType="remove"
       />
     </div>
   );
