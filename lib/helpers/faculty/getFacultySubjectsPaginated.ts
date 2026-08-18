@@ -53,7 +53,8 @@ export async function getFacultySubjectsPaginated(params: {
         collegeSemesterId,
         college_branch (collegeBranchCode),
         college_academic_year (collegeAcademicYear),
-        college_semester (collegeSemester)
+        college_semester (collegeSemester),
+        college_education (collegeEducationType)
       )
     `, { count: "exact" })
     .eq("facultyId", facultyId)
@@ -286,12 +287,19 @@ export async function getFacultySubjectsPaginated(params: {
 
     const semesterDisplay = semData?.collegeSemester ? `Sem ${semData.collegeSemester}` : "-";
 
+    const eduData = Array.isArray(s.college_education)
+      ? s.college_education[0]
+      : s.college_education;
+    
+    const educationType = eduData?.collegeEducationType || undefined;
+
     const batchKey = `${s.collegeEducationId}-${s.collegeBranchId}-${s.collegeAcademicYearId}-${s.collegeSemesterId}-${fs.collegeSectionsId}`;
     const students = studentCounts.get(batchKey) ?? 0;
 
     return {
       collegeId,
       collegeEducationId: s.collegeEducationId,
+      educationType,
       collegeBranchId: s.collegeBranchId,
       branchCode: branchCode || "-",
       collegeAcademicYearId: s.collegeAcademicYearId,

@@ -2,13 +2,15 @@
 
 import { useState, useEffect, ChangeEvent, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ArrowLeft, UploadSimple, X, MicrosoftExcelLogoIcon } from "@phosphor-icons/react";
+import { ArrowLeft, UploadSimple, X, MicrosoftExcelLogoIcon, SpinnerGap } from "@phosphor-icons/react";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import { supabase } from "@/lib/supabaseClient";
 import * as XLSX from "xlsx";
 import toast from "react-hot-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/app/utils/context/UserContext";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { checkFacultyResultsExists } from "@/lib/helpers/faculty/results/checkFacultyResultsExists";
+import { uploadFacultyResults } from "@/lib/helpers/faculty/results/uploadFacultyResults";
 
 export default function UploadResults() {
   const router = useRouter();
@@ -20,6 +22,22 @@ export default function UploadResults() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+  const validateAndSetFile = (file: File) => {
+    const validExtensions = [".xlsx", ".xls", ".csv"];
+    const fileExtension = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+    if (!validExtensions.includes(fileExtension)) {
+      toast.error("Only Excel formats (.xlsx, .xls, .csv) are allowed.");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("File is too large. Maximum allowed size is 10MB.");
+      return;
+    }
+    setExcelFile(file);
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -38,13 +56,7 @@ export default function UploadResults() {
 
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      const validExtensions = [".xlsx", ".xls", ".csv"];
-      const fileExtension = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
-      if (!validExtensions.includes(fileExtension)) {
-        alert("Only Excel formats (.xlsx, .xls, .csv) are allowed for results upload.");
-        return;
-      }
-      setExcelFile(file);
+      validateAndSetFile(file);
     }
   };
 
@@ -104,67 +116,40 @@ export default function UploadResults() {
     });
   }, [searchParams, collegeBranchId]);
 
+  const scheduleIdParam = searchParams.get("collegeExamScheduleId");
+  const scheduleId = scheduleIdParam ? Number(scheduleIdParam) : null;
+
+  const { data: existsData, isFetching: isCheckingExists } = useQuery({
+    queryKey: ["checkResultsExists", scheduleId, subjectParam, formData.academicYearId, formData.branchId, isSchool],
+    queryFn: async () => {
+      if (!scheduleId || !formData.academicYearId) return false;
+      return await checkFacultyResultsExists({
+        scheduleId: scheduleId as number,
+        subjectName: subjectParam,
+        collegeAcademicYearId: Number(formData.academicYearId),
+        collegeBranchId: formData.branchId ? Number(formData.branchId) : null,
+        isSchool
+      });
+    },
+    enabled: !!scheduleId && !!formData.academicYearId && !!collegeId,
+  });
+
   useEffect(() => {
-    const checkExistingResults = async () => {
-      const scheduleIdParam = searchParams.get("collegeExamScheduleId");
-      const scheduleId = scheduleIdParam ? Number(scheduleIdParam) : null;
-      if (!scheduleId) return;
-
-      let targetSubjectId = facultySections.find(s => s.faculty_subject?.subjectName === subjectParam)?.collegeSubjectId;
-
-      if (!targetSubjectId && (isSchool || formData.branchId)) {
-        let subjectQuery = supabase
-          .from("college_subjects")
-          .select("collegeSubjectId")
-          .eq("subjectName", subjectParam)
-          .eq("collegeAcademicYearId", Number(formData.academicYearId))
-          .is("deletedAt", null);
-
-        if (!isSchool) {
-          subjectQuery = subjectQuery.eq(
-            "collegeBranchId",
-            Number(formData.branchId),
-          );
-        }
-
-        const { data: subData } = await subjectQuery.maybeSingle();
-        targetSubjectId = subData?.collegeSubjectId;
-      }
-
-      if (!targetSubjectId) return;
-
-      const { count, error } = await supabase
-        .from("results")
-        .select("*", { count: "exact", head: true })
-        .eq("subjectId", targetSubjectId)
-        .eq("collegeExamScheduleId", scheduleId)
-        .is("deletedAt", null);
-
-      if (!error && count && count > 0) {
-        setIsEditMode(true);
-        const fileName = "Results.xlsx";
-        const dummyFile = new File([""], fileName, {
-          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        });
-        setExcelFile(dummyFile);
-      }
-    };
-
-    if (collegeId && formData.sectionId && formData.academicYearId) {
-      checkExistingResults();
+    if (existsData) {
+      setIsEditMode(true);
+      const dummyFile = new File([""], "Results.xlsx", {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      });
+      setExcelFile(dummyFile);
+    } else {
+      setIsEditMode(false);
     }
-  }, [collegeId, formData.sectionId, formData.academicYearId, subjectParam, facultySections, formData.branchId, examTypeParam, searchParams, isSchool]);
+  }, [existsData]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const validExtensions = [".xlsx", ".xls", ".csv"];
-      const fileExtension = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
-      if (!validExtensions.includes(fileExtension)) {
-        alert("Only Excel formats (.xlsx, .xls, .csv) are allowed for results upload.");
-        return;
-      }
-      setExcelFile(file);
+      validateAndSetFile(file);
     }
   };
 
@@ -174,11 +159,45 @@ export default function UploadResults() {
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
-  const handleSubmit = async () => {
-    const finalSemesterId = formData.semesterId ? Number(formData.semesterId) : 1;
-    const scheduleIdParam = searchParams.get("collegeExamScheduleId");
-    const scheduleId = scheduleIdParam ? Number(scheduleIdParam) : null;
+  const handleSuccessRedirect = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("view", "details");
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
+  const queryClient = useQueryClient();
+
+  const uploadMutation = useMutation({
+    mutationFn: async (resultsJson: any[]) => {
+      const finalSemesterId = formData.semesterId ? Number(formData.semesterId) : 1;
+      return await uploadFacultyResults({
+        collegeId: collegeId as number,
+        scheduleId: scheduleId as number,
+        subjectName: subjectParam,
+        collegeAcademicYearId: Number(formData.academicYearId),
+        collegeBranchId: formData.branchId ? Number(formData.branchId) : null,
+        sectionId: Number(formData.sectionId),
+        semesterId: finalSemesterId,
+        isSchool,
+        resultsJson,
+      });
+    },
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success(res.message, { duration: 6000 });
+        queryClient.invalidateQueries({ queryKey: ["facultyResultsOverview"] });
+        handleSuccessRedirect();
+      } else {
+        toast.error(res.message);
+      }
+    },
+    onError: (err: any) => {
+      console.error("Upload mutation error:", err);
+      toast.error(`Upload failed: ${err?.message || "Unknown error occurred"}`);
+    }
+  });
+
+  const handleSubmit = async () => {
     if (!scheduleId) {
       toast.error("Exam schedule information is missing.");
       return;
@@ -203,150 +222,13 @@ export default function UploadResults() {
           return;
         }
 
-        const sampleRow = jsonData[0];
-        const keys = Object.keys(sampleRow);
+        // Fix Next.js Server Action serialization error by stripping any hidden prototypes from XLSX
+        const plainJsonData = JSON.parse(JSON.stringify(jsonData));
 
-        const findKey = (candidates: string[]) => {
-          return keys.find(k => candidates.includes(k.toLowerCase().trim()));
-        };
-
-        const rollNoKey = findKey(["roll no", "rollno", "student id", "studentid", "pin number", "pinnumber", "student roll no", "register no", "reg no"]);
-        const internalKey = findKey(["internal marks", "internalmarks", "internal", "internals"]);
-        const externalKey = findKey(["external marks", "externalmarks", "external", "externals"]);
-        const totalKey = findKey(["total", "total marks", "totalmarks"]);
-        const gradeKey = findKey(["grade", "grade secured", "result grade"]);
-
-        if (!rollNoKey || !gradeKey) {
-          toast.error("Excel sheet must contain at least a 'Roll No' (or Student ID) and a 'Grade' column.");
-          return;
-        }
-
-        const sectionIdNum = Number(formData.sectionId);
-        const yearIdNum = Number(formData.academicYearId);
-
-        const { data: historyRows, error: histError } = await supabase
-          .from("student_academic_history")
-          .select("studentId")
-          .eq("collegeSectionsId", sectionIdNum)
-          .eq("collegeAcademicYearId", yearIdNum)
-          .eq("isCurrent", true)
-          .is("deletedAt", null);
-
-        if (histError) throw histError;
-
-        if (!historyRows || historyRows.length === 0) {
-          toast.error("No students found currently enrolled in this section/year.");
-          return;
-        }
-
-        const studentIds = historyRows.map(h => h.studentId);
-
-        const { data: pinRows, error: pinError } = await supabase
-          .from("student_pins")
-          .select("studentId, pinNumber")
-          .in("studentId", studentIds)
-          .eq("collegeId", collegeId)
-          .eq("isActive", true)
-          .is("deletedAt", null);
-
-        if (pinError) throw pinError;
-
-        const pinMap = new Map<string, number>();
-        pinRows?.forEach(r => {
-          if (r.pinNumber) {
-            pinMap.set(r.pinNumber.trim().toUpperCase(), r.studentId);
-          }
-        });
-
-        let targetSubjectId = facultySections.find(s => s.faculty_subject?.subjectName === subjectParam)?.collegeSubjectId;
-
-        if (!targetSubjectId) {
-          let subjectQuery = supabase
-            .from("college_subjects")
-            .select("collegeSubjectId")
-            .eq("subjectName", subjectParam)
-            .eq("collegeAcademicYearId", yearIdNum)
-            .is("deletedAt", null);
-
-          if (!isSchool) {
-            subjectQuery = subjectQuery.eq(
-              "collegeBranchId",
-              Number(formData.branchId),
-            );
-          }
-
-          const { data: subData } = await subjectQuery.maybeSingle();
-          targetSubjectId = subData?.collegeSubjectId;
-        }
-
-        if (!targetSubjectId) {
-          toast.error(`Could not resolve subject ID for subject "${subjectParam}"`);
-          return;
-        }
-
-        const resultsToInsert: any[] = [];
-        const notFoundRollNos: string[] = [];
-
-        jsonData.forEach(row => {
-          const rollVal = String(row[rollNoKey] || "").trim().toUpperCase();
-          const studentId = pinMap.get(rollVal);
-
-          if (!studentId) {
-            notFoundRollNos.push(rollVal);
-            return;
-          }
-
-          const internal = Number(row[internalKey || ""] || 0);
-          const external = Number(row[externalKey || ""] || 0);
-          const total = row[totalKey || ""] !== undefined ? Number(row[totalKey || ""]) : (internal + external);
-          const grade = String(row[gradeKey] || "").trim();
-
-          resultsToInsert.push({
-            studentId,
-            subjectId: targetSubjectId,
-            collegeSemesterId: finalSemesterId,
-            collegeExamScheduleId: scheduleId,
-            internalMarks: internal,
-            externalMarks: external,
-            total,
-            grade,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-        });
-
-        if (resultsToInsert.length === 0) {
-          toast.error("No matching student roll numbers found in the excel sheet.");
-          return;
-        }
-
-        const targetStudentIds = resultsToInsert.map(r => r.studentId);
-        const { error: deleteError } = await supabase
-          .from("results")
-          .delete()
-          .in("studentId", targetStudentIds)
-          .eq("subjectId", targetSubjectId)
-          .eq("collegeSemesterId", finalSemesterId)
-          .eq("collegeExamScheduleId", scheduleId);
-
-        if (deleteError) throw deleteError;
-
-        const { error: insertError } = await supabase
-          .from("results")
-          .insert(resultsToInsert);
-
-        if (insertError) throw insertError;
-
-        let message = `Successfully uploaded results for ${resultsToInsert.length} students!`;
-        if (notFoundRollNos.length > 0) {
-          message += ` Note: ${notFoundRollNos.length} roll numbers were not found in this section: ${notFoundRollNos.join(", ")}`;
-        }
-
-        toast.success(message, { duration: 6000 });
-        handleGoBack();
+        uploadMutation.mutate(plainJsonData);
       } catch (err: any) {
-        console.error("Excel upload error:", err);
-        toast.error(`Failed to process results upload: ${err.message || err}`);
+        console.error("Excel parse error:", err);
+        toast.error(`Failed to parse excel file: ${err.message || err}`);
       }
     };
 
@@ -466,23 +348,33 @@ export default function UploadResults() {
         <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
           <button
             onClick={handleGoBack}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors cursor-pointer"
+            disabled={uploadMutation.isPending}
+            className="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
           >
             Cancel Upload
           </button>
           <button
             onClick={handleSubmit}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-[#43C17A] hover:bg-[#38A166] text-white font-semibold text-sm transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+            className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-2.5 rounded-lg bg-[#43C17A] hover:bg-[#38A166] text-white font-semibold text-sm transition-colors shadow-sm disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed min-w-[120px]"
             disabled={
               (!isSchool && !formData.branchId) ||
               !formData.academicYearId ||
               (parsedSemesterId && !formData.semesterId) ||
               !formData.sectionId ||
               !excelFile ||
+              isCheckingExists ||
+              uploadMutation.isPending ||
               (isEditMode && excelFile.size === 0)
             }
           >
-            {isEditMode ? "Update" : "Submit"}
+            {uploadMutation.isPending ? (
+              <>
+                <SpinnerGap size={16} className="animate-spin" />
+                <span>Processing...</span>
+              </>
+            ) : (
+              isEditMode ? "Update Results" : "Submit Results"
+            )}
           </button>
         </div>
       </div>

@@ -24,6 +24,8 @@ interface CustomDropdownProps {
   hideCheckmark?: boolean;
   isMultiSelect?: boolean;
   selectedValues?: (string | number)[];
+  isOpenProp?: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
 }
 
 export const CustomDropdown = ({
@@ -40,8 +42,16 @@ export const CustomDropdown = ({
   hideCheckmark = false,
   isMultiSelect = false,
   selectedValues = [],
+  isOpenProp,
+  onOpenChange,
 }: CustomDropdownProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpenInternal, setIsOpenInternal] = useState(false);
+  const isOpen = isOpenProp !== undefined ? isOpenProp : isOpenInternal;
+  
+  const setIsOpen = (newVal: boolean) => {
+    setIsOpenInternal(newVal);
+    onOpenChange?.(newVal);
+  };
   const [rect, setRect] = useState<DOMRect | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 

@@ -125,8 +125,7 @@ type FacultyLeaveTableRow = {
 };
 
 function FacultyLeavesContent() {
-  const { userId, collegeEducationType } = useUser();
-  const [facultyId, setFacultyId] = useState<number | null>(null);
+  const { userId, collegeEducationType, facultyId } = useUser();
   const queryClient = useQueryClient();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -179,10 +178,16 @@ function FacultyLeavesContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const dateInputRef = useRef<HTMLInputElement>(null);
   
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
-
   const [page, setPage] = useState(1);
   const itemsPerPage = 20;
+
+  const [isFirstLoad, setIsFirstLoad] = useState(() => {
+    // If we already have cache, it's not the first load (e.g. returning to tab)
+    const hasCache = queryClient.getQueryData(["facultyLeaves", facultyId, mainTab, activeTab, debouncedSearch, debouncedFilterDate, page]);
+    return !hasCache;
+  });
+
+
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -205,12 +210,7 @@ function FacultyLeavesContent() {
     return () => clearTimeout(timer);
   }, [searchQuery, filterDate]);
 
-  useEffect(() => {
-    if (!userId) return;
-    getFacultyIdByUserId(userId)
-      .then((id) => setFacultyId(id))
-      .catch(() => toast.error("Faculty context not found"));
-  }, [userId]);
+  // facultyId is directly available from context
 
   const { data: countsData = { all: 0, approved: 0, pending: 0, rejected: 0 }, isLoading: isCountsLoading } = useQuery({
     queryKey: ["facultyLeaveCounts", facultyId, mainTab],

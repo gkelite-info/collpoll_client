@@ -474,9 +474,19 @@ export default function DashboardLayout() {
               <StudentProfileCard {...details.studentProfile} isSchool={isSchool} />
               <AcademicPerformance data={details.academicPerformance} />
               <AssignmentsTable
-                assignments={details.assignments}
-                quizzes={details.quizzes}
-                discussions={details.discussions}
+                scope={{
+                  rollNo: rollNo as string,
+                  collegeId: collegeId as number,
+                  collegeEducationId: collegeEducationId as number,
+                  collegeBranchIds: activeBranchIds,
+                  academicYearIds: activeYearIds,
+                  semesterIds: activeSemesterIds,
+                  sectionIds: activeSectionIds,
+                  subjectIds: activeSubjectIds,
+                  facultyIds: activeFacultyIds,
+                  isSchool,
+                  departmentLabel: selectedBranch?.collegeBranchCode ?? branchLabel ?? "ALL",
+                }}
                 weightages={details.taskWeightages}
                 insights={details.taskInsights}
               />
@@ -515,9 +525,19 @@ export default function DashboardLayout() {
             <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-5">
               <div className="h-full lg:col-span-3">
                 <AssignmentsTable
-                  assignments={details.assignments}
-                  quizzes={details.quizzes}
-                  discussions={details.discussions}
+                  scope={{
+                    rollNo: rollNo as string,
+                    collegeId: collegeId as number,
+                    collegeEducationId: collegeEducationId as number,
+                    collegeBranchIds: activeBranchIds,
+                    academicYearIds: activeYearIds,
+                    semesterIds: activeSemesterIds,
+                    sectionIds: activeSectionIds,
+                    subjectIds: activeSubjectIds,
+                    facultyIds: activeFacultyIds,
+                    isSchool,
+                    departmentLabel: selectedBranch?.collegeBranchCode ?? branchLabel ?? "ALL",
+                  }}
                   weightages={details.taskWeightages}
                   insights={details.taskInsights}
                 />

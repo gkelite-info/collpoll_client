@@ -7,16 +7,18 @@ import { StudentDataTable } from "./studentDataTable";
 import TopFivePerformers from "./topFivePerformers";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import CardComponent, { CardProps } from "./stuPerfCards";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { getFacultyStudentProgressSummary } from "@/lib/helpers/faculty/studentProgress/getFacultyStudentProgressSummary";
 import { StudentProgressPageSkeleton } from "../shimmer/StudentProgressSkeleton";
 import { FaChevronDown } from "react-icons/fa6";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
-
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
+import toast from "react-hot-toast";
 const cardData: CardProps[] = [
   {
-    value: "35",
+    value: "0",
     label: "Total Students",
     bgColor: "bg-[#FFEDDA]",
     icon: <UsersThree />,
@@ -24,7 +26,7 @@ const cardData: CardProps[] = [
     iconColor: "text-[#EFEFEF]",
   },
   {
-    value: "30",
+    value: "0",
     label: "Present Today",
     bgColor: "bg-[#E6FBEA]",
     icon: <UserCircle />,
@@ -32,7 +34,7 @@ const cardData: CardProps[] = [
     iconColor: "text-[#EFEFEF]",
   },
   {
-    value: "5",
+    value: "0",
     label: "Low Attendance",
     bgColor: "bg-[#FFE0E0]",
     icon: <ChartLineDown />,
@@ -77,18 +79,13 @@ export default function StudentProgressOverview() {
     sections,
     collegeAcademicYears,
   } = useFaculty();
-  const [summaryLoading, setSummaryLoading] = useState(true);
-  const [summary, setSummary] =
-    useState<StudentProgressSummary>(defaultSummary);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedYearId, setSelectedYearId] = useState<number | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
-  const lastSummaryRequestKeyRef = useRef("");
-  const summaryRequestSequenceRef = useRef(0);
+  const [isSectionDropdownOpen, setIsSectionDropdownOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const isSchool = useMemo(
@@ -98,6 +95,15 @@ export default function StudentProgressOverview() {
         .some((educationType) => isSchoolEducation(educationType)) ?? false,
     [faculty_edu_type],
   );
+  
+  const isInter = useMemo(
+    () =>
+      faculty_edu_type
+        ?.toUpperCase()
+        .includes("INTER") ?? false,
+    [faculty_edu_type],
+  );
+
   const effectiveCollegeBranchId = isSchool ? 0 : collegeBranchId;
 
   const registeredSubjects = useMemo(() => {
@@ -189,21 +195,6 @@ export default function StudentProgressOverview() {
         .map((subject) => subject.subjectName)
         .join(", ") || "N/A"
     : faculty_subject.map((subject) => subject.subjectName).join(", ") || "N/A";
-  const summaryRequestKey = JSON.stringify([
-    facultyLoading,
-    collegeId,
-    facultyId,
-    collegeEducationId,
-    effectiveCollegeBranchId,
-    college_branch,
-    currentPage,
-    rowsPerPage,
-    debouncedSearchQuery,
-    scopedAcademicYearIds,
-    scopedSectionIds,
-    scopedSubjectIds,
-    scopedSubjectLabel,
-  ]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -214,29 +205,35 @@ export default function StudentProgressOverview() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  useEffect(() => {
-    if (facultyLoading) return;
-    if (lastSummaryRequestKeyRef.current === summaryRequestKey) return;
-
-    lastSummaryRequestKeyRef.current = summaryRequestKey;
-    const requestSequence = ++summaryRequestSequenceRef.current;
-
-    const loadSummary = async () => {
+  const { data: summaryData, isLoading: summaryLoading, isFetching } = useQuery({
+    queryKey: [
+      "facultyStudentProgressSummary",
+      collegeId,
+      facultyId,
+      collegeEducationId,
+      effectiveCollegeBranchId,
+      college_branch,
+      currentPage,
+      rowsPerPage,
+      debouncedSearchQuery,
+      scopedAcademicYearIds,
+      scopedSectionIds,
+      scopedSubjectIds,
+      scopedSubjectLabel,
+      isSchool,
+    ],
+    queryFn: async () => {
       if (
         !collegeId ||
         !facultyId ||
         !collegeEducationId ||
         effectiveCollegeBranchId === undefined
       ) {
-        setSummary(defaultSummary);
-        setSummaryLoading(false);
-        return;
+        return defaultSummary;
       }
 
-      setSummaryLoading(true);
-
       try {
-        const data = await getFacultyStudentProgressSummary({
+        return await getFacultyStudentProgressSummary({
           facultyId,
           collegeId,
           collegeEducationId,
@@ -251,25 +248,20 @@ export default function StudentProgressOverview() {
           pageSize: rowsPerPage,
           searchQuery: debouncedSearchQuery,
         });
-
-        if (requestSequence === summaryRequestSequenceRef.current) {
-          setSummary(data);
-          setHasLoadedOnce(true);
-        }
       } catch (error) {
-        console.error("Failed to load faculty student progress summary", error);
-        if (requestSequence === summaryRequestSequenceRef.current) {
-          setSummary(defaultSummary);
-        }
-      } finally {
-        if (requestSequence === summaryRequestSequenceRef.current) {
-          setSummaryLoading(false);
-        }
+        console.error("Failed to fetch student progress summary:", error);
+        toast.error("Unable to load student progress. Please try again later.");
+        throw error;
       }
-    };
-
-    loadSummary();
+    },
+    enabled: !facultyLoading && !!facultyId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
+
+  const summary = summaryData ?? defaultSummary;
+  const hasLoadedOnce = summaryData !== undefined;
 
   const subtitleParts = [summary.yearLabel, summary.sectionLabel]
     .filter((value) => value && value !== "N/A")
@@ -334,7 +326,7 @@ export default function StudentProgressOverview() {
           {!isSchool && (
             <div className="flex items-center gap-1.5">
               <span className="text-gray-600 text-xs md:text-sm font-medium shrink-0">
-                {faculty_edu_type === "Inter" ? "Group" : "Branch"}
+                {isInter ? "Group" : "Branch"}
               </span>
               <span className="bg-[#43C17A1C] text-[#43C17A] px-3 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0">
                 {summary.departmentLabel}
@@ -347,25 +339,27 @@ export default function StudentProgressOverview() {
               Subject :
             </span>
             {isSchool ? (
-              <div className="relative">
-                <select
-                  className="bg-[#43C17A1C] text-[#43C17A] pl-3 pr-7 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0 outline-none cursor-pointer appearance-none"
+              <div className="w-[120px]">
+                <CustomDropdown
                   value={selectedSubjectId ?? ""}
-                  onChange={(e) => {
-                    setSelectedSubjectId(
-                      e.target.value ? Number(e.target.value) : null,
-                    );
+                  options={registeredSubjects.map((subject) => ({
+                    value: subject.subjectId,
+                    label: subject.subjectName,
+                  }))}
+                  onChange={(val) => {
+                    const newVal = val ? Number(val) : null;
+                    setSelectedSubjectId(newVal);
                     setSelectedSectionId(null);
+                    setCurrentPage(1);
+                    if (newVal) {
+                      setIsSectionDropdownOpen(true);
+                    }
                   }}
-                >
-                  <option value="">All</option>
-                  {registeredSubjects.map((subject) => (
-                    <option key={subject.subjectId} value={subject.subjectId}>
-                      {subject.subjectName}
-                    </option>
-                  ))}
-                </select>
-                <FaChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] md:text-xs text-[#43C17A] pointer-events-none" />
+                  includeAll
+                  placeholder="All"
+                  theme="always-green"
+                  className="!py-1 !pl-3 !pr-7 !rounded-full !font-bold"
+                />
               </div>
             ) : (
               <span className="bg-[#43C17A1C] text-[#43C17A] px-3 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0">
@@ -378,26 +372,24 @@ export default function StudentProgressOverview() {
             <span className="text-gray-600 text-xs md:text-sm font-medium shrink-0">
               Year :
             </span>
-            <div className="relative">
-              <select
-                className="bg-[#43C17A1C] text-[#43C17A] pl-3 pr-7 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0 outline-none cursor-pointer appearance-none"
+            <div className="w-[120px]">
+              <CustomDropdown
                 value={selectedYearId ?? ""}
-                onChange={(e) => {
-                  setSelectedYearId(
-                    e.target.value ? Number(e.target.value) : null,
-                  );
+                options={collegeAcademicYears?.map((y) => ({
+                  value: y.collegeAcademicYearId,
+                  label: y.collegeAcademicYear,
+                })) || []}
+                onChange={(val) => {
+                  setSelectedYearId(val ? Number(val) : null);
                   setSelectedSubjectId(null);
                   setSelectedSectionId(null);
+                  setCurrentPage(1);
                 }}
-              >
-                <option value="">All</option>
-                {collegeAcademicYears?.map((y) => (
-                  <option key={y.collegeAcademicYearId} value={y.collegeAcademicYearId}>
-                    {y.collegeAcademicYear}
-                  </option>
-                ))}
-              </select>
-              <FaChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] md:text-xs text-[#43C17A] pointer-events-none" />
+                includeAll
+                placeholder="All"
+                theme="always-green"
+                className="!py-1 !pl-3 !pr-7 !rounded-full !font-bold"
+              />
             </div>
           </div>
 
@@ -405,33 +397,39 @@ export default function StudentProgressOverview() {
             <span className="text-gray-600 text-xs md:text-sm font-medium shrink-0">
               Sec :
             </span>
-            <div className="relative">
-              <select
-                className="bg-[#43C17A1C] text-[#43C17A] pl-3 pr-7 py-1 rounded-full font-bold text-[10px] md:text-xs tracking-wide shrink-0 outline-none cursor-pointer appearance-none"
+            <div className="w-[100px]">
+              <CustomDropdown
                 value={selectedSectionId ?? ""}
-                onChange={(e) => setSelectedSectionId(e.target.value ? Number(e.target.value) : null)}
-              >
-                <option value="">All</option>
-                {(isSchool
+                options={(isSchool
                   ? registeredSections
                   : Array.from(new Map(
                       sections
                         ?.filter((s) => selectedYearId ? s.collegeAcademicYearId === selectedYearId : true)
                         .map((s) => [s.collegeSectionsId, s] as const)
                     ).values())
-                ).map((s) => (
-                  <option key={s.collegeSectionsId} value={s.collegeSectionsId}>
-                    {s.college_sections?.collegeSections}
-                  </option>
-                ))}
-              </select>
-              <FaChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] md:text-xs text-[#43C17A] pointer-events-none" />
+                ).map((s) => ({
+                  value: s.collegeSectionsId,
+                  label: s.college_sections?.collegeSections || "",
+                }))}
+                onChange={(val) => {
+                  setSelectedSectionId(val ? Number(val) : null);
+                  setIsSectionDropdownOpen(false);
+                  setCurrentPage(1);
+                }}
+                disabled={isSchool ? !selectedSubjectId : false}
+                isOpenProp={isSectionDropdownOpen}
+                onOpenChange={setIsSectionDropdownOpen}
+                includeAll
+                placeholder="All"
+                theme="always-green"
+                className="!py-1 !pl-3 !pr-7 !rounded-full !font-bold"
+              />
             </div>
           </div>
         </div>
       </div>
 
-      <article className="mb-4 grid items-start gap-3 lg:gap-4 lg:grid-cols-[68%_32%]">
+      <article className="mb-4 grid items-start gap-3 lg:gap-4 lg:grid-cols-[67%_32%]">
         <div className="grid grid-cols-3 gap-2 lg:gap-3 w-full">
           {cardData.map((item, index) => (
             <CardComponent
@@ -469,6 +467,7 @@ export default function StudentProgressOverview() {
             setRowsPerPage(items);
             setCurrentPage(1);
           }}
+          isLoading={isFetching}
         />
         <div className="mt-4 md:mt-5 grid gap-4 pb-4 lg:grid-cols-[360px_minmax(0,1fr)] items-stretch">
           <div className="w-full h-full flex flex-col min-h-[300px]">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   Chalkboard,
@@ -15,88 +15,41 @@ import ResultsDropdown from "./resultsDropdown";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { useUser } from "@/app/utils/context/UserContext";
-import { fetchStudentsWithProfile } from "@/lib/helpers/faculty/fetchStudents";
-import { supabase } from "@/lib/supabaseClient";
 import * as XLSX from "xlsx";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { getFacultyResultsOverview } from "@/lib/helpers/faculty/results/getFacultyResultsOverview";
 
 export default function ResultsManagement() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const { sections, faculty_subject, collegeAcademicYears, college_branch, collegeId, collegeEducationId, collegeBranchId } = useFaculty();
-  const { identifierId, collegeEducationType } = useUser();
+  const {
+    facultyId,
+    collegeId,
+    collegeEducationId,
+    collegeBranchId,
+    faculty_edu_type,
+    college_branch,
+  } = useFaculty();
+  const { collegeEducationType } = useUser();
   const isSchool = isSchoolEducation(collegeEducationType);
 
-  const [selectedSection, setSelectedSection] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedSubject, setSelectedSubject] = useState(searchParams.get("filterSubject") || searchParams.get("subject") || "");
+  const [selectedSection, setSelectedSection] = useState(searchParams.get("filterSection") || "all");
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get("page")) || 1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [schedules, setSchedules] = useState<any[]>([]);
-  const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
-  const [uploadStatuses, setUploadStatuses] = useState<Record<string, "UPLOADED" | "NOT UPLOADED">>({});
-
-  const downloadExcelTemplate = () => {
-    const wsData = [
-      ["Roll No", "Internal Marks", "External Marks", "Total", "Grade"],
-      ["STU001", 20, 70, 90, "A+"],
-      ["STU002", 18, 65, 83, "A"],
-      ["STU003", 15, 45, 60, "B"],
-      ["STU004", 10, 20, 30, "F"]
-    ];
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    ws["!cols"] = [
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 10 },
-      { wch: 10 }
-    ];
-
-    XLSX.utils.book_append_sheet(wb, ws, "Results_Template");
-    XLSX.writeFile(wb, "Student_Results_Template.xlsx");
-  };
-
-  const [selectedSubject, setSelectedSubject] = useState("");
   const [isSubjectDropdownOpen, setIsSubjectDropdownOpen] = useState(false);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
   const subjectDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!collegeId || !collegeEducationId) return;
-    supabase
-      .from("college_exam_schedules")
-      .select("*")
-      .eq("collegeId", collegeId)
-      .eq("collegeEducationId", collegeEducationId)
-      .eq("isActive", true)
-      .is("deletedAt", null)
-      .then(({ data, error }) => {
-        if (!error && data) {
-          setSchedules(data);
-        }
-      });
-  }, [collegeId, collegeEducationId]);
-
-  const uniqueSubjects = useMemo(() => {
-    const namesFromFacultySubject = faculty_subject?.map((s) => s.subjectName) || [];
-    const namesFromSections = sections
-      ?.map((sec) => sec.faculty_subject?.subjectName)
-      .filter((name): name is string => !!name) || [];
-    return Array.from(new Set([...namesFromFacultySubject, ...namesFromSections]));
-  }, [faculty_subject, sections]);
-
-  useEffect(() => {
-    if (uniqueSubjects.length > 0 && !selectedSubject) {
-      setSelectedSubject(uniqueSubjects[0]);
-    }
-  }, [uniqueSubjects, selectedSubject]);
-
-  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (subjectDropdownRef.current && !subjectDropdownRef.current.contains(event.target as Node)) {
+      if (
+        subjectDropdownRef.current &&
+        !subjectDropdownRef.current.contains(event.target as Node)
+      ) {
         setIsSubjectDropdownOpen(false);
       }
     }
@@ -106,147 +59,123 @@ export default function ResultsManagement() {
     };
   }, []);
 
-  const filteredSections = useMemo(() => {
-    if (!selectedSubject) return sections;
-    return sections.filter((sec) => sec.faculty_subject?.subjectName === selectedSubject);
-  }, [sections, selectedSubject]);
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: [
+      "facultyResultsOverview",
+      collegeId,
+      collegeEducationId,
+      collegeBranchId,
+      facultyId,
+      isSchool,
+      selectedSubject,
+      selectedSection,
+      currentPage,
+      itemsPerPage,
+    ],
+    queryFn: async () => {
+      if (!collegeId || !facultyId || !collegeEducationId) {
+        return { items: [], totalCount: 0, totalUploaded: 0, totalPending: 0, subjects: [], sections: [] };
+      }
+      return await getFacultyResultsOverview({
+        collegeId,
+        collegeEducationId,
+        collegeBranchId: collegeBranchId ?? null,
+        facultyId,
+        isSchool,
+        subjectName: selectedSubject,
+        sectionName: selectedSection,
+        page: currentPage,
+        pageSize: itemsPerPage,
+      });
+    },
+    enabled: !!collegeId && !!facultyId && !!collegeEducationId,
+    placeholderData: keepPreviousData,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const uniqueSubjects = data?.subjects || [];
+  const uniqueSections = data?.sections || [];
 
   useEffect(() => {
-    if (!collegeId || filteredSections.length === 0 || !selectedSubject) return;
-    const targetSubjectId = sections.find(s => s.faculty_subject?.subjectName === selectedSubject)?.collegeSubjectId;
+    if (uniqueSubjects.length > 0 && !selectedSubject) {
+      const defaultSubject = uniqueSubjects[0];
+      setSelectedSubject(defaultSubject);
+      
+      // Also sync it to URL so it doesn't get lost on refresh
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("filterSubject", defaultSubject);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }
+  }, [uniqueSubjects, selectedSubject, searchParams, pathname, router]);
 
-    filteredSections.forEach(async (sec) => {
-      try {
-        const result = await fetchStudentsWithProfile(collegeId, {
-          sectionId: sec.collegeSectionsId,
-          yearId: sec.collegeAcademicYearId,
-          fetchAll: true,
-        });
-
-        const students = result.data;
-
-        setStudentCounts(prev => ({
-          ...prev,
-          [sec.facultySectionId.toString()]: students.length
-        }));
-
-        const studentIds = students.map((s: any) => s.studentId);
-        if (studentIds.length === 0 || !targetSubjectId) {
-          setUploadStatuses(prev => {
-            const updated = { ...prev };
-            updated[`${sec.facultySectionId}-default`] = "NOT UPLOADED";
-            schedules.forEach(sch => {
-              updated[`${sec.facultySectionId}-${sch.collegeExamScheduleId}`] = "NOT UPLOADED";
-            });
-            return updated;
-          });
-          return;
-        }
-
-        const scheduleIds = schedules.map(s => s.collegeExamScheduleId);
-        if (scheduleIds.length === 0) return;
-
-        const { data: results, error } = await supabase
-          .from("results")
-          .select("studentId, collegeExamScheduleId")
-          .in("studentId", studentIds)
-          .eq("subjectId", targetSubjectId)
-          .in("collegeExamScheduleId", scheduleIds);
-
-        if (error) throw error;
-
-        const uploadedScheduleIds = new Set<number>();
-        results?.forEach(r => {
-          if (r.collegeExamScheduleId !== null && r.collegeExamScheduleId !== undefined) {
-            uploadedScheduleIds.add(r.collegeExamScheduleId);
-          }
-        });
-
-        setUploadStatuses(prev => {
-          const updated = { ...prev };
-          schedules.forEach(sch => {
-            const isUploaded = uploadedScheduleIds.has(sch.collegeExamScheduleId);
-            updated[`${sec.facultySectionId}-${sch.collegeExamScheduleId}`] = isUploaded ? "UPLOADED" : "NOT UPLOADED";
-          });
-          return updated;
-        });
-
-      } catch (error) {
-        console.error("Failed to fetch students or results status", error);
-      }
-    });
-  }, [collegeId, filteredSections, selectedSubject, sections, schedules]);
-
-  const dynamicClasses = useMemo(() => {
-    const list: any[] = [];
-    filteredSections.forEach((sec) => {
-      const yearObj = collegeAcademicYears.find((y) => y.collegeAcademicYearId === sec.collegeAcademicYearId);
-      const yearName = yearObj?.collegeAcademicYear || "N/A";
-
-      const matchingSchedules = schedules.filter(s => {
-        const isSpecificMatch =
-          s.collegeBranchId === collegeBranchId &&
-          s.academicYear === yearName &&
-          s.collegeSectionsId === sec.collegeSectionsId;
-
-        const isGeneralMatch =
-          (!s.collegeBranchId) &&
-          (!s.academicYear || s.academicYear === "") &&
-          (!s.collegeSectionsId);
-
-        return isSpecificMatch || isGeneralMatch;
-      });
-
-      matchingSchedules.forEach((sch) => {
-        const scheduleKey = `${sec.facultySectionId}-${sch.collegeExamScheduleId}`;
-        list.push({
-          id: scheduleKey,
-          examType: sch.scheduleTitle || sch.examType || "Exam",
-          semesterId: sch.collegeSemesterId || 1,
-          branch: college_branch || "N/A",
-          year: yearName,
-          section: sec.college_sections?.collegeSections || "N/A",
-          students: studentCounts[sec.facultySectionId.toString()] || 0,
-          status: uploadStatuses[scheduleKey] || "NOT UPLOADED",
-          sectionId: sec.collegeSectionsId,
-          academicYearId: sec.collegeAcademicYearId,
-          collegeExamScheduleId: sch.collegeExamScheduleId,
-        });
-      });
-    });
-    return list;
-  }, [filteredSections, collegeAcademicYears, college_branch, collegeBranchId, studentCounts, uploadStatuses, schedules]);
+  const assignedSubject =
+    selectedSubject ||
+    (uniqueSubjects.length > 0 ? uniqueSubjects[0] : "No Subject Assigned");
 
   const sectionOptions = useMemo(() => {
-    const uniqueSections = Array.from(
-      new Set(
-        filteredSections
-          .map((section) => section.college_sections?.collegeSections)
-          .filter((section): section is string => !!section),
-      ),
-    );
     return [
       { label: "All Sections", value: "all" },
-      ...uniqueSections.map(s => ({ label: `Section ${s}`, value: s }))
+      ...uniqueSections.map((s) => ({ label: `Section ${s}`, value: s })),
     ];
-  }, [filteredSections]);
+  }, [uniqueSections]);
 
-  const filteredData = useMemo(() => {
-    let data = dynamicClasses;
-    if (selectedSection !== "all") {
-      data = data.filter((item) => item.section === selectedSection);
+  const paginatedData = data?.items || [];
+  const totalItems = data?.totalCount || 0;
+  
+  const assignedClassesCount = data?.totalCount || 0;
+  const resultsUploadedCount = data?.totalUploaded || 0;
+  const pendingUploadsCount = data?.totalPending || 0;
+
+  const downloadExcelTemplate = async () => {
+    try {
+      setIsDownloadingTemplate(true);
+      
+      // Simulating a slightly heavy template generation or network fetch
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      const wsData = [
+        ["Roll No", "Internal Marks", "External Marks", "Total", "Grade"],
+        ["STU001", 20, 70, 90, "A+"],
+        ["STU002", 18, 65, 83, "A"],
+        ["STU003", 15, 45, 60, "B"],
+        ["STU004", 10, 20, 30, "F"]
+      ];
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+      ws["!cols"] = [
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 10 },
+        { wch: 10 }
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, "Results_Template");
+      XLSX.writeFile(wb, "Student_Results_Template.xlsx");
+    } finally {
+      setIsDownloadingTemplate(false);
     }
-    return data;
-  }, [dynamicClasses, selectedSection]);
+  };
 
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredData.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredData, currentPage, itemsPerPage]);
+  const updateFiltersInUrl = (subject: string, section: string, page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("filterSubject", subject);
+    params.set("filterSection", section);
+    params.set("page", String(page));
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   const handleSectionChange = (value: string) => {
     setSelectedSection(value);
     setCurrentPage(1);
+    updateFiltersInUrl(assignedSubject, value, 1);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    updateFiltersInUrl(assignedSubject, selectedSection, newPage);
   };
 
   const handleViewDetails = (row: any) => {
@@ -256,7 +185,7 @@ export default function ResultsManagement() {
     params.set("year", row.year);
     params.set("section", row.section);
     params.set("students", String(row.students));
-    params.set("branch", row.branch);
+    params.set("branch", college_branch || "N/A");
     params.set("subject", assignedSubject);
     params.set("sectionId", String(row.sectionId));
     params.set("academicYearId", String(row.academicYearId));
@@ -274,7 +203,7 @@ export default function ResultsManagement() {
     params.set("section", row.section);
     params.set("students", String(row.students));
     if (!isSchool) {
-      params.set("branch", row.branch);
+      params.set("branch", college_branch || "N/A");
       params.set("branchId", String(collegeBranchId || ""));
     }
     params.set("subject", assignedSubject);
@@ -285,27 +214,6 @@ export default function ResultsManagement() {
     params.set("collegeExamScheduleId", String(row.collegeExamScheduleId));
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
-
-  const handleUploadResults = () => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", "results");
-    params.set("view", "upload");
-    params.set("subject", assignedSubject);
-
-    if (filteredSections.length > 0) {
-      params.set("sectionId", String(filteredSections[0].collegeSectionsId));
-      params.set("academicYearId", String(filteredSections[0].collegeAcademicYearId));
-    }
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
-  };
-
-  const assignedClassesCount = filteredSections.length;
-  const resultsUploadedCount = dynamicClasses.filter(c => c.status === "UPLOADED").length;
-  const pendingUploadsCount = dynamicClasses.filter(c => c.status === "NOT UPLOADED").length;
-
-  const assignedSubject = selectedSubject || (faculty_subject && faculty_subject.length > 0
-    ? faculty_subject[0].subjectName
-    : "No Subject Assigned");
 
   return (
     <div className="w-full space-y-6">
@@ -320,16 +228,23 @@ export default function ResultsManagement() {
         <div className="flex items-center gap-3">
           <button
             onClick={downloadExcelTemplate}
-            className="flex items-center gap-3 bg-[#107c41] hover:bg-[#0b592e] text-white px-4 py-2 rounded-lg shadow-sm transition-colors cursor-pointer"
+            disabled={isDownloadingTemplate}
+            className={`flex items-center gap-3 px-4 py-2 rounded-lg shadow-sm transition-colors ${
+              isDownloadingTemplate
+                ? "bg-gray-400 cursor-not-allowed text-gray-200"
+                : "bg-[#107c41] hover:bg-[#0b592e] text-white cursor-pointer"
+            }`}
           >
             <div className="bg-[#ffffff20] p-1.5 rounded-md text-white">
-              <DownloadSimple size={18} weight="bold" />
+              <DownloadSimple size={18} weight="bold" className={isDownloadingTemplate ? "animate-pulse" : ""} />
             </div>
             <div className="text-left">
-              <p className="text-[9px] uppercase tracking-wider text-green-200 font-medium leading-none">
-                Format
+              <p className="text-[9px] uppercase tracking-wider text-white/80 font-medium leading-none">
+                {isDownloadingTemplate ? "Preparing..." : "Format"}
               </p>
-              <p className="text-xs md:text-sm font-bold mt-0.5 leading-none">Excel Template</p>
+              <p className="text-xs md:text-sm font-bold mt-0.5 leading-none">
+                {isDownloadingTemplate ? "Downloading..." : "Excel Template"}
+              </p>
             </div>
           </button>
 
@@ -357,15 +272,15 @@ export default function ResultsManagement() {
             </button>
             {isSubjectDropdownOpen && (
               <div className="absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 overflow-hidden">
-                <div className="py-0">
+                <div className="py-0 max-h-[300px] overflow-y-auto">
                   {uniqueSubjects.map((subjectName) => (
                     <button
                       key={subjectName}
                       onClick={() => {
                         setSelectedSubject(subjectName);
-                        setIsSubjectDropdownOpen(false);
-                        setSelectedSection("all");
                         setCurrentPage(1);
+                        updateFiltersInUrl(subjectName, "all", 1);
+                        setIsSubjectDropdownOpen(false);
                       }}
                       className={`block w-full px-4 py-2.5 text-left text-xs md:text-sm transition-colors cursor-pointer ${selectedSubject === subjectName
                         ? "bg-[#004d33] text-white font-semibold"
@@ -375,6 +290,11 @@ export default function ResultsManagement() {
                       {subjectName}
                     </button>
                   ))}
+                  {uniqueSubjects.length === 0 && (
+                    <div className="px-4 py-3 text-sm text-gray-500">
+                      No subjects available
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -383,7 +303,8 @@ export default function ResultsManagement() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="flex items-center gap-4 bg-white border border-gray-150 p-4 rounded-xl shadow-sm">
+        <div className="flex items-center gap-4 bg-white border border-gray-150 p-4 rounded-xl shadow-sm relative overflow-hidden">
+          {isFetching && <div className="absolute inset-0 bg-white/40 animate-pulse z-10" />}
           <div className="bg-[#E6FBEA] text-[#43C17A] p-3 rounded-xl">
             <Chalkboard size={24} weight="fill" />
           </div>
@@ -393,7 +314,8 @@ export default function ResultsManagement() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 bg-white border border-gray-150 p-4 rounded-xl shadow-sm">
+        <div className="flex items-center gap-4 bg-white border border-gray-150 p-4 rounded-xl shadow-sm relative overflow-hidden">
+          {isFetching && <div className="absolute inset-0 bg-white/40 animate-pulse z-10" />}
           <div className="bg-[#E6FBEA] text-[#43C17A] p-3 rounded-xl">
             <CheckCircle size={24} weight="fill" />
           </div>
@@ -403,7 +325,8 @@ export default function ResultsManagement() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 bg-white border border-gray-150 p-4 rounded-xl shadow-sm">
+        <div className="flex items-center gap-4 bg-white border border-gray-150 p-4 rounded-xl shadow-sm relative overflow-hidden">
+          {isFetching && <div className="absolute inset-0 bg-white/40 animate-pulse z-10" />}
           <div className="bg-[#FFE0E0] text-[#FF3B30] p-3 rounded-xl">
             <ClipboardText size={24} weight="fill" />
           </div>
@@ -429,7 +352,7 @@ export default function ResultsManagement() {
           />
         </div>
 
-        <div className="w-full overflow-x-auto">
+        <div className="w-full overflow-x-auto relative">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-[#F8F9FA]">
               <tr>
@@ -459,7 +382,38 @@ export default function ResultsManagement() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-150">
-              {paginatedData.length > 0 ? (
+              {isFetching ? (
+                [1, 2, 3, 4].map((i) => (
+                  <tr key={`shimmer-${i}`} className="animate-pulse">
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="h-4 w-28 bg-gray-200 rounded mx-auto" />
+                    </td>
+                    {!isSchool && (
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <div className="h-4 w-16 bg-gray-200 rounded mx-auto" />
+                      </td>
+                    )}
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="h-4 w-16 bg-gray-200 rounded mx-auto" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="h-4 w-12 bg-gray-200 rounded mx-auto" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="h-4 w-8 bg-gray-200 rounded mx-auto" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="h-5 w-24 bg-gray-200 rounded-full mx-auto" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="flex justify-center gap-2">
+                        <div className="h-8 w-20 bg-gray-200 rounded-lg" />
+                        <div className="h-8 w-16 bg-gray-200 rounded-lg" />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : paginatedData.length > 0 ? (
                 paginatedData.map((row) => (
                   <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-center text-xs md:text-sm font-semibold text-gray-800">
@@ -515,12 +469,6 @@ export default function ResultsManagement() {
                             >
                               Upload
                             </button>
-                            {/* <button
-                              onClick={() => handleViewDetails(row)}
-                              className="inline-flex items-center justify-center px-4 py-1.5 border border-[#43C17A] rounded-lg text-xs md:text-sm font-bold text-[#43C17A] hover:bg-[#E6FBEA] transition-colors cursor-pointer"
-                            >
-                              View
-                            </button> */}
                           </>
                         )}
                       </div>
@@ -530,7 +478,7 @@ export default function ResultsManagement() {
               ) : (
                 <tr>
                   <td colSpan={isSchool ? 6 : 7} className="px-6 py-10 text-center text-sm text-gray-500">
-                    No classes found matching the criteria.
+                    {isLoading ? "Loading..." : "No classes found matching the criteria."}
                   </td>
                 </tr>
               )}
@@ -540,9 +488,9 @@ export default function ResultsManagement() {
 
         <Pagination
           currentPage={currentPage}
-          totalItems={filteredData.length}
+          totalItems={totalItems}
           itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
+          onPageChange={handlePageChange}
           itemsPerPageOptions={[5, 10, 20, 50]}
           onItemsPerPageChange={(items) => {
             setItemsPerPage(items);

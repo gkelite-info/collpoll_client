@@ -1,73 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CaretLeft } from "@phosphor-icons/react";
+import { useQuery } from "@tanstack/react-query";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import { getFacultyStudentProgressDetails } from "@/lib/helpers/faculty/studentProgress/getFacultyStudentProgressDetails";
-import GradesTable from "./components/gradesTable";
-import AssignmentsTable from "@/app/(screens)/admin/student-progress/[roll-no]/components/assignmentsTable";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
+import { getFacultyStudentProfile } from "@/lib/helpers/faculty/studentProgress/getFacultyStudentProfile";
+import { getFacultyStudentPerformance } from "@/lib/helpers/faculty/studentProgress/getFacultyStudentPerformance";
+import type { FacultyStudentProgressDetailsScope } from "@/lib/helpers/faculty/studentProgress/sharedProgressTypes";
+
+import GradesTable from "./components/gradesTable";
+import AssignmentsTable from "./components/assignmentsTable";
 import ParentsList, { Parent } from "./components/parentsList";
 import StudentProfileCard from "./components/stuProfileCard";
 import ChatWindow from "./components/chatWindow";
 import AttendanceSummaryCard from "./components/attendanceSummaryCard";
 import AcademicPerformance from "@/app/(screens)/admin/student-progress/[roll-no]/components/academicPerformanceChart";
-import { StudentProgressDetailsSkeleton } from "../shimmer/StudentProgressSkeleton";
-import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
-type StudentProgressDetails = Awaited<
-  ReturnType<typeof getFacultyStudentProgressDetails>
->;
-
-const emptyDetails: NonNullable<StudentProgressDetails> = {
-  departmentLabel: "N/A",
-  yearLabel: "N/A",
-  sectionLabel: "N/A",
-  semesterLabel: "N/A",
-  studentProfile: {
-    name: "Unknown Student",
-    department: "N/A",
-    studentId: "N/A",
-    phone: "N/A",
-    email: "N/A",
-    address: "Not Available",
-    photo: "/maleuser.png",
-    attendanceDays: 0,
-    absentDays: 0,
-    leaveDays: 0,
-  },
-  parents: [],
-  attendancePercentage: 0,
-  academicPerformance: [],
-  taskWeightages: {
-    assignments: 0,
-    quizzes: 0,
-    discussions: 0,
-  },
-  taskInsights: {
-    assignments: {
-      obtained: 0,
-      total: 0,
-      weightedScore: 0,
-    },
-    quizzes: {
-      obtained: 0,
-      total: 0,
-      weightedScore: 0,
-    },
-    discussions: {
-      obtained: 0,
-      total: 0,
-      weightedScore: 0,
-    },
-  },
-  assignments: [],
-  quizzes: [],
-  discussions: [],
-  grades: [],
-};
+import {
+  StudentProgressDetailsSkeleton,
+  StudentProfileCardSkeleton,
+  ParentsCardSkeleton as ParentsListSkeleton,
+  AcademicPerformanceSkeleton,
+  AttendanceSummarySkeleton,
+  GradesTableSkeleton as GradesSkeleton,
+} from "../shimmer/StudentProgressSkeleton";
 
 export default function StudentProgressDetailsPage() {
   const router = useRouter();
@@ -88,115 +48,92 @@ export default function StudentProgressDetailsPage() {
     facultyId,
     faculty_edu_type,
   } = useFaculty();
+
   const isSchoolFromEducation =
     faculty_edu_type
       ?.split(",")
       .some((educationType) => isSchoolEducation(educationType)) ?? false;
+  
   const isSchoolFromCookie =
     typeof document !== "undefined" &&
-    document.cookie
-      .split("; ")
-      .some((cookie) => cookie === "isSchool=true");
+    document.cookie.split("; ").some((cookie) => cookie === "isSchool=true");
+    
   const isSchool = isSchoolFromEducation || isSchoolFromCookie;
 
   const [activeChatParent, setActiveChatParent] = useState<Parent | null>(null);
-  const [details, setDetails] =
-    useState<NonNullable<StudentProgressDetails>>(emptyDetails);
-  const [detailsLoading, setDetailsLoading] = useState(true);
 
-  useEffect(() => {
-    if (facultyLoading) return;
+  const isContextReady =
+    !facultyLoading &&
+    !!rollNo &&
+    !!collegeId &&
+    !!collegeEducationId &&
+    (isSchool || !!collegeBranchId) &&
+    !!facultyId &&
+    !!academicYearIds?.length &&
+    !!sectionIds?.length &&
+    !!subjectIds?.length;
 
-    let mounted = true;
+  const scope = useMemo(
+    (): FacultyStudentProgressDetailsScope | null => {
+      if (!isContextReady) return null;
+      return {
+        rollNo,
+        facultyId,
+        collegeId,
+        collegeEducationId,
+        collegeBranchId: isSchool ? 0 : (collegeBranchId ?? 0),
+        isSchool,
+        academicYearIds,
+        sectionIds,
+        subjectIds,
+        departmentLabel: college_branch,
+      };
+    },
+    [
+      isContextReady,
+      rollNo,
+      facultyId,
+      collegeId,
+      collegeEducationId,
+      collegeBranchId,
+      isSchool,
+      academicYearIds,
+      sectionIds,
+      subjectIds,
+      college_branch,
+    ]
+  );
 
-    const loadDetails = async () => {
-      if (
-        !rollNo ||
-        !collegeId ||
-        !collegeEducationId ||
-        (!isSchool && !collegeBranchId) ||
-        !facultyId ||
-        !academicYearIds.length ||
-        !sectionIds.length ||
-        !subjectIds.length
-      ) {
-        setDetails(emptyDetails);
-        setDetailsLoading(false);
-        return;
-      }
+  const { data: profileData, isLoading: profileLoading } = useQuery({
+    queryKey: ["facultyStudentProfile", scope],
+    queryFn: () => getFacultyStudentProfile(scope!),
+    enabled: !!scope,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
-      setDetailsLoading(true);
+  const { data: performanceData, isLoading: performanceLoading } = useQuery({
+    queryKey: ["facultyStudentPerformance", scope],
+    queryFn: () => getFacultyStudentPerformance(scope!),
+    enabled: !!scope,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
-      try {
-        const data = await getFacultyStudentProgressDetails({
-          rollNo,
-          facultyId,
-          collegeId,
-          collegeEducationId,
-          collegeBranchId: isSchool ? 0 : (collegeBranchId ?? 0),
-          isSchool,
-          academicYearIds,
-          sectionIds,
-          subjectIds,
-          departmentLabel: college_branch,
-        });
-
-        if (mounted) {
-          setDetails(data ?? emptyDetails);
-        }
-      } catch (error) {
-        console.error("Failed to load faculty student progress details", error);
-        if (mounted) {
-          setDetails(emptyDetails);
-        }
-      } finally {
-        if (mounted) {
-          setDetailsLoading(false);
-        }
-      }
-    };
-
-    loadDetails();
-
-    return () => {
-      mounted = false;
-    };
-  }, [
-    facultyLoading,
-    rollNo,
-    collegeId,
-    collegeEducationId,
-    collegeBranchId,
-    facultyId,
-    academicYearIds,
-    sectionIds,
-    subjectIds,
-    college_branch,
-    isSchool,
-  ]);
-
-  if (detailsLoading) {
+  if (facultyLoading || (!scope && !facultyLoading && !!rollNo)) {
     return <StudentProgressDetailsSkeleton />;
   }
 
-  const profile = details.studentProfile;
-  const totalAttendanceRecords =
-    profile.attendanceDays + profile.absentDays + profile.leaveDays;
-  const attendancePercentage =
-    totalAttendanceRecords > 0
-      ? Math.round((profile.attendanceDays / totalAttendanceRecords) * 100)
-      : 0;
-  const absentPercentage =
-    totalAttendanceRecords > 0
-      ? Math.round((profile.absentDays / totalAttendanceRecords) * 100)
-      : 0;
-  const leavePercentage =
-    totalAttendanceRecords > 0
-      ? Math.round((profile.leaveDays / totalAttendanceRecords) * 100)
-      : 0;
+  const profile = profileData?.studentProfile;
+  const totalAttendanceRecords = profile
+    ? profile.attendanceDays + profile.absentDays + profile.leaveDays
+    : 0;
+  const attendancePercentage = profileData?.attendancePercentage ?? 0;
+  const absentPercentage = totalAttendanceRecords > 0 ? Math.round((profile!.absentDays / totalAttendanceRecords) * 100) : 0;
+  const leavePercentage = totalAttendanceRecords > 0 ? Math.round((profile!.leaveDays / totalAttendanceRecords) * 100) : 0;
 
   return (
-    <div className="relative min-h-screen bg-transparent p-3 md:p-6 font-sans">
+    <div className="relative min-h-screen bg-transparent p-2 font-sans">
       <section className="mb-4 md:mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
           <button
@@ -208,41 +145,39 @@ export default function StudentProgressDetailsPage() {
             <CaretLeft size={18} weight="bold" />
           </button>
 
-          {!isSchool && <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-gray-600 text-xs md:text-sm font-medium">
-              Department:
-            </span>
-            <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
-              {details.departmentLabel}
-            </span>
-          </div>}
+          {!isSchool && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-gray-600 text-xs md:text-sm font-medium">Department:</span>
+              <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
+                {profileData?.departmentLabel ?? "..."}
+              </span>
+            </div>
+          )}
 
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-gray-600 text-xs md:text-sm font-medium">
               {isSchool ? "Class:" : "Year:"}
             </span>
             <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
-              {details.yearLabel}
+              {profileData?.yearLabel ?? "..."}
             </span>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-gray-600 text-xs md:text-sm font-medium">
-              Sec:
-            </span>
+            <span className="text-gray-600 text-xs md:text-sm font-medium">Sec:</span>
             <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
-              {details.sectionLabel}
+              {profileData?.sectionLabel ?? "..."}
             </span>
           </div>
 
-          {!isSchool && <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-gray-600 text-xs md:text-sm font-medium">
-              Sem:
-            </span>
-            <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
-              {details.semesterLabel}
-            </span>
-          </div>}
+          {!isSchool && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-gray-600 text-xs md:text-sm font-medium">Sem:</span>
+              <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
+                {profileData?.semesterLabel ?? "..."}
+              </span>
+            </div>
+          )}
         </div>
 
         <article className="hidden lg:flex justify-end">
@@ -254,20 +189,30 @@ export default function StudentProgressDetailsPage() {
         {activeChatParent ? (
           <div className="flex min-h-[calc(100vh-3rem)] lg:h-[calc(100vh-3rem)] flex-col items-start gap-4 md:gap-6 lg:flex-row">
             <div className="flex h-full w-full flex-col gap-4 md:gap-6 lg:overflow-y-auto lg:pb-2 lg:pr-2 scrollbar-hide lg:w-[60%]">
-              <StudentProfileCard
-                {...profile}
-                attendancePercentage={attendancePercentage}
-                absentPercentage={absentPercentage}
-                leavePercentage={leavePercentage}
-              />
-              <AcademicPerformance data={details.academicPerformance} />
-              <AssignmentsTable
-                assignments={details.assignments}
-                quizzes={details.quizzes}
-                discussions={details.discussions}
-                weightages={details.taskWeightages}
-                insights={details.taskInsights}
-              />
+              {profileLoading || !profile ? (
+                <StudentProfileCardSkeleton />
+              ) : (
+                <StudentProfileCard
+                  {...profile}
+                  attendancePercentage={attendancePercentage}
+                  absentPercentage={absentPercentage}
+                  leavePercentage={leavePercentage}
+                />
+              )}
+              
+              {performanceLoading || !performanceData ? (
+                <AcademicPerformanceSkeleton />
+              ) : (
+                <AcademicPerformance data={performanceData.academicPerformance} />
+              )}
+              
+              {scope && (
+                <AssignmentsTable
+                  scope={scope}
+                  weightages={performanceData?.taskWeightages}
+                  insights={performanceData?.taskInsights}
+                />
+              )}
             </div>
 
             <div className="w-full rounded-[24px] md:rounded-[30px] bg-white lg:sticky lg:top-0 lg:h-full lg:w-[40%] min-h-[500px]">
@@ -280,43 +225,73 @@ export default function StudentProgressDetailsPage() {
         ) : (
           <div className="flex flex-col gap-4 md:gap-6">
             <div className="grid grid-cols-1 items-stretch gap-4 md:gap-6 lg:grid-cols-5">
-              <div className="h-full lg:col-span-3">
-                <StudentProfileCard
-                  {...profile}
-                  attendancePercentage={attendancePercentage}
-                  absentPercentage={absentPercentage}
-                  leavePercentage={leavePercentage}
-                />
-              </div>
-              <div className="h-full lg:col-span-2">
-                <ParentsList
-                  parents={details.parents}
-                  onChatOpen={(parent) => setActiveChatParent(parent)}
-                />
-              </div>
+              {profileLoading || !profile ? (
+                <>
+                  <div className="h-full lg:col-span-3">
+                    <StudentProfileCardSkeleton />
+                  </div>
+                  <div className="h-full lg:col-span-2">
+                    <ParentsListSkeleton />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="h-full lg:col-span-3">
+                    <StudentProfileCard
+                      {...profile}
+                      attendancePercentage={attendancePercentage}
+                      absentPercentage={absentPercentage}
+                      leavePercentage={leavePercentage}
+                    />
+                  </div>
+                  <div className="h-full lg:col-span-2">
+                    <ParentsList
+                      parents={profileData.parents}
+                      onChatOpen={(parent) => setActiveChatParent(parent)}
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="grid grid-cols-1 items-stretch gap-4 md:gap-6 lg:grid-cols-5">
-              <div className="h-full lg:col-span-3">
-                <AcademicPerformance data={details.academicPerformance} />
-              </div>
-              <div className="h-full lg:col-span-2">
-                <AttendanceSummaryCard percentage={attendancePercentage} />
-              </div>
+              {performanceLoading || !performanceData ? (
+                <>
+                  <div className="h-full lg:col-span-3">
+                    <AcademicPerformanceSkeleton />
+                  </div>
+                  <div className="h-full lg:col-span-2">
+                    <AttendanceSummarySkeleton />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="h-full lg:col-span-3">
+                    <AcademicPerformance data={performanceData.academicPerformance} />
+                  </div>
+                  <div className="h-full lg:col-span-2">
+                    <AttendanceSummaryCard percentage={attendancePercentage} />
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="grid grid-cols-1 items-stretch gap-4 md:gap-6 lg:grid-cols-5">
               <div className="h-full lg:col-span-3 min-w-0">
-                <AssignmentsTable
-                  assignments={details.assignments}
-                  quizzes={details.quizzes}
-                  discussions={details.discussions}
-                  weightages={details.taskWeightages}
-                  insights={details.taskInsights}
-                />
+                {scope && (
+                  <AssignmentsTable
+                    scope={scope}
+                    weightages={performanceData?.taskWeightages}
+                    insights={performanceData?.taskInsights}
+                  />
+                )}
               </div>
               <div className="h-full lg:col-span-2 min-w-0">
-                <GradesTable grades={details.grades} />
+                {performanceLoading || !performanceData ? (
+                  <GradesSkeleton />
+                ) : (
+                  <GradesTable grades={performanceData.grades} />
+                )}
               </div>
             </div>
           </div>

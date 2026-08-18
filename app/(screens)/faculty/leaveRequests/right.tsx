@@ -40,7 +40,10 @@ export default function FacultyDashRight() {
   
   const isFetchingTasks = useQueryClient().isFetching({ queryKey: ["facultyTasks", facultyId, collegeSubjectId] }) > 0;
 
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const [isFirstLoad, setIsFirstLoad] = useState(() => {
+    const hasCache = queryClient.getQueryData(["facultyTasks", facultyId, collegeSubjectId]);
+    return !hasCache;
+  });
 
   useEffect(() => {
     if (!facultyLoading && !isFetchingTasks && facultyId) {

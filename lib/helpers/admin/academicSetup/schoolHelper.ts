@@ -48,6 +48,16 @@ export const isStrictlySchoolOrInterAssigned = (collegeEducationTypeStr: any): b
   });
 };
 
+export const isSchoolOrInterSubject = (educationTypeStr: string | null | undefined): boolean => {
+  if (!educationTypeStr) return false;
+  
+  const type = educationTypeStr.trim().toUpperCase();
+  const isSchool = SCHOOL_BOARDS.includes(type);
+  const isInter = type === "INTER" || type === "INTERMEDIATE";
+  return isSchool || isInter;
+};
+
+
 export const getRestrictedPlacementsToastMessage = (collegeEducationTypeStr: any): string => {
   if (!collegeEducationTypeStr) return "Placements are restricted for your profile.";
   
