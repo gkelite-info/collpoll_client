@@ -8,12 +8,23 @@ import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
 import { CardProps } from "@/lib/types/faculty";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { FacultySectionRow, fetchFacultySections } from "@/lib/helpers/faculty/facultysectionsAPI";
-import { saveLabManual, uploadLabManualFile } from "@/lib/helpers/faculty/facultyLabManualHelper";
+import { deleteLabManualFile, getLabManualPublicUrl, saveLabManual, uploadLabManualFile } from "@/lib/helpers/faculty/facultyLabManualHelper";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
 interface FacultyLabFormProps {
     onSaved?: () => void;
     onCancel?: () => void;
-    initialData?: any;
+    initialData?: {
+        labId?: number;
+        labTitle?: string;
+        description?: string;
+        pdfUrl?: string;
+        fileUrl?: string;
+        collegeSubjectId: number;
+        collegeAcademicYearId: number;
+        collegeSectionsId: number;
+    };
 }
 
 export default function FacultyLabForm({ onSaved, onCancel, initialData }: FacultyLabFormProps) {
@@ -37,6 +48,8 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
     const [uploadProgress, setUploadProgress] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [existingFileName, setExistingFileName] = useState<string | null>(null);
+    const [removeExistingFile, setRemoveExistingFile] = useState(false);
+    const [showRemoveFileConfirmation, setShowRemoveFileConfirmation] = useState(false);
 
     useEffect(() => {
         async function loadInitialData() {
@@ -52,14 +65,28 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
                     sectionIds: faculty.sectionIds,
                 });
                 setSubjects(data);
-            } catch (error) {
+
+                if (faculty.facultyId) {
+                    const assignments = await fetchFacultySections(faculty.facultyId);
+                    setAssignedData(assignments);
+                }
+            } catch {
                 toast.error("Failed to load subjects");
             } finally {
                 setIsLoadingSubjects(false);
             }
         }
         loadInitialData();
-    }, [faculty.loading, faculty.collegeId]);
+    }, [
+        faculty.loading,
+        faculty.collegeId,
+        faculty.collegeEducationId,
+        faculty.collegeBranchId,
+        faculty.academicYearIds,
+        faculty.subjectIds,
+        faculty.sectionIds,
+        faculty.facultyId,
+    ]);
 
     useEffect(() => {
         if (!initialData || !faculty.facultyId) return;
@@ -70,20 +97,14 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
 
                 setSubjectId(initialData.collegeSubjectId.toString());
 
-                const data = await fetchFacultySections(
-                    faculty.facultyId!,
-                    Number(initialData.collegeSubjectId)
-                );
-
-                setAssignedData(data);
-
                 setAcademicYearId(initialData.collegeAcademicYearId.toString());
                 setSectionId(initialData.collegeSectionsId.toString());
                 setExistingFileName(initialData.pdfUrl?.split("/").pop() || null);
+                setRemoveExistingFile(false);
 
                 setLabTitle(initialData.labTitle || "");
                 setDescription(initialData.description || "");
-            } catch (error) {
+            } catch {
                 toast.error("Failed to load edit data");
             } finally {
                 setIsLoadingSections(false);
@@ -93,23 +114,15 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
         loadAll();
     }, [initialData, faculty.facultyId]);
 
-    const handleSubjectChange = async (sId: string) => {
-        setSubjectId(sId);
-        setAcademicYearId("");
+    const handleYearChange = (yearId: string) => {
+        setAcademicYearId(yearId);
+        setSubjectId("");
         setSectionId("");
-        setAssignedData([]);
+    };
 
-        if (!sId || !faculty.facultyId) return;
-
-        try {
-            setIsLoadingSections(true);
-            const data = await fetchFacultySections(faculty.facultyId, Number(sId));
-            setAssignedData(data);
-        } catch (error) {
-            toast.error("Failed to load assigned years and sections");
-        } finally {
-            setIsLoadingSections(false);
-        }
+    const handleSubjectChange = (sId: string) => {
+        setSubjectId(sId);
+        setSectionId("");
     };
 
     const availableYears = Array.from(new Set(assignedData.map(item => item.collegeAcademicYearId)))
@@ -118,17 +131,34 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
             return { id, label: yearObj?.collegeAcademicYear || `Year ID: ${id}` };
         });
 
-    const availableSections = assignedData
-        .filter(item => item.collegeAcademicYearId === Number(academicYearId))
-        .map(item => ({
-            id: item.collegeSectionsId,
-            name: item.college_sections?.collegeSections || "Unknown Section"
-        }));
+    const availableSubjects = subjects.filter(subject =>
+        assignedData.some(item =>
+            item.collegeAcademicYearId === Number(academicYearId) &&
+            item.collegeSubjectId === subject.collegeSubjectId
+        )
+    );
+
+    const availableSections = Array.from(new Map(
+        assignedData
+            .filter(item =>
+                item.collegeAcademicYearId === Number(academicYearId) &&
+                item.collegeSubjectId === Number(subjectId)
+            )
+            .map(item => [item.collegeSectionsId, {
+                id: item.collegeSectionsId,
+                name: item.college_sections?.collegeSections || "Unknown Section"
+            }])
+    ).values());
 
     const handleBack = () => {
         const params = new URLSearchParams(searchParams.toString());
         params.delete("action");
         router.push(`${pathname}?${params.toString()}`);
+    };
+
+    const handleCancel = () => {
+        onCancel?.();
+        handleBack();
     };
 
     const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -157,31 +187,61 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
         return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
     };
 
+    const handlePreviewExistingFile = async () => {
+        if (!initialData?.pdfUrl) return;
+
+        const previewWindow = window.open("", "_blank");
+        try {
+            const signedUrl = await getLabManualPublicUrl(initialData.pdfUrl);
+            if (!signedUrl) throw new Error("Unable to generate PDF URL");
+
+            if (previewWindow) {
+                previewWindow.opener = null;
+                previewWindow.location.href = signedUrl;
+            } else {
+                window.open(signedUrl, "_blank", "noopener,noreferrer");
+            }
+        } catch {
+            previewWindow?.close();
+            toast.error("Failed to open lab manual");
+        }
+    };
+
 
     const handleSubmit = async () => {
-        if (!labTitle.trim()) return toast.error("Lab Title required");
-        if (!subjectId) return toast.error("Choose at least one subject");
-        if (!academicYearId) return toast.error("Choose at least one year");
-        if (!sectionId) return toast.error("Choose at least one section");
-        if (!pdfFile && !initialData) return toast.error("PDF is required");
+        if (!labTitle.trim()) return toast.error("Lab title is required");
+        if (!academicYearId) return toast.error("Academic year is required");
+        if (!subjectId) return toast.error("Subject is required");
+        if (!sectionId) return toast.error("Section is required");
+        if (!pdfFile && (!initialData?.pdfUrl || removeExistingFile)) return toast.error("PDF is required");
         if (!faculty.facultyId) return toast.error("Faculty session not found");
+
+        const hasValidAssignment = assignedData.some(item =>
+            item.collegeAcademicYearId === Number(academicYearId) &&
+            item.collegeSubjectId === Number(subjectId) &&
+            item.collegeSectionsId === Number(sectionId)
+        );
+        if (!hasValidAssignment) return toast.error("Please select a valid assigned year, subject, and section");
 
         try {
             setIsSaving(true);
             setUploadProgress(10);
 
-            let filePath = initialData?.pdfUrl;
+            const existingFilePath = initialData?.pdfUrl;
+            let filePath = removeExistingFile ? undefined : existingFilePath;
 
             if (pdfFile) {
                 const folder = `faculty_${faculty.facultyId}`;
                 filePath = await uploadLabManualFile(pdfFile, folder);
             }
 
+            if (!filePath) throw new Error("Lab manual PDF path is missing");
+
             setUploadProgress(60);
 
             const payload = {
-                labTitle,
-                description,
+                labTitle: labTitle.trim(),
+                description: description.trim(),
                 pdfUrl: filePath,
                 collegeSubjectId: Number(subjectId),
                 collegeAcademicYearId: Number(academicYearId),
@@ -199,6 +259,14 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
                     role: "faculty",
                 }
             );
+
+            if (pdfFile && existingFilePath && filePath !== existingFilePath) {
+                try {
+                    await deleteLabManualFile(existingFilePath);
+                } catch {
+                    toast.error("Lab manual updated, but the old PDF could not be removed");
+                }
+            }
 
             setUploadProgress(100);
 
@@ -222,7 +290,7 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
     return (
         <div className="w-[68%] h-full p-2 flex flex-col">
             <div className="flex items-start gap-3 mb-6">
-                <button onClick={handleBack} className="transition-colors cursor-pointer lg:mt-1">
+                <button onClick={handleCancel} className="transition-colors cursor-pointer lg:mt-1">
                     <CaretLeftIcon size={22} weight="bold" className="text-black" />
                 </button>
                 <div>
@@ -252,63 +320,42 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
 
                 <div className="grid grid-cols-3 gap-4">
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-[#282828]">Subject <span className="text-red-500">*</span></label>
-                        <div className="relative">
-                            <select
-                                value={subjectId}
-                                onChange={(e) => handleSubjectChange(e.target.value)}
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-[#282828] bg-white focus:outline-none focus:ring-2 focus:ring-[#43C17A] appearance-none cursor-pointer disabled:bg-gray-50"
-                                disabled={isLoadingSubjects}
-                            >
-                                <option value="">{isLoadingSubjects ? "Loading..." : "Select subject"}</option>
-                                {subjects.map((sub) => (
-                                    <option key={sub.collegeSubjectId} value={sub.collegeSubjectId}>{sub.subjectTitle}</option>
-                                ))}
-                            </select>
-                            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
-                            </div>
-                        </div>
+                        <label className="text-sm font-medium text-[#282828]">Year <span className="text-red-500">*</span></label>
+                        <CustomDropdown
+                            value={academicYearId}
+                            onChange={(value) => handleYearChange(String(value))}
+                            options={availableYears.map(year => ({ value: year.id, label: year.label }))}
+                            placeholder={isLoadingSubjects || isLoadingSections ? "Loading..." : "Select year"}
+                            disabled={isLoadingSubjects || isLoadingSections}
+                            theme="green"
+                            className="rounded-lg py-2.5"
+                        />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-[#282828]">Year <span className="text-red-500">*</span></label>
-                        <div className="relative">
-                            <select
-                                value={academicYearId}
-                                onChange={(e) => { setAcademicYearId(e.target.value); setSectionId(""); }}
-                                disabled={!subjectId || isLoadingSections}
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-[#282828] bg-white focus:outline-none appearance-none cursor-pointer disabled:bg-gray-50"
-                            >
-                                <option value="">Select year</option>
-                                {availableYears.map((year) => (
-                                    <option key={year.id} value={year.id}>{year.label}</option>
-                                ))}
-                            </select>
-                            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
-                            </div>
-                        </div>
+                        <label className="text-sm font-medium text-[#282828]">Subject <span className="text-red-500">*</span></label>
+                        <CustomDropdown
+                            value={subjectId}
+                            onChange={(value) => handleSubjectChange(String(value))}
+                            options={availableSubjects.map(subject => ({ value: subject.collegeSubjectId, label: subject.subjectTitle }))}
+                            placeholder={academicYearId ? "Select subject" : "Select year first"}
+                            disabled={!academicYearId || isLoadingSubjects || isLoadingSections}
+                            theme="green"
+                            className="rounded-lg py-2.5"
+                        />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-medium text-[#282828]">Section <span className="text-red-500">*</span></label>
-                        <div className="relative">
-                            <select
-                                value={sectionId}
-                                onChange={(e) => setSectionId(e.target.value)}
-                                disabled={!academicYearId || isLoadingSections}
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-[#282828] bg-white focus:outline-none appearance-none cursor-pointer disabled:bg-gray-50"
-                            >
-                                <option value="">Select section</option>
-                                {availableSections.map((sec) => (
-                                    <option key={sec.id} value={sec.id}>{sec.name}</option>
-                                ))}
-                            </select>
-                            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
-                            </div>
-                        </div>
+                        <CustomDropdown
+                            value={sectionId}
+                            onChange={(value) => setSectionId(String(value))}
+                            options={availableSections.map(section => ({ value: section.id, label: section.name }))}
+                            placeholder={subjectId ? "Select section" : "Select subject first"}
+                            disabled={!subjectId || isLoadingSections}
+                            theme="green"
+                            className="rounded-lg py-2.5"
+                        />
                     </div>
                 </div>
 
@@ -366,34 +413,43 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
                             )}
                         </div>
                     ) : existingFileName ? (
-                        <div className="w-full border border-gray-200 bg-gray-50 rounded-xl p-4 flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-gray-200 flex items-center justify-center flex-shrink-0">
-                                <UploadSimpleIcon size={22} className="text-gray-500" />
+                        <div className="flex flex-col gap-2">
+                            <div className="w-full border border-gray-200 bg-gray-50 rounded-xl p-4 flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-gray-200 flex items-center justify-center flex-shrink-0">
+                                    <UploadSimpleIcon size={22} className="text-gray-500" />
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-[#282828] truncate">
+                                        {existingFileName}
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-0.5">
+                                        Already uploaded
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={handlePreviewExistingFile}
+                                        className="text-xs font-medium text-green-600 hover:text-green-700 cursor-pointer"
+                                    >
+                                        Preview
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowRemoveFileConfirmation(true)}
+                                        className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 transition-colors cursor-pointer"
+                                        aria-label="Remove existing PDF"
+                                    >
+                                        <XIcon size={16} weight="bold" className="text-red-500" />
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-[#282828] truncate">
-                                    {existingFileName}
-                                </p>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                    Already uploaded
-                                </p>
-                            </div>
-
-                            {/* <button
-                                onClick={() => setExistingFileName(null)}
-                                className="text-xs font-medium text-blue-600 hover:text-blue-700 cursor-pointer"
-                            >
-                                Replace
-                            </button> */}
-                            <a
-                                href={initialData?.fileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs font-medium text-green-600 hover:text-green-700"
-                            >
-                                Preview
-                            </a>
+                            <p className="text-xs text-amber-600">
+                                Note: Remove the existing PDF to upload a new file.
+                            </p>
                         </div>
                     ) : (
                         <div
@@ -440,7 +496,7 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
                 </div>
 
                 <div className="flex justify-end gap-3 pt-2 pb-4">
-                    <button onClick={handleBack} className="px-6 py-2 rounded-lg border border-gray-200 text-sm font-medium text-[#282828] hover:bg-gray-50 transition-colors cursor-pointer">
+                    <button onClick={handleCancel} className="px-6 py-2 rounded-lg border border-gray-200 text-sm font-medium text-[#282828] hover:bg-gray-50 transition-colors cursor-pointer">
                         Cancel
                     </button>
                     <button onClick={handleSubmit} disabled={isSaving} className="px-6 py-2 rounded-lg bg-[#16284F] text-sm font-medium text-white hover:bg-[#102040] transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-60">
@@ -450,6 +506,23 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
                     </button>
                 </div>
             </div>
+
+            <ConfirmDeleteModal
+                open={showRemoveFileConfirmation}
+                onConfirm={() => {
+                    setExistingFileName(null);
+                    setRemoveExistingFile(true);
+                    setShowRemoveFileConfirmation(false);
+                }}
+                onCancel={() => setShowRemoveFileConfirmation(false)}
+                title="Remove"
+                name="existing PDF"
+                confirmText="Yes, Remove"
+                actionType="remove"
+                customDescription={
+                    <>Are you sure you want to remove the existing PDF? You must upload a new PDF before updating the lab manual.</>
+                }
+            />
         </div>
     );
 }

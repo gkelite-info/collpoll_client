@@ -1,5 +1,6 @@
 import { Trash, Plus, Pencil } from "@phosphor-icons/react";
 import { CustomSelect } from "./CustomSelect";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 
 interface ExamFormProps {
   scheduleTitle: string;
@@ -31,8 +32,8 @@ interface ExamFormProps {
   semesterSelect: number | null;
   setSemesterSelect: (val: number | null) => void;
   sections: any[];
-  sectionSelect: number | null;
-  setSectionSelect: (val: number | null) => void;
+  sectionSelect: number[];
+  setSectionSelect: (val: number[]) => void;
   scheduledSubjects: any[];
   setScheduledSubjects: (val: any) => void;
   editingScheduleId: number | null;
@@ -311,14 +312,24 @@ export function ExamForm({
 
               <div className="flex flex-col">
                 <label className="text-xs font-bold text-gray-600 mb-1.5">Section</label>
-                <CustomSelect
-                  value={sectionSelect?.toString() || ""}
-                  onChange={(val) => setSectionSelect(Number(val))}
+                <CustomDropdown
+                  value=""
+                  isMultiSelect
+                  selectedValues={sectionSelect}
+                  onChange={(val) => {
+                    const sectionId = Number(val);
+                    setSectionSelect(
+                      sectionSelect.includes(sectionId)
+                        ? sectionSelect.filter((id) => id !== sectionId)
+                        : [...sectionSelect, sectionId],
+                    );
+                  }}
                   options={sections.map((s) => ({
                     value: s.collegeSectionsId,
                     label: s.collegeSections,
                   }))}
-                  placeholder="Select Section"
+                  placeholder="Select Sections"
+                  theme="green"
                 />
               </div>
             </div>

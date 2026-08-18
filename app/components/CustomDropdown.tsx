@@ -94,7 +94,11 @@ export const CustomDropdown = ({
   }
 
   const selectedOption = finalOptions.find(opt => String(opt.value) === String(selectedValue));
-  const selectedLabel = selectedOption ? selectedOption.label : "";
+  const selectedLabel = isMultiSelect
+    ? selectedValues.length > 0
+      ? `${selectedValues.length} selected`
+      : ""
+    : selectedOption ? selectedOption.label : "";
 
   const menuHeightEstimate = Math.min(240, finalOptions.length * 40 + 10);
   const spaceBelow = typeof window !== 'undefined' && rect ? window.innerHeight - rect.bottom : 0;
@@ -140,8 +144,15 @@ export const CustomDropdown = ({
                     : "text-[#282828] hover:bg-gray-50 font-medium"
                 }`}
               >
-                <span className="pr-2">{opt.label}</span>
-                {isSelected && !hideCheckmark && <Check size={14} weight="bold" className="shrink-0" />}
+                <span className="flex items-center gap-2 pr-2">
+                  {isMultiSelect && (
+                    <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? "bg-[#43C17A] border-[#43C17A] text-white" : "border-gray-300 bg-white"}`}>
+                      {isSelected && <Check size={11} weight="bold" />}
+                    </span>
+                  )}
+                  {opt.label}
+                </span>
+                {isSelected && !hideCheckmark && !isMultiSelect && <Check size={14} weight="bold" className="shrink-0" />}
               </div>
             );
           })}

@@ -148,34 +148,31 @@ export async function getFacultyDashboardStats(
 
   // ---------------------------------------------------------
   // 3. COMPUTE TOTAL STUDENTS (Total Possible Attendance Marks)
-  // ---------------------------------------------------------
-  if (fetchedSectionIds.size > 0) {
-    const sectionStudentCounts: Record<number, number> = {};
-    const { data: history } = await supabase
-      .from("student_academic_history")
-      .select("collegeSectionsId")
-      .in("collegeSectionsId", Array.from(fetchedSectionIds))
-      .eq("isCurrent", true);
-
-    if (history) {
-      history.forEach((h) => {
-        sectionStudentCounts[h.collegeSectionsId] =
-          (sectionStudentCounts[h.collegeSectionsId] || 0) + 1;
-      });
+  let sectionIdsToCount: number[] = [];
+  if (sectionId) {
+    sectionIdsToCount = [sectionId];
+  } else {
+    // get all sections for this faculty's selected subject (or all subjects)
+    let query = supabase.from("faculty_sections").select("collegeSectionsId").eq("facultyId", facultyId).is("deletedAt", null);
+    if (subjectId) {
+       query = query.eq("collegeSubjectId", subjectId);
     }
+    const { data: fSecs } = await query;
+    if (fSecs) {
+      sectionIdsToCount = fSecs.map((fs) => fs.collegeSectionsId);
+    }
+  }
 
-    if (events) {
-      for (const ev of events as any[]) {
-        const evSections = Array.isArray(ev.calendar_event_section)
-          ? ev.calendar_event_section
-          : [];
-        let evStudentCount = 0;
-        evSections.forEach((sec: any) => {
-          if (sec?.collegeSectionId)
-            evStudentCount += sectionStudentCounts[sec.collegeSectionId] || 0;
-        });
-        totalStudents += evStudentCount;
-      }
+  if (sectionIdsToCount.length > 0) {
+    const { count, error } = await supabase
+      .from("student_academic_history")
+      .select("studentId", { count: "exact", head: true })
+      .in("collegeSectionsId", sectionIdsToCount)
+      .eq("isCurrent", true)
+      .is("deletedAt", null);
+      
+    if (!error && count !== null) {
+      totalStudents = count;
     }
   }
 
