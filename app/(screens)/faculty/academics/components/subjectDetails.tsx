@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { useUser } from "@/app/utils/context/UserContext";
 import { CardProps } from "@/lib/types/faculty";
-import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { isSchoolEducation, isSchoolOrInterSubject } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { getUnitsPaginated } from "@/lib/helpers/faculty/getUnitsPaginated";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
@@ -21,9 +21,11 @@ type FilterBannerProps = {
   filterBannerDetails: CardProps;
 };
 function FilterBanner({ filterBannerDetails }: FilterBannerProps) {
-  const { subjectTitle, semester, year, sectionName } = filterBannerDetails;
+  const { subjectTitle, semester, year, sectionName, educationType } = filterBannerDetails;
   const { faculty_edu_type } = useFaculty();
-  const isSchool = isSchoolEducation(faculty_edu_type);
+  
+  // Use subject-level education type if available, fallback to faculty level
+  const isSchoolOrInter = isSchoolOrInterSubject(educationType || faculty_edu_type);
 
   return (
     <div className="mb-4 flex flex-col gap-4">
@@ -34,7 +36,7 @@ function FilterBanner({ filterBannerDetails }: FilterBannerProps) {
             {subjectTitle}
           </p>
         </div>
-        {!(faculty_edu_type === "Inter" || isSchool) && (
+        {!isSchoolOrInter && (
           <div className="flex items-center gap-2">
             <p className="text-[#525252] text-sm">Semester :</p>
             <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">

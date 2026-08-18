@@ -171,7 +171,7 @@ export const GradesTableSkeleton = () => (
 );
 
 export const StudentProgressDetailsSkeleton = () => (
-  <div className="relative min-h-screen bg-[#F5F7FA] p-3 md:p-6 font-sans">
+  <div className="relative min-h-screen p-3 md:p-6 font-sans">
     <DetailHeaderSkeleton />
     <div className="mx-auto max-w-[1400px]">
       <div className="flex flex-col gap-4 md:gap-6">
@@ -319,26 +319,49 @@ export const StudentProgressPageSkeleton = () => (
     </section>
 
     <div className="mb-4 md:mb-5 w-full max-w-5xl overflow-hidden">
-      <div className="flex gap-2 md:gap-3 overflow-x-auto scrollbar-hide pb-2">
-        {Array.from({ length: 4 }).map((_, index) => (
+      <div className="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide pb-2">
+        {["Year", "Subject", "Sec"].map((label, index) => (
           <div key={index} className="flex items-center gap-2 shrink-0">
-            <ShimmerBlock className="h-4 w-12 md:w-16 rounded-md" />
-            <ShimmerBlock className="h-6 md:h-7 w-16 md:w-20 rounded-full bg-[#E8F6E2]" />
+            <span className="text-gray-600 text-xs md:text-sm font-medium">{label} :</span>
+            <ShimmerBlock className="h-[34px] w-[100px] rounded-full bg-gray-100" />
           </div>
         ))}
       </div>
     </div>
 
-    <article className="mb-4 grid items-start gap-2 lg:gap-4 lg:grid-cols-[68%_32%]">
-      <div className="grid grid-cols-3 gap-2 lg:gap-3 w-full">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <ShimmerBlock
-            key={index}
-            className="h-[100px] lg:h-[130px] w-full rounded-xl lg:rounded-[12px] bg-white shadow-sm"
-          />
-        ))}
+    <article className="mb-4 grid items-start gap-4 lg:grid-cols-[1fr_32%]">
+      <div className="grid grid-cols-3 gap-3 md:gap-4 w-full">
+        {/* Orange Card */}
+        <div className="h-[100px] lg:h-[130px] w-full rounded-xl lg:rounded-[12px] bg-[#FFEDDA] p-4 flex flex-col justify-between relative overflow-hidden">
+          <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.6s_infinite] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+          <div className="h-10 w-10 rounded-full bg-[#FFBB70]/50" />
+          <div className="mt-auto">
+            <div className="h-6 w-8 bg-black/10 rounded mb-2" />
+            <div className="h-3 w-24 bg-black/10 rounded" />
+          </div>
+        </div>
+        {/* Green Card */}
+        <div className="h-[100px] lg:h-[130px] w-full rounded-xl lg:rounded-[12px] bg-[#E6FBEA] p-4 flex flex-col justify-between relative overflow-hidden">
+          <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.6s_infinite] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+          <div className="h-10 w-10 rounded-full bg-[#43C17A]/30" />
+          <div className="mt-auto">
+            <div className="h-6 w-8 bg-black/10 rounded mb-2" />
+            <div className="h-3 w-24 bg-black/10 rounded" />
+          </div>
+        </div>
+        {/* Red Card */}
+        <div className="h-[100px] lg:h-[130px] w-full rounded-xl lg:rounded-[12px] bg-[#FFE0E0] p-4 flex flex-col justify-between relative overflow-hidden">
+          <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.6s_infinite] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+          <div className="h-10 w-10 rounded-full bg-[#FF2020]/30" />
+          <div className="mt-auto">
+            <div className="h-6 w-8 bg-black/10 rounded mb-2" />
+            <div className="h-3 w-24 bg-black/10 rounded" />
+          </div>
+        </div>
       </div>
-      <ShimmerBlock className="hidden lg:block -mt-5 h-[210px] rounded-[24px] bg-white shadow-sm" />
+      <div className="hidden lg:block h-full">
+         <ShimmerBlock className="h-[140px] w-full rounded-[16px] bg-white shadow-sm" />
+      </div>
     </article>
 
     <section>

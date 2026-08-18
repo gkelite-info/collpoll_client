@@ -26,7 +26,7 @@ export default function CardComponent({
 
   return (
     <div
-      className={`rounded-lg md:rounded-xl shadow-sm p-3 md:p-4 flex flex-col justify-between h-[105px] md:h-[130px] w-full text-gray-900 ${bgColor}`}
+      className={`rounded-lg md:rounded-xl shadow-sm p-3 md:p-4 flex flex-col justify-between h-[105px] md:h-[150px] gap-4 w-full text-gray-900 ${bgColor}`}
     >
       {/* Icon Box */}
       <div
@@ -38,7 +38,7 @@ export default function CardComponent({
       </div>
 
       {/* Text Area */}
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-col gap-3">
         <div className="text-[18px] md:text-3xl font-bold leading-none truncate">
           {value}
         </div>

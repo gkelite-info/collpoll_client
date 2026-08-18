@@ -8,6 +8,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import type { FacultyStudentProgressRow } from "@/lib/helpers/faculty/studentProgress/getFacultyStudentProgressSummary";
 import { Avatar } from "@/app/utils/Avatar";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { StudentTableSkeleton } from "../shimmer/StudentTableSkeleton";
 
 const getProgressColor = (progress: number): string => {
   if (progress >= 90) return "#43C17A";
@@ -62,6 +63,7 @@ type StudentDataTableProps = {
   rowsPerPage: number;
   onPageChange: (page: number) => void;
   onRowsPerPageChange: (items: number) => void;
+  isLoading?: boolean;
 };
 
 const formatScore = (obtained: number, total: number) =>
@@ -82,6 +84,7 @@ export function StudentDataTable({
   rowsPerPage,
   onPageChange,
   onRowsPerPageChange,
+  isLoading = false,
 }: StudentDataTableProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -119,8 +122,8 @@ export function StudentDataTable({
         </h2>
       </div>
 
-      <div className="rounded-xl md:rounded-2xl border border-gray-100 bg-white shadow-sm md:shadow-xl overflow-hidden">
-        <div className="w-full overflow-x-auto">
+      <div className="rounded-xl md:rounded-2xl border border-gray-100 bg-white shadow-sm md:shadow-xl flex flex-col">
+        <div className="w-full overflow-x-auto rounded-t-xl md:rounded-t-2xl">
           <div className="min-w-[800px] lg:min-w-full">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-[#F1F3F2]">
@@ -186,7 +189,9 @@ export function StudentDataTable({
               </thead>
 
               <tbody className="divide-y divide-gray-100 bg-white">
-                {students.length ? (
+                {isLoading ? (
+                  <StudentTableSkeleton rowsPerPage={rowsPerPage} />
+                ) : students.length ? (
                   students.map((student) => (
                     <tr
                       key={student.studentId}
