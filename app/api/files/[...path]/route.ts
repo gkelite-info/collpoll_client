@@ -17,14 +17,27 @@ export async function GET(
 
     const resolvedParams = await params;
     const pathSegments = resolvedParams.path;
-    const bucketAndFilePath = pathSegments.join("/");
+    const bucket = pathSegments[0];
+    const filePath = pathSegments.slice(1).join("/");
     
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (!supabaseUrl) {
         return new NextResponse("Server configuration error", { status: 500 });
     }
 
-    const targetUrl = `${supabaseUrl}/storage/v1/object/public/${bucketAndFilePath}`;
+    let targetUrl = "";
+
+    if (bucket === "progress_chat_attachments") {
+        // Securely generate a temporary signed URL server-side to fetch the private file
+        const { data, error } = await authClient.storage.from(bucket).createSignedUrl(filePath, 60);
+        if (error || !data) {
+            return new NextResponse("File not found or unauthorized", { status: 404 });
+        }
+        targetUrl = data.signedUrl;
+    } else {
+        // Fallback for older public buckets
+        targetUrl = `${supabaseUrl}/storage/v1/object/public/${pathSegments.join("/")}`;
+    }
     
     try {
         const response = await fetch(targetUrl);

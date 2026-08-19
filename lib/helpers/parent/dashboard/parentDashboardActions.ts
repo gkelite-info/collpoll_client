@@ -50,6 +50,7 @@ export async function getParentDashboardWidgets(userId: number) {
       `
         collegeAcademicYearId,
         collegeSemesterId,
+        collegeSectionsId,
         college_academic_year (
             collegeAcademicYear
         )
@@ -230,22 +231,69 @@ export async function getParentDashboardWidgets(userId: number) {
     const { data: subjectRows } = await subQuery;
 
     if (subjectRows && subjectRows.length > 0) {
+      const subjectIds = subjectRows.map((sub: any) => sub.collegeSubjectId);
+      
+      let facultySectionsQuery = supabase
+        .from("faculty_sections")
+        .select("facultyId, collegeSubjectId")
+        .in("collegeSubjectId", subjectIds)
+        .eq("isActive", true)
+        .is("deletedAt", null);
+
+      if (sah.collegeAcademicYearId === null) {
+        facultySectionsQuery = facultySectionsQuery.is("collegeAcademicYearId", null);
+      } else {
+        facultySectionsQuery = facultySectionsQuery.or(`collegeAcademicYearId.eq.${sah.collegeAcademicYearId},collegeAcademicYearId.is.null`);
+      }
+
+      if (sah.collegeSectionsId === null) {
+        facultySectionsQuery = facultySectionsQuery.is("collegeSectionsId", null);
+      } else {
+        facultySectionsQuery = facultySectionsQuery.or(`collegeSectionsId.eq.${sah.collegeSectionsId},collegeSectionsId.is.null`);
+      }
+
+      const { data: facultySectionRows } = await facultySectionsQuery;
+
       const facultyIds = new Set<number>();
+      facultySectionRows?.forEach((fs: any) => {
+        if (fs.facultyId) facultyIds.add(fs.facultyId);
+      });
+      
+      // Fallback: also collect from college_subject_units
       subjectRows.forEach((sub: any) => {
         sub.college_subject_units?.forEach((unit: any) => {
           if (unit.createdBy) facultyIds.add(unit.createdBy);
         });
       });
 
-      const facultyMap: Record<number, string> = {};
+      const facultyMap: Record<number, { name: string; avatar: string | null }> = {};
       if (facultyIds.size > 0) {
         const { data: facultyData } = await supabase
           .from("faculty")
-          .select("facultyId, fullName")
+          .select("facultyId, fullName, userId")
           .in("facultyId", Array.from(facultyIds));
-        facultyData?.forEach((f: any) => {
-          facultyMap[f.facultyId] = f.fullName;
-        });
+
+        if (facultyData && facultyData.length > 0) {
+          const userIds = facultyData.map((f: any) => f.userId).filter(Boolean);
+          let userProfiles: any[] = [];
+          if (userIds.length > 0) {
+            const { data: profiles } = await supabase
+              .from("user_profile")
+              .select("userId, profileUrl")
+              .in("userId", userIds)
+              .eq("is_deleted", false)
+              .is("deletedAt", null);
+            userProfiles = profiles || [];
+          }
+
+          facultyData.forEach((f: any) => {
+            const profile = userProfiles.find((p) => p.userId === f.userId);
+            facultyMap[f.facultyId] = {
+              name: f.fullName,
+              avatar: profile?.profileUrl || null,
+            };
+          });
+        }
       }
 
       const colorPalettes = [
@@ -286,21 +334,33 @@ export async function getParentDashboardWidgets(userId: number) {
             )
             : 0;
 
-        const firstUnit = units[0];
+        const assignedSection = facultySectionRows?.find(
+          (fs: any) => fs.collegeSubjectId === sub.collegeSubjectId
+        );
+        let facultyId = assignedSection?.facultyId || null;
+        
+        // Fallback to unit creator if not found in faculty_sections
+        if (!facultyId && units.length > 0) {
+          facultyId = units[0].createdBy || null;
+        }
+
         const professor =
-          firstUnit && facultyMap[firstUnit.createdBy]
-            ? `Prof. ${facultyMap[firstUnit.createdBy]}`
+          facultyId && facultyMap[facultyId]
+            ? facultyMap[facultyId].name
             : "Faculty not assigned";
+        const facultyAvatar = facultyId && facultyMap[facultyId] ? facultyMap[facultyId].avatar : null;
         const colors = colorPalettes[index % colorPalettes.length];
 
         return {
           title: sub.subjectName,
           professor: professor,
+          facultyAvatar: facultyAvatar,
           image: sub.image || "",
           percentage: avgPercentage,
           radialStart: colors.radialStart,
           radialEnd: colors.radialEnd,
           remainingColor: colors.remainingColor,
+          facultyId: facultyId,
         };
       });
     }

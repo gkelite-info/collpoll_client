@@ -545,7 +545,7 @@ const Page = () => {
           }}
           isDeleting={deleteMutation.isPending}
           title="Delete Project"
-          name="Project"
+          name={projectToDelete.title}
           itemName={projectToDelete.title}
           customDescription="Are you sure you want to permanently delete this project? All associated data will be removed."
         />

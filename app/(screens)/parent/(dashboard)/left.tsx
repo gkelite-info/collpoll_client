@@ -392,12 +392,7 @@ export default function ParentLeft() {
     subject: "Computer Networks",
   };
 
-  const chats = [
-    { image: "/Group 2992 (01).png", professor: "1", subject: "N/A" },
-    { image: "/Group 2992 (01).png", professor: "2", subject: "N/A" },
-    { image: "/Group 2992 (01).png", professor: "3", subject: "N/A" },
-    { image: "/Group 2992 (01).png", professor: "4", subject: "N/A" },
-  ];
+  const chats = dashData?.subjects || [];
 
   if (loading || userLoading) {
     return <ParentDashboardShimmer />;
@@ -441,7 +436,7 @@ export default function ParentLeft() {
           {FeeDueNode}
         </div>
 
-        <div className="bg-blue-00 mt-4 grid grid-cols-1 md:grid-cols-[66%_66%] gap-4">
+        <div className="bg-blue-00 mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
           {SubjectProgressNode}
           {FacultyChatNode}
         </div>

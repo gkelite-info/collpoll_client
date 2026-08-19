@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { getBaseStudentHistory } from "./getBaseStudentHistory";
 import {
   FacultyStudentProgressDetailsScope,
@@ -19,10 +20,13 @@ export type FacultyStudentProfile = {
   yearLabel: string;
   sectionLabel: string;
   semesterLabel: string;
+  isStudentSchool: boolean;
+  isStudentInter: boolean;
   studentProfile: {
     name: string;
     department: string;
     studentId: string;
+    studentDbId: number;
     phone: string;
     email: string;
     address: string;
@@ -43,6 +47,11 @@ export async function getFacultyStudentProfile(
 
   const { pinRow, studentRow, historyRow, user } = baseData;
   const today = formatDate(new Date());
+
+  const studentEduType = getFirst(studentRow.college_education)?.collegeEducationType;
+  const studentBranchCode = getFirst(studentRow.college_branch)?.collegeBranchCode;
+  const isStudentSchool = isSchoolEducation(studentEduType);
+  const isStudentInter = studentEduType?.trim().toUpperCase() === "INTER" || studentEduType?.trim().toUpperCase() === "INTERMEDIATE";
 
   const [
     userProfileResult,
@@ -181,12 +190,14 @@ export async function getFacultyStudentProfile(
           (parentUser?.gender?.toLowerCase() === "female"
             ? "/student-f.png"
             : "/maleuser.png"),
+        parentId: parent.parentId,
+        userId: parent.userId,
       };
     },
   );
 
   return {
-    departmentLabel: scope.departmentLabel ?? "N/A",
+    departmentLabel: studentBranchCode ?? "N/A",
     yearLabel: getFirst(historyRow.college_academic_year)?.collegeAcademicYear ?? "N/A",
     sectionLabel: getFirst(historyRow.college_sections)?.collegeSections ?? "N/A",
     semesterLabel:
@@ -194,12 +205,15 @@ export async function getFacultyStudentProfile(
       getFirst(historyRow.college_semester)?.collegeSemester !== undefined
         ? String(getFirst(historyRow.college_semester)?.collegeSemester)
         : "N/A",
+    isStudentSchool,
+    isStudentInter,
     studentProfile: {
       name: user?.fullName ?? "Unknown Student",
-      department: scope.isSchool
+      department: isStudentSchool
         ? getFirst(historyRow.college_academic_year)?.collegeAcademicYear ?? "N/A"
-        : scope.departmentLabel ?? "N/A",
+        : studentBranchCode ?? "N/A",
       studentId: pinRow.pinNumber,
+      studentDbId: studentRow.studentId,
       phone: user?.mobile ?? "N/A",
       email: user?.email ?? "N/A",
       address: "Not Available",

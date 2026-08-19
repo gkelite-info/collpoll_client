@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { getBaseStudentHistory } from "./getBaseStudentHistory";
 import {
   FacultyStudentProgressDetailsScope,
@@ -37,20 +38,27 @@ export async function getFacultyStudentTasks(
   const { studentRow, historyRow } = baseData;
   const { taskType, pageParam = 0, pageSize = 10 } = params;
   
+  const studentEduId = studentRow.collegeEducationId;
+  const studentBranchId = studentRow.collegeBranchId;
+  const isStudentSchool = isSchoolEducation(
+    Array.isArray(studentRow.college_education)
+      ? studentRow.college_education[0]?.collegeEducationType
+      : studentRow.college_education?.collegeEducationType
+  );
+
   const from = pageParam * pageSize;
   const to = from + pageSize - 1;
 
   let subjectsQuery = supabase
     .from("college_subjects")
     .select("collegeSubjectId, subjectName, subjectKey")
-    .in("collegeSubjectId", params.subjectIds)
     .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
-    .eq("collegeEducationId", params.collegeEducationId)
+    .eq("collegeEducationId", studentEduId)
     .eq("isActive", true)
     .is("deletedAt", null);
 
-  if (!params.isSchool) {
-    subjectsQuery = subjectsQuery.eq("collegeBranchId", params.collegeBranchId);
+  if (!isStudentSchool) {
+    subjectsQuery = subjectsQuery.eq("collegeBranchId", studentBranchId);
   }
 
   const { data: subjectsData, error: subjectsError } = await subjectsQuery.returns<SubjectRow[]>();
@@ -70,14 +78,13 @@ export async function getFacultyStudentTasks(
       .eq("createdBy", params.facultyId)
       .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
       .eq("collegeSectionsId", historyRow.collegeSectionsId)
-      .in("subjectId", params.subjectIds)
       .eq("is_deleted", false)
       .neq("status", "Cancelled")
       .order("submissionDeadlineInt", { ascending: false })
       .range(from, to);
 
-    if (!params.isSchool) {
-      query = query.eq("collegeBranchId", params.collegeBranchId);
+    if (!isStudentSchool) {
+      query = query.eq("collegeBranchId", studentBranchId);
     }
 
     const { data: assignments, error: assignmentsError } = await query.returns<AssignmentRow[]>();
@@ -129,7 +136,6 @@ export async function getFacultyStudentTasks(
       .eq("facultyId", params.facultyId)
       .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
       .eq("collegeSectionsId", historyRow.collegeSectionsId)
-      .in("collegeSubjectId", params.subjectIds)
       .eq("isActive", true)
       .is("deletedAt", null)
       .order("endDate", { ascending: false, nullsFirst: false })

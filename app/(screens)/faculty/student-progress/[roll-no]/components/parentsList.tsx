@@ -3,6 +3,8 @@ export interface Parent {
   name: string;
   relation: string;
   avatar: string;
+  parentId: number;
+  userId: number;
 }
 
 interface ParentsListProps {
@@ -41,7 +43,7 @@ export default function ParentsList({ parents, onChatOpen }: ParentsListProps) {
               </div>
               <button
                 onClick={() => onChatOpen(parent)}
-                className="flex h-10 w-10 md:h-14 md:w-14 shrink-0 items-center justify-center rounded-full bg-[#A1D683] text-white shadow-sm transition-transform hover:scale-105 active:scale-95"
+                className="flex h-10 w-10 md:h-14 md:w-14 shrink-0 items-center justify-center rounded-full bg-[#A1D683] text-white shadow-sm transition-transform hover:scale-105 active:scale-95 cursor-pointer"
               >
                 <ChatCircleDots
                   size={24}

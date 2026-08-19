@@ -2,13 +2,9 @@ export type FacultyStudentProgressDetailsScope = {
   rollNo: string;
   facultyId: number;
   collegeId: number;
-  collegeEducationId: number;
-  collegeBranchId: number;
-  isSchool?: boolean;
   academicYearIds: number[];
   sectionIds: number[];
   subjectIds: number[];
-  departmentLabel?: string | null;
 };
 
 export type StudentPinLookupRow = {
@@ -19,6 +15,8 @@ export type StudentPinLookupRow = {
 export type StudentProfileLookupRow = {
   studentId: number;
   userId: number;
+  collegeEducationId: number;
+  collegeBranchId: number | null;
   user: {
     fullName: string;
     email: string;
@@ -29,6 +27,16 @@ export type StudentProfileLookupRow = {
     email: string;
     mobile: string;
     gender: string | null;
+  }[] | null;
+  college_education?: {
+    collegeEducationType: string;
+  } | {
+    collegeEducationType: string;
+  }[] | null;
+  college_branch?: {
+    collegeBranchCode: string;
+  } | {
+    collegeBranchCode: string;
   }[] | null;
 };
 
@@ -211,6 +219,8 @@ export type ParentInfo = {
   name: string;
   relation: string;
   avatar: string;
+  parentId: number;
+  userId: number;
 };
 
 export type ProgressWeights = {

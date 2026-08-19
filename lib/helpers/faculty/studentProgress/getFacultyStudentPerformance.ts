@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { getBaseStudentHistory } from "./getBaseStudentHistory";
 import {
   FacultyStudentProgressDetailsScope,
@@ -48,6 +49,10 @@ export async function getFacultyStudentPerformance(
   const { studentRow, historyRow } = baseData;
   const today = formatDate(new Date());
 
+  const studentEduId = studentRow.collegeEducationId;
+  const studentBranchId = studentRow.collegeBranchId;
+  const isStudentSchool = isSchoolEducation(getFirst(studentRow.college_education)?.collegeEducationType);
+
   let weightageQuery = supabase
     .from("faculty_weightage_configs")
     .select(`
@@ -61,13 +66,13 @@ export async function getFacultyStudentPerformance(
     `)
     .eq("facultyId", scope.facultyId)
     .eq("collegeId", scope.collegeId)
-    .eq("collegeEducationId", scope.collegeEducationId)
+    .eq("collegeEducationId", studentEduId)
     .eq("collegeSectionsId", historyRow.collegeSectionsId)
     .in("collegeSubjectId", scope.subjectIds)
     .is("deletedAt", null);
 
-  if (!scope.isSchool) {
-    weightageQuery = weightageQuery.eq("collegeBranchId", scope.collegeBranchId);
+  if (!isStudentSchool) {
+    weightageQuery = weightageQuery.eq("collegeBranchId", studentBranchId);
   }
 
   if (historyRow.collegeSemesterId === null) {
@@ -81,7 +86,7 @@ export async function getFacultyStudentPerformance(
     .select("collegeSubjectId, subjectName, subjectKey")
     .in("collegeSubjectId", scope.subjectIds)
     .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
-    .eq("collegeEducationId", scope.collegeEducationId)
+    .eq("collegeEducationId", studentEduId)
     .eq("isActive", true)
     .is("deletedAt", null);
 
@@ -95,9 +100,9 @@ export async function getFacultyStudentPerformance(
     .eq("is_deleted", false)
     .neq("status", "Cancelled");
 
-  if (!scope.isSchool) {
-    subjectsQuery = subjectsQuery.eq("collegeBranchId", scope.collegeBranchId);
-    assignmentsQuery = assignmentsQuery.eq("collegeBranchId", scope.collegeBranchId);
+  if (!isStudentSchool) {
+    subjectsQuery = subjectsQuery.eq("collegeBranchId", studentBranchId);
+    assignmentsQuery = assignmentsQuery.eq("collegeBranchId", studentBranchId);
   }
 
   const [

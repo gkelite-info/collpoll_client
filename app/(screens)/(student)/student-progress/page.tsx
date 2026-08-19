@@ -5,6 +5,7 @@ import { AttendanceSummaryCard } from "./attendanceSummaryCard";
 import { ProfileCard } from "./profileCard";
 import { AssignmentsSummaryTable } from "./assignmentsSummaryTable";
 import { AttendanceList } from "./attendanceBySubjectCard";
+import FacultyChatSection from "./components/FacultyChatSection";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { List, X, CaretRight, User, ArrowLeft } from "@phosphor-icons/react";
 import { Suspense, useEffect, useState, useMemo, useRef } from "react";
@@ -596,6 +597,10 @@ const StudentProgressPage = () => {
                   showSemester={usesBranchAndSemester}
                 />
               </section>
+
+              {isSchoolEducation(collegeEducationType) && (
+                <FacultyChatSection rows={progressData?.subjectProgressRows ?? []} />
+              )}
             </section>
 
             {open && (
