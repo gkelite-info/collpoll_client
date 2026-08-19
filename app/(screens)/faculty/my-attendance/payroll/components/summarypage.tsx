@@ -66,7 +66,7 @@ export default function SummaryPage() {
     mobile,
     email,
   } = useFaculty();
-  const { userId, profilePhoto, dateOfJoining, professionalExperienceYears, identifierId } =
+  const { userId, profilePhoto, dateOfJoining, professionalExperienceYears, identifierId, collegeEducationType } =
     useUser();
   const [onboardingData, setOnboardingData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -118,6 +118,7 @@ export default function SummaryPage() {
         </div>
         <div className="flex flex-col items-center justify-center space-y-0.5">
           <InfoRow label={`${role} ID`} value={systemId} />
+          <InfoRow label="Education Type" value={collegeEducationType || "—"} />
           {isSchool ? (
             <InfoRow label="Year" value={collegeAcademicYear} />
           ) : (

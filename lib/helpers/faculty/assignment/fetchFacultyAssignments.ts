@@ -6,6 +6,13 @@ export const fetchFacultyAssignments = async (
   page: number = 1,
   limit: number = 10,
   dateStr?: string,
+    filters?: {
+    branchIds?: number[];
+    yearId?: number;
+    sectionId?: number;
+    subjectId?: number;
+    isSchool?: boolean;
+  }
 ) => {
   try {
     const from = (page - 1) * limit;
@@ -37,6 +44,24 @@ export const fetchFacultyAssignments = async (
 
     if (tab === "Evaluated") {
       query = query.eq("student_assignments_submission.status", "Evaluated");
+    }
+
+    if (filters?.isSchool) {
+      query = query.is("collegeBranchId", null);
+    } else if (filters?.branchIds && filters.branchIds.length > 0) {
+      query = query.in("collegeBranchId", filters.branchIds);
+    }
+
+    if (filters?.yearId) {
+      query = query.eq("collegeAcademicYearId", filters.yearId);
+    }
+
+    if (filters?.subjectId) {
+      query = query.eq("collegeSubjectId", filters.subjectId);
+    }
+
+    if (filters?.sectionId) {
+      query = query.eq("collegeSectionsId", filters.sectionId);
     }
 
     const { data, error, count } = await query

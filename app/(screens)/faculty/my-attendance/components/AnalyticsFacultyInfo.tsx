@@ -20,6 +20,10 @@ const AnalyticsFacultyInfo: FC<Props> = ({ profile, isSchool }) => {
           <span className="text-[#525252]">{profile.name}</span>
         </div>
         <div>
+          <span className="font-semibold text-[#282828]">Education Type : </span>
+          <span className="text-[#525252]">{profile.collegeEducationType || "—"}</span>
+        </div>
+        <div>
           <span className="font-semibold text-[#282828]">
             {isSchool ? "Year" : isInter ? "Group" : "Branch"} :{" "}
           </span>

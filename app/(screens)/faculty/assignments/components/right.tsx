@@ -1,133 +1,73 @@
 "use client";
+
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 import type { Task } from "@/app/utils/taskPanel";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import { fetchFacultyTasks, saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
-import toast from "react-hot-toast";
-import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
-
-
-const typeIcons: Record<string, string> = {
-  class: "/class.png",
-  exam: "/exam.png",
-  meeting: "/meeting.png",
-  holiday: "/calendar-3d.png",
-  event: "/event.png",
-  notice: "/clip.png",
-  result: "/result.jpg",
-  timetable: "/timetable.png",
-  placement: "/placement.png",
-  emergency: "/emergency.png",
-  finance: "/finance.jpg",
-  other: "/others.png",
-};
+import TaskModal from "@/app/components/modals/taskModal";
 
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function AssignmentsRight() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { facultyId, subjectIds, collegeId, userId, role, loading: facultyLoading } = useFaculty();
-  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const queryClient = useQueryClient();
+  const [openModal, setOpenModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [view, setView] = useState<"my" | "others">("others");
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const urlDateStr = searchParams.get("selectedDate");
-  const [selectedDate, setSelectedDate] = useState<Date>(
-    urlDateStr ? new Date(urlDateStr) : new Date()
-  );
 
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("selectedDate", date.toISOString());
-    router.push(`${pathname}?${params.toString()}`);
-  };
-  const collegeSubjectId = subjectIds?.[0] ?? null;
+  const {
+    facultyId,
+    collegeId,
+    userId,
+    role,
+    sections,
+    selectedSectionIndex,
+    loading: facultyLoading,
+  } = useFaculty();
 
+  const uniqueSubjectsCount = new Set(sections?.map(s => s.collegeSubjectId)).size;
+  const isSingleSubject = uniqueSubjectsCount === 1;
 
-  const loadTasks = async () => {
-    if (!collegeSubjectId) return;
+  const activeSection = sections?.[selectedSectionIndex];
+  const collegeSubjectId = activeSection?.collegeSubjectId ?? null;
+  const collegeSectionId = isSingleSubject ? null : (activeSection?.collegeSectionsId ?? null);
 
-    try {
-
-      const data = await fetchFacultyTasks(collegeSubjectId);
-
-      setTasks(
-        data.map((t: any) => ({
-          facultyTaskId: t.facultyTaskId,
-          title: t.taskTitle,
-          description: t.description,
-          time: t.time,
-          date: t.date,
-        }))
+  const saveTaskMutation = useMutation({
+    mutationFn: async (payload: {
+      data: any,
+      taskId?: number
+    }) => {
+      const res = await saveFacultyTask({
+        facultyTaskId: payload.taskId,
+        collegeSubjectId: collegeSubjectId!,
+        taskTitle: payload.data.title,
+        description: payload.data.description,
+        date: payload.data.dueDate,
+        time: payload.data.dueTime,
+        collegeAcademicYearId: payload.data.collegeAcademicYearId,
+        collegeSectionsId: payload.data.collegeSectionsId,
+      },
+        facultyId!,
       );
 
-    } catch (err) {
-      console.error("LOAD TASK ERROR", err);
-    } finally {
-      setLoading(false);
+      if (!res.success) {
+        throw new Error(res.error?.message || "Save failed");
+      }
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["facultyTasksInfinite", facultyId, collegeSubjectId] });
+      queryClient.invalidateQueries({ queryKey: ["facultyTasks", facultyId, collegeSubjectId, collegeSectionId] });
+    },
+    onError: (error: any) => {
+      console.error("HANDLE SAVE ERROR:", error?.message || error);
     }
-
-  };
-
-  useEffect(() => {
-
-    if (!facultyLoading && collegeSubjectId) {
-      loadTasks();
-    }
-
-  }, [facultyLoading, collegeSubjectId]);
-
-  const fetchAnnouncements = async () => {
-    try {
-      if (!collegeId || !userId || !role) return;
-
-      const res = await fetchCollegeAnnouncements({
-        collegeId,
-        userId,
-        role,
-        view,
-        page: 1,
-        limit: 20,
-      });
-
-      const formatted = res.data.map((item: any) => ({
-        collegeAnnouncementId: item.collegeAnnouncementId,
-        title: item.title,
-        date: item.date,
-        createdAt: item.createdAt,
-        type: item.type,
-        targetRoles: item.targetRoles,
-
-        image: typeIcons[item.type] || "/clip.png",
-        imgHeight: "h-10",
-        cardBg: "#E8F8EF",
-        imageBg: "#D3F1E0",
-
-        professor:
-          view === "my"
-            ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
-            : `By ${formatRole(item.createdByRole)}`,
-      }));
-
-      setAnnouncements(formatted);
-    } catch (err) {
-      console.error("Fetch announcements error:", err);
-    }
-  };
-
-  useEffect(() => {
-    if (!collegeId || !userId || !role) return;
-    fetchAnnouncements();
-  }, [collegeId, userId, role, view]);
+  });
 
   const handleSave = async (
     payload: {
@@ -138,61 +78,62 @@ export default function AssignmentsRight() {
       collegeAcademicYearId?: number | null;
       collegeSectionsId?: number | null;
     },
-    taskId?: number
+    taskId?: number,
   ) => {
-    try {
-      const res = await saveFacultyTask(
-        {
-          facultyTaskId: taskId,
-          collegeSubjectId: collegeSubjectId!,
-          taskTitle: payload.title,
-          description: payload.description,
-          date: payload.dueDate,
-          time: payload.dueTime,
-          collegeAcademicYearId: payload.collegeAcademicYearId,
-          collegeSectionsId: payload.collegeSectionsId,
-        },
-        facultyId!
-      );
-
-      if (!res.success) {
-        throw new Error("Save failed");
-      }
-
-      await loadTasks();
-    } catch (error) {
-      console.error("HANDLE SAVE ERROR:", error);
-      toast.error("Failed to save task");
-      throw error;
-    }
+    await saveTaskMutation.mutateAsync({ data: payload, taskId });
   };
 
+  const isTasksLoading = facultyLoading || (!facultyId || !collegeSubjectId);
+  const isAnnouncementsLoadingFinal = facultyLoading || (!collegeId || !userId || !role);
 
   return (
-    <>
-      <div className="w-[32%] p-2 h-full flex flex-col max-md:hidden">
-        <CourseScheduleCard />
-        <WorkWeekCalendar activeDate={selectedDate} onDateSelect={handleDateSelect} />
-        <TaskPanel
+    <div className="w-[32%] p-2 h-full flex flex-col max-md:hidden">
+      <CourseScheduleCard />
+      <WorkWeekCalendar />
+
+      <TaskPanel
+        role="faculty"
+        enableInfiniteScroll={true}
+        loading={isTasksLoading}
+        collegeSubjectId={collegeSubjectId ?? undefined}
+        facultyId={facultyId ?? undefined}
+        onAddTask={() => setOpenModal(true)}
+        onSaveTask={handleSave}
+        onDeleteTask={async () => {
+          queryClient.invalidateQueries({ queryKey: ["facultyTasksInfinite", facultyId, collegeSubjectId] });
+          queryClient.invalidateQueries({ queryKey: ["facultyTasks", facultyId, collegeSubjectId, collegeSectionId] });
+        }}
+      />
+
+      {openModal && (
+        <TaskModal
+          open={openModal}
           role="faculty"
-          facultyTasks={loading ? [] : tasks}
-          loading={loading}
-          collegeSubjectId={collegeSubjectId ?? undefined}
-          facultyId={facultyId ?? undefined}
-          onAddTask={() => { }}
-          onSaveTask={handleSave}
-          onDeleteTask={async () => {
-            await loadTasks();
+          collegeSubjectId={collegeSubjectId!}
+          facultyId={facultyId!}
+          onClose={() => {
+            setOpenModal(false);
+            setEditingTask(null);
+          }}
+          defaultValues={editingTask}
+          onSave={async (payload, taskId) => {
+            await handleSave(payload, taskId);
+            setOpenModal(false);
+            setEditingTask(null);
           }}
         />
+      )}
+
+      <div className="min-h-0 flex-1 mt-4">
         <AnnouncementsCard
-          announceCard={announcements}
-          height="80vh"
+          className="h-full"
+          enableInfiniteScroll={true}
           currentView={view}
-          onViewChange={(v) => setView(v)}
-          refreshAnnouncements={fetchAnnouncements}
+          isLoading={isAnnouncementsLoadingFinal}
+          onViewChange={(v) => setView(v as "my" | "others")}
+          refreshAnnouncements={async () => { await queryClient.invalidateQueries({ queryKey: ["announcementsInfinite"] }); }}
         />
       </div>
-    </>
+    </div>
   );
 }

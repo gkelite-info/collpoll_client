@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { CaretDown, CheckSquare, XSquare, Question } from "@phosphor-icons/react";
 import { AttendanceRecord } from "../types";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
@@ -25,12 +26,7 @@ interface Props {
   onPageChange?: (page: number) => void;
   onMonthYearChange?: (month: number, year: number) => void;
   loading?: boolean;
-  academicYears?: Array<{ id: number; name: string }>;
-  selectedAcademicYearId?: number | null;
-  onAcademicYearChange?: (academicYearId: number | null) => void;
-  subjects?: Array<{ id: number; name: string }>;
-  selectedSubjectId?: number | null;
-  onSubjectChange?: (subjectId: number | null) => void;
+  renderFilters?: React.ReactNode;
 }
 
 const months = [
@@ -65,22 +61,21 @@ const AttendanceTable: React.FC<Props> = ({
   onPageChange,
   onMonthYearChange,
   loading = false,
-  academicYears = [],
-  selectedAcademicYearId = null,
-  onAcademicYearChange,
-  subjects = [],
-  selectedSubjectId = null,
-  onSubjectChange,
+  renderFilters,
 }) => {
   const { dateOfJoining } = useUser();
   const [isMonthOpen, setIsMonthOpen] = useState(false);
   const [isYearOpen, setIsYearOpen] = useState(false);
+  const [monthRect, setMonthRect] = useState<DOMRect | null>(null);
+  const [yearRect, setYearRect] = useState<DOMRect | null>(null);
+  const monthBtnRef = useRef<HTMLButtonElement>(null);
+  const yearBtnRef = useRef<HTMLButtonElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(months.indexOf(month));
   const [selectedYear, setSelectedYear] = useState(Number(year));
 
-  const itemsPerPage = 15
+  const itemsPerPage = 15;
   const startYear = 2026;
   const safeTotalItems = Number(totalItems ?? 0);
   const safeCurrentPage = Number(currentPage ?? 1);
@@ -92,6 +87,18 @@ const AttendanceTable: React.FC<Props> = ({
     },
     (_, i) => startYear + i
   );
+
+  const updateMonthRect = () => {
+    if (monthBtnRef.current) {
+      setMonthRect(monthBtnRef.current.getBoundingClientRect());
+    }
+  };
+
+  const updateYearRect = () => {
+    if (yearBtnRef.current) {
+      setYearRect(yearBtnRef.current.getBoundingClientRect());
+    }
+  };
 
   useEffect(() => {
     if (!onMonthYearChange) return;
@@ -123,6 +130,7 @@ const AttendanceTable: React.FC<Props> = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
   const getStatusDisplay = (status: string) => {
     if (!status) return { color: "text-gray-400", icon: <Question size={15} weight="fill" /> };
     const s = status.toUpperCase();
@@ -147,61 +155,40 @@ const AttendanceTable: React.FC<Props> = ({
     };
   };
 
-
   return (
     <div className="w-full max-md:px-2">
-      <div className="flex justify-between items-end mb-2.5 max-md:flex-col max-md:items-start max-md:gap-3" ref={containerRef}>
-        <h2 className="text-[#282828] text-[17px] font-bold">
+      <div className="flex justify-between items-center mb-2.5 max-md:flex-col max-md:items-start max-md:gap-3 gap-3" ref={containerRef}>
+        <h2 className="text-[#282828] text-[17px] font-bold shrink-0">
           {title || "Attendance Table"}
         </h2>
 
-        <div className="flex gap-2 flex-wrap justify-end">
-          {onAcademicYearChange && (
-            <select
-              value={selectedAcademicYearId ?? ""}
-              onChange={(event) => onAcademicYearChange(event.target.value ? Number(event.target.value) : null)}
-              disabled={loading}
-              aria-label="Filter by academic year"
-              className={`bg-[#43C17A] text-white px-3 py-1.5 rounded font-medium text-[12.5px] shadow-sm outline-none max-w-[180px] ${loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-            >
-              <option value="" className="bg-white text-gray-700">All Years</option>
-              {academicYears.map((academicYear) => (
-                <option key={academicYear.id} value={academicYear.id} className="bg-white text-gray-700">
-                  {academicYear.name}
-                </option>
-              ))}
-            </select>
-          )}
-          {onSubjectChange && (
-            <select
-              value={selectedSubjectId ?? ""}
-              onChange={(event) => onSubjectChange(event.target.value ? Number(event.target.value) : null)}
-              disabled={loading}
-              aria-label="Filter classes taken by subject"
-              className={`bg-[#43C17A] text-white px-3 py-1.5 rounded font-medium text-[12.5px] shadow-sm outline-none max-w-[190px] ${loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-            >
-              <option value="" className="bg-white text-gray-700">All Subjects</option>
-              {subjects.map((subject) => (
-                <option key={subject.id} value={subject.id} className="bg-white text-gray-700">
-                  {subject.name}
-                </option>
-              ))}
-            </select>
-          )}
-          <div className="relative">
+        <div className="flex-1 min-w-0 flex overflow-x-auto custom-scrollbar pb-1.5 w-full">
+          <div className="flex gap-2 items-center flex-nowrap ml-auto max-md:ml-0 shrink-0">
+            {renderFilters}
+          <div className="relative shrink-0">
             <button
+              ref={monthBtnRef}
               onClick={() => {
                 if (loading) return;
+                if (!isMonthOpen) updateMonthRect();
                 setIsMonthOpen(!isMonthOpen);
                 setIsYearOpen(false);
               }}
-              className={`bg-[#43C17A] text-white px-3 py-1.5 rounded flex items-center gap-1.5 font-medium text-[12.5px] shadow-sm hover:bg-[#3baf6d] transition-colors ${loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+              className={`bg-[#43C17A] text-white px-3 py-1.5 rounded flex items-center gap-1.5 font-medium text-[12.5px] shadow-sm hover:bg-[#3baf6d] transition-colors whitespace-nowrap shrink-0 ${loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
               disabled={loading}
             >
               {months[selectedMonth]} <CaretDown size={14} weight="bold" />
             </button>
-            {isMonthOpen && (
-              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-100 shadow-lg rounded-md py-1 z-20 max-h-48 overflow-y-auto w-full min-w-[80px]">
+            {isMonthOpen && monthRect && typeof document !== "undefined" && createPortal(
+              <div 
+                style={{
+                  position: "fixed",
+                  top: monthRect.bottom + 4,
+                  left: monthRect.right - 90,
+                  zIndex: 9999,
+                }}
+                className="bg-white border border-gray-100 shadow-lg rounded-md py-1 max-h-48 overflow-y-auto w-[90px] custom-scrollbar"
+              >
                 {months.map((m) => (
                   <button
                     key={m}
@@ -215,24 +202,35 @@ const AttendanceTable: React.FC<Props> = ({
                     {m}
                   </button>
                 ))}
-              </div>
+              </div>,
+              document.body
             )}
           </div>
 
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
+              ref={yearBtnRef}
               onClick={() => {
                 if (loading) return;
+                if (!isYearOpen) updateYearRect();
                 setIsYearOpen(!isYearOpen);
                 setIsMonthOpen(false);
               }}
-              className={`bg-[#43C17A] text-white px-3 py-1.5 rounded flex items-center gap-1.5 font-medium text-[12.5px] shadow-sm hover:bg-[#3baf6d] transition-colors ${loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+              className={`bg-[#43C17A] text-white px-3 py-1.5 rounded flex items-center gap-1.5 font-medium text-[12.5px] shadow-sm hover:bg-[#3baf6d] transition-colors whitespace-nowrap shrink-0 ${loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
               disabled={loading}
             >
               {selectedYear} <CaretDown size={14} weight="bold" />
             </button>
-            {isYearOpen && (
-              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-100 shadow-lg rounded-md py-1 z-20 max-h-48 overflow-y-auto w-full min-w-[80px]">
+            {isYearOpen && yearRect && typeof document !== "undefined" && createPortal(
+              <div 
+                style={{
+                  position: "fixed",
+                  top: yearRect.bottom + 4,
+                  left: yearRect.right - 90,
+                  zIndex: 9999,
+                }}
+                className="bg-white border border-gray-100 shadow-lg rounded-md py-1 max-h-48 overflow-y-auto w-[90px] custom-scrollbar"
+              >
                 {years.map((y) => (
                   <button
                     key={y}
@@ -246,10 +244,18 @@ const AttendanceTable: React.FC<Props> = ({
                     {y}
                   </button>
                 ))}
-              </div>
+              </div>,
+              document.body
             )}
           </div>
+          </div>
         </div>
+      </div>
+
+      <div className="flex justify-end max-md:justify-start mb-2 mt-1">
+        <span className="text-[12px] text-gray-500 italic">
+          * Note: Classes Taken will change according to chosen filter values.
+        </span>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col">

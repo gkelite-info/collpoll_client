@@ -10,6 +10,8 @@ import FormSkeleton from "../shimmer/FormSkeleton";
 import { useRouter } from "next/navigation";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
+import { CaretLeft } from "@phosphor-icons/react";
 
 type Props = {
   initialData?: Assignment | null;
@@ -44,12 +46,6 @@ export default function AssignmentForm({
     document.cookie
       .split("; ")
       .some((cookie) => cookie === "isSchool=true");
-  const isSchool =
-    faculty_edu_type
-      ?.split(",")
-      .some((educationType) => isSchoolEducation(educationType)) === true ||
-    isSchoolFromCookie;
-  const [sectionSelect, setSectionSelect] = useState("");
 
   const [form, setForm] = useState({
     assignmentId: initialData?.assignmentId,
@@ -58,6 +54,7 @@ export default function AssignmentForm({
     toDate: toHtmlDate(initialData?.toDate),
     totalMarks: initialData?.marks ? String(initialData.marks) : "",
 
+    educationTypeId: "",
     subjectId: "",
     branchId: "",
     sectionIds: [] as string[],
@@ -95,8 +92,9 @@ export default function AssignmentForm({
 
             setForm((prev) => ({
               ...prev,
+              educationTypeId: String(sectionObj.collegeEducationId || ""),
               subjectId: String(matchedSection.collegeSubjectId),
-              branchId: String(sectionObj.collegeBranchId),
+              branchId: String(sectionObj.collegeBranchId || ""),
               sectionIds: [String(matchedSection.collegeSectionsId)],
               yearId: String(matchedSection.collegeAcademicYearId),
             }));
@@ -113,43 +111,68 @@ export default function AssignmentForm({
     loadContext();
   }, [initialData]);
 
-  const uniqueSubjects = useMemo(() => {
+  const availableEducationTypes = useMemo(() => {
     const map = new Map();
     facultySections.forEach((s) => {
-      const subjectObj = getSafe(s.college_subjects);
-      if (subjectObj && !map.has(s.collegeSubjectId)) {
-        map.set(s.collegeSubjectId, subjectObj.subjectName);
+      const sectionObj = getSafe(s.college_sections);
+      const eduObj = getSafe(sectionObj?.college_education);
+      if (sectionObj && eduObj) {
+        map.set(sectionObj.collegeEducationId, eduObj.collegeEducationType);
       }
     });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [facultySections]);
 
   useEffect(() => {
-    if (uniqueSubjects.length === 1 && !form.subjectId) {
+    if (
+      availableEducationTypes.length === 1 &&
+      form.educationTypeId !== String(availableEducationTypes[0].id)
+    ) {
       setForm((prev) => ({
         ...prev,
-        subjectId: String(uniqueSubjects[0].id),
+        educationTypeId: String(availableEducationTypes[0].id),
       }));
     }
-  }, [uniqueSubjects, form.subjectId]);
+  }, [availableEducationTypes, form.educationTypeId]);
+
+  const isSchool = useMemo(() => {
+    if (!form.educationTypeId) {
+      return (
+        faculty_edu_type
+          ?.split(",")
+          .some((educationType) => isSchoolEducation(educationType)) === true ||
+        isSchoolFromCookie
+      );
+    }
+    const selectedEdu = availableEducationTypes.find(
+      (e) => String(e.id) === form.educationTypeId
+    );
+    if (selectedEdu) {
+      return isSchoolEducation(selectedEdu.name);
+    }
+    return false;
+  }, [form.educationTypeId, availableEducationTypes, faculty_edu_type, isSchoolFromCookie]);
 
   const availableBranches = useMemo(() => {
-    if (!form.subjectId) return [];
+    if (isSchool || !form.educationTypeId) return [];
     const map = new Map();
     facultySections
-      .filter((s) => s.collegeSubjectId === Number(form.subjectId))
-      .forEach((s) => {
+      .filter((s) => {
         const sectionObj = getSafe(s.college_sections);
-        const branchObj = getSafe(sectionObj?.college_branch);
+        return String(sectionObj?.collegeEducationId) === form.educationTypeId;
+      })
+      .forEach((s) => {
+      const sectionObj = getSafe(s.college_sections);
+      const branchObj = getSafe(sectionObj?.college_branch);
 
-        if (sectionObj && branchObj) {
-          const bId = sectionObj.collegeBranchId;
-          const bName = branchObj.collegeBranchCode;
-          if (!map.has(bId)) map.set(bId, bName);
-        }
-      });
+      if (sectionObj && branchObj) {
+        const bId = sectionObj.collegeBranchId;
+        const bName = branchObj.collegeBranchCode;
+        if (!map.has(bId)) map.set(bId, bName);
+      }
+    });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [facultySections, form.subjectId]);
+  }, [facultySections, form.educationTypeId, isSchool]);
 
   useEffect(() => {
     if (
@@ -163,17 +186,87 @@ export default function AssignmentForm({
     }
   }, [availableBranches, form.branchId]);
 
-  const availableSections = useMemo(() => {
-    if (!form.subjectId || (!isSchool && !form.branchId) || !form.yearId) return [];
+  const availableYears = useMemo(() => {
+    if (!form.educationTypeId) return [];
+    if (!isSchool && !form.branchId) return [];
     const map = new Map();
 
     facultySections
       .filter((s) => {
         const sectionObj = getSafe(s.college_sections);
+        if (String(sectionObj?.collegeEducationId) !== form.educationTypeId) return false;
+        return isSchool || sectionObj?.collegeBranchId === Number(form.branchId);
+      })
+      .forEach((s) => {
+        const yearObj = getSafe(s.college_academic_year);
+        if (yearObj) {
+          const yId = s.collegeAcademicYearId;
+          const yName = yearObj.collegeAcademicYear;
+          if (!map.has(yId)) map.set(yId, yName);
+        }
+      });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [facultySections, form.educationTypeId, form.branchId, isSchool]);
+
+  useEffect(() => {
+    if (
+      availableYears.length === 1 &&
+      form.yearId !== String(availableYears[0].id)
+    ) {
+      setForm((prev) => ({
+        ...prev,
+        yearId: String(availableYears[0].id),
+      }));
+    }
+  }, [availableYears, form.yearId]);
+
+  const uniqueSubjects = useMemo(() => {
+    if (!form.educationTypeId) return [];
+    if (!isSchool && !form.branchId) return [];
+    if (!form.yearId) return [];
+
+    const map = new Map();
+    facultySections
+      .filter((s) => {
+        const sectionObj = getSafe(s.college_sections);
+        if (String(sectionObj?.collegeEducationId) !== form.educationTypeId) return false;
+        const branchMatch = isSchool || sectionObj?.collegeBranchId === Number(form.branchId);
+        const yearMatch = s.collegeAcademicYearId === Number(form.yearId);
+        return branchMatch && yearMatch;
+      })
+      .forEach((s) => {
+        const subjectObj = getSafe(s.college_subjects);
+        if (subjectObj && !map.has(s.collegeSubjectId)) {
+          map.set(s.collegeSubjectId, subjectObj.subjectName);
+        }
+      });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [facultySections, form.educationTypeId, form.branchId, form.yearId, isSchool]);
+
+  useEffect(() => {
+    if (
+      uniqueSubjects.length === 1 &&
+      form.subjectId !== String(uniqueSubjects[0].id)
+    ) {
+      setForm((prev) => ({
+        ...prev,
+        subjectId: String(uniqueSubjects[0].id),
+      }));
+    }
+  }, [uniqueSubjects, form.subjectId]);
+
+  const availableSections = useMemo(() => {
+    if (!form.educationTypeId || !form.subjectId || (!isSchool && !form.branchId) || !form.yearId) return [];
+    const map = new Map();
+
+    facultySections
+      .filter((s) => {
+        const sectionObj = getSafe(s.college_sections);
+        if (String(sectionObj?.collegeEducationId) !== form.educationTypeId) return false;
         return (
           s.collegeSubjectId === Number(form.subjectId) &&
           (isSchool || sectionObj?.collegeBranchId === Number(form.branchId)) &&
-          s.collegeAcademicYearId === Number(form.yearId) // Filter by the selected year
+          s.collegeAcademicYearId === Number(form.yearId)
         );
       })
       .forEach((s) => {
@@ -185,30 +278,7 @@ export default function AssignmentForm({
         }
       });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [facultySections, form.subjectId, form.branchId, form.yearId, isSchool]);
-
-  const availableYears = useMemo(() => {
-    if (!form.subjectId || (!isSchool && !form.branchId)) return [];
-    const map = new Map();
-
-    facultySections
-      .filter((s) => {
-        const sectionObj = getSafe(s.college_sections);
-        return (
-          s.collegeSubjectId === Number(form.subjectId) &&
-          (isSchool || sectionObj?.collegeBranchId === Number(form.branchId))
-        );
-      })
-      .forEach((s) => {
-        const yearObj = getSafe(s.college_academic_year);
-        if (yearObj) {
-          const yId = s.collegeAcademicYearId;
-          const yName = yearObj.collegeAcademicYear;
-          if (!map.has(yId)) map.set(yId, yName);
-        }
-      });
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [facultySections, form.subjectId, form.branchId, isSchool]);
+  }, [facultySections, form.educationTypeId, form.subjectId, form.branchId, form.yearId, isSchool]);
 
   // ==========================================
   // FIX: ROBUST PRE-SUBMISSION VALIDATION
@@ -216,6 +286,11 @@ export default function AssignmentForm({
   const validateForm = () => {
     if (!facultyId) {
       toast.error("Faculty ID missing");
+      return false;
+    }
+
+    if (!form.educationTypeId) {
+      toast.error("Please select an Education Type.");
       return false;
     }
 
@@ -342,7 +417,10 @@ export default function AssignmentForm({
 
   return (
     <div className="w-[68%] mx-1 max-w-3xl">
-      <div className="mb-6">
+      <div className="mb-6 flex items-center gap-2">
+        <button type="button" onClick={onCancel} className="text-gray-900 cursor-pointer p-1">
+          <CaretLeft size={24} weight="bold" />
+        </button>
         <h2 className="text-xl font-semibold text-gray-900">
           {initialData ? "Edit Assignment" : "Add New Assignment"}
         </h2>
@@ -352,35 +430,138 @@ export default function AssignmentForm({
         <div className="bg-white p-4 rounded-xl text-[#282828]">
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-gray-700">
-              Subject <span className="text-red-500">*</span>
+              Education Type <span className="text-red-500">*</span>
             </label>
-            {uniqueSubjects.length === 1 ? (
+            {availableEducationTypes.length === 1 ? (
               <div className="w-full cursor-not-allowed rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700">
-                {singleSubjectDisplay}
+                {availableEducationTypes[0].name}
               </div>
             ) : (
-              <select
-                value={form.subjectId}
-                required
-                onChange={(e) =>
+              <CustomDropdown
+                value={form.educationTypeId}
+                theme="green"
+                options={availableEducationTypes.map((edu) => ({ value: edu.id, label: edu.name }))}
+                onChange={(val) =>
                   setForm({
                     ...form,
-                    subjectId: e.target.value,
+                    educationTypeId: String(val),
                     branchId: "",
-                    sectionIds: [] as string[],
                     yearId: "",
+                    subjectId: "",
+                    sectionIds: [],
                   })
                 }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none"
-              >
-                <option value="">Select Subject</option>
-                {uniqueSubjects.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+                placeholder="Select Education Type"
+              />
             )}
+          </div>
+
+          <div className="flex gap-4 mb-4">
+            {!isSchool && <div className="flex-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                {faculty_edu_type === "Inter" ? "Group" : "Branch"}
+              </label>
+              {availableBranches.length === 1 ? (
+                <div className="w-full cursor-not-allowed rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700">
+                  {availableBranches[0].name}
+                </div>
+              ) : (
+                <CustomDropdown
+                  value={form.branchId}
+                  theme="green"
+                  options={availableBranches.map((b) => ({ value: b.id, label: b.name }))}
+                  onChange={(val) =>
+                    setForm({
+                      ...form,
+                      branchId: String(val),
+                      yearId: "",
+                      subjectId: "",
+                      sectionIds: [],
+                    })
+                  }
+                  placeholder="Select Branch"
+                />
+              )}
+            </div>}
+
+            <div className="flex-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Year <span className="text-red-500">*</span>
+              </label>
+              {availableYears.length === 1 ? (
+                <div className="w-full cursor-not-allowed rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700">
+                  {availableYears[0].name}
+                </div>
+              ) : (
+                <CustomDropdown
+                  value={form.yearId}
+                  theme="green"
+                  disabled={!isSchool && !form.branchId}
+                  options={availableYears.map((y) => ({ value: y.id, label: y.name }))}
+                  onChange={(val) =>
+                    setForm({
+                      ...form,
+                      yearId: String(val),
+                      subjectId: "",
+                      sectionIds: [],
+                    })
+                  }
+                  placeholder={!isSchool && !form.branchId ? "Select branch first" : "Select Year"}
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="flex gap-4 mb-4">
+            <div className="flex-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Subject <span className="text-red-500">*</span>
+              </label>
+              {uniqueSubjects.length === 1 ? (
+                <div className="w-full cursor-not-allowed rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700">
+                  {singleSubjectDisplay}
+                </div>
+              ) : (
+                <CustomDropdown
+                  value={form.subjectId}
+                  theme="green"
+                  disabled={!form.yearId}
+                  options={uniqueSubjects.map((s) => ({ value: s.id, label: s.name }))}
+                  onChange={(val) =>
+                    setForm({
+                      ...form,
+                      subjectId: String(val),
+                      sectionIds: [] as string[],
+                    })
+                  }
+                  placeholder={!form.yearId ? "Select year first" : "Select Subject"}
+                />
+              )}
+            </div>
+
+            <div className="flex-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Section <span className="text-red-500">*</span>
+              </label>
+              <CustomDropdown
+                value=""
+                theme="green"
+                isMultiSelect={true}
+                selectedValues={form.sectionIds}
+                disabled={!form.subjectId}
+                options={availableSections.map((s) => ({ value: s.id, label: s.name }))}
+                onChange={(val) => {
+                  const strVal = String(val);
+                  setForm((prev) => ({
+                    ...prev,
+                    sectionIds: prev.sectionIds.includes(strVal)
+                      ? prev.sectionIds.filter((id) => id !== strVal)
+                      : [...prev.sectionIds, strVal],
+                  }));
+                }}
+                placeholder={!form.subjectId ? "Select subject first" : "Select section"}
+              />
+            </div>
           </div>
 
           <div className="mb-4 flex gap-4">
@@ -441,135 +622,6 @@ export default function AssignmentForm({
                 }}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none"
               />
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            {!isSchool && <div className="mb-4 flex-1">
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                {faculty_edu_type === "Inter" ? "Group" : "Branch"}
-              </label>
-              {availableBranches.length === 1 ? (
-                <div className="w-full cursor-not-allowed rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700">
-                  {availableBranches[0].name}
-                </div>
-              ) : (
-                <select
-                  value={form.branchId}
-                  required
-                  disabled={!form.subjectId}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      branchId: e.target.value,
-                      sectionIds: [],
-                      yearId: "",
-                    })
-                  }
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 outline-none"
-                >
-                  <option value="">Select Branch</option>
-                  {availableBranches.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>}
-
-            <div className="mb-4 flex-1">
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Year <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={form.yearId}
-                required
-                disabled={!form.subjectId || (!isSchool && !form.branchId)}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    yearId: e.target.value,
-                    sectionIds: []
-                  })
-                }
-                className="w-full cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 outline-none"
-              >
-                <option value="">Select Year</option>
-                {availableYears.map((y) => (
-                  <option key={y.id} value={y.id}>
-                    {y.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="mb-4 flex-1">
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Section <span className="text-red-500">*</span>
-              </label>
-
-              <div className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white min-h-[40px] flex flex-wrap gap-2">
-                {form.sectionIds.map((id) => {
-                  const section = availableSections.find(
-                    (s) => String(s.id) === id,
-                  );
-
-                  return (
-                    <div
-                      key={id}
-                      className="flex items-center gap-2 bg-[#ECFDF5] text-[#065F46] px-3 py-1 rounded-full text-xs"
-                    >
-                      {section?.name}
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setForm((prev) => ({
-                            ...prev,
-                            sectionIds: prev.sectionIds.filter(
-                              (sid) => sid !== id,
-                            ),
-                          }))
-                        }
-                        className="text-red-500 font-bold cursor-pointer"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  );
-                })}
-
-                <select
-                  value={sectionSelect}
-                  disabled={!form.yearId}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (!value) return;
-
-                    setForm((prev) => ({
-                      ...prev,
-                      sectionIds: prev.sectionIds.includes(value)
-                        ? prev.sectionIds
-                        : [...prev.sectionIds, value],
-                    }));
-
-                    setSectionSelect("");
-                  }}
-                  className="text-sm outline-none flex-1 cursor-pointer text-black"
-                >
-                  {/* <option value="">Select section</option> */}
-                  <option value="">{form.yearId ? "Select section" : "Select year first"}</option>
-
-                  {availableSections
-                    .filter((s) => !form.sectionIds.includes(String(s.id)))
-                    .map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
             </div>
           </div>
 
