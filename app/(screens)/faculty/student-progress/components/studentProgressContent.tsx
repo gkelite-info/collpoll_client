@@ -7,11 +7,14 @@ import ResultsManagement from "./resultsManagement";
 import ClassResultDetails from "./classResultDetails";
 import MemorandumOfGrades from "./memorandumOfGrades";
 import UploadResults from "./uploadResults";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { StudentProgressPageSkeleton } from "../shimmer/StudentProgressSkeleton";
 
 export default function StudentProgressContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { loading: facultyLoading } = useFaculty();
 
   const currentTab = searchParams.get("tab") || "student-progress";
   const currentView = searchParams.get("view") || "";
@@ -39,6 +42,23 @@ export default function StudentProgressContent() {
         return <ResultsManagement />;
     }
   };
+
+  // While user/faculty context is still hydrating, show skeleton immediately
+  if (facultyLoading) {
+    return (
+      <main className="p-2 relative overflow-hidden max-w-full min-h-screen flex flex-col">
+        <div className="flex justify-center w-full mb-6">
+          <div className="bg-white/80 p-2 rounded-full inline-flex gap-2 mx-auto self-center">
+            <div className="w-36 md:w-44 py-2 rounded-full bg-[#43C17A] h-9 animate-pulse" />
+            <div className="w-36 md:w-44 py-2 rounded-full bg-[#DEDEDE] h-9 animate-pulse" />
+          </div>
+        </div>
+        <div className="flex-1 w-full max-w-7xl mx-auto">
+          <StudentProgressPageSkeleton />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="p-2 relative overflow-hidden max-w-full min-h-screen flex flex-col">

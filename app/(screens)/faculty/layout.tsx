@@ -33,7 +33,9 @@ export default function FacultyLayout({ children }: { children: React.ReactNode 
     }
   }, [isSchool, hideClubs, hidePlacements, isClubsPath, isPlacementsPath, isWellbeingPath, loading, router, collegeEducationType]);
 
-  if (loading || (hideClubs && isClubsPath) || (hidePlacements && isPlacementsPath) || (isSchool && isWellbeingPath)) {
+  // We only block rendering (return null) if we are certain the user is restricted.
+  // During loading, we allow children to mount so they can display their localized shimmer skeletons!
+  if (!loading && ((hideClubs && isClubsPath) || (hidePlacements && isPlacementsPath) || (isSchool && isWellbeingPath))) {
     return null;
   }
 

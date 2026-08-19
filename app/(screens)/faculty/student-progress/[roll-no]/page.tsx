@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { useUser } from "@/app/utils/context/UserContext";
 
 import { getFacultyStudentProfile } from "@/lib/helpers/faculty/studentProgress/getFacultyStudentProfile";
 import { getFacultyStudentPerformance } from "@/lib/helpers/faculty/studentProgress/getFacultyStudentPerformance";
@@ -16,7 +17,7 @@ import GradesTable from "./components/gradesTable";
 import AssignmentsTable from "./components/assignmentsTable";
 import ParentsList, { Parent } from "./components/parentsList";
 import StudentProfileCard from "./components/stuProfileCard";
-import ChatWindow from "./components/chatWindow";
+import SharedProgressChatModal from "@/app/components/SharedProgressChatModal";
 import AttendanceSummaryCard from "./components/attendanceSummaryCard";
 import AcademicPerformance from "@/app/(screens)/admin/student-progress/[roll-no]/components/academicPerformanceChart";
 
@@ -35,6 +36,8 @@ export default function StudentProgressDetailsPage() {
   const rollNo = Array.isArray(params?.["roll-no"])
     ? params["roll-no"][0]
     : params?.["roll-no"];
+
+  const { userId: facultyUserId } = useUser();
 
   const {
     loading: facultyLoading,
@@ -66,8 +69,6 @@ export default function StudentProgressDetailsPage() {
     !facultyLoading &&
     !!rollNo &&
     !!collegeId &&
-    !!collegeEducationId &&
-    (isSchool || !!collegeBranchId) &&
     !!facultyId &&
     !!academicYearIds?.length &&
     !!sectionIds?.length &&
@@ -80,13 +81,9 @@ export default function StudentProgressDetailsPage() {
         rollNo,
         facultyId,
         collegeId,
-        collegeEducationId,
-        collegeBranchId: isSchool ? 0 : (collegeBranchId ?? 0),
-        isSchool,
         academicYearIds,
         sectionIds,
         subjectIds,
-        departmentLabel: college_branch,
       };
     },
     [
@@ -94,13 +91,9 @@ export default function StudentProgressDetailsPage() {
       rollNo,
       facultyId,
       collegeId,
-      collegeEducationId,
-      collegeBranchId,
-      isSchool,
       academicYearIds,
       sectionIds,
       subjectIds,
-      college_branch,
     ]
   );
 
@@ -145,86 +138,61 @@ export default function StudentProgressDetailsPage() {
             <CaretLeft size={18} weight="bold" />
           </button>
 
-          {!isSchool && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-gray-600 text-xs md:text-sm font-medium">Department:</span>
-              <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
-                {profileData?.departmentLabel ?? "..."}
-              </span>
+          {profileLoading ? (
+            <div className="flex items-center gap-2 ml-1">
+              <div className="w-[100px] h-6 md:h-7 bg-[#F3F4F6] rounded-full animate-pulse"></div>
+              <div className="w-[80px] h-6 md:h-7 bg-[#F3F4F6] rounded-full animate-pulse"></div>
+              <div className="w-[70px] h-6 md:h-7 bg-[#F3F4F6] rounded-full animate-pulse"></div>
             </div>
-          )}
+          ) : (
+            <>
+              {(!profileData ? !isSchool : !profileData.isStudentSchool) && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-gray-600 text-xs md:text-sm font-medium">
+                    {profileData?.isStudentInter ? "Group:" : "Branch:"}
+                  </span>
+                  <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
+                    {profileData?.departmentLabel ?? "..."}
+                  </span>
+                </div>
+              )}
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-gray-600 text-xs md:text-sm font-medium">
-              {isSchool ? "Class:" : "Year:"}
-            </span>
-            <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
-              {profileData?.yearLabel ?? "..."}
-            </span>
-          </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-gray-600 text-xs md:text-sm font-medium">
+                  {(!profileData ? isSchool : profileData.isStudentSchool) ? "Class:" : "Year:"}
+                </span>
+                <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
+                  {profileData?.yearLabel ?? "..."}
+                </span>
+              </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-gray-600 text-xs md:text-sm font-medium">Sec:</span>
-            <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
-              {profileData?.sectionLabel ?? "..."}
-            </span>
-          </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-gray-600 text-xs md:text-sm font-medium">Sec:</span>
+                <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
+                  {profileData?.sectionLabel ?? "..."}
+                </span>
+              </div>
 
-          {!isSchool && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-gray-600 text-xs md:text-sm font-medium">Sem:</span>
-              <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
-                {profileData?.semesterLabel ?? "..."}
-              </span>
-            </div>
+              {(!profileData ? !isSchool : (!profileData.isStudentSchool && !profileData.isStudentInter)) && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-gray-600 text-xs md:text-sm font-medium">Sem:</span>
+                  <span className="rounded-full bg-[#43C17A1C] px-3 py-1 md:px-4 md:py-0.5 text-[10px] md:text-sm font-bold md:font-semibold tracking-wide text-[#43C17A]">
+                    {profileData?.semesterLabel ?? "..."}
+                  </span>
+                </div>
+              )}
+            </>
           )}
         </div>
 
         <article className="hidden lg:flex justify-end">
-          <CourseScheduleCard style="w-[320px]" />
+          <CourseScheduleCard style="w-[320px]" isVisibile={false}/>
         </article>
       </section>
 
       <div className="mx-auto max-w-[1400px]">
-        {activeChatParent ? (
-          <div className="flex min-h-[calc(100vh-3rem)] lg:h-[calc(100vh-3rem)] flex-col items-start gap-4 md:gap-6 lg:flex-row">
-            <div className="flex h-full w-full flex-col gap-4 md:gap-6 lg:overflow-y-auto lg:pb-2 lg:pr-2 scrollbar-hide lg:w-[60%]">
-              {profileLoading || !profile ? (
-                <StudentProfileCardSkeleton />
-              ) : (
-                <StudentProfileCard
-                  {...profile}
-                  attendancePercentage={attendancePercentage}
-                  absentPercentage={absentPercentage}
-                  leavePercentage={leavePercentage}
-                />
-              )}
-              
-              {performanceLoading || !performanceData ? (
-                <AcademicPerformanceSkeleton />
-              ) : (
-                <AcademicPerformance data={performanceData.academicPerformance} />
-              )}
-              
-              {scope && (
-                <AssignmentsTable
-                  scope={scope}
-                  weightages={performanceData?.taskWeightages}
-                  insights={performanceData?.taskInsights}
-                />
-              )}
-            </div>
-
-            <div className="w-full rounded-[24px] md:rounded-[30px] bg-white lg:sticky lg:top-0 lg:h-full lg:w-[40%] min-h-[500px]">
-              <ChatWindow
-                parent={activeChatParent}
-                onClose={() => setActiveChatParent(null)}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4 md:gap-6">
-            <div className="grid grid-cols-1 items-stretch gap-4 md:gap-6 lg:grid-cols-5">
+        <div className="flex flex-col gap-4 md:gap-6">
+          <div className="grid grid-cols-1 items-stretch gap-4 md:gap-6 lg:grid-cols-5">
               {profileLoading || !profile ? (
                 <>
                   <div className="h-full lg:col-span-3">
@@ -292,11 +260,25 @@ export default function StudentProgressDetailsPage() {
                 ) : (
                   <GradesTable grades={performanceData.grades} />
                 )}
-              </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
+
+      {activeChatParent && profile && (
+        <SharedProgressChatModal
+          isOpen={true}
+          onClose={() => setActiveChatParent(null)}
+          chatParticipantName={activeChatParent.name}
+          chatParticipantSubtitle={activeChatParent.relation}
+          chatParticipantAvatar={activeChatParent.avatar}
+          studentId={profile.studentDbId}
+          facultyId={facultyId!}
+          collegeId={collegeId!}
+          senderUserId={facultyUserId!}
+          senderRole="FACULTY"
+        />
+      )}
     </div>
   );
 }

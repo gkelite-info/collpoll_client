@@ -25,23 +25,26 @@ export async function getBaseStudentHistory(scope: FacultyStudentProgressDetails
       `
       studentId,
       userId,
+      collegeEducationId,
+      collegeBranchId,
       user:users (
         fullName,
         email,
         mobile,
         gender
+      ),
+      college_education:collegeEducationId (
+        collegeEducationType
+      ),
+      college_branch:collegeBranchId (
+        collegeBranchCode
       )
     `,
     )
     .eq("studentId", pinRow.studentId)
     .eq("collegeId", scope.collegeId)
-    .eq("collegeEducationId", scope.collegeEducationId)
     .eq("isActive", true)
     .is("deletedAt", null);
-
-  if (!scope.isSchool) {
-    studentQuery = studentQuery.eq("collegeBranchId", scope.collegeBranchId);
-  }
 
   const { data: studentRow, error: studentError } =
     await studentQuery.maybeSingle<StudentProfileLookupRow>();

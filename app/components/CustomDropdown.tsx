@@ -79,13 +79,23 @@ export const CustomDropdown = ({
   useEffect(() => {
     if (isOpen) {
       updateRect();
-      window.addEventListener('scroll', updateRect, true);
+
+      const handleScroll = (e: Event) => {
+        const target = e.target as Node;
+        if (target instanceof Element && target.closest('.custom-dropdown-menu')) {
+          return;
+        }
+        setIsOpen(false);
+      };
+
+      window.addEventListener('scroll', handleScroll, true);
       window.addEventListener('resize', updateRect);
       return () => {
-        window.removeEventListener('scroll', updateRect, true);
+        window.removeEventListener('scroll', handleScroll, true);
         window.removeEventListener('resize', updateRect);
-      }
+      };
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   let finalOptions = [...options];

@@ -277,13 +277,13 @@ export async function getStudentProgressData(userId: number) {
   if (studentContext.collegeAcademicYearId === null) {
     facultySectionsQuery = facultySectionsQuery.is("collegeAcademicYearId", null);
   } else {
-    facultySectionsQuery = facultySectionsQuery.eq("collegeAcademicYearId", studentContext.collegeAcademicYearId);
+    facultySectionsQuery = facultySectionsQuery.or(`collegeAcademicYearId.eq.${studentContext.collegeAcademicYearId},collegeAcademicYearId.is.null`);
   }
 
   if (studentContext.collegeSectionsId === null) {
     facultySectionsQuery = facultySectionsQuery.is("collegeSectionsId", null);
   } else {
-    facultySectionsQuery = facultySectionsQuery.eq("collegeSectionsId", studentContext.collegeSectionsId);
+    facultySectionsQuery = facultySectionsQuery.or(`collegeSectionsId.eq.${studentContext.collegeSectionsId},collegeSectionsId.is.null`);
   }
 
   const { data: facultySectionRows, error: facultySectionError } =
@@ -296,6 +296,29 @@ export async function getStudentProgressData(userId: number) {
   const facultyIds = Array.from(
     new Set((facultySectionRows ?? []).map((row) => row.facultyId)),
   );
+
+  // Fallback: also fetch college_subject_units
+  const { data: subjectUnits } = await supabase
+    .from("college_subject_units")
+    .select("collegeSubjectId, createdBy")
+    .in("collegeSubjectId", semesterSubjectIds)
+    .is("deletedAt", null);
+
+  subjectUnits?.forEach((u) => {
+    if (u.createdBy) facultyIds.push(u.createdBy);
+  });
+
+  const facultyMap = new Map<number, string>();
+  if (facultyIds.length > 0) {
+    const { data: facultyData } = await supabase
+      .from("faculty")
+      .select("facultyId, fullName")
+      .in("facultyId", Array.from(new Set(facultyIds)));
+
+    facultyData?.forEach((f) => {
+      facultyMap.set(f.facultyId, f.fullName);
+    });
+  }
 
   const { data: attendanceRecords, error: attendanceError } = await supabase
     .from("attendance_record")
@@ -840,9 +863,25 @@ export async function getStudentProgressData(userId: number) {
     const subjectLabel =
       subject.subjectKey?.trim() || subject.subjectName;
 
+    // Find assigned faculty from facultySectionRows
+    const assignedSection = (facultySectionRows ?? []).find(
+      (fs) => fs.collegeSubjectId === subject.collegeSubjectId
+    );
+    let facultyId = assignedSection?.facultyId || null;
+    
+    // Fallback to college_subject_units
+    if (!facultyId) {
+      const fallbackUnit = subjectUnits?.find((u) => u.collegeSubjectId === subject.collegeSubjectId);
+      facultyId = fallbackUnit?.createdBy || null;
+    }
+    
+    const professorName = facultyId ? facultyMap.get(facultyId) : null;
+
     return {
       subject: subject.subjectName,
       subjectKey: subjectLabel,
+      facultyId,
+      professorName,
       attendance: `${attendancePercentage}%`,
       assignmentsDone:
         assignmentStats.total > 0
