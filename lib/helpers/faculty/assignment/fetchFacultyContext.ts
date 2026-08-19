@@ -32,6 +32,8 @@ export async function fetchFacultyContext(userId: number) {
       college_sections (
         collegeSections,
         collegeBranchId, 
+        collegeEducationId,
+        college_education (collegeEducationType),
         college_branch (collegeBranchCode, collegeBranchType)
       ),
       college_academic_year (collegeAcademicYear)

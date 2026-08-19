@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useUser } from "@/app/utils/context/UserContext";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import toast from "react-hot-toast";
 import { CaretLeftIcon, UploadSimpleIcon, XIcon } from "@phosphor-icons/react";
 import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
 import { CardProps } from "@/lib/types/faculty";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import { FacultySectionRow, fetchFacultySections } from "@/lib/helpers/faculty/facultysectionsAPI";
 import { deleteLabManualFile, getLabManualPublicUrl, saveLabManual, uploadLabManualFile } from "@/lib/helpers/faculty/facultyLabManualHelper";
 import { CustomDropdown } from "@/app/components/CustomDropdown";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
@@ -33,6 +35,11 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
     const searchParams = useSearchParams();
     const faculty = useFaculty();
 
+    const { collegeEducationType } = useUser();
+    const { isSchool: isSchoolTerminology } = useInstitutionTerminology();
+
+    const [educationTypeId, setEducationTypeId] = useState("");
+    const [branchId, setBranchId] = useState("");
     const [labTitle, setLabTitle] = useState("");
     const [subjectId, setSubjectId] = useState("");
     const [academicYearId, setAcademicYearId] = useState("");
@@ -40,7 +47,7 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
     const [description, setDescription] = useState("");
     const [pdfFile, setPdfFile] = useState<File | null>(null);
     const [subjects, setSubjects] = useState<CardProps[]>([]);
-    const [assignedData, setAssignedData] = useState<FacultySectionRow[]>([]);
+    const assignedData = useMemo(() => faculty.sections || [], [faculty.sections]);
     const [isLoadingSubjects, setIsLoadingSubjects] = useState(true);
     const [isLoadingSections, setIsLoadingSections] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
@@ -65,11 +72,6 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
                     sectionIds: faculty.sectionIds,
                 });
                 setSubjects(data);
-
-                if (faculty.facultyId) {
-                    const assignments = await fetchFacultySections(faculty.facultyId);
-                    setAssignedData(assignments);
-                }
             } catch {
                 toast.error("Failed to load subjects");
             } finally {
@@ -89,11 +91,22 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
     ]);
 
     useEffect(() => {
-        if (!initialData || !faculty.facultyId) return;
+        if (!initialData || !faculty.facultyId || assignedData.length === 0) return;
 
         const loadAll = async () => {
             try {
                 setIsLoadingSections(true);
+
+                const matchedSection = assignedData.find(s => 
+                    s.collegeSectionsId === initialData.collegeSectionsId &&
+                    s.collegeSubjectId === initialData.collegeSubjectId &&
+                    s.collegeAcademicYearId === initialData.collegeAcademicYearId
+                );
+
+                if (matchedSection) {
+                    setEducationTypeId(matchedSection.collegeEducationId?.toString() || "");
+                    setBranchId(matchedSection.collegeBranchId?.toString() || "");
+                }
 
                 setSubjectId(initialData.collegeSubjectId.toString());
 
@@ -112,7 +125,22 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
         };
 
         loadAll();
-    }, [initialData, faculty.facultyId]);
+    }, [initialData, faculty.facultyId, assignedData]);
+
+    const handleEducationTypeChange = (eduId: string) => {
+        setEducationTypeId(eduId);
+        setBranchId("");
+        setAcademicYearId("");
+        setSubjectId("");
+        setSectionId("");
+    };
+
+    const handleBranchChange = (bId: string) => {
+        setBranchId(bId);
+        setAcademicYearId("");
+        setSubjectId("");
+        setSectionId("");
+    };
 
     const handleYearChange = (yearId: string) => {
         setAcademicYearId(yearId);
@@ -125,30 +153,114 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
         setSectionId("");
     };
 
-    const availableYears = Array.from(new Set(assignedData.map(item => item.collegeAcademicYearId)))
-        .map(id => {
-            const yearObj = faculty.collegeAcademicYears?.find(y => y.collegeAcademicYearId === id);
-            return { id, label: yearObj?.collegeAcademicYear || `Year ID: ${id}` };
+    const availableEducationTypes = useMemo(() => {
+        const typesMap = new Map();
+        assignedData.forEach((s) => {
+            if (s.collegeEducationId && s.faculty_edu_type) {
+                typesMap.set(s.collegeEducationId, {
+                    id: String(s.collegeEducationId),
+                    name: s.faculty_edu_type.collegeEducationType,
+                });
+            }
         });
+        return Array.from(typesMap.values());
+    }, [assignedData]);
 
-    const availableSubjects = subjects.filter(subject =>
-        assignedData.some(item =>
-            item.collegeAcademicYearId === Number(academicYearId) &&
-            item.collegeSubjectId === subject.collegeSubjectId
-        )
-    );
+    const isSchool = useMemo(() => {
+        if (!educationTypeId) {
+            if (isSchoolTerminology) return true;
+            if (availableEducationTypes.length > 0) {
+                return availableEducationTypes.every((e) => isSchoolEducation(e.name));
+            }
+            return isSchoolEducation(collegeEducationType);
+        }
+        const selectedEdu = availableEducationTypes.find(e => e.id === educationTypeId);
+        return selectedEdu ? isSchoolEducation(selectedEdu.name) : isSchoolTerminology;
+    }, [educationTypeId, availableEducationTypes, isSchoolTerminology, collegeEducationType]);
 
-    const availableSections = Array.from(new Map(
-        assignedData
-            .filter(item =>
-                item.collegeAcademicYearId === Number(academicYearId) &&
-                item.collegeSubjectId === Number(subjectId)
-            )
-            .map(item => [item.collegeSectionsId, {
-                id: item.collegeSectionsId,
-                name: item.college_sections?.collegeSections || "Unknown Section"
-            }])
-    ).values());
+    useEffect(() => {
+        if (availableEducationTypes.length === 1 && !educationTypeId) {
+            setEducationTypeId(String(availableEducationTypes[0].id));
+        }
+    }, [availableEducationTypes, educationTypeId]);
+
+    const availableBranches = useMemo(() => {
+        if (isSchool) return [];
+        if (!educationTypeId) return [];
+        const branchesMap = new Map();
+        assignedData.forEach((s) => {
+            if (String(s.collegeEducationId) === educationTypeId && s.collegeBranchId && s.college_branch) {
+                branchesMap.set(s.collegeBranchId, {
+                    id: String(s.collegeBranchId),
+                    name: s.college_branch.collegeBranchCode,
+                });
+            }
+        });
+        return Array.from(branchesMap.values());
+    }, [educationTypeId, isSchool, assignedData]);
+
+    const availableYears = useMemo(() => {
+        const targetEduId = educationTypeId || (availableEducationTypes.length === 1 ? String(availableEducationTypes[0].id) : "");
+        if (!targetEduId && availableEducationTypes.length > 1) return [];
+        
+        const yearsMap = new Map();
+        assignedData.forEach((s) => {
+            if (
+                (!targetEduId || String(s.collegeEducationId) === targetEduId) &&
+                (isSchool || !branchId || String(s.collegeBranchId) === branchId)
+            ) {
+                const yearObj = faculty.collegeAcademicYears?.find(y => y.collegeAcademicYearId === s.collegeAcademicYearId);
+                yearsMap.set(s.collegeAcademicYearId, {
+                    id: String(s.collegeAcademicYearId),
+                    label: yearObj?.collegeAcademicYear || `Year ID: ${s.collegeAcademicYearId}`
+                });
+            }
+        });
+        return Array.from(yearsMap.values());
+    }, [educationTypeId, branchId, isSchool, availableEducationTypes, assignedData, faculty.collegeAcademicYears]);
+
+    const availableSubjects = useMemo(() => {
+        if (!academicYearId) return [];
+        const targetEduId = educationTypeId || (availableEducationTypes.length === 1 ? String(availableEducationTypes[0].id) : "");
+        
+        const subjectsMap = new Map();
+        assignedData.forEach((s) => {
+            if (
+                (!targetEduId || String(s.collegeEducationId) === targetEduId) &&
+                (isSchool || !branchId || String(s.collegeBranchId) === branchId) &&
+                String(s.collegeAcademicYearId) === academicYearId &&
+                s.collegeSubjectId && s.faculty_subject
+            ) {
+                subjectsMap.set(s.collegeSubjectId, {
+                    id: String(s.collegeSubjectId),
+                    name: s.faculty_subject.subjectName
+                });
+            }
+        });
+        return Array.from(subjectsMap.values());
+    }, [educationTypeId, branchId, academicYearId, isSchool, availableEducationTypes, assignedData]);
+
+    const availableSections = useMemo(() => {
+        if (!subjectId) return [];
+        const targetEduId = educationTypeId || (availableEducationTypes.length === 1 ? String(availableEducationTypes[0].id) : "");
+        
+        const sectionsMap = new Map();
+        assignedData.forEach((s) => {
+            if (
+                (!targetEduId || String(s.collegeEducationId) === targetEduId) &&
+                (isSchool || !branchId || String(s.collegeBranchId) === branchId) &&
+                String(s.collegeAcademicYearId) === academicYearId &&
+                String(s.collegeSubjectId) === subjectId &&
+                s.collegeSectionsId
+            ) {
+                sectionsMap.set(s.collegeSectionsId, {
+                    id: String(s.collegeSectionsId),
+                    name: s.college_sections?.collegeSections || "Unknown Section"
+                });
+            }
+        });
+        return Array.from(sectionsMap.values());
+    }, [educationTypeId, branchId, academicYearId, subjectId, isSchool, availableEducationTypes, assignedData]);
 
     const handleBack = () => {
         const params = new URLSearchParams(searchParams.toString());
@@ -318,15 +430,43 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
                     />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className={`grid grid-cols-1 ${isSchool ? 'md:grid-cols-4' : 'md:grid-cols-5'} gap-4`}>
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium text-[#282828]">Education Type <span className="text-red-500">*</span></label>
+                        <CustomDropdown
+                            value={educationTypeId}
+                            onChange={(value) => handleEducationTypeChange(String(value))}
+                            options={availableEducationTypes.map(edu => ({ value: edu.id, label: edu.name }))}
+                            placeholder={isLoadingSubjects || isLoadingSections ? "Loading..." : "Select type"}
+                            disabled={isLoadingSubjects || isLoadingSections || availableEducationTypes.length <= 1}
+                            theme="green"
+                            className="rounded-lg py-2.5"
+                        />
+                    </div>
+
+                    {!isSchool && (
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-medium text-[#282828]">Branch <span className="text-red-500">*</span></label>
+                            <CustomDropdown
+                                value={branchId}
+                                onChange={(value) => handleBranchChange(String(value))}
+                                options={availableBranches.map(b => ({ value: b.id, label: b.name }))}
+                                placeholder={educationTypeId ? "Select branch" : "Select type first"}
+                                disabled={!educationTypeId || isLoadingSubjects || isLoadingSections}
+                                theme="green"
+                                className="rounded-lg py-2.5"
+                            />
+                        </div>
+                    )}
+
                     <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-medium text-[#282828]">Year <span className="text-red-500">*</span></label>
                         <CustomDropdown
                             value={academicYearId}
                             onChange={(value) => handleYearChange(String(value))}
                             options={availableYears.map(year => ({ value: year.id, label: year.label }))}
-                            placeholder={isLoadingSubjects || isLoadingSections ? "Loading..." : "Select year"}
-                            disabled={isLoadingSubjects || isLoadingSections}
+                            placeholder={(isSchool ? !educationTypeId : (!educationTypeId || !branchId)) ? "Select branch first" : "Select year"}
+                            disabled={(isSchool ? !educationTypeId : (!educationTypeId || !branchId)) || isLoadingSubjects || isLoadingSections}
                             theme="green"
                             className="rounded-lg py-2.5"
                         />
@@ -337,7 +477,7 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
                         <CustomDropdown
                             value={subjectId}
                             onChange={(value) => handleSubjectChange(String(value))}
-                            options={availableSubjects.map(subject => ({ value: subject.collegeSubjectId, label: subject.subjectTitle }))}
+                            options={availableSubjects.map(subject => ({ value: subject.id, label: subject.name }))}
                             placeholder={academicYearId ? "Select subject" : "Select year first"}
                             disabled={!academicYearId || isLoadingSubjects || isLoadingSections}
                             theme="green"

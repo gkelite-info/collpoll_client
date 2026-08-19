@@ -110,6 +110,7 @@ export async function fetchLabManualsForStaff(params: {
     collegeBranchId?: number;
     collegeAcademicYearId?: number;
     collegeSubjectId?: number;
+    collegeSectionsId?: number;
     page?: number;
     pageSize?: number;
 }) {
@@ -148,6 +149,10 @@ export async function fetchLabManualsForStaff(params: {
 
     if (params.collegeSubjectId) {
         query = query.eq("collegeSubjectId", params.collegeSubjectId);
+    }
+
+    if (params.collegeSectionsId) {
+        query = query.eq("collegeSectionsId", params.collegeSectionsId);
     }
 
     const { data: facultyLabManual, error: faculty_lab_manualsError, count } = await query

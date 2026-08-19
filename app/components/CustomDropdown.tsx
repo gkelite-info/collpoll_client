@@ -125,7 +125,7 @@ export const CustomDropdown = ({
         >
           {finalOptions.map((opt, index) => {
             const isSelected = isMultiSelect 
-              ? selectedValues.includes(opt.value)
+              ? selectedValues.some(val => String(val) === String(opt.value))
               : String(opt.value) === String(selectedValue);
             
             return (

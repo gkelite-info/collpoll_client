@@ -2,8 +2,10 @@ import AttendanceTable from "../tables/attendanceTable";
 import { AttendanceRecord, AttendanceStats, FacultyProfile } from "../types";
 import AttendanceStatusCard from "./attendanceStatusCard";
 import FacultyInfoCard from "./facultyInfoCard";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import FacultyInfoCardShimmer from "../shimmers/FacultyInfoCardShimmer";
 import AttendanceStatusCardShimmer from "../shimmers/AttendanceStatusCardShimmer";
 import AttendanceTableShimmer from "../shimmers/AttendanceTableShimmer";
@@ -11,6 +13,7 @@ import { getAttendanceData } from "@/lib/helpers/myAttendance/getAttendanceData"
 import { getAttendanceMonthlyStats } from "@/lib/helpers/myAttendance/getAttendanceMonthlyStats";
 import { getFacultyAssignedSubjects } from "@/lib/helpers/faculty/getFacultyAssignedSubjects";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 type SubjectOption = {
   id: number;
@@ -20,9 +23,9 @@ type SubjectOption = {
 
 type AssignedSubjectRow = {
   college_subjects:
-    | { collegeSubjectId: number; subjectName: string }
-    | Array<{ collegeSubjectId: number; subjectName: string }>
-    | null;
+  | { collegeSubjectId: number; subjectName: string }
+  | Array<{ collegeSubjectId: number; subjectName: string }>
+  | null;
   collegeAcademicYearId: number;
 };
 
@@ -68,7 +71,8 @@ const AttendancePage = () => {
 
   const { facultyId, email, collegeBranchCode, profilePhoto, mobile, fullName, dateOfJoining,
     professionalExperienceYears, collegeEducationType, userId, identifierId } = useUser()
-  const { collegeAcademicYears, collegeAcademicYear } = useFaculty();
+  const { collegeAcademicYears, collegeAcademicYear, sections } = useFaculty();
+  const { isSchool: isSchoolTerminology } = useInstitutionTerminology();
   const [profile, setProfile] = useState<FacultyProfile | null>(null);
   const [infoLoading, setInfoLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -86,6 +90,115 @@ const AttendancePage = () => {
   const [subjects, setSubjects] = useState<SubjectOption[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<number | null>(null);
+
+  const [filterEducationTypeId, setFilterEducationTypeId] = useState("");
+  const [filterBranchId, setFilterBranchId] = useState("");
+  const [filterSectionId, setFilterSectionId] = useState("");
+
+  const availableEducationTypes = useMemo(() => {
+    const typesMap = new Map();
+    sections?.forEach((s) => {
+      if (s.collegeEducationId && s.faculty_edu_type) {
+        typesMap.set(s.collegeEducationId, {
+          id: String(s.collegeEducationId),
+          name: s.faculty_edu_type.collegeEducationType,
+        });
+      }
+    });
+    return Array.from(typesMap.values());
+  }, [sections]);
+
+  const isSchool = useMemo(() => {
+    if (!filterEducationTypeId) {
+      if (isSchoolTerminology) return true;
+      if (availableEducationTypes.length > 0) {
+        return availableEducationTypes.every((e) => isSchoolEducation(e.name));
+      }
+      return isSchoolEducation(collegeEducationType);
+    }
+    const selectedEdu = availableEducationTypes.find((e) => e.id === filterEducationTypeId);
+    return selectedEdu ? isSchoolEducation(selectedEdu.name) : isSchoolTerminology;
+  }, [filterEducationTypeId, availableEducationTypes, isSchoolTerminology, collegeEducationType]);
+
+  useEffect(() => {
+    if (availableEducationTypes.length === 1 && !filterEducationTypeId) {
+      setFilterEducationTypeId(String(availableEducationTypes[0].id));
+    }
+  }, [availableEducationTypes, filterEducationTypeId]);
+
+  const availableBranches = useMemo(() => {
+    if (isSchool) return [];
+    if (!filterEducationTypeId) return [];
+    const branchesMap = new Map();
+    sections?.forEach((s) => {
+      if (String(s.collegeEducationId) === filterEducationTypeId && s.collegeBranchId && s.college_branch) {
+        branchesMap.set(s.collegeBranchId, {
+          id: String(s.collegeBranchId),
+          name: s.college_branch.collegeBranchCode,
+        });
+      }
+    });
+    return Array.from(branchesMap.values());
+  }, [filterEducationTypeId, isSchool, sections]);
+
+  const availableYears = useMemo(() => {
+    const targetEduId = filterEducationTypeId || (availableEducationTypes.length === 1 ? String(availableEducationTypes[0].id) : "");
+    if (!targetEduId && availableEducationTypes.length > 1) return [];
+    const yearsMap = new Map();
+    sections?.forEach((s: any) => {
+      if (
+        (!targetEduId || String(s.collegeEducationId) === targetEduId) &&
+        (isSchool || !filterBranchId || String(s.collegeBranchId) === filterBranchId)
+      ) {
+        yearsMap.set(s.collegeAcademicYearId, {
+          id: s.collegeAcademicYearId, // keeping as number since selectedAcademicYearId is number
+          name: s.college_academic_year?.collegeAcademicYear || `Year ${s.collegeAcademicYearId}`,
+        });
+      }
+    });
+    return Array.from(yearsMap.values());
+  }, [filterEducationTypeId, filterBranchId, isSchool, availableEducationTypes, sections]);
+
+  const availableSubjects = useMemo(() => {
+    if (!selectedAcademicYearId) return [];
+    const targetEduId = filterEducationTypeId || (availableEducationTypes.length === 1 ? String(availableEducationTypes[0].id) : "");
+    const subjectsMap = new Map();
+    sections?.forEach((s: any) => {
+      if (
+        (!targetEduId || String(s.collegeEducationId) === targetEduId) &&
+        (isSchool || !filterBranchId || String(s.collegeBranchId) === filterBranchId) &&
+        s.collegeAcademicYearId === selectedAcademicYearId &&
+        s.collegeSubjectId && s.faculty_subject
+      ) {
+        subjectsMap.set(s.collegeSubjectId, {
+          id: s.collegeSubjectId,
+          name: s.faculty_subject.subjectName,
+        });
+      }
+    });
+    return Array.from(subjectsMap.values());
+  }, [filterEducationTypeId, filterBranchId, selectedAcademicYearId, isSchool, availableEducationTypes, sections]);
+
+  const availableSections = useMemo(() => {
+    if (!selectedSubjectId) return [];
+    const targetEduId = filterEducationTypeId || (availableEducationTypes.length === 1 ? String(availableEducationTypes[0].id) : "");
+    const sectionsMap = new Map();
+    sections?.forEach((s: any) => {
+      if (
+        (!targetEduId || String(s.collegeEducationId) === targetEduId) &&
+        (isSchool || !filterBranchId || String(s.collegeBranchId) === filterBranchId) &&
+        s.collegeAcademicYearId === selectedAcademicYearId &&
+        s.collegeSubjectId === selectedSubjectId &&
+        s.collegeSectionsId
+      ) {
+        sectionsMap.set(s.collegeSectionsId, {
+          id: String(s.collegeSectionsId),
+          name: s.college_sections?.collegeSections || `Section ${s.collegeSectionsId}`,
+        });
+      }
+    });
+    return Array.from(sectionsMap.values());
+  }, [filterEducationTypeId, filterBranchId, selectedAcademicYearId, selectedSubjectId, isSchool, availableEducationTypes, sections]);
 
   const itemsPerPage = 15
 
@@ -292,54 +405,122 @@ const AttendancePage = () => {
             profile={{ ...profile, collegeEducationType }}
             loading={false}
             academicYear={collegeAcademicYear}
+            sections={sections}
+            isSchool={isSchool}
           />
         }
         {(statsLoading || !stats) ? <AttendanceStatusCardShimmer /> : <AttendanceStatusCard stats={stats} />}
       </div>
+      <div className="flex flex-col flex-1 h-full min-h-[400px]">
+        {tableLoading || !records
+          ? <AttendanceTableShimmer />
+          : <AttendanceTable
+            title="Attendance Table"
+            records={records}
+            month={
+              [
+                "JAN", "FEB", "MAR", "APR",
+                "MAY", "JUN", "JUL", "AUG",
+                "SEP", "OCT", "NOV", "DEC"
+              ][selectedMonth - 1]
+            }
+            year={String(selectedYear)}
+            totalItems={totalItems}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            onMonthYearChange={(month, year) => {
+              setSelectedMonth(month);
+              setSelectedYear(year);
+              setCurrentPage(1);
+            }}
+            loading={tableLoading}
+            renderFilters={
+              <>
+                <CustomDropdown
+                  label=""
+                  options={availableEducationTypes.map(t => ({ label: t.name, value: t.id }))}
+                  value={filterEducationTypeId}
+                  onChange={(v) => {
+                    setFilterEducationTypeId(String(v));
+                    setFilterBranchId("");
+                    setSelectedAcademicYearId(null);
+                    setSelectedSubjectId(null);
+                    setFilterSectionId("");
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Education Type"
+                  theme="green"
+                  widthClassName="w-[140px] shrink-0"
+                />
 
-      {initialLoad
-        ? <AttendanceTableShimmer />
-        :
-        <AttendanceTable
-          loading={tableLoading}
-          records={records}
-          month={
-            [
-              "JAN", "FEB", "MAR", "APR",
-              "MAY", "JUN", "JUL", "AUG",
-              "SEP", "OCT", "NOV", "DEC"
-            ][selectedMonth - 1]
-          }
-          year={String(selectedYear)}
-          totalItems={totalItems}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          academicYears={collegeAcademicYears.map((item) => ({
-            id: item.collegeAcademicYearId,
-            name: item.collegeAcademicYear,
-          }))}
-          selectedAcademicYearId={selectedAcademicYearId}
-          onAcademicYearChange={(academicYearId) => {
-            setSelectedAcademicYearId(academicYearId);
-            setSelectedSubjectId(null);
-            setCurrentPage(1);
-          }}
-          subjects={subjects.filter(
-            (subject) =>
-              !selectedAcademicYearId || subject.academicYearIds.includes(selectedAcademicYearId),
-          )}
-          selectedSubjectId={selectedSubjectId}
-          onSubjectChange={(subjectId) => {
-            setSelectedSubjectId(subjectId);
-            setCurrentPage(1);
-          }}
-          onMonthYearChange={(m, y) => {
-            setSelectedMonth(m);
-            setSelectedYear(y);
-            setCurrentPage(1);
-          }}
-        />
-      }
+                {!isSchool && (
+                  <CustomDropdown
+                    label=""
+                    options={availableBranches.map(b => ({ label: b.name, value: b.id }))}
+                    value={filterBranchId}
+                    onChange={(v) => {
+                      setFilterBranchId(String(v));
+                      setSelectedAcademicYearId(null);
+                      setSelectedSubjectId(null);
+                      setFilterSectionId("");
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Branch"
+                    theme="green"
+                    disabled={!filterEducationTypeId}
+                    widthClassName="w-[140px] shrink-0"
+                  />
+                )}
+
+                <CustomDropdown
+                  label=""
+                  options={availableYears.map(y => ({ label: y.name, value: String(y.id) }))}
+                  value={selectedAcademicYearId ? String(selectedAcademicYearId) : ""}
+                  onChange={(v) => {
+                    setSelectedAcademicYearId(Number(v));
+                    setSelectedSubjectId(null);
+                    setFilterSectionId("");
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Year"
+                  theme="green"
+                  disabled={(!filterEducationTypeId && availableEducationTypes.length > 1) || (!isSchool && !filterBranchId)}
+                  widthClassName="w-[140px] shrink-0"
+                />
+
+                <CustomDropdown
+                  label=""
+                  options={availableSubjects.map(s => ({ label: s.name, value: String(s.id) }))}
+                  value={selectedSubjectId ? String(selectedSubjectId) : ""}
+                  onChange={(v) => {
+                    setSelectedSubjectId(Number(v));
+                    setFilterSectionId("");
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Subject"
+                  theme="green"
+                  disabled={!selectedAcademicYearId}
+                  widthClassName="w-[140px] shrink-0"
+                />
+
+                <CustomDropdown
+                  label=""
+                  options={availableSections.map(s => ({ label: s.name, value: s.id }))}
+                  value={filterSectionId}
+                  onChange={(v) => {
+                    setFilterSectionId(String(v));
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Section"
+                  theme="green"
+                  disabled={!selectedSubjectId}
+                  widthClassName="w-[140px] shrink-0"
+                />
+              </>
+            }
+          />
+        }
+      </div>
     </div>
   );
 };

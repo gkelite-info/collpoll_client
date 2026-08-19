@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useMemo } from "react";
 import AssignmentForm from "./assignmentForm";
 import AssignmentCard from "./assignmentCard";
 import { supabase } from "@/lib/supabaseClient";
@@ -39,6 +39,10 @@ import FacultyQuizSubmissions from "./quizSubmissions";
 import FacultyLabForm from "./facultyLabForm";
 import { deleteLabManual, fetchLabManualsForStaff } from "@/lib/helpers/faculty/facultyLabManualHelper";
 import FacultyLabCard from "./FacultyLabCard";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
+import { useUser } from "@/app/utils/context/UserContext";
 
 export interface Assignment {
   sectionId: string | number | readonly string[] | undefined;
@@ -68,7 +72,6 @@ function AssignmentsLeftContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { facultyId } = useFaculty();
   const refreshQuiz = searchParams.get("refreshQuiz");
   const activeTab = searchParams.get("tab") || "assignments";
   const action = searchParams.get("action");
@@ -130,6 +133,118 @@ function AssignmentsLeftContent() {
   const [labsLoading, setLabsLoading] = useState(false);
   const [labCurrentPage, setLabCurrentPage] = useState(1);
   const [labTotalCount, setLabTotalCount] = useState(0);
+
+  // Filter States
+  const [filterEducationTypeId, setFilterEducationTypeId] = useState("");
+  const [filterBranchId, setFilterBranchId] = useState("");
+  const [filterYearId, setFilterYearId] = useState("");
+  const [filterSubjectId, setFilterSubjectId] = useState("");
+  const [filterSectionId, setFilterSectionId] = useState("");
+
+  const { facultyId, sections } = useFaculty();
+  const { isSchool: isSchoolTerminology } = useInstitutionTerminology();
+  const { collegeEducationType } = useUser();
+
+  const availableEducationTypes = useMemo(() => {
+    const typesMap = new Map();
+    sections?.forEach((s) => {
+      if (s.collegeEducationId && s.faculty_edu_type) {
+        typesMap.set(s.collegeEducationId, {
+          id: String(s.collegeEducationId),
+          name: s.faculty_edu_type.collegeEducationType,
+        });
+      }
+    });
+    return Array.from(typesMap.values());
+  }, [sections]);
+
+  const isSchool = useMemo(() => {
+    if (!filterEducationTypeId) {
+      if (isSchoolTerminology) return true;
+      if (availableEducationTypes.length > 0) {
+        return availableEducationTypes.every((e) => isSchoolEducation(e.name));
+      }
+      return isSchoolEducation(collegeEducationType);
+    }
+    const selectedEdu = availableEducationTypes.find(e => e.id === filterEducationTypeId);
+    return selectedEdu ? isSchoolEducation(selectedEdu.name) : isSchoolTerminology;
+  }, [filterEducationTypeId, availableEducationTypes, isSchoolTerminology, collegeEducationType]);
+
+  useEffect(() => {
+    if (availableEducationTypes.length === 1 && !filterEducationTypeId) {
+      setFilterEducationTypeId(String(availableEducationTypes[0].id));
+    }
+  }, [availableEducationTypes, filterEducationTypeId]);
+
+  const availableBranches = useMemo(() => {
+    if (!filterEducationTypeId) return [];
+    const branchesMap = new Map();
+    sections?.forEach((s) => {
+      if (String(s.collegeEducationId) === filterEducationTypeId && s.collegeBranchId && s.college_branch) {
+        branchesMap.set(s.collegeBranchId, {
+          id: String(s.collegeBranchId),
+          name: s.college_branch.collegeBranchCode,
+        });
+      }
+    });
+    return Array.from(branchesMap.values());
+  }, [filterEducationTypeId, sections]);
+
+  const availableYears = useMemo(() => {
+    if (!filterEducationTypeId) return [];
+    const yearsMap = new Map();
+    sections?.forEach((s: any) => {
+      if (
+        String(s.collegeEducationId) === filterEducationTypeId &&
+        (isSchool || String(s.collegeBranchId) === filterBranchId)
+      ) {
+        yearsMap.set(s.collegeAcademicYearId, {
+          id: String(s.collegeAcademicYearId),
+          name: s.college_academic_year?.collegeAcademicYear || `Year ${s.collegeAcademicYearId}`,
+        });
+      }
+    });
+    return Array.from(yearsMap.values());
+  }, [filterEducationTypeId, filterBranchId, isSchool, sections]);
+
+  const availableSubjects = useMemo(() => {
+    if (!filterYearId) return [];
+    const subjectsMap = new Map();
+    sections?.forEach((s: any) => {
+      if (
+        String(s.collegeEducationId) === filterEducationTypeId &&
+        (isSchool || String(s.collegeBranchId) === filterBranchId) &&
+        String(s.collegeAcademicYearId) === filterYearId &&
+        s.collegeSubjectId && s.faculty_subject
+      ) {
+        subjectsMap.set(s.collegeSubjectId, {
+          id: String(s.collegeSubjectId),
+          name: s.faculty_subject.subjectName,
+        });
+      }
+    });
+    return Array.from(subjectsMap.values());
+  }, [filterEducationTypeId, filterBranchId, filterYearId, isSchool, sections]);
+
+  const availableSections = useMemo(() => {
+    if (!filterSubjectId) return [];
+    const sectionsMap = new Map();
+    sections?.forEach((s: any) => {
+      if (
+        String(s.collegeEducationId) === filterEducationTypeId &&
+        (isSchool || String(s.collegeBranchId) === filterBranchId) &&
+        String(s.collegeAcademicYearId) === filterYearId &&
+        String(s.collegeSubjectId) === filterSubjectId
+      ) {
+        sectionsMap.set(s.collegeSectionsId, {
+          id: String(s.collegeSectionsId),
+          name: s.college_sections?.collegeSections || `Section ${s.collegeSectionsId}`,
+        });
+      }
+    });
+    return Array.from(sectionsMap.values());
+  }, [filterEducationTypeId, filterBranchId, filterYearId, filterSubjectId, isSchool, sections]);
+
 
   async function fetchQuizzes() {
     if (!facultyId) return;
@@ -243,6 +358,11 @@ function AssignmentsLeftContent() {
         facultyId,
         page: labCurrentPage,
         pageSize: ITEMS_PER_PAGE,
+        collegeEducationId: filterEducationTypeId ? Number(filterEducationTypeId) : undefined,
+        collegeBranchId: filterBranchId ? Number(filterBranchId) : undefined,
+        collegeAcademicYearId: filterYearId ? Number(filterYearId) : undefined,
+        collegeSubjectId: filterSubjectId ? Number(filterSubjectId) : undefined,
+        collegeSectionsId: filterSectionId ? Number(filterSectionId) : undefined,
       });
 
       const formatted = response.data.map((lab: any) => {
@@ -277,7 +397,7 @@ function AssignmentsLeftContent() {
   useEffect(() => {
     if (activeTab !== "lab") return;
     fetchLabs();
-  }, [activeTab, facultyId, labCurrentPage]);
+  }, [activeTab, facultyId, labCurrentPage, filterEducationTypeId, filterBranchId, filterYearId, filterSubjectId, filterSectionId]);
 
   const handleMainTabChange = (tab: "assignments" | "quiz" | "discussion" | "lab") => {
     const params = new URLSearchParams(searchParams.toString());
@@ -293,6 +413,7 @@ function AssignmentsLeftContent() {
     setQuizCurrentPage(1);
     setDiscussionCurrentPage(1);
     setLabCurrentPage(1);
+    setView("list");
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -321,7 +442,7 @@ function AssignmentsLeftContent() {
   useEffect(() => {
     if (activeTab !== "assignments") return;
     fetchAssignments();
-  }, [activeView, currentPage, activeTab, selectedDate]);
+  }, [activeView, currentPage, activeTab, selectedDate, filterEducationTypeId, filterBranchId, filterYearId, filterSubjectId, filterSectionId]);
 
   async function fetchAssignments() {
     if (!isFetchingMore) setIsLoading(true);
@@ -353,7 +474,14 @@ function AssignmentsLeftContent() {
         dbStatus,
         currentPage,
         ITEMS_PER_PAGE,
-        selectedDate || undefined
+        selectedDate || undefined,
+        {
+          branchIds: filterBranchId ? [Number(filterBranchId)] : availableBranches.map((b) => Number(b.id)),
+          yearId: filterYearId ? Number(filterYearId) : undefined,
+          subjectId: filterSubjectId ? Number(filterSubjectId) : undefined,
+          sectionId: filterSectionId ? Number(filterSectionId) : undefined,
+          isSchool: isSchoolEducation(filterEducationTypeId),
+        }
       );
 
       if (error) {
@@ -601,12 +729,18 @@ function AssignmentsLeftContent() {
         onCancel={() => {
           setEditing(null);
           setView("list");
+          const params = new URLSearchParams(searchParams.toString());
+          params.delete("action");
+          router.push(`${pathname}?${params.toString()}`);
         }}
         onSave={() => {
           setIsLoading(true);
           fetchAssignments();
           setEditing(null);
           setView("list");
+          const params = new URLSearchParams(searchParams.toString());
+          params.delete("action");
+          router.push(`${pathname}?${params.toString()}`);
         }}
       />
     );
@@ -754,10 +888,109 @@ function AssignmentsLeftContent() {
                 </div>
                 <button
                   className="text-sm text-white cursor-pointer bg-[#16284F] px-4 py-1.5 rounded-md hover:bg-[#102040] transition-colors w-fit max-md:w-full max-md:py-2.5 max-md:mt-1 font-bold shrink-0"
-                  onClick={() => setView("add")}
+                  onClick={() => {
+                    setView("add");
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set("action", "addAssignment");
+                    router.push(`${pathname}?${params.toString()}`);
+                  }}
                 >
                   Add Assignment
                 </button>
+              </div>
+            )}
+
+            {activeTab === "lab" && (
+              <div className="flex justify-between w-full max-md:flex-col gap-2">
+                <div className="hidden md:flex gap-4 pb-1"></div>
+                <button
+                  className="text-sm text-white cursor-pointer bg-[#16284F] px-4 py-1.5 rounded-md font-bold hover:bg-[#102040] transition-colors w-fit max-md:w-full max-md:py-2.5 max-md:mt-1 shrink-0 ml-auto"
+                  onClick={() => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set("action", "createLab");
+                    router.push(`${pathname}?${params.toString()}`);
+                  }}
+                >
+                  Upload Lab Manual
+                </button>
+              </div>
+            )}
+
+            {(activeTab === "assignments" || activeTab === "lab") && view === "list" && (
+              <div className="flex w-full gap-4 mt-2 overflow-x-auto custom-scrollbar pb-2">
+                <CustomDropdown
+                  label="Education Type"
+                  options={availableEducationTypes.map(t => ({ label: t.name, value: t.id }))}
+                  value={filterEducationTypeId}
+                  onChange={(v) => {
+                    setFilterEducationTypeId(String(v));
+                    setFilterBranchId("");
+                    setFilterYearId("");
+                    setFilterSubjectId("");
+                    setFilterSectionId("");
+                  }}
+                  placeholder="Select Education Type"
+                  theme="green"
+                  widthClassName="min-w-[160px] shrink-0"
+                />
+
+                {!isSchool && (
+                  <CustomDropdown
+                    label="Branch"
+                    options={availableBranches.map(b => ({ label: b.name, value: b.id }))}
+                    value={filterBranchId}
+                    onChange={(v) => {
+                      setFilterBranchId(String(v));
+                      setFilterYearId("");
+                      setFilterSubjectId("");
+                      setFilterSectionId("");
+                    }}
+                    placeholder="Select Branch"
+                    theme="green"
+                    disabled={!filterEducationTypeId}
+                    widthClassName="min-w-[160px] shrink-0"
+                  />
+                )}
+
+                <CustomDropdown
+                  label="Year"
+                  options={availableYears.map(y => ({ label: y.name, value: y.id }))}
+                  value={filterYearId}
+                  onChange={(v) => {
+                    setFilterYearId(String(v));
+                    setFilterSubjectId("");
+                    setFilterSectionId("");
+                  }}
+                  placeholder="Select Year"
+                  theme="green"
+                  disabled={!filterEducationTypeId || (!isSchool && !filterBranchId)}
+                  widthClassName="min-w-[160px] shrink-0"
+                />
+
+                <CustomDropdown
+                  label="Subject"
+                  options={availableSubjects.map(s => ({ label: s.name, value: s.id }))}
+                  value={filterSubjectId}
+                  onChange={(v) => {
+                    setFilterSubjectId(String(v));
+                    setFilterSectionId("");
+                  }}
+                  placeholder="Select Subject"
+                  theme="green"
+                  disabled={!filterYearId}
+                  widthClassName="min-w-[160px] shrink-0"
+                />
+
+                <CustomDropdown
+                  label="Section"
+                  options={availableSections.map(s => ({ label: s.name, value: s.id }))}
+                  value={filterSectionId}
+                  onChange={(v) => setFilterSectionId(String(v))}
+                  placeholder="Select Section"
+                  theme="green"
+                  disabled={!filterSubjectId}
+                  widthClassName="min-w-[160px] shrink-0"
+                />
               </div>
             )}
 
@@ -892,20 +1125,7 @@ function AssignmentsLeftContent() {
               </div>
             )}
 
-            {activeTab === "lab" && (
-              <div className="flex justify-end w-full">
-                <button
-                  className="text-sm text-white cursor-pointer bg-[#16284F] px-4 py-1.5 rounded-md font-bold hover:bg-[#102040] transition-colors w-fit max-md:w-full max-md:py-2.5 max-md:mt-1"
-                  onClick={() => {
-                    const params = new URLSearchParams(searchParams.toString());
-                    params.set("action", "createLab");
-                    router.push(`${pathname}?${params.toString()}`);
-                  }}
-                >
-                  Upload Lab Manual
-                </button>
-              </div>
-            )}
+
           </div>
 
           <div className="max-h-[115vh] overflow-y-auto w-full pr-1">
@@ -934,6 +1154,9 @@ function AssignmentsLeftContent() {
                     onEdit={(a) => {
                       setEditing(a);
                       setView("edit");
+                      const params = new URLSearchParams(searchParams.toString());
+                      params.set("action", "editAssignment");
+                      router.push(`${pathname}?${params.toString()}`);
                     }}
                     onDelete={handleDelete}
                   />
