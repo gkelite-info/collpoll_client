@@ -14,7 +14,7 @@ import TaskModal from "@/app/components/modals/taskModal";
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-export default function MyAttendanceRight() {
+export default function MyAttendanceRight({ activeMainTab }: { activeMainTab?: string }) {
   const queryClient = useQueryClient();
   const [openModal, setOpenModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -90,7 +90,6 @@ export default function MyAttendanceRight() {
     <div className="w-[32%] p-2 flex flex-col max-md:hidden h-full">
       <CourseScheduleCard />
       <WorkWeekCalendar />
-
       <TaskPanel
         role="faculty"
         enableInfiniteScroll={true}
@@ -124,7 +123,7 @@ export default function MyAttendanceRight() {
         />
       )}
 
-      <div className="min-h-0 flex-1 mt-4">
+      <div className="flex-1 min-h-0 mt-4">
         <AnnouncementsCard
           className="h-full"
           enableInfiniteScroll={true}

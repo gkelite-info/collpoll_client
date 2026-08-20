@@ -375,7 +375,11 @@ async function executeFetch(
     // 6. Apply Filters
     const searchText = search.toLowerCase().trim();
     allGroups = allGroups.filter((item) => {
-      const matchesSearch = item.name.toLowerCase().includes(searchText);
+      const matchesSearch =
+        item.name.toLowerCase().includes(searchText) ||
+        Array.from(item.facultyMap.values()).some((f: any) =>
+          f.fullName?.toLowerCase().includes(searchText)
+        );
       const matchesDept = deptFilter === "All" || item.deptCode === deptFilter;
       const matchesYear = yearFilter === "All" || item.year === yearFilter;
       return matchesSearch && matchesDept && matchesYear;

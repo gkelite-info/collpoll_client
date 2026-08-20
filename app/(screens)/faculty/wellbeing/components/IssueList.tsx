@@ -166,6 +166,7 @@ export default function IssueList({ onEditIssue }: IssueListProps) {
               totalItems={totalItems}
               itemsPerPage={itemsPerPage}
               onPageChange={handlePageChange}
+              alwaysShow={true}
             />
           </div>
         </>

@@ -156,7 +156,7 @@ const AttendanceTable: React.FC<Props> = ({
   };
 
   return (
-    <div className="w-full max-md:px-2">
+    <div className="w-full h-full flex flex-col max-md:px-2">
       <div className="flex justify-between items-center mb-2.5 max-md:flex-col max-md:items-start max-md:gap-3 gap-3" ref={containerRef}>
         <h2 className="text-[#282828] text-[17px] font-bold shrink-0">
           {title || "Attendance Table"}
@@ -258,8 +258,8 @@ const AttendanceTable: React.FC<Props> = ({
         </span>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col">
-        <div className="overflow-x-auto overflow-y-auto max-h-[300px] custom-scrollbar">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col h-full flex-1">
+        <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
           <table className="w-full text-left border-collapse whitespace-nowrap min-w-[800px]">
             <thead className="sticky top-0 z-10">
               <tr className="bg-[#F2F2F2] text-[#282828] text-[12.5px] shadow-sm">

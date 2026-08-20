@@ -74,8 +74,8 @@ const MyAttendanceLeft = () => {
   const showRightSidebar = !(activeMainTab === "payroll" && activePayrollTab === "reimbursements");
 
   return (
-    <div className="flex w-full items-start justify-between max-md:flex-col max-md:gap-4 relative">
-      <div className="w-full flex-1 min-w-0 min-h-150 pt-4 px-2.5 max-md:px-0 relative">
+    <div className="flex w-full items-stretch justify-between max-md:flex-col max-md:gap-4 relative h-full">
+      <div className="w-full flex-1 flex flex-col min-w-0 min-h-150 pt-4 pb-4 px-2.5 max-md:px-0 relative">
         <div className="flex justify-center mb-8 w-full px-20 max-md:px-2 max-md:mb-4">
           <div className="relative flex items-center bg-[#E5E5E5] p-1 rounded-full w-full max-w-[700px] justify-between">
             {mainTabs.map((tab) => (
@@ -100,15 +100,15 @@ const MyAttendanceLeft = () => {
           </div>
         </div>
 
-        <div className="transition-opacity duration-300 mt-4 max-md:mt-2">
+        <div className="transition-opacity duration-300 mt-4 max-md:mt-2 flex-1 flex flex-col min-h-0">
           {activeMainTab === "attendance" && (
-            <div className="w-full">
+            <div className="w-full flex-1 flex flex-col min-h-0">
               <AttendancePage />
             </div>
           )}
 
           {activeMainTab === "payroll" && (
-            <div className="flex flex-col items-center w-full p-2 max-md:p-0">
+            <div className="flex flex-col items-center w-full p-2 max-md:p-0 flex-1 min-h-0">
               <div className="flex justify-center mb-4 gap-12 max-md:gap-4 max-md:justify-around w-full">
                 {payrollSubTabs.map((tab) => (
                   <button
@@ -124,24 +124,24 @@ const MyAttendanceLeft = () => {
                 ))}
               </div>
 
-              <div className="w-full">
+              <div className="w-full flex-1 flex flex-col min-h-0">
                 {activePayrollTab === "summary" && (
-                  <div className="w-full text-left mt-2">
+                  <div className="w-full text-left mt-2 flex-1 min-h-0">
                     <SummaryPage />
                   </div>
                 )}
                 {activePayrollTab === "myPay" && (
-                  <div className="w-full text-left mt-2">
+                  <div className="w-full text-left mt-2 flex-1 min-h-0">
                     <MyPayPage />
                   </div>
                 )}
                 {activePayrollTab === "manageTax" && (
-                  <div className="w-full text-left mt-2">
+                  <div className="w-full text-left mt-2 flex-1 min-h-0">
                     <ManageTaxPage />
                   </div>
                 )}
                 {activePayrollTab === "reimbursements" && (
-                  <div className="w-full text-left mt-2">
+                  <div className="w-full text-left mt-2 flex-1 min-h-0">
                     <ReimbursementsClient />
                   </div>
                 )}
@@ -150,13 +150,13 @@ const MyAttendanceLeft = () => {
           )}
 
           {activeMainTab === "analytics" && (
-            <div className="w-full">
+            <div className="w-full flex-1 flex flex-col min-h-0">
               <AttendanceAnalyticsPage />
             </div>
           )}
         </div>
       </div>
-      {showRightSidebar && <MyAttendanceRight />}
+      {showRightSidebar && <MyAttendanceRight activeMainTab={activeMainTab} />}
     </div>
   );
 };

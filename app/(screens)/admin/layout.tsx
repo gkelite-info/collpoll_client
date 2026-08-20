@@ -37,7 +37,12 @@ export default function AdminLayout({
     }
   }, [isSchool, hideClubs, hidePlacements, isClubsPath, isPlacementsPath, isWellbeingPath, loading, router, collegeEducationType]);
 
-  if (loading || (hideClubs && isClubsPath) || (hidePlacements && isPlacementsPath) || (isSchool && isWellbeingPath)) {
+  if (
+    !loading &&
+    ((hideClubs && isClubsPath) ||
+      (hidePlacements && isPlacementsPath) ||
+      (isSchool && isWellbeingPath))
+  ) {
     return null;
   }
 

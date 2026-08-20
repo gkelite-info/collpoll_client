@@ -25,6 +25,7 @@ import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/Confir
 import ReplaceFolderModal from "./components/modal/replaceFolderModal";
 import { useTranslations } from "next-intl";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { useInView } from "react-intersection-observer";
 
 type SortOption = "latest" | "name" | "size";
 
@@ -153,12 +154,6 @@ const DriveClient = () => {
 
   const rowsPerPage = 10;
   const foldersPerPage = 5;
-  const recentItemsPerPage = 5;
-
-  const paginatedRecentFiles = recentViewed.slice(
-    (recentCurrentPage - 1) * recentItemsPerPage,
-    recentCurrentPage * recentItemsPerPage,
-  );
 
   const showToast = (message: string, type: "success" | "error") => {
     setToastState({ message, type });
@@ -192,10 +187,20 @@ const DriveClient = () => {
     return () => window.clearTimeout(debounceTimer);
   }, [fileSearch, debouncedFileSearch]);
 
+  const { ref: folderLoadMoreRef, inView: folderInView } = useInView();
+
+  useEffect(() => {
+    if (folderInView && folders.length < totalFolders && !loadingFolders) {
+      setFolderCurrentPage((prev) => prev + 1);
+    }
+  }, [folderInView, folders.length, totalFolders, loadingFolders]);
+
   useEffect(() => {
     if (!collegeId || !userId) return;
 
     setLoadingFolders(true);
+
+    let isSubscribed = true;
 
     Promise.all([
       fetchRootDriveFolders(
@@ -208,20 +213,31 @@ const DriveClient = () => {
       fetchFolderStats(collegeId, userId),
     ])
       .then(([folderResult, stats]) => {
+        if (!isSubscribed) return;
         const { data: folderData, totalCount: folderCount } = folderResult;
-        setFolders(
-          folderData.map((f: DriveFolderRow) => ({
-            driveFolderId: f.driveFolderId,
-            name: f.folderName,
-            color: f.color ?? "#0096A6",
-            filesCount: stats[f.driveFolderId]?.totalFiles ?? 0,
-            sizeLabel: formatSize(stats[f.driveFolderId]?.totalSizeBytes ?? 0),
-          })),
+        const mappedFolders = folderData.map((f: DriveFolderRow) => ({
+          driveFolderId: f.driveFolderId,
+          name: f.folderName,
+          color: f.color ?? "#0096A6",
+          filesCount: stats[f.driveFolderId]?.totalFiles ?? 0,
+          sizeLabel: formatSize(stats[f.driveFolderId]?.totalSizeBytes ?? 0),
+        }));
+        
+        setFolders((prev) =>
+          folderCurrentPage === 1 ? mappedFolders : [...prev, ...mappedFolders]
         );
         setTotalFolders(folderCount);
       })
-      .catch(() => showToast(t("Failed to load data"), "error"))
-      .finally(() => setLoadingFolders(false));
+      .catch(() => {
+        if (isSubscribed) showToast(t("Failed to load data"), "error");
+      })
+      .finally(() => {
+        if (isSubscribed) setLoadingFolders(false);
+      });
+      
+    return () => {
+      isSubscribed = false;
+    };
   }, [
     collegeId,
     userId,
@@ -546,20 +562,15 @@ const DriveClient = () => {
       const storagePath = `${collegeId}/${file.driveFolderId}/${file.fileName.trim()}`;
       const { data, error } = await supabase.storage
         .from("college-drive")
-        .createSignedUrl(storagePath, 120);
+        .createSignedUrl(storagePath, 120, { download: file.fileName });
 
       if (error || !data?.signedUrl) return;
 
-      const response = await fetch(data.signedUrl);
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = file.fileName;
+      a.href = data.signedUrl;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
 
       const updated = addToRecent(file, userId);
       setRecentViewed(updated);
@@ -679,51 +690,52 @@ const DriveClient = () => {
             {t("Folders")}
           </h2>
 
-          {loadingFolders ? (
-            <div className="mt-2 flex gap-4 overflow-x-auto pb-2">
+          {loadingFolders && folderCurrentPage === 1 ? (
+            <div className="mt-2 flex gap-4 overflow-x-auto custom-scrollbar pb-2 snap-x">
               {[...Array(4)].map((_, i) => (
                 <div
                   key={i}
-                  className="relative overflow-hidden flex min-w-[200px] shrink-0 flex-col rounded-md p-2 bg-gray-100 h-[130px] max-md:min-w-[160px] max-md:h-[110px] max-md:rounded-xl"
+                  className="relative overflow-hidden flex min-w-[200px] shrink-0 snap-start flex-col rounded-md p-2 bg-[#EAEAEA] h-[130px] max-md:min-w-[160px] max-md:h-[110px] max-md:rounded-xl"
                 >
-                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
                 </div>
               ))}
             </div>
           ) : (
-            <div className="mt-2 flex gap-4 overflow-x-auto pb-2">
+            <div className="mt-2 flex gap-4 overflow-x-auto custom-scrollbar pb-2 snap-x">
               {sortedFolders.map((f) => (
-                <FolderCard
-                  key={f.driveFolderId}
-                  {...f}
-                  onRename={() => setFolderToRename(f)}
-                  onDelete={() => setFolderToDelete(f)}
-                  onClick={() => {
-                    setSelectedFolder(f);
-                    setIsFilesModalOpen(true);
-                  }}
-                />
+                <div key={f.driveFolderId} className="shrink-0 snap-start">
+                  <FolderCard
+                    {...f}
+                    onRename={() => setFolderToRename(f)}
+                    onDelete={() => setFolderToDelete(f)}
+                    onClick={() => {
+                      setSelectedFolder(f);
+                      setIsFilesModalOpen(true);
+                    }}
+                  />
+                </div>
               ))}
+              {folders.length < totalFolders && (
+                <div ref={folderLoadMoreRef} className="shrink-0 flex items-center gap-4 justify-center">
+                  {loadingFolders && folderCurrentPage > 1 ? (
+                    <>
+                      {[...Array(4)].map((_, i) => (
+                        <div key={i} className="relative overflow-hidden flex min-w-[200px] shrink-0 snap-start flex-col rounded-md p-2 bg-[#EAEAEA] h-[130px] max-md:min-w-[160px] max-md:h-[110px] max-md:rounded-xl">
+                          <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="w-10 h-full"></div>
+                  )}
+                </div>
+              )}
               {sortedFolders.length === 0 && (
                 <p className="text-sm text-[#9CA3AF] mt-2">
                   {t("No folders yet Click New to create one")}
                 </p>
               )}
-            </div>
-          )}
-
-          {!loadingFolders && totalFolders > 0 && (
-            <div className="mt-3 w-full">
-              <Pagination
-                currentPage={folderCurrentPage}
-                totalItems={totalFolders}
-                itemsPerPage={foldersPerPage}
-                onPageChange={(page) => {
-                  setLoadingFolders(true);
-                  setFolderCurrentPage(page);
-                }}
-                alwaysShow
-              />
             </div>
           )}
         </section>
@@ -738,40 +750,29 @@ const DriveClient = () => {
               {[...Array(4)].map((_, i) => (
                 <div
                   key={i}
-                  className="relative overflow-hidden flex items-center min-w-[220px] rounded-md bg-gray-100 p-3 gap-2 h-16 max-md:rounded-xl"
+                  className="relative overflow-hidden flex items-center min-w-[220px] rounded-md bg-[#EAEAEA] p-3 gap-2 h-16 max-md:rounded-xl"
                 >
-                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
                 </div>
               ))}
             </div>
           ) : recentViewed.length > 0 ? (
-            <div className="mt-2 flex gap-4 overflow-x-auto pb-1 scrollbar-hide">
-              {paginatedRecentFiles.map((file) => (
-                <RecentFileCard
-                  key={file.driveFileId}
-                  name={file.fileName}
-                  type={file.fileName.split(".").pop()?.toUpperCase() ?? "FILE"}
-                  sizeLabel={formatSize(file.fileSize)}
-                  date={formatDate(file.accessedAt)}
-                />
+            <div className="mt-2 flex gap-4 overflow-x-auto custom-scrollbar pb-2 snap-x">
+              {recentViewed.map((file) => (
+                <div key={file.driveFileId} className="shrink-0 snap-start">
+                  <RecentFileCard
+                    name={file.fileName}
+                    type={file.fileName.split(".").pop()?.toUpperCase() ?? "FILE"}
+                    sizeLabel={formatSize(file.fileSize)}
+                    date={formatDate(file.accessedAt)}
+                  />
+                </div>
               ))}
             </div>
           ) : (
             <p className="text-sm text-[#9CA3AF] mt-2">
               {t("No recently viewed files yet")}
             </p>
-          )}
-
-          {!loadingFiles && recentViewed.length > 0 && (
-            <div className="mt-3 w-full">
-              <Pagination
-                currentPage={recentCurrentPage}
-                totalItems={recentViewed.length}
-                itemsPerPage={recentItemsPerPage}
-                onPageChange={setRecentCurrentPage}
-                alwaysShow
-              />
-            </div>
           )}
         </section>
 
