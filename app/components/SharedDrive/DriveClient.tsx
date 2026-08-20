@@ -154,6 +154,7 @@ const DriveClient = () => {
 
   const rowsPerPage = 10;
   const foldersPerPage = 5;
+  const recentItemsPerPage = 5;
 
   const showToast = (message: string, type: "success" | "error") => {
     setToastState({ message, type });
