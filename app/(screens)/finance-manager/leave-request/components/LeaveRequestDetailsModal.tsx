@@ -2,6 +2,7 @@
 
 import { Avatar } from "@/app/utils/Avatar";
 import { useUser } from "@/app/utils/context/UserContext";
+import SecureMedia from "@/app/components/SecureMedia";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import {
   deleteEmployeeLeaveChatMessage,
@@ -639,33 +640,11 @@ export default function LeaveRequestDetailsModal({
                         >
                           {message.mediaUrl && (
                             <div className="mb-1.5">
-                              {message.mediaType === "image" ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  src={message.mediaUrl}
-                                  alt="attachment"
-                                  className="max-w-[160px] cursor-pointer rounded-md hover:opacity-90"
-                                  onClick={() =>
-                                    window.open(message.mediaUrl ?? "", "_blank")
-                                  }
-                                />
-                              ) : (
-                                <a
-                                  href={message.mediaUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 transition ${
-                                    isMe
-                                      ? "bg-black/10 hover:bg-black/20"
-                                      : "bg-gray-100 hover:bg-gray-200"
-                                  }`}
-                                >
-                                  <FilePdf size={14} weight="fill" />
-                                  <span className="text-[11px] font-medium underline">
-                                    Document
-                                  </span>
-                                </a>
-                              )}
+                              <SecureMedia 
+                                path={message.mediaUrl} 
+                                type={message.mediaType as "image" | "pdf"} 
+                                isMe={isMe} 
+                              />
                             </div>
                           )}
                           {isEditing ? (

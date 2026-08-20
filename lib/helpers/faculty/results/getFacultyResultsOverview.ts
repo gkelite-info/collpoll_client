@@ -10,6 +10,7 @@ export type ResultsOverviewParams = {
   sectionName?: string;
   page?: number;
   pageSize?: number;
+  branchName?: string;
 };
 
 export type ResultsOverviewRow = {
@@ -17,6 +18,7 @@ export type ResultsOverviewRow = {
   examType: string;
   semesterId: number;
   branch: string;
+  branchId: number | null;
   year: string;
   section: string;
   students: number;
@@ -48,21 +50,34 @@ export async function getFacultyResultsOverview(
     sectionName = "all",
     page = 1,
     pageSize = 10,
+    branchName = "N/A",
   } = params;
 
   try {
     // 1. Fetch assigned sections for this faculty
+    //    Using the same proven join pattern as facultyContextAPI.tsx
+    //    faculty_branch:collegeBranchId resolves the branch code directly per row
     const { data: facultySections, error: facultyError } = await supabase
       .from("faculty_sections")
       .select(`
         facultySectionId,
         collegeSectionsId,
         collegeAcademicYearId,
-        college_sections ( collegeSections ),
-        college_academic_year ( collegeAcademicYear ),
-        college_subjects (
+        collegeBranchId,
+        college_sections:collegeSectionsId (
+          collegeSections,
+          collegeBranchId
+        ),
+        college_academic_year:collegeAcademicYearId (
+          collegeAcademicYear
+        ),
+        college_subjects:college_subjects!inner (
           collegeSubjectId,
-          subjectName
+          subjectName,
+          collegeBranchId
+        ),
+        faculty_branch:collegeBranchId (
+          collegeBranchCode
         )
       `)
       .eq("facultyId", facultyId)
@@ -71,39 +86,42 @@ export async function getFacultyResultsOverview(
 
     if (facultyError) throw facultyError;
 
+    // Helper to safely extract first item from Supabase nested relation (array or object)
+    const getFirst = (rel: any) => (Array.isArray(rel) ? rel[0] : rel) ?? null;
+
     // Build lists for dropdowns
     const subjectSet = new Set<string>();
     const sectionSet = new Set<string>();
 
     facultySections?.forEach((fs: any) => {
-      const subjectData = Array.isArray(fs.college_subjects) ? fs.college_subjects[0] : fs.college_subjects;
+      const subjectData = getFirst(fs.college_subjects);
       const sName = subjectData?.subjectName;
       if (sName) subjectSet.add(sName);
     });
 
     const subjects = Array.from(subjectSet).sort();
-    
+
     // Filter sections by selected subject
     const targetSubject = subjectName || (subjects.length > 0 ? subjects[0] : "");
-    const filteredBySubject = facultySections?.filter((fs: any) => {
-      const subjectData = Array.isArray(fs.college_subjects) ? fs.college_subjects[0] : fs.college_subjects;
-      return subjectData?.subjectName === targetSubject;
-    }) || [];
+    const filteredBySubject =
+      facultySections?.filter((fs: any) => {
+        const subjectData = getFirst(fs.college_subjects);
+        return subjectData?.subjectName === targetSubject;
+      }) || [];
 
     filteredBySubject.forEach((fs: any) => {
-      // Supabase nested relation might return object or array depending on mapping
-      const secData = Array.isArray(fs.college_sections) ? fs.college_sections[0] : fs.college_sections;
+      const secData = getFirst(fs.college_sections);
       const secName = secData?.collegeSections;
       if (secName) sectionSet.add(secName);
     });
-    
+
     const allSectionsForSubject = Array.from(sectionSet).sort();
-    
+
     // Apply section filter if provided
     let finalSections = filteredBySubject;
     if (sectionName && sectionName !== "all") {
       finalSections = finalSections.filter((fs: any) => {
-        const secData = Array.isArray(fs.college_sections) ? fs.college_sections[0] : fs.college_sections;
+        const secData = getFirst(fs.college_sections);
         return secData?.collegeSections === sectionName;
       });
     }
@@ -130,31 +148,86 @@ export async function getFacultyResultsOverview(
 
     if (scheduleError) throw scheduleError;
 
+    // Fetch branches map for fallback branch resolution
+    const { data: branches } = await supabase
+      .from("college_branches")
+      .select("collegeBranchId, collegeBranchCode")
+      .eq("collegeId", collegeId)
+      .is("deletedAt", null);
+
+    const branchMap: Record<number, string> = {};
+    branches?.forEach((b) => {
+      branchMap[b.collegeBranchId] = b.collegeBranchCode;
+    });
+
     // 3. For each section, find students and matching schedules
     let allDynamicClasses: ResultsOverviewRow[] = [];
 
     const sectionPromises = finalSections.map(async (sec: any) => {
-      const yearData = Array.isArray(sec.college_academic_year) ? sec.college_academic_year[0] : sec.college_academic_year;
-      const secData = Array.isArray(sec.college_sections) ? sec.college_sections[0] : sec.college_sections;
-      const subjectData = Array.isArray(sec.college_subjects) ? sec.college_subjects[0] : sec.college_subjects;
+      const yearData = getFirst(sec.college_academic_year);
+      const secData = getFirst(sec.college_sections);
+      const subjectData = getFirst(sec.college_subjects);
+      const branchData = getFirst(sec.faculty_branch);
 
       const yearName = yearData?.collegeAcademicYear || "N/A";
       const secName = secData?.collegeSections || "N/A";
 
+      // ============================================================================
+      // BRANCH RESOLUTION (per schoolHelper.ts guidelines)
+      // ============================================================================
+      // For Schools: No branch concept → always "N/A"
+      // For Inter/College: Resolve the SINGLE branch for this faculty_sections row
+      //
+      // Priority chain:
+      //   1. faculty_branch join (faculty_sections.collegeBranchId → college_branches.collegeBranchCode)
+      //      This is the PROVEN pattern from facultyContextAPI.tsx — each faculty_sections
+      //      row is assigned to exactly ONE branch.
+      //   2. college_subjects.collegeBranchId → branchMap lookup
+      //   3. college_sections.collegeBranchId → branchMap lookup
+      //   4. "N/A" safe fallback (NEVER the comma-joined multi-branch string)
+      // ============================================================================
+      let resolvedBranchName = "N/A";
+      if (!isSchool) {
+        if (branchData?.collegeBranchCode) {
+          // Best source: direct join from faculty_sections.collegeBranchId → college_branches
+          resolvedBranchName = branchData.collegeBranchCode;
+        } else if (subjectData?.collegeBranchId && branchMap[subjectData.collegeBranchId]) {
+          // Fallback: subject's own branch
+          resolvedBranchName = branchMap[subjectData.collegeBranchId];
+        } else if (secData?.collegeBranchId && branchMap[secData.collegeBranchId]) {
+          // Fallback: section's branch
+          resolvedBranchName = branchMap[secData.collegeBranchId];
+        } else if (collegeBranchId && branchMap[collegeBranchId]) {
+          // Fallback: Global context branch (works for single branch faculty)
+          resolvedBranchName = branchMap[collegeBranchId];
+        } else if (branchName && branchName !== "N/A" && !branchName.includes(",")) {
+           // Absolute last resort: if branchName is a single exact branch string, use it
+           resolvedBranchName = branchName;
+        }
+      }
+
       // Find matching schedules
-      const matchingSchedules = schedules?.filter((s) => {
-        const isSpecificMatch =
-          s.collegeBranchId === collegeBranchId &&
-          s.academicYear === yearName &&
-          s.collegeSectionsId === sec.collegeSectionsId;
+      // For multi-branch faculty, use the resolved branch to match schedules more precisely
+      const resolvedBranchId =
+        sec.collegeBranchId ||
+        subjectData?.collegeBranchId ||
+        secData?.collegeBranchId ||
+        collegeBranchId;
 
-        const isGeneralMatch =
-          !s.collegeBranchId &&
-          (!s.academicYear || s.academicYear === "") &&
-          !s.collegeSectionsId;
+      const matchingSchedules =
+        schedules?.filter((s) => {
+          const isSpecificMatch =
+            s.collegeBranchId === resolvedBranchId &&
+            s.academicYear === yearName &&
+            s.collegeSectionsId === sec.collegeSectionsId;
 
-        return isSpecificMatch || isGeneralMatch;
-      }) || [];
+          const isGeneralMatch =
+            !s.collegeBranchId &&
+            (!s.academicYear || s.academicYear === "") &&
+            !s.collegeSectionsId;
+
+          return isSpecificMatch || isGeneralMatch;
+        }) || [];
 
       if (matchingSchedules.length === 0) return;
 
@@ -170,43 +243,14 @@ export async function getFacultyResultsOverview(
       const studentIds = studentHistory?.map((h) => h.studentId) || [];
       const studentCount = studentIds.length;
 
-      // Resolve subject exactly like uploadFacultyResults does
-      let subjectQuery = supabase
-        .from("college_subjects")
-        .select("collegeSubjectId")
-        .eq("subjectName", subjectName)
-        .eq("collegeAcademicYearId", sec.collegeAcademicYearId)
-        .is("deletedAt", null);
-
-      if (!isSchool && collegeBranchId) {
-        subjectQuery = subjectQuery.eq("collegeBranchId", collegeBranchId);
-      }
-
-      const { data: subData } = await subjectQuery.limit(1);
-      let targetSubjectId = subData && subData.length > 0 ? subData[0].collegeSubjectId : undefined;
-
-      if (!targetSubjectId && subjectName && subjectName !== "N/A") {
-        let fallbackQuery = supabase
-          .from("college_subjects")
-          .select("collegeSubjectId")
-          .ilike("subjectName", subjectName)
-          .is("deletedAt", null);
-
-        if (collegeId) {
-          fallbackQuery = fallbackQuery.eq("collegeId", collegeId);
-        }
-
-        const { data: fbData } = await fallbackQuery.limit(1);
-        if (fbData && fbData.length > 0) {
-          targetSubjectId = fbData[0].collegeSubjectId;
-        }
-      }
+      // Resolve subject ID for results lookup — use the exact subject from the faculty_sections join
+      const targetSubjectId = subjectData?.collegeSubjectId;
 
       // Fetch uploaded results for these students, subject, and schedules
       const scheduleIds = matchingSchedules.map((s) => s.collegeExamScheduleId);
-      
+
       let uploadedScheduleIds = new Set<number>();
-      
+
       if (studentCount > 0 && targetSubjectId && scheduleIds.length > 0) {
         const { data: results } = await supabase
           .from("results")
@@ -228,11 +272,17 @@ export async function getFacultyResultsOverview(
         const scheduleKey = `${sec.facultySectionId}-${sch.collegeExamScheduleId}`;
         const isUploaded = uploadedScheduleIds.has(sch.collegeExamScheduleId);
 
+        let rowBranchName = resolvedBranchName;
+        if (!isSchool && sch.collegeBranchId && branchMap[sch.collegeBranchId]) {
+          rowBranchName = branchMap[sch.collegeBranchId];
+        }
+
         allDynamicClasses.push({
           id: scheduleKey,
           examType: sch.scheduleTitle || sch.examType || "Exam",
           semesterId: sch.collegeSemesterId || 1,
-          branch: "N/A", // Handled on client side if needed via context, or just "N/A"
+          branch: rowBranchName,
+          branchId: resolvedBranchId || null,
           year: yearName,
           section: secName,
           students: studentCount,
@@ -272,7 +322,10 @@ export async function getFacultyResultsOverview(
     // Apply Pagination
     const totalCount = allDynamicClasses.length;
     const startIndex = (page - 1) * pageSize;
-    const paginatedItems = allDynamicClasses.slice(startIndex, startIndex + pageSize);
+    const paginatedItems = allDynamicClasses.slice(
+      startIndex,
+      startIndex + pageSize
+    );
 
     return {
       items: paginatedItems,
@@ -283,7 +336,10 @@ export async function getFacultyResultsOverview(
       sections: allSectionsForSubject,
     };
   } catch (error: any) {
-    console.error("Error in getFacultyResultsOverview:", error?.message || error);
+    console.error(
+      "Error in getFacultyResultsOverview:",
+      error?.message || error
+    );
     return {
       items: [],
       totalCount: 0,

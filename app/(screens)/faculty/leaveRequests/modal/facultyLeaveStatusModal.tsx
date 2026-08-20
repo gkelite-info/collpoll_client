@@ -21,6 +21,7 @@ import toast from "react-hot-toast";
 import { Avatar } from "@/app/utils/Avatar";
 import { useUser } from "@/app/utils/context/UserContext";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import SecureMedia from "@/app/components/SecureMedia";
 
 interface FacultyLeaveDetailsModalProps {
   isOpen: boolean;
@@ -501,28 +502,11 @@ export default function FacultyLeaveDetailsModal({
                           >
                             {msg.mediaUrl && (
                               <div className="mb-1">
-                                {msg.mediaType === "image" ? (
-                                  <img
-                                    src={msg.mediaUrl}
-                                    alt="attachment"
-                                    className="max-w-[150px] rounded-md cursor-pointer hover:opacity-90"
-                                    onClick={() =>
-                                      window.open(msg.mediaUrl, "_blank")
-                                    }
-                                  />
-                                ) : (
-                                  <a
-                                    href={msg.mediaUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition ${isMe ? "bg-black/10 hover:bg-black/20" : "bg-gray-100 hover:bg-gray-200"}`}
-                                  >
-                                    <FilePdf size={14} weight="fill" />
-                                    <span className="text-[11px] underline font-medium">
-                                      Document
-                                    </span>
-                                  </a>
-                                )}
+                                <SecureMedia 
+                                  path={msg.mediaUrl} 
+                                  type={msg.mediaType as "image" | "pdf"} 
+                                  isMe={isMe} 
+                                />
                               </div>
                             )}
                             {msg.message && (

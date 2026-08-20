@@ -373,3 +373,68 @@ export const StudentProgressPageSkeleton = () => (
     </section>
   </main>
 );
+
+export const ResultsManagementSkeleton = ({ isSchool = false }: { isSchool?: boolean }) => (
+  <div className="w-full space-y-6 animate-pulse">
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <div className="h-8 w-64 bg-gray-200 rounded mb-2"></div>
+        <div className="h-4 w-96 bg-gray-100 rounded"></div>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-32 bg-gray-200 rounded-lg"></div>
+        <div className="h-10 w-48 bg-[#004d33]/20 rounded-lg"></div>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="flex items-center gap-4 bg-white border border-gray-150 p-4 rounded-xl shadow-sm">
+          <div className="h-12 w-12 bg-[#E6FBEA] rounded-xl"></div>
+          <div>
+            <div className="h-3 w-24 bg-gray-100 rounded mb-2"></div>
+            <div className="h-6 w-12 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div className="bg-white border border-gray-150 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+      <div className="p-4 border-b border-gray-150 flex flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <div className="h-5 w-5 bg-gray-200 rounded"></div>
+          <div className="h-5 w-40 bg-gray-200 rounded"></div>
+        </div>
+        <div className="h-8 w-32 bg-gray-200 rounded-lg"></div>
+      </div>
+
+      <div className="w-full overflow-x-auto relative">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-[#F8F9FA]">
+            <tr>
+              {Array.from({ length: isSchool ? 6 : 7 }).map((_, i) => (
+                <th key={i} className="px-6 py-3 text-center">
+                  <div className="h-4 w-20 bg-gray-200 rounded mx-auto"></div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-150">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <tr key={i}>
+                {Array.from({ length: isSchool ? 6 : 7 }).map((_, j) => {
+                  const isActionColumn = j === (isSchool ? 5 : 6);
+                  return (
+                    <td key={j} className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className={`h-4 ${isActionColumn ? 'w-24 h-8' : 'w-16'} bg-gray-100 rounded mx-auto`}></div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+);

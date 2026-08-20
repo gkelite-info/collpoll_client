@@ -12,10 +12,18 @@ interface SecureMediaProps {
 export default function SecureMedia({ path, type, isMe = false }: SecureMediaProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  // If it's already a full HTTP URL (legacy backward compatibility), just use it
-  const secureUrl = path.startsWith("http")
-    ? path
-    : `/api/files/progress_chat_attachments/${path}`;
+  let secureUrl = path;
+  const bucketMarker = "/storage/v1/object/public/";
+  const idx = path.indexOf(bucketMarker);
+  
+  if (idx !== -1) {
+    // Convert full URL to proxy API
+    const relativePath = path.slice(idx + bucketMarker.length); // e.g., "leave_request_chats_attachments/123/..."
+    secureUrl = `/api/files/${relativePath}`;
+  } else if (!path.startsWith("http") && !path.startsWith("/api/")) {
+    // fallback for legacy paths which only had the file path
+    secureUrl = `/api/files/progress_chat_attachments/${path}`;
+  }
 
   if (type === "image") {
     return (

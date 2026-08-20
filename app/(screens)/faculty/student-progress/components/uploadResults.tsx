@@ -92,6 +92,12 @@ export default function UploadResults() {
       .some((educationType) => isSchoolEducation(educationType)) === true ||
     isSchoolFromCookie;
 
+  const isInter =
+    collegeEducationType?.trim().toLowerCase() === "inter" ||
+    faculty_edu_type
+      ?.split(",")
+      .some((t) => t.trim().toLowerCase() === "inter");
+
   const branchParam = searchParams.get("branch") || college_branch || "N/A";
   const yearParam = searchParams.get("year") || "N/A";
   const sectionParam = searchParams.get("section") || "N/A";
@@ -263,7 +269,7 @@ export default function UploadResults() {
               <p className="text-sm font-extrabold text-gray-800 mt-1 truncate">{examTypeParam}</p>
             </div>
             {!isSchool && <div className="bg-[#F8F9FA] border border-gray-200 rounded-xl p-4 flex flex-col justify-center shadow-sm">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{collegeEducationType === "Inter" ? "Group" : "Branch"}</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{isInter ? "Group" : "Branch"}</span>
               <p className="text-sm font-extrabold text-gray-800 mt-1 truncate">{branchParam}</p>
             </div>}
             <div className="bg-[#F8F9FA] border border-gray-200 rounded-xl p-4 flex flex-col justify-center shadow-sm">
@@ -276,7 +282,7 @@ export default function UploadResults() {
             </div>
           </div>
 
-          {!isSchool && (parsedSemesterId ? (
+          {!isSchool && !isInter && (parsedSemesterId ? (
             <div className="bg-[#E6FBEA] text-[#007A48] border border-[#d2f7da] rounded-xl p-3 text-xs font-semibold flex items-center gap-2 shadow-sm">
               <div className="w-1.5 h-1.5 rounded-full bg-[#007A48]"></div>
               Target Semester: Semester {parsedSemesterId}

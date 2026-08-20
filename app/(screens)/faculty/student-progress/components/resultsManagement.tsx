@@ -19,6 +19,7 @@ import * as XLSX from "xlsx";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getFacultyResultsOverview } from "@/lib/helpers/faculty/results/getFacultyResultsOverview";
+import { ResultsManagementSkeleton } from "../shimmer/StudentProgressSkeleton";
 
 export default function ResultsManagement() {
   const router = useRouter();
@@ -86,6 +87,7 @@ export default function ResultsManagement() {
         sectionName: selectedSection,
         page: currentPage,
         pageSize: itemsPerPage,
+        branchName: isSchool ? "N/A" : (college_branch || "N/A"),
       });
     },
     enabled: !!collegeId && !!facultyId && !!collegeEducationId,
@@ -185,7 +187,12 @@ export default function ResultsManagement() {
     params.set("year", row.year);
     params.set("section", row.section);
     params.set("students", String(row.students));
-    params.set("branch", college_branch || "N/A");
+    if (!isSchool) {
+      params.set("branch", row.branch || "N/A");
+      if (row.branchId) {
+        params.set("branchId", String(row.branchId));
+      }
+    }
     params.set("subject", assignedSubject);
     params.set("sectionId", String(row.sectionId));
     params.set("academicYearId", String(row.academicYearId));
@@ -203,8 +210,10 @@ export default function ResultsManagement() {
     params.set("section", row.section);
     params.set("students", String(row.students));
     if (!isSchool) {
-      params.set("branch", college_branch || "N/A");
-      params.set("branchId", String(collegeBranchId || ""));
+      params.set("branch", row.branch || "N/A");
+      if (row.branchId) {
+        params.set("branchId", String(row.branchId));
+      }
     }
     params.set("subject", assignedSubject);
     params.set("sectionId", String(row.sectionId));
@@ -214,6 +223,10 @@ export default function ResultsManagement() {
     params.set("collegeExamScheduleId", String(row.collegeExamScheduleId));
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
+
+  if (isLoading) {
+    return <ResultsManagementSkeleton isSchool={isSchool} />;
+  }
 
   return (
     <div className="w-full space-y-6">
@@ -304,35 +317,44 @@ export default function ResultsManagement() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="flex items-center gap-4 bg-white border border-gray-150 p-4 rounded-xl shadow-sm relative overflow-hidden">
-          {isFetching && <div className="absolute inset-0 bg-white/40 animate-pulse z-10" />}
-          <div className="bg-[#E6FBEA] text-[#43C17A] p-3 rounded-xl">
+          <div className="bg-[#E6FBEA] text-[#43C17A] p-3 rounded-xl shrink-0">
             <Chalkboard size={24} weight="fill" />
           </div>
-          <div>
+          <div className="flex flex-col gap-1">
             <p className="text-xs font-semibold text-gray-500">Assigned Classes</p>
-            <p className="text-2xl font-bold text-gray-800">{assignedClassesCount}</p>
+            {isFetching ? (
+              <div className="h-7 md:h-8 w-12 md:w-16 animate-pulse rounded-lg bg-gray-200" />
+            ) : (
+              <p className="text-2xl font-bold text-gray-800">{assignedClassesCount}</p>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-4 bg-white border border-gray-150 p-4 rounded-xl shadow-sm relative overflow-hidden">
-          {isFetching && <div className="absolute inset-0 bg-white/40 animate-pulse z-10" />}
-          <div className="bg-[#E6FBEA] text-[#43C17A] p-3 rounded-xl">
+          <div className="bg-[#E6FBEA] text-[#43C17A] p-3 rounded-xl shrink-0">
             <CheckCircle size={24} weight="fill" />
           </div>
-          <div>
+          <div className="flex flex-col gap-1">
             <p className="text-xs font-semibold text-gray-500">Results Uploaded</p>
-            <p className="text-2xl font-bold text-gray-800">{resultsUploadedCount}</p>
+            {isFetching ? (
+              <div className="h-7 md:h-8 w-12 md:w-16 animate-pulse rounded-lg bg-gray-200" />
+            ) : (
+              <p className="text-2xl font-bold text-gray-800">{resultsUploadedCount}</p>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-4 bg-white border border-gray-150 p-4 rounded-xl shadow-sm relative overflow-hidden">
-          {isFetching && <div className="absolute inset-0 bg-white/40 animate-pulse z-10" />}
-          <div className="bg-[#FFE0E0] text-[#FF3B30] p-3 rounded-xl">
+          <div className="bg-[#FFE0E0] text-[#FF3B30] p-3 rounded-xl shrink-0">
             <ClipboardText size={24} weight="fill" />
           </div>
-          <div>
+          <div className="flex flex-col gap-1">
             <p className="text-xs font-semibold text-gray-500">Pending Uploads</p>
-            <p className="text-2xl font-bold text-gray-800">{pendingUploadsCount}</p>
+            {isFetching ? (
+              <div className="h-7 md:h-8 w-12 md:w-16 animate-pulse rounded-lg bg-gray-200" />
+            ) : (
+              <p className="text-2xl font-bold text-gray-800">{pendingUploadsCount}</p>
+            )}
           </div>
         </div>
       </div>
