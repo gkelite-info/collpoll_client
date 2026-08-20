@@ -1,3 +1,55 @@
+/**
+ * ============================================================================
+ * SCHOOL LOGIC & EDUCATION LEVEL GUIDELINES
+ * ============================================================================
+ * This helper file provides utilities to differentiate between School, Inter, 
+ * and Higher Education (Degree, B.Tech, PG) levels. Agents and developers must 
+ * use these guidelines to conditionally render or fetch appropriate data.
+ * 
+ * 1. SCHOOL LEVEL (CBSE, SSC, ICSE, etc.)
+ *    - No `branch_id` or branch context.
+ *    - No `sem_ids` or semester context.
+ *    - Academic structure is direct: Year -> Subjects.
+ *    - Subjects are fetched year-wise directly.
+ *    - In UI: Hide Branch and Semester filters/columns entirely.
+ * 
+ * 2. INTERMEDIATE LEVEL (Inter)
+ *    - Has `branch` context, but in the frontend, it should be displayed as "Group".
+ *    - No `sem_ids` or semester context.
+ *    - Academic structure: Branch (Group) + Year -> Subjects.
+ *    - Subjects are fetched branch-wise and year-wise.
+ *    - In UI: Show "Group" label instead of "Branch". Hide Semester filter/column.
+ * 
+ * 3. HIGHER EDUCATION (Degree, B.Tech, PG, etc.)
+ *    - Has full `branch_id` and branch context.
+ *    - Has full `sem_ids` and semester context.
+ *    - Academic structure: Branch + Year + Semester -> Subjects.
+ *    - Frontend should display "Branch".
+ *    - In UI: Show Branch and Semester filters/columns.
+ * 
+ * ============================================================================
+ * BRANCH RESOLUTION FOR MULTI-BRANCH FACULTY
+ * ============================================================================
+ * When a faculty is assigned to multiple branches (e.g., teaches across EEE, BSC,
+ * B.COM, MPC), the global `college_branch` context in useFaculty() becomes a
+ * comma-separated string like "EEE, BSC, B.COM, MPC". This must NEVER be shown 
+ * directly as a row's branch value.
+ * 
+ * Instead, resolve the exact branch per row using this priority:
+ *   1. faculty_sections.collegeBranchId — The most authoritative; each faculty 
+ *      section row is always linked to a single specific branch.
+ *   2. college_subjects.collegeBranchId — The subject's parent branch.
+ *   3. college_sections.collegeBranchId — The section's parent branch.
+ *   4. college_exam_schedules.collegeBranchId — The exam schedule's branch.
+ *   5. Global collegeBranchId from params — Only if faculty has a single branch.
+ *   6. "N/A" — Safe fallback. Never fall back to the multi-branch string.
+ * 
+ * For Schools: Always use "N/A" (no branch concept).
+ * For Inter: The resolved branch should be displayed as "Group" in the UI.
+ * ============================================================================
+ */
+
+
 export const SCHOOL_BOARDS = ["CBSE", "SSC", "ICSE", "ISC", "IB"];
 
 export const isSchoolEducation = (type: string | null | undefined): boolean => {

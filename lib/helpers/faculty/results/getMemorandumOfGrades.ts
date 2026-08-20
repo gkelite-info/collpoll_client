@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
 import { fetchStudentsWithProfile } from "@/lib/helpers/faculty/fetchStudents";
+import { resolveGradePoints, resolvePassFail } from "./gradeHelper";
 
 export async function getMemorandumOfGrades(
   collegeId: number,
@@ -143,24 +144,7 @@ export async function getMemorandumOfGrades(
     });
 
     // 6. Map students to StudentGradeRow
-    const getGradePoints = (grade: string): number => {
-      const g = grade.toUpperCase().trim();
-      switch (g) {
-        case "A+": return 10;
-        case "A": return 9;
-        case "B+": return 8;
-        case "B": return 7;
-        case "C": return 6;
-        case "F": return 0; // standard fail
-        default: return 0;
-      }
-    };
-
-    const isPass = (grade: string): "P" | "F" | "-" => {
-      const g = grade.toUpperCase().trim();
-      if (!g || g === "N/A") return "-";
-      return g === "F" ? "F" : "P";
-    };
+    // 6. Map students to StudentGradeRow
 
     const mappedGrades = students.map((s: any) => {
       const studentKeyId = s.id || s.studentId;
@@ -179,8 +163,9 @@ export async function getMemorandumOfGrades(
       const sectionName = secIdNum ? (sectionMap.get(secIdNum) || "") : "";
 
       const grade = res?.grade || "N/A";
-      const gradePoints = getGradePoints(grade);
-      const passFail = isPass(grade);
+      const totalMarks = res?.total;
+      const gradePoints = resolveGradePoints(grade, totalMarks);
+      const passFail = resolvePassFail(grade);
 
       return {
         studentId: pin,

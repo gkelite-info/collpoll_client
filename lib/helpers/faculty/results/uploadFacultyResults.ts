@@ -43,6 +43,8 @@ export async function uploadFacultyResults(
     const sampleRow = resultsJson[0];
     const keys = Object.keys(sampleRow);
     const findKey = (candidates: string[]) => keys.find(k => candidates.includes(k.toLowerCase().trim()));
+    
+    console.log("[UPLOAD_DEBUG] Excel Keys:", keys);
 
     const rollNoKey = findKey(["roll no", "rollno", "student id", "studentid", "pin number", "pinnumber", "student roll no", "register no", "reg no"]);
     const internalKey = findKey(["internal marks", "internalmarks", "internal", "internals"]);
@@ -89,6 +91,7 @@ export async function uploadFacultyResults(
     }
 
     const studentIds = historyRows.map(h => h.studentId);
+    console.log(`[UPLOAD_DEBUG] Found ${studentIds.length} students enrolled in section ${sectionId} year ${collegeAcademicYearId}`);
 
     // 3. Fetch pins for mapping roll numbers to studentIds
     const { data: pinRows, error: pinError } = await supabase
@@ -104,20 +107,24 @@ export async function uploadFacultyResults(
     const pinMap = new Map<string, number>();
     pinRows?.forEach(r => {
       if (r.pinNumber) {
-        pinMap.set(r.pinNumber.trim().toUpperCase(), r.studentId);
+        // SaaS Level robustness: completely strip all whitespace including non-breaking spaces
+        pinMap.set(r.pinNumber.replace(/\s/g, "").toUpperCase(), r.studentId);
       }
     });
+    console.log(`[UPLOAD_DEBUG] Mapped ${pinMap.size} pins:`, Array.from(pinMap.keys()));
 
     // 4. Map JSON rows to database inserts
     const resultsToInsert: any[] = [];
     const notFoundRollNos: string[] = [];
 
     resultsJson.forEach(row => {
-      const rollVal = String(row[rollNoKey] || "").trim().toUpperCase();
+      // Robust matching: strip all spaces
+      const rawRoll = String(row[rollNoKey] || "");
+      const rollVal = rawRoll.replace(/\s/g, "").toUpperCase();
       const studentId = pinMap.get(rollVal);
 
       if (!studentId) {
-        if (rollVal) notFoundRollNos.push(rollVal);
+        if (rollVal) notFoundRollNos.push(rawRoll.trim());
         return;
       }
 
@@ -141,7 +148,14 @@ export async function uploadFacultyResults(
     });
 
     if (resultsToInsert.length === 0) {
-      return { success: false, message: "No matching student roll numbers found in the excel sheet for this section." };
+      console.log("[UPLOAD_DEBUG] No match found. Not Found Roll Nos:", notFoundRollNos);
+      console.log("[UPLOAD_DEBUG] Excel first few rows:", resultsJson.slice(0, 2));
+      
+      const sampleRolls = notFoundRollNos.slice(0, 3).join(", ");
+      return { 
+        success: false, 
+        message: `No matching students found in this section for the roll numbers provided (e.g., ${sampleRolls}). Please ensure you are uploading the correct file for this specific section and year.` 
+      };
     }
 
     // 5. Delete existing results for this specific schedule & subject
