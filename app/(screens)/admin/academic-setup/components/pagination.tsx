@@ -13,6 +13,7 @@ interface PaginationProps {
   onItemsPerPageChange?: (items: number) => void;
   disabled?: boolean;
   alwaysShow?: boolean;
+  bgClassName?: string;
 }
 
 export function Pagination({
@@ -24,7 +25,8 @@ export function Pagination({
   itemsPerPageOptions,
   onItemsPerPageChange,
   disabled,
-  alwaysShow
+  alwaysShow,
+  bgClassName = "bg-white border-t border-gray-200"
 }: PaginationProps) {
   const [dropdownPosition, setDropdownPosition] = useState<"top" | "bottom">("bottom");
 
@@ -60,7 +62,7 @@ export function Pagination({
   const visiblePages = getPageNumbers();
 
   return (
-    <div className={`flex items-center justify-between px-2 py-4 sm:px-4 bg-white border-t border-gray-200 mt-auto w-full ${roundedBottom || ""} ${disabled ? "opacity-50 pointer-events-none" : "transition-opacity duration-200"}`}>
+    <div className={`flex items-center justify-between px-2 py-4 sm:px-4 ${bgClassName} mt-auto w-full ${roundedBottom || ""} ${disabled ? "opacity-50 pointer-events-none" : "transition-opacity duration-200"}`}>
       <div className="flex flex-col gap-4 w-full md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 md:gap-6 w-full md:w-auto shrink-0">
           {itemsPerPageOptions && onItemsPerPageChange && (
@@ -70,7 +72,7 @@ export function Pagination({
                 <Listbox value={itemsPerPage} onChange={onItemsPerPageChange} disabled={disabled}>
                   {({ open }) => (
                     <>
-                      <Listbox.Button 
+                      <Listbox.Button
                         onPointerDown={checkPosition}
                         onClick={checkPosition}
                         className="relative w-full cursor-pointer rounded-lg bg-white py-1.5 pl-3 pr-8 text-left border border-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 sm:text-sm"
@@ -91,17 +93,16 @@ export function Pagination({
                         leaveFrom="opacity-100"
                         leaveTo="opacity-0"
                       >
-                        <Listbox.Options 
+                        <Listbox.Options
                           className={`absolute ${dropdownPosition === "top" ? "bottom-full mb-1" : "top-full mt-1"} max-h-60 w-full overflow-auto rounded-lg bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50`}
                         >
                           {itemsPerPageOptions.map((option) => (
                             <Listbox.Option
                               key={option}
                               className={({ active, selected }) =>
-                                `relative cursor-pointer select-none py-2 px-3 ${
-                                  selected
-                                    ? "bg-green-100 text-green-800 font-bold"
-                                    : active
+                                `relative cursor-pointer select-none py-2 px-3 ${selected
+                                  ? "bg-green-100 text-green-800 font-bold"
+                                  : active
                                     ? "bg-green-50 text-green-900"
                                     : "text-gray-900"
                                 }`
@@ -110,9 +111,8 @@ export function Pagination({
                             >
                               {({ selected }) => (
                                 <span
-                                  className={`block truncate ${
-                                    selected ? "font-bold text-green-700" : "font-normal"
-                                  }`}
+                                  className={`block truncate ${selected ? "font-bold text-green-700" : "font-normal"
+                                    }`}
                                 >
                                   {option}
                                 </span>
@@ -183,11 +183,10 @@ export function Pagination({
                   key={page}
                   onClick={() => onPageChange(page as number)}
                   disabled={disabled}
-                  className={`relative inline-flex items-center px-2.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold focus:z-20 cursor-pointer ${
-                    isCurrent
+                  className={`relative inline-flex items-center px-2.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold focus:z-20 cursor-pointer ${isCurrent
                       ? "z-10 bg-[#16284F] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#43C17A]"
                       : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
-                  }`}
+                    }`}
                 >
                   {page}
                 </button>

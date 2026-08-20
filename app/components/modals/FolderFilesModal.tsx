@@ -498,19 +498,14 @@ export default function FolderFilesModal({
       const storagePath = `${collegeId}/${file.driveFolderId}/${file.fileName.trim()}`;
       const { data, error } = await supabase.storage
         .from("college-drive")
-        .createSignedUrl(storagePath, 120);
+        .createSignedUrl(storagePath, 120, { download: file.fileName });
       if (error || !data?.signedUrl) return;
 
-      const response = await fetch(data.signedUrl);
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = file.fileName;
+      a.href = data.signedUrl;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
     } catch {
       showToast("Download failed", "error");
     }

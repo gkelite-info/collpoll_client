@@ -107,8 +107,14 @@ export async function createExamSchedule(
     .single();
 
   if (scheduleError) {
-    console.error("Error creating exam schedule:", scheduleError);
-    throw scheduleError;
+    console.error("Error creating exam schedule:");
+    console.error("Message:", scheduleError.message);
+    console.error("Code:", scheduleError.code);
+    console.error("Details:", scheduleError.details);
+    const err = new Error(scheduleError.message) as any;
+    err.code = scheduleError.code;
+    err.details = scheduleError.details;
+    throw err;
   }
 
   const scheduleId = data.collegeExamScheduleId;
@@ -120,7 +126,17 @@ export async function createExamSchedule(
         collegeExamScheduleId: scheduleId,
         collegeSectionsId,
       })));
-    if (sectionsError) throw sectionsError;
+
+    if (sectionsError) {
+      if (sectionsError.code === "PGRST205") {
+        console.warn("Table college_exam_schedule_sections does not exist yet. Please run the SQL migration.");
+      } else {
+        console.error("Error inserting sections:", sectionsError);
+        const err = new Error(sectionsError.message) as any;
+        err.code = sectionsError.code;
+        throw err;
+      }
+    }
   }
 
   if (subjects.length > 0) {
@@ -140,7 +156,9 @@ export async function createExamSchedule(
 
     if (subjectsError) {
       console.error("Error inserting exam schedule subjects:", subjectsError);
-      throw subjectsError;
+      const err = new Error(subjectsError.message) as any;
+      err.code = subjectsError.code;
+      throw err;
     }
   }
 
@@ -176,11 +194,7 @@ export async function fetchExamSchedules(
       college_education ( collegeEducationType ),
       college_branch ( collegeBranchCode ),
       college_semester ( collegeSemester ),
-      college_sections ( collegeSections ),
-      college_exam_schedule_sections (
-        collegeSectionsId,
-        college_sections ( collegeSections )
-      )
+      college_sections ( collegeSections )
     `, { count: 'exact' })
     .eq("collegeId", collegeId)
     .is("deletedAt", null);
@@ -280,6 +294,7 @@ export async function updateExamSchedule(
     throw scheduleError;
   }
 
+  /*
   const { error: deleteSectionsError } = await supabase
     .from("college_exam_schedule_sections")
     .delete()
@@ -295,6 +310,7 @@ export async function updateExamSchedule(
       })));
     if (sectionsError) throw sectionsError;
   }
+  */
 
   const { error: deleteError } = await supabase
     .from("college_exam_schedule_subjects")

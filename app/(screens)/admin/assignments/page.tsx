@@ -195,7 +195,7 @@ const AssignmentPage = () => {
         <div className="relative w-full md:w-[50%]">
           <input
             type="text"
-            placeholder="Search here......"
+            placeholder="Search by branch or faculty name..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);

@@ -73,7 +73,7 @@ export default function CourseScheduleCard({
       const activeSection = sections[selectedSectionIndex];
       if (activeSection) {
         displayBranch = activeSection.college_branch?.collegeBranchCode || college_branch || "";
-        displayEducation = activeSection.faculty_edu_type?.collegeEducationType || faculty_edu_type || "";
+        displayEducation = faculty_edu_type || collegeEducationType || "";
       }
     }
   }
@@ -116,7 +116,7 @@ export default function CourseScheduleCard({
             </p>
           ) : role === "Faculty" ? (
             <p className="text-[#EFEFEF] text-md font-medium text-center">
-              {displayBranch ? displayBranch : (displayEducation || "—")}
+              {displayEducation || "—"}
             </p>
           ) : role === "Finance" || role === "FinanceManager" ? (
             <p className="text-[#EFEFEF] text-md font-medium">
