@@ -224,25 +224,87 @@ export async function createEmployeeExpenseReport(
   }
 }
 
-export async function fetchEmployeeExpenseReports(
+export async function fetchEmployeeExpenseReportStats(
   userId: number,
   collegeId: number,
-): Promise<EmployeeExpenseReport[]> {
+) {
   const employeeId = await getEmployeeIdPk(userId, collegeId);
   const { data: reports, error } = await supabase
     .from("employee_expense_reports")
-    .select("employeeExpenseReportId, expenseTitle, expenseCategory, expenseDate, amountSpent, description, paymentBank, accountNumber, ifscCode, status, approvedAt, rejectedAt, createdAt")
+    .select("employeeExpenseReportId, status")
+    .eq("employeeId", employeeId)
+    .eq("collegeId", collegeId)
+    .is("deletedAt", null);
+
+  if (error) throw error;
+  if (!reports || !reports.length) {
+    return { total: 0, pending: 0, paid: 0, rejected: 0 };
+  }
+
+  const reportIds = reports.map((r) => r.employeeExpenseReportId);
+  const { data: approvals, error: approvalError } = await supabase
+    .from("employee_expense_approvals")
+    .select("employeeExpenseReportId, status")
+    .in("employeeExpenseReportId", reportIds)
+    .eq("collegeId", collegeId)
+    .is("deletedAt", null);
+
+  if (approvalError) throw approvalError;
+
+  const approvalByReportId = new Map(
+    (approvals || []).map((approval) => [approval.employeeExpenseReportId, approval.status])
+  );
+
+  let pending = 0;
+  let paid = 0;
+  let rejected = 0;
+
+  for (const report of reports) {
+    const approvalStatus = approvalByReportId.get(report.employeeExpenseReportId);
+    let finalStatus = report.status;
+    if (approvalStatus === "approved") finalStatus = "paid";
+    else if (approvalStatus === "rejected") finalStatus = "payment_rejected";
+
+    const normalizedStatus = finalStatus?.toLowerCase();
+    if (normalizedStatus === "rejected" || normalizedStatus === "payment_rejected") {
+      rejected++;
+    } else if (["paid", "approved", "completed"].includes(normalizedStatus ?? "")) {
+      paid++;
+    } else {
+      pending++;
+    }
+  }
+
+  return { total: reports.length, pending, paid, rejected };
+}
+
+export async function fetchEmployeeExpenseReports(
+  userId: number,
+  collegeId: number,
+  page: number = 1,
+  limit: number = 5,
+  sortOrder: "asc" | "desc" = "desc"
+): Promise<{ reports: EmployeeExpenseReport[]; totalCount: number }> {
+  const employeeId = await getEmployeeIdPk(userId, collegeId);
+  
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data: reports, count, error } = await supabase
+    .from("employee_expense_reports")
+    .select("employeeExpenseReportId, expenseTitle, expenseCategory, expenseDate, amountSpent, description, paymentBank, accountNumber, ifscCode, status, approvedAt, rejectedAt, createdAt", { count: "exact" })
     .eq("employeeId", employeeId)
     .eq("collegeId", collegeId)
     .is("deletedAt", null)
-    .order("createdAt", { ascending: false });
+    .order("createdAt", { ascending: sortOrder === "asc" })
+    .range(from, to);
 
   if (error) throw error;
   const reportRows = (reports ?? []) as Omit<
     EmployeeExpenseReport,
     "attachments" | "paymentApproval"
   >[];
-  if (!reportRows.length) return [];
+  if (!reportRows.length) return { reports: [], totalCount: count || 0 };
 
   const reportIds = reportRows.map((report) => report.employeeExpenseReportId);
   const [{ data: attachments, error: attachmentError }, { data: approvals, error: approvalError }] =
@@ -270,24 +332,27 @@ export async function fetchEmployeeExpenseReports(
     approvalRows.map((approval) => [approval.employeeExpenseReportId, approval]),
   );
 
-  return reportRows.map((report) => {
-    const paymentApproval =
-      approvalByReportId.get(report.employeeExpenseReportId) ?? null;
-    return {
-      ...report,
-      status:
-        paymentApproval?.status === "approved"
-          ? "paid"
-          : paymentApproval?.status === "rejected"
-            ? "payment_rejected"
-            : report.status,
-      amountSpent: Number(report.amountSpent),
-      attachments: attachmentRows.filter(
-        (attachment) => attachment.employeeExpenseReportId === report.employeeExpenseReportId,
-      ),
-      paymentApproval,
-    };
-  });
+  return {
+    reports: reportRows.map((report) => {
+      const paymentApproval =
+        approvalByReportId.get(report.employeeExpenseReportId) ?? null;
+      return {
+        ...report,
+        status:
+          paymentApproval?.status === "approved"
+            ? "paid"
+            : paymentApproval?.status === "rejected"
+              ? "payment_rejected"
+              : report.status,
+        amountSpent: Number(report.amountSpent),
+        attachments: attachmentRows.filter(
+          (attachment) => attachment.employeeExpenseReportId === report.employeeExpenseReportId,
+        ),
+        paymentApproval,
+      };
+    }),
+    totalCount: count || 0
+  };
 }
 
 export async function getExpenseAttachmentSignedUrl(filePath: string, downloadFileName?: string) {

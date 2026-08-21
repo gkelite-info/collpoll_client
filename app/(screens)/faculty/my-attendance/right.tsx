@@ -9,16 +9,14 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 import type { Task } from "@/app/utils/taskPanel";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import TaskModal from "@/app/components/modals/taskModal";
 
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function MyAttendanceRight({ activeMainTab }: { activeMainTab?: string }) {
   const queryClient = useQueryClient();
-  const [openModal, setOpenModal] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [view, setView] = useState<"my" | "others">("others");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const {
     facultyId,
@@ -89,14 +87,19 @@ export default function MyAttendanceRight({ activeMainTab }: { activeMainTab?: s
   return (
     <div className="w-[32%] p-2 flex flex-col max-md:hidden h-full">
       <CourseScheduleCard />
-      <WorkWeekCalendar />
+      <WorkWeekCalendar 
+        activeDate={selectedDate || undefined}
+        onDateSelect={(date) => setSelectedDate(date)} 
+      />
       <TaskPanel
         role="faculty"
         enableInfiniteScroll={true}
         loading={isTasksLoading}
         collegeSubjectId={collegeSubjectId ?? undefined}
         facultyId={facultyId ?? undefined}
-        onAddTask={() => setOpenModal(true)}
+        selectedDate={selectedDate ? selectedDate.toLocaleDateString("en-CA") : null}
+        onDateChange={(date) => setSelectedDate(date ? new Date(date) : null)}
+        onAddTask={() => {}}
         onSaveTask={handleSave}
         onDeleteTask={async () => {
           queryClient.invalidateQueries({ queryKey: ["facultyTasksInfinite", facultyId, collegeSubjectId] });
@@ -104,30 +107,13 @@ export default function MyAttendanceRight({ activeMainTab }: { activeMainTab?: s
         }}
       />
 
-      {openModal && (
-        <TaskModal
-          open={openModal}
-          role="faculty"
-          collegeSubjectId={collegeSubjectId!}
-          facultyId={facultyId!}
-          onClose={() => {
-            setOpenModal(false);
-            setEditingTask(null);
-          }}
-          defaultValues={editingTask}
-          onSave={async (payload, taskId) => {
-            await handleSave(payload, taskId);
-            setOpenModal(false);
-            setEditingTask(null);
-          }}
-        />
-      )}
-
       <div className="flex-1 min-h-0 mt-4">
         <AnnouncementsCard
           className="h-full"
           enableInfiniteScroll={true}
           currentView={view}
+          selectedDate={selectedDate ? selectedDate.toLocaleDateString("en-CA") : null}
+          onDateChange={(date) => setSelectedDate(date ? new Date(date) : null)}
           isLoading={isAnnouncementsLoadingFinal}
           onViewChange={(v) => setView(v as "my" | "others")}
           refreshAnnouncements={async () => { await queryClient.invalidateQueries({ queryKey: ["announcementsInfinite"] }); }}

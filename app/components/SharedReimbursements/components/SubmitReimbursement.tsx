@@ -3,6 +3,7 @@
 import { ChangeEvent, DragEvent, FormEvent, useRef, useState } from "react";
 import { Building2, ChevronDown, ChevronLeft, CloudUpload, FileText, ReceiptText, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useUser } from "@/app/utils/context/UserContext";
 import { createEmployeeExpenseReport, updateEmployeeExpenseReport, type EmployeeExpenseReport } from "@/lib/helpers/reimbursements/employeeExpenseReportsAPI";
@@ -54,8 +55,8 @@ const getSubmissionErrorMessage = (error: unknown) => {
 
 export default function SubmitReimbursement({ onBack, onSubmitted, initialReport }: SubmitReimbursementProps) {
   const { userId, collegeId, loading: userLoading } = useUser();
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [isAddingCustomCategory, setIsAddingCustomCategory] = useState(false);
   const [customCategory, setCustomCategory] = useState("");
@@ -136,7 +137,34 @@ export default function SubmitReimbursement({ onBack, onSubmitted, initialReport
     void addFiles(Array.from(event.dataTransfer.files));
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const mutation = useMutation({
+    mutationFn: async (payload: { expensePayload: any; files: File[] }) => {
+      const { expensePayload, files } = payload;
+      if (initialReport) {
+        return await updateEmployeeExpenseReport({
+          ...expensePayload,
+          employeeExpenseReportId: initialReport.employeeExpenseReportId,
+          newAttachments: files,
+        });
+      } else {
+        return await createEmployeeExpenseReport({ ...expensePayload, attachments: files });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employeeExpenseReports"] });
+      queryClient.invalidateQueries({ queryKey: ["employeeExpenseReportStats"] });
+      toast.success(isEditing ? "Reimbursement request updated successfully." : "Reimbursement request submitted successfully.");
+      onSubmitted?.();
+      onBack();
+    },
+    onError: (error) => {
+      toast.error(getSubmissionErrorMessage(error));
+    },
+  });
+
+  const submitting = mutation.isPending;
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!userId || !collegeId) {
       toast.error("Your employee context is still loading. Please try again.");
@@ -157,37 +185,19 @@ export default function SubmitReimbursement({ onBack, onSubmitted, initialReport
     const ifscCode = form.ifscCode.trim().toUpperCase();
     if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode)) return toast.error("Enter a valid 11-character IFSC code, for example HDFC0001234.");
 
-    setSubmitting(true);
-    try {
-      const expensePayload = {
-        userId,
-        collegeId,
-        expenseTitle: form.expenseTitle,
-        expenseCategory: form.expenseCategory,
-        expenseDate: form.expenseDate,
-        amountSpent: amount,
-        description: form.description,
-        paymentBank: form.paymentBank,
-        accountNumber: form.accountNumber,
-        ifscCode: form.ifscCode,
-      };
-      if (initialReport) {
-        await updateEmployeeExpenseReport({
-          ...expensePayload,
-          employeeExpenseReportId: initialReport.employeeExpenseReportId,
-          newAttachments: files,
-        });
-      } else {
-        await createEmployeeExpenseReport({ ...expensePayload, attachments: files });
-      }
-      toast.success(isEditing ? "Reimbursement request updated successfully." : "Reimbursement request submitted successfully.");
-      onSubmitted?.();
-      onBack();
-    } catch (error) {
-      toast.error(getSubmissionErrorMessage(error));
-    } finally {
-      setSubmitting(false);
-    }
+    const expensePayload = {
+      userId,
+      collegeId,
+      expenseTitle: form.expenseTitle,
+      expenseCategory: form.expenseCategory,
+      expenseDate: form.expenseDate,
+      amountSpent: amount,
+      description: form.description,
+      paymentBank: form.paymentBank,
+      accountNumber: form.accountNumber,
+      ifscCode: form.ifscCode,
+    };
+    mutation.mutate({ expensePayload, files });
   };
 
   return (

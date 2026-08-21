@@ -253,7 +253,7 @@ const AttendanceTable: React.FC<Props> = ({
       </div>
 
       <div className="flex justify-end max-md:justify-start mb-2 mt-1">
-        <span className="text-[12px] text-gray-500 italic">
+        <span className="text-[12px] text-red-500 italic">
           * Note: Classes Taken will change according to chosen filter values.
         </span>
       </div>

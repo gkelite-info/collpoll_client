@@ -1,5 +1,6 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, Fragment } from "react";
 import toast from "react-hot-toast";
+import { useQuery } from "@tanstack/react-query";
 import { Listbox, Transition } from "@headlessui/react";
 import { CaretDown } from "@phosphor-icons/react";
 import { getMyPayslips } from "@/lib/helpers/Hr/payroll/payrollAPI";
@@ -12,13 +13,10 @@ interface PayslipsSectionProps {
 }
 
 export function PayslipsSection({ userId }: PayslipsSectionProps) {
-  const [paySlips, setPaySlips] = useState<any[]>([]);
-  const [isFetchingSlips, setIsFetchingSlips] = useState(true);
   const [previewEntryId, setPreviewEntryId] = useState<number | null>(null);
 
   // Pagination & Filtering State
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPayslips, setTotalPayslips] = useState(0);
   const itemsPerPage = 10;
 
   // Year Filter State
@@ -32,28 +30,27 @@ export function PayslipsSection({ userId }: PayslipsSectionProps) {
   const yearFilterOptions = [allOption, ...yearOptions];
   const [selectedYear, setSelectedYear] = useState<number | string>(allOption);
 
-  const loadPayslips = async () => {
-    if (!userId) return;
-    setIsFetchingSlips(true);
-    try {
-      const { slips, total } = await getMyPayslips(
-        userId,
-        currentPage,
-        itemsPerPage,
-        selectedYear === allOption ? undefined : selectedYear
-      );
-      setPaySlips(slips);
-      setTotalPayslips(total);
-    } catch (error) {
-      toast.error("Unable to fetch payslips at this time.", { id: "payslips-fetch-error" });
-    } finally {
-      setIsFetchingSlips(false);
-    }
-  };
+  const { data: payslipsData, isFetching: isFetchingSlips } = useQuery({
+    queryKey: ["myPayslips", userId, currentPage, selectedYear],
+    queryFn: async () => {
+      try {
+        return await getMyPayslips(
+          userId,
+          currentPage,
+          itemsPerPage,
+          selectedYear === allOption ? undefined : selectedYear
+        );
+      } catch (error) {
+        toast.error("Unable to fetch payslips at this time.", { id: "payslips-fetch-error" });
+        throw error;
+      }
+    },
+    enabled: !!userId,
+    placeholderData: (previousData) => previousData, // keepPreviousData logic
+  });
 
-  useEffect(() => {
-    loadPayslips();
-  }, [userId, currentPage, selectedYear]);
+  const paySlips = payslipsData?.slips || [];
+  const totalPayslips = payslipsData?.total || 0;
 
   const handleYearChange = (year: number | string) => {
     setSelectedYear(year);
@@ -142,17 +139,16 @@ export function PayslipsSection({ userId }: PayslipsSectionProps) {
       </div>
 
       <div className="flex flex-col w-full">
-        <div className="relative overflow-y-auto max-h-[500px] min-h-[200px] custom-scrollbar pb-2 flex flex-col gap-3 rounded-xl">
+        <div className={`relative overflow-y-auto max-h-[600px] custom-scrollbar flex flex-col gap-3 rounded-xl ${paySlips.length === 0 ? "" : "pb-2"}`}>
           {isFetchingSlips ? (
             <>
               <PaySlipShimmer />
               <PaySlipShimmer />
               <PaySlipShimmer />
               <PaySlipShimmer />
-              <PaySlipShimmer />
             </>
           ) : paySlips.length === 0 ? (
-            <div className="text-center text-gray-500 py-10 bg-white rounded-xl shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50 mr-1">
+            <div className="bg-white rounded-t-xl p-8 text-center text-[#666666] border border-gray-100 border-b-0 shadow-sm min-h-[400px] flex items-center justify-center">
               No payslips found for {selectedYear === allOption ? "your history" : selectedYear}.
             </div>
           ) : (
@@ -245,14 +241,15 @@ export function PayslipsSection({ userId }: PayslipsSectionProps) {
         </div>
 
         {/* Server-Side Pagination */}
-        {paySlips.length > 0 && totalPayslips > 0 && !isFetchingSlips && (
-          <div className="mt-1 border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+        {!isFetchingSlips && (
+          <div className={`border border-gray-100 shadow-sm overflow-hidden ${paySlips.length === 0 ? "rounded-b-xl bg-white border-t-0 mt-0" : "rounded-xl mt-1"}`}>
             <Pagination
               currentPage={currentPage}
               totalItems={totalPayslips}
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
-              roundedBottom="rounded-xl"
+              roundedBottom={paySlips.length === 0 ? "rounded-b-xl" : "rounded-xl"}
+              alwaysShow={true}
             />
           </div>
         )}

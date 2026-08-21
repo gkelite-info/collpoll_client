@@ -12,7 +12,6 @@ import {
 } from "@/lib/helpers/faculty/facultyTasks";
 import type { Task } from "@/app/utils/taskPanel";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import TaskModal from "@/app/components/modals/taskModal";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
 
 const typeIcons: Record<string, string> = {
@@ -35,9 +34,8 @@ const formatRole = (role: string) =>
 
 export default function FacultyDashRight() {
   const queryClient = useQueryClient();
-  const [openModal, setOpenModal] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [view, setView] = useState<"my" | "others">("others");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const {
     facultyId,
@@ -112,7 +110,10 @@ export default function FacultyDashRight() {
   return (
     <div className="hidden h-full min-h-0 flex-col overflow-hidden p-2 pb-4 md:flex md:w-[35%] lg:w-[32%]">
       <CourseScheduleCard />
-      <WorkWeekCalendar />
+      <WorkWeekCalendar 
+        activeDate={selectedDate || undefined}
+        onDateSelect={(date) => setSelectedDate(date)} 
+      />
 
       <TaskPanel
         role="faculty"
@@ -120,36 +121,22 @@ export default function FacultyDashRight() {
         loading={isTasksLoading}
         collegeSubjectId={collegeSubjectId ?? undefined}
         facultyId={facultyId ?? undefined}
-        onAddTask={() => { }}
+        selectedDate={selectedDate ? selectedDate.toLocaleDateString("en-CA") : null}
+        onDateChange={(date) => setSelectedDate(date ? new Date(date) : null)}
+        onAddTask={() => {}}
         onSaveTask={handleSave}
         onDeleteTask={async () => {
           queryClient.invalidateQueries({ queryKey: ["facultyTasks", facultyId, collegeSubjectId, collegeSectionId] });
         }}
       />
 
-      {openModal && (
-        <TaskModal
-          open={openModal}
-          role="faculty"
-          collegeSubjectId={collegeSubjectId!}
-          facultyId={facultyId!}
-          onClose={() => {
-            setOpenModal(false);
-            setEditingTask(null);
-          }}
-          defaultValues={editingTask}
-          onSave={async (payload, taskId) => {
-            await handleSave(payload, taskId);
-            setOpenModal(false);
-            setEditingTask(null);
-          }}
-        />
-      )}
       <div className="min-h-0 flex-1 mt-4">
         <AnnouncementsCard
           className="h-full"
           enableInfiniteScroll={true}
           currentView={view}
+          selectedDate={selectedDate ? selectedDate.toLocaleDateString("en-CA") : null}
+          onDateChange={(date) => setSelectedDate(date ? new Date(date) : null)}
           isLoading={isAnnouncementsLoadingFinal}
           onViewChange={(v) => setView(v as "my" | "others")}
           refreshAnnouncements={async () => { await queryClient.invalidateQueries({ queryKey: ["announcementsInfinite"] }); }}

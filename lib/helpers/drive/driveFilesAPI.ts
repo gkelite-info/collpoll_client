@@ -63,8 +63,13 @@ export type DriveFileRow = {
 
 export async function fetchDriveFilesByFolder(
     driveFolderId: number,
+    page: number = 1,
+    limit: number = 10,
 ) {
-    const { data, error } = await supabase
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data, error, count } = await supabase
         .from("drive_files")
         .select(`
       driveFileId,
@@ -77,18 +82,20 @@ export async function fetchDriveFilesByFolder(
       uploadedBy,
       createdAt,
       updatedAt,
-      deletedAt
-    `)
+      deletedAt,
+      is_deleted
+    `, { count: "exact" })
         .eq("driveFolderId", driveFolderId)
         .is("deletedAt", null)
-        .order("createdAt", { ascending: false });
+        .order("createdAt", { ascending: false })
+        .range(from, to);
 
     if (error) {
         console.error("fetchDriveFilesByFolder error:", error);
         throw error;
     }
 
-    return data ?? [];
+    return { data: data ?? [], totalCount: count ?? 0 };
 }
 
 // Returns file count and total size (raw bytes) grouped by folderId for a college
@@ -377,4 +384,11 @@ export async function fetchDriveFilesByUser(
     }
 
     return data ?? [];
+}
+
+export async function getDriveFileDownloadUrl(collegeId: number, driveFolderId: number, fileName: string) {
+  const storagePath = `${collegeId}/${driveFolderId}/${fileName.trim()}`;
+  const { data, error } = await supabase.storage.from('college-drive').createSignedUrl(storagePath, 120, { download: fileName });
+  if (error || !data?.signedUrl) throw new Error('Failed to get download URL');
+  return data.signedUrl;
 }

@@ -48,6 +48,8 @@ export type TaskPanelProps = {
     taskId?: number,
   ) => Promise<void>;
   onDeleteTask?: (taskId: number) => Promise<void>;
+  selectedDate?: string | null;
+  onDateChange?: (date: string | null) => void;
 };
 
 export default function TaskPanel({
@@ -65,6 +67,8 @@ export default function TaskPanel({
   onAddTask,
   onSaveTask,
   onDeleteTask,
+  selectedDate: propSelectedDate,
+  onDateChange: propOnDateChange,
 }: TaskPanelProps) {
   const [openModal, setOpenModal] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
@@ -79,7 +83,17 @@ export default function TaskPanel({
 
   const studentContext = useStudent();
   const { subjects } = studentContext;
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  
+  const [internalSelectedDate, setInternalSelectedDate] = useState<string | null>(null);
+  const selectedDate = propSelectedDate !== undefined ? propSelectedDate : internalSelectedDate;
+  
+  const setSelectedDate = (date: string | null) => {
+    setInternalSelectedDate(date);
+    if (propOnDateChange) {
+      propOnDateChange(date);
+    }
+  };
+
   const [calendarStudentTasks, setCalendarStudentTasks] = useState<Task[]>([]);
   const [calendarFacultyTasks, setCalendarFacultyTasks] = useState<Task[]>([]);
   const [isCalendarLoading, setIsCalendarLoading] = useState(false);

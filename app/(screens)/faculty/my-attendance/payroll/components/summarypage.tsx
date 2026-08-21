@@ -6,7 +6,7 @@ import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { fetchStaffOnboardingSummary } from "@/lib/helpers/staffOnBoarding/onboardingSummaryAPI";
 import { User } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 const InfoRow = ({
   label,
@@ -68,19 +68,11 @@ export default function SummaryPage() {
   } = useFaculty();
   const { userId, profilePhoto, dateOfJoining, professionalExperienceYears, identifierId, collegeEducationType } =
     useUser();
-  const [onboardingData, setOnboardingData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const loadData = async () => {
-      if (!userId) return;
-      setIsLoading(true);
-      const data = await fetchStaffOnboardingSummary(userId);
-      setOnboardingData(data);
-      setIsLoading(false);
-    };
-    loadData();
-  }, [userId]);
+  const { data: onboardingData, isLoading } = useQuery({
+    queryKey: ["staffOnboardingSummary", userId],
+    queryFn: () => fetchStaffOnboardingSummary(userId!),
+    enabled: !!userId,
+  });
 
   if (!role || !userId) return null;
   if (isLoading) return <SummaryShimmer />;

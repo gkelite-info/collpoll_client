@@ -2,6 +2,7 @@
 
 import toast from "react-hot-toast";
 import  { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { useUser } from "@/app/utils/context/UserContext";
@@ -65,71 +66,24 @@ export function SharedMyPayPage({ overrideUserId, isHrView: propIsHrView, employ
 
   const viewParam = (searchParams.get("view") as "salary" | "tax") || "salary";
   const [activeTab, setActiveTab] = useState<"salary" | "tax">(viewParam);
+  const queryClient = useQueryClient();
 
-  const [payData, setPayData] = useState<any | null>(null);
-  const [isFetchingPay, setIsFetchingPay] = useState(false);
-  const [payLoadedForUserId, setPayLoadedForUserId] = useState<number | undefined>(undefined);
-
-  // Derive whether we are still waiting for data for the current user
-  const hasFetchedCurrentUser = payLoadedForUserId === effectiveUserId;
-  const showLoading = !hasFetchedCurrentUser && !!effectiveUserId && !!collegeId;
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchPay = async () => {
-      if (!effectiveUserId || !collegeId) {
-        // Nothing to fetch — clear stale data and stop loading
-        if (!cancelled) {
-          setPayData(null);
-          setPayLoadedForUserId(effectiveUserId);
-          setIsFetchingPay(false);
-        }
-        return;
-      }
-
-      setIsFetchingPay(true);
+  const { data: payData, isLoading: isFetchingPay, refetch } = useQuery({
+    queryKey: ["employeePaySummary", effectiveUserId, collegeId],
+    queryFn: async () => {
       try {
-        const data = await fetchEmployeePaySummary(effectiveUserId, collegeId);
-        if (!cancelled) {
-          setPayData(data);
-          setPayLoadedForUserId(effectiveUserId);
-        }
+        return await fetchEmployeePaySummary(effectiveUserId!, collegeId!);
       } catch (error) {
-        if (!cancelled) {
-          toast.error("Unable to fetch pay summary at this time.", { id: "pay-summary-fetch-error" });
-          setPayData(null);
-          setPayLoadedForUserId(effectiveUserId);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsFetchingPay(false);
-        }
+        toast.error("Unable to fetch pay summary at this time.", { id: "pay-summary-fetch-error" });
+        throw error;
       }
-    };
+    },
+    enabled: !!effectiveUserId && !!collegeId,
+  });
 
-    fetchPay();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [effectiveUserId, collegeId]);
-
-  const loadPaySummary = async () => {
-    if (!effectiveUserId || !collegeId) return;
-    setIsFetchingPay(true);
-    try {
-      const data = await fetchEmployeePaySummary(effectiveUserId, collegeId);
-      setPayData(data);
-      setPayLoadedForUserId(effectiveUserId);
-    } catch (error) {
-      toast.error("Unable to fetch pay summary at this time.", { id: "pay-summary-fetch-error" });
-    } finally {
-      setIsFetchingPay(false);
-    }
+  const loadPaySummary = () => {
+    queryClient.invalidateQueries({ queryKey: ["employeePaySummary", effectiveUserId, collegeId] });
   };
-
-  const finalIsFetchingPay = isFetchingPay || showLoading;
 
   useEffect(() => {
     setActiveTab(viewParam);
@@ -162,7 +116,7 @@ export function SharedMyPayPage({ overrideUserId, isHrView: propIsHrView, employ
 
       {activeTab === "salary" ? (
         <div className="w-full flex flex-col gap-6">
-          <SalaryOverview payData={payData} isFetchingPay={finalIsFetchingPay} isHrView={finalIsHrView} employeeProfile={effectiveProfile} effectiveUserId={effectiveUserId} onRefresh={loadPaySummary} />
+          <SalaryOverview payData={payData} isFetchingPay={isFetchingPay} isHrView={finalIsHrView} employeeProfile={effectiveProfile} effectiveUserId={effectiveUserId} onRefresh={loadPaySummary} />
           {effectiveUserId && (
             <PayslipsSection userId={effectiveUserId} />
           )}

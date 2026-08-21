@@ -60,10 +60,11 @@ type AnnouncementsCardProps = {
   isLoading?: boolean;
   onAddClick?: () => void;
   onViewChange?: (view: "my" | "others") => void;
-  onEditAnnouncement?: (announcement: AnnounceCard) => void;
   refreshAnnouncements?: () => Promise<void>;
   readOnly?: boolean;
   className?: string;
+  selectedDate?: string | null;
+  onDateChange?: (date: string | null) => void;
 };
 
 const AnnouncementListShimmer = () => (
@@ -244,10 +245,11 @@ export default function AnnouncementsCard({
   isLoading = false,
   onAddClick,
   onViewChange,
-  onEditAnnouncement,
   refreshAnnouncements,
   readOnly,
   className,
+  selectedDate: propSelectedDate,
+  onDateChange: propOnDateChange,
 }: AnnouncementsCardProps) {
   const queryClient = useQueryClient();
   const pathname = usePathname();
@@ -288,7 +290,17 @@ export default function AnnouncementsCard({
 
   const { userId, collegeId, role: userRole, collegeEducationType } = useUser();
   const isSchool = isSchoolEducation(collegeEducationType);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  
+  const [internalSelectedDate, setInternalSelectedDate] = useState<string | null>(null);
+  const selectedDate = propSelectedDate !== undefined ? propSelectedDate : internalSelectedDate;
+  
+  const setSelectedDate = (date: string | null) => {
+    setInternalSelectedDate(date);
+    if (propOnDateChange) {
+      propOnDateChange(date);
+    }
+  };
+
   const [calendarAnnouncementsRaw, setCalendarAnnouncementsRaw] = useState<AnnounceCard[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
