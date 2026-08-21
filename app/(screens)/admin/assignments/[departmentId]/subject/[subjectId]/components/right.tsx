@@ -8,7 +8,6 @@ import type { Task } from "@/app/utils/taskPanel";
 import { fetchFacultyTasksByFacultyId, saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 import TaskCardShimmer from "@/app/(screens)/faculty/shimmers/TaskCardShimmer";
 import { CheckCircle } from "@phosphor-icons/react";
-import TaskModal from "@/app/components/modals/taskModal";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
@@ -41,7 +40,6 @@ const formatRole = (role: string) =>
 export default function AssignmentsRight({ facultyId, collegeSubjectId, selectedDate, onDateSelect }: props) {
   const [facultyTasks, setFacultyTasks] = useState<Task[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
-  const [openTaskModal, setOpenTaskModal] = useState(false);
   const { collegeId, userId, role } = useUser();
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("others");
@@ -180,26 +178,6 @@ export default function AssignmentsRight({ facultyId, collegeSubjectId, selected
             <TaskCardShimmer />
             <TaskCardShimmer />
           </div>
-        ) : facultyTasks.length === 0 ? (
-          <div className="bg-white mt-5 rounded-md shadow-md p-4 min-h-[345px] flex flex-col">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="bg-[#E7F7EE] rounded-full p-1">
-                  <CheckCircle size={22} weight="fill" color="#43C17A" />
-                </div>
-                <p className="text-[#282828] font-medium">Faculty Tasks</p>
-              </div>
-              <button
-                onClick={() => setOpenTaskModal(true)}
-                className="flex items-center gap-2 px-3 py-1 rounded-full border border-[#43C17A] text-[#43C17A] text-xs font-medium hover:bg-[#43C17A] hover:text-white transition cursor-pointer"
-              >
-                + Add Task
-              </button>
-            </div>
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-xs text-gray-400">No tasks available</p>
-            </div>
-          </div>
         ) : (
           <TaskPanel
             role="faculty"
@@ -207,7 +185,7 @@ export default function AssignmentsRight({ facultyId, collegeSubjectId, selected
             facultyTasks={facultyTasks}
             facultyId={facultyId}
             collegeSubjectId={collegeSubjectId}
-            onAddTask={() => setOpenTaskModal(true)}
+            onAddTask={() => {}}
             onSaveTask={handleSaveFacultyTask}
             onDeleteTask={handleDeleteTask}
           />
@@ -220,16 +198,6 @@ export default function AssignmentsRight({ facultyId, collegeSubjectId, selected
           refreshAnnouncements={fetchData}
         />
       </div>
-
-      <TaskModal
-        open={openTaskModal}
-        role="faculty"
-        facultyId={facultyId}
-        collegeSubjectId={collegeSubjectId}
-        defaultValues={null}
-        onClose={() => setOpenTaskModal(false)}
-        onSave={handleSaveFacultyTask}
-      />
     </>
   );
 }

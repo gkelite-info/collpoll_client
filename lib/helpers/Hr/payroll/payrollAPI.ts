@@ -234,7 +234,7 @@ export async function getMyPayslips(
   }
 
   const runsMap = new Map();
-  (runs || []).forEach((r: any) => runsMap.set(r.payrollRunId, r));
+  (runs || []).forEach((r: any) => runsMap.set(Number(r.payrollRunId), r));
 
   const { data: employeeIdentifier, error: identifierError } = await supabase
     .from("employee_ids")
@@ -259,32 +259,35 @@ export async function getMyPayslips(
   
   // Merge and sort
   const results = entries.map((entry: any) => {
-    const run = runsMap.get(entry.payrollRunId);
-    if (!run) return null;
-
-    const monthName = months[run.payrollMonth - 1] || "";
+    const run = runsMap.get(Number(entry.payrollRunId));
     const payment = paymentByRun.get(Number(entry.payrollRunId));
-    const processor = Array.isArray(run.processor) ? run.processor[0] : run.processor;
-    const creator = Array.isArray(payment?.creator) ? payment.creator[0] : payment?.creator;
+    
+    // Fallback if run is missing (e.g. RLS blocks read or run was deleted)
+    const fallbackDate = new Date(entry.createdAt);
+    const monthName = run ? (months[run.payrollMonth - 1] || "") : months[fallbackDate.getMonth()];
+    const year = run ? run.payrollYear : fallbackDate.getFullYear();
+    
+    const processor = run ? (Array.isArray(run.processor) ? run.processor[0] : run.processor) : null;
+    const creator = payment ? (Array.isArray(payment.creator) ? payment.creator[0] : payment.creator) : null;
     
     return {
       id: entry.payrollEntryId,
-      month: `${monthName} ${run.payrollYear}`,
+      month: `${monthName} ${year}`,
       date: payment?.paymentDate
         ? new Date(`${payment.paymentDate}T00:00:00Z`).toLocaleDateString("en-GB", { timeZone: "UTC" })
-        : new Date(run.createdAt).toLocaleDateString('en-GB'),
+        : (run?.createdAt ? new Date(run.createdAt).toLocaleDateString('en-GB') : fallbackDate.toLocaleDateString('en-GB')),
       gross: entry.grossEarnings,
       deductions: entry.totalDeductions,
       net: entry.netPay,
       status: payment || entry.status === 'paid' ? 'Paid' : (entry.status === 'finalized' ? 'Generated' : entry.status),
       tracking: {
-        calculatedAt: run.createdAt,
-        finalizedAt: run.processedAt || (run.status === "finalized" || run.status === "paid" ? run.updatedAt : null),
-        paidAt: payment?.paymentDate || payment?.createdAt || run.paidAt || null,
+        calculatedAt: run?.createdAt || entry.createdAt,
+        finalizedAt: run?.processedAt || ((run?.status === "finalized" || run?.status === "paid") ? run.updatedAt : null) || (entry.status === "finalized" ? entry.createdAt : null),
+        paidAt: payment?.paymentDate || payment?.createdAt || run?.paidAt || null,
         processedBy: processor?.fullName || "HR Manager",
         paidBy: creator?.fullName || "Accountant",
       },
-      _createdAt: new Date(run.createdAt).getTime()
+      _createdAt: run?.createdAt ? new Date(run.createdAt).getTime() : fallbackDate.getTime()
     };
   }).filter(Boolean) as any[];
 

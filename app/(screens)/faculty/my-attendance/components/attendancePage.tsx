@@ -3,6 +3,7 @@ import { AttendanceRecord, AttendanceStats, FacultyProfile } from "../types";
 import AttendanceStatusCard from "./attendanceStatusCard";
 import FacultyInfoCard from "./facultyInfoCard";
 import { useEffect, useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/app/utils/context/UserContext";
 import { CustomDropdown } from "@/app/components/CustomDropdown";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
@@ -73,27 +74,17 @@ const AttendancePage = () => {
     professionalExperienceYears, collegeEducationType, userId, identifierId } = useUser()
   const { collegeAcademicYears, collegeAcademicYear, sections } = useFaculty();
   const { isSchool: isSchoolTerminology } = useInstitutionTerminology();
-  const [profile, setProfile] = useState<FacultyProfile | null>(null);
-  const [infoLoading, setInfoLoading] = useState(true);
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [tableLoading, setTableLoading] = useState(true);
-  const [initialLoad, setInitialLoad] = useState(true);
-
-  const [records, setRecords] = useState<AttendanceRecord[]>([]);
-  const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [rawStats, setRawStats] = useState<AttendanceStats | null>(null);
-  const [allMonthRecords, setAllMonthRecords] = useState<AttendanceRecord[]>([]);
-  const [stats, setStats] = useState<AttendanceStats | null>(null);
-  const [subjects, setSubjects] = useState<SubjectOption[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<number | null>(null);
 
   const [filterEducationTypeId, setFilterEducationTypeId] = useState("");
   const [filterBranchId, setFilterBranchId] = useState("");
   const [filterSectionId, setFilterSectionId] = useState("");
+
+  const itemsPerPage = 15;
 
   const availableEducationTypes = useMemo(() => {
     const typesMap = new Map();
@@ -151,13 +142,44 @@ const AttendancePage = () => {
         (isSchool || !filterBranchId || String(s.collegeBranchId) === filterBranchId)
       ) {
         yearsMap.set(s.collegeAcademicYearId, {
-          id: s.collegeAcademicYearId, // keeping as number since selectedAcademicYearId is number
+          id: s.collegeAcademicYearId,
           name: s.college_academic_year?.collegeAcademicYear || `Year ${s.collegeAcademicYearId}`,
         });
       }
     });
     return Array.from(yearsMap.values());
   }, [filterEducationTypeId, filterBranchId, isSchool, availableEducationTypes, sections]);
+
+  const { data: subjectsData = [] } = useQuery({
+    queryKey: ["facultyAssignedSubjects", facultyId],
+    queryFn: async () => {
+      const rows = await getFacultyAssignedSubjects({ facultyId: facultyId! });
+      const uniqueSubjects = new Map<number, SubjectOption>();
+      (rows as AssignedSubjectRow[]).forEach((row) => {
+        const subject = Array.isArray(row.college_subjects)
+          ? row.college_subjects[0]
+          : row.college_subjects;
+        if (subject?.collegeSubjectId && subject?.subjectName) {
+          const existing = uniqueSubjects.get(subject.collegeSubjectId);
+          if (existing) {
+            if (!existing.academicYearIds.includes(row.collegeAcademicYearId)) {
+              existing.academicYearIds.push(row.collegeAcademicYearId);
+            }
+          } else {
+            uniqueSubjects.set(subject.collegeSubjectId, {
+              id: subject.collegeSubjectId,
+              name: subject.subjectName,
+              academicYearIds: [row.collegeAcademicYearId],
+            });
+          }
+        }
+      });
+      return Array.from(uniqueSubjects.values()).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+    },
+    enabled: !!facultyId,
+  });
 
   const availableSubjects = useMemo(() => {
     if (!selectedAcademicYearId) return [];
@@ -200,63 +222,26 @@ const AttendancePage = () => {
     return Array.from(sectionsMap.values());
   }, [filterEducationTypeId, filterBranchId, selectedAcademicYearId, selectedSubjectId, isSchool, availableEducationTypes, sections]);
 
-  const itemsPerPage = 15
-
-  useEffect(() => {
-    if (!facultyId) return;
-
-    getFacultyAssignedSubjects({ facultyId })
-      .then((rows) => {
-        const uniqueSubjects = new Map<number, SubjectOption>();
-        (rows as AssignedSubjectRow[]).forEach((row) => {
-          const subject = Array.isArray(row.college_subjects)
-            ? row.college_subjects[0]
-            : row.college_subjects;
-          if (subject?.collegeSubjectId && subject?.subjectName) {
-            const existing = uniqueSubjects.get(subject.collegeSubjectId);
-            if (existing) {
-              if (!existing.academicYearIds.includes(row.collegeAcademicYearId)) {
-                existing.academicYearIds.push(row.collegeAcademicYearId);
-              }
-            } else {
-              uniqueSubjects.set(subject.collegeSubjectId, {
-                id: subject.collegeSubjectId,
-                name: subject.subjectName,
-                academicYearIds: [row.collegeAcademicYearId],
-              });
-            }
-          }
-        });
-        setSubjects(
-          Array.from(uniqueSubjects.values()).sort((a, b) =>
-            a.name.localeCompare(b.name),
-          ),
-        );
-      })
-      .catch(() => setSubjects([]));
-  }, [facultyId]);
-
-  useEffect(() => {
-    if (!userId) return;
-    const fetchStats = async () => {
-      setStatsLoading(true);
-      try {
-        const [statsRes, recordsRes] = await Promise.all([
-          getAttendanceMonthlyStats({
-            userId,
-            month: selectedMonth,
-            year: selectedYear
-          }),
-          getAttendanceData({
-            userId,
-            month: selectedMonth,
-            year: selectedYear,
-            page: 1,
-            limit: 31
-          })
-        ]);
-        setAllMonthRecords(recordsRes.records);
-        setRawStats({
+  const { data: rawStatsData, isLoading: statsLoading } = useQuery({
+    queryKey: ["attendanceMonthlyStats", userId, selectedMonth, selectedYear],
+    queryFn: async () => {
+      const [statsRes, recordsRes] = await Promise.all([
+        getAttendanceMonthlyStats({
+          userId: userId!,
+          month: selectedMonth,
+          year: selectedYear
+        }),
+        getAttendanceData({
+          userId: userId!,
+          month: selectedMonth,
+          year: selectedYear,
+          page: 1,
+          limit: 31
+        })
+      ]);
+      return {
+        allMonthRecords: recordsRes.records,
+        rawStats: {
           todayStatus: statsRes.todayStatus,
           totalWorkingDays: statsRes.totalWorkingDays,
           leavesTaken: statsRes.leavesTaken,
@@ -264,26 +249,17 @@ const AttendancePage = () => {
           lopDays: statsRes.lopDays,
           expectedWorkingDays: statsRes.expectedWorkingDays,
           presentDays: statsRes.presentDays
-        });
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setStatsLoading(false);
-      }
-    };
-    fetchStats();
-  }, [userId, selectedMonth, selectedYear]);
+        }
+      };
+    },
+    enabled: !!userId,
+  });
 
-  useEffect(() => {
-    if (!rawStats) {
-      setStats(null);
-      return;
-    }
+  const stats = useMemo(() => {
+    if (!rawStatsData?.rawStats) return null;
+    const { rawStats, allMonthRecords } = rawStatsData;
 
-    if (!dateOfJoining) {
-      setStats(rawStats);
-      return;
-    }
+    if (!dateOfJoining) return rawStats;
 
     const joiningDateObj = new Date(dateOfJoining);
     joiningDateObj.setHours(0, 0, 0, 0);
@@ -291,9 +267,8 @@ const AttendancePage = () => {
     const selectedMonthStart = new Date(selectedYear, selectedMonth - 1, 1);
     const selectedMonthEnd = new Date(selectedYear, selectedMonth, 0);
 
-    // Case A: Selected month is entirely before joining date
     if (selectedMonthEnd < joiningDateObj) {
-      setStats({
+      return {
         todayStatus: "—",
         totalWorkingDays: 0,
         leavesTaken: 0,
@@ -301,11 +276,9 @@ const AttendancePage = () => {
         lopDays: 0,
         expectedWorkingDays: 0,
         presentDays: 0
-      });
-      return;
+      };
     }
 
-    // Case B: Selected month is the same month as joining date
     if (
       selectedYear === joiningDateObj.getFullYear() &&
       selectedMonth - 1 === joiningDateObj.getMonth()
@@ -324,75 +297,63 @@ const AttendancePage = () => {
         }
       });
 
-      setStats({
+      return {
         ...rawStats,
         lopDays: Math.max(0, (rawStats.lopDays ?? 0) - preJoiningAbsentCount)
-      });
-      return;
-    }
-
-    // Case C: Selected month is after joining date
-    setStats(rawStats);
-  }, [rawStats, allMonthRecords, dateOfJoining, selectedMonth, selectedYear]);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    const fetchAttendance = async () => {
-      setTableLoading(true);
-      try {
-        const res = await getAttendanceData({
-          userId,
-          month: selectedMonth,
-          year: selectedYear,
-          page: currentPage,
-          limit: itemsPerPage,
-          subjectId: selectedSubjectId ?? undefined,
-          academicYearId: selectedAcademicYearId ?? undefined,
-        });
-
-        setRecords(res.records);
-        setTotalItems(res.total);
-      } catch (err) {
-        setRecords([]);
-        setTotalItems(0);
-      } finally {
-        setTableLoading(false);
-        setInitialLoad(false);
-      }
-    };
-
-    fetchAttendance();
-  }, [
-    userId,
-    selectedMonth,
-    selectedYear,
-    currentPage,
-    selectedAcademicYearId,
-    selectedSubjectId,
-  ]);
-
-  useEffect(() => {
-    if (!facultyId || !identifierId) return;
-    setInfoLoading(true);
-    try {
-      const updatedProfile: FacultyProfile = {
-        ...mockProfile,
-        name: fullName!,
-        mobile: mobile!,
-        facultyId: identifierId!,
-        branch: collegeBranchCode ?? mockProfile.branch,
-        email: email ?? mockProfile.email,
-        joiningDate: formatDate(dateOfJoining),
-        image: profilePhoto ?? "",
-        experience: professionalExperienceYears ? `${professionalExperienceYears} ${Number(professionalExperienceYears) > 1 ? 'years' : 'year'} ` : "—"
       };
-
-      setProfile(updatedProfile);
-    } finally {
-      setInfoLoading(false);
     }
-  }, [facultyId, collegeBranchCode, email, profilePhoto, fullName, dateOfJoining, mobile, professionalExperienceYears]);
+
+    return rawStats;
+  }, [rawStatsData, dateOfJoining, selectedMonth, selectedYear]);
+
+  const { data: tableData, isLoading: tableLoading } = useQuery({
+    queryKey: [
+      "attendanceRecords",
+      userId,
+      selectedMonth,
+      selectedYear,
+      currentPage,
+      itemsPerPage,
+      selectedSubjectId,
+      selectedAcademicYearId,
+    ],
+    queryFn: async () => {
+      const res = await getAttendanceData({
+        userId: userId!,
+        month: selectedMonth,
+        year: selectedYear,
+        page: currentPage,
+        limit: itemsPerPage,
+        subjectId: selectedSubjectId ?? undefined,
+        academicYearId: selectedAcademicYearId ?? undefined,
+      });
+      return {
+        records: res.records,
+        totalItems: res.total,
+      };
+    },
+    enabled: !!userId,
+  });
+
+  const records = tableData?.records ?? [];
+  const totalItems = tableData?.totalItems ?? 0;
+
+  const profile = useMemo(() => {
+    if (!facultyId || !identifierId) return null;
+    return {
+      ...mockProfile,
+      name: fullName!,
+      mobile: mobile!,
+      facultyId: identifierId!,
+      branch: collegeBranchCode ?? mockProfile.branch,
+      email: email ?? mockProfile.email,
+      joiningDate: formatDate(dateOfJoining),
+      image: profilePhoto ?? "",
+      experience: professionalExperienceYears ? `${professionalExperienceYears} ${Number(professionalExperienceYears) > 1 ? 'years' : 'year'} ` : "—"
+    };
+  }, [facultyId, identifierId, collegeBranchCode, email, profilePhoto, fullName, dateOfJoining, mobile, professionalExperienceYears]);
+
+  const infoLoading = !profile;
 
 
   return (

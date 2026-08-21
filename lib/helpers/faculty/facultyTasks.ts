@@ -169,7 +169,7 @@ export async function fetchFacultyTasksForLoggedInFaculty({
   limit = 10,
 }: {
   facultyId: number;
-  collegeSubjectId: number;
+  collegeSubjectId?: number | null;
   collegeSectionId?: number | null;
   selectedDate?: string | null;
   page?: number;
@@ -193,8 +193,11 @@ export async function fetchFacultyTasksForLoggedInFaculty({
       { count: "exact" }
     )
     .eq("createdBy", facultyId)
-    .eq("collegeSubjectId", collegeSubjectId)
     .is("deletedAt", null);
+
+  if (collegeSubjectId) {
+    query = query.eq("collegeSubjectId", collegeSubjectId);
+  }
 
   if (selectedDate) {
     query = query.eq("date", selectedDate);

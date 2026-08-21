@@ -1,4 +1,3 @@
-import AddAnnouncementModal from "@/app/components/modals/AddAnnouncementModal";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import { useUser } from "@/app/utils/context/UserContext";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
@@ -25,10 +24,8 @@ const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function SemwiseDetailsRight() {
-  const [openModal, setOpenModal] = useState(false);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const { collegeId, userId, role } = useUser();
-  const [editAnnouncement, setEditAnnouncement] = useState<any | null>(null);
   const [view, setView] = useState<"my" | "others">("others");
 
   const loadAnnouncements = async () => {
@@ -87,22 +84,8 @@ export default function SemwiseDetailsRight() {
         announceCard={announcements}
         height="80vh"
         currentView={view}
-        onAddClick={() => {
-          setEditAnnouncement(null);
-          setOpenModal(true);
-        }}
         onViewChange={setView}
-        onEditAnnouncement={(item) => {
-          setEditAnnouncement(item);
-          setOpenModal(true);
-        }}
         refreshAnnouncements={loadAnnouncements}
-      />
-      <AddAnnouncementModal
-        open={openModal}
-        onClose={() => setOpenModal(false)}
-        refreshAnnouncements={loadAnnouncements}
-        editData={editAnnouncement}
       />
     </div>
   );

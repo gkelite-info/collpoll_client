@@ -3,17 +3,20 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { useState, useEffect } from "react";
 import FolderFilesModal from "@/app/components/modals/FolderFilesModal";
 import { useUser } from "@/app/utils/context/UserContext";
-import { supabase } from "@/lib/supabaseClient";
+
 import {
   DriveFolderRow,
   fetchRootDriveFolders,
   saveDriveFolder,
   deleteDriveFolder,
+  fetchCollegeName,
 } from "@/lib/helpers/drive/driveFolderAPI";
 import {
   DriveFileRow,
   fetchFolderStats,
   fetchRecentDriveFiles,
+  deleteDriveFile,
+  getDriveFileDownloadUrl,
 } from "@/lib/helpers/drive/driveFilesAPI";
 import NewFolderModal from "./components/modal/newFolderModal";
 import ActionBar from "./components/actionBar";
@@ -26,6 +29,8 @@ import ReplaceFolderModal from "./components/modal/replaceFolderModal";
 import { useTranslations } from "next-intl";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useInView } from "react-intersection-observer";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 
 type SortOption = "latest" | "name" | "size";
 
@@ -111,41 +116,19 @@ const DriveClient = () => {
 
   const { collegeId, userId } = useUser();
   const t = useTranslations("Drive.student"); // Hook
+  const queryClient = useQueryClient();
 
   const [collegeName, setCollegeName] = useState<string | null>(null);
-  const [folders, setFolders] = useState<FolderItemProps[]>([]);
-  const [recentFiles, setRecentFiles] = useState<DriveFileRow[]>([]);
   const [recentViewed, setRecentViewed] = useState<RecentFile[]>([]);
-  const [recentCurrentPage, setRecentCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState<SortOption>("latest");
   const [fileSearch, setFileSearch] = useState("");
   const [debouncedFileSearch, setDebouncedFileSearch] = useState("");
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
-  const [selectedFolder, setSelectedFolder] = useState<FolderItemProps | null>(
-    null,
-  );
-  const [folderToRename, setFolderToRename] = useState<FolderItemProps | null>(
-    null,
-  );
-  const [folderToDelete, setFolderToDelete] = useState<FolderItemProps | null>(
-    null,
-  );
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeletingFile, setIsDeletingFile] = useState(false);
-  const [loadingFolders, setLoadingFolders] = useState(true);
-  const [loadingFiles, setLoadingFiles] = useState(true);
-  const [folderCurrentPage, setFolderCurrentPage] = useState(1);
-  const [totalFolders, setTotalFolders] = useState(0);
-  const [folderRefreshKey, setFolderRefreshKey] = useState(0);
+  const [selectedFolder, setSelectedFolder] = useState<FolderItemProps | null>(null);
+  const [folderToRename, setFolderToRename] = useState<FolderItemProps | null>(null);
+  const [folderToDelete, setFolderToDelete] = useState<FolderItemProps | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [toastState, setToastState] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
   const [isReplaceModalOpen, setIsReplaceModalOpen] = useState(false);
   const [duplicateFolderData, setDuplicateFolderData] = useState<{
     name: string;
@@ -154,11 +137,13 @@ const DriveClient = () => {
 
   const rowsPerPage = 10;
   const foldersPerPage = 5;
-  const recentItemsPerPage = 5;
 
   const showToast = (message: string, type: "success" | "error") => {
-    setToastState({ message, type });
-    setTimeout(() => setToastState(null), 3000);
+    if (type === "success") {
+      toast.success(message, { id: "drive-toast-success" });
+    } else {
+      toast.error(message, { id: "drive-toast-error" });
+    }
   };
 
   useEffect(() => {
@@ -167,20 +152,14 @@ const DriveClient = () => {
 
   useEffect(() => {
     if (!collegeId) return;
-    supabase
-      .from("colleges")
-      .select("collegeName")
-      .eq("collegeId", collegeId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) setCollegeName(data.collegeName);
-      });
+    fetchCollegeName(collegeId).then((name) => {
+      if (name) setCollegeName(name);
+    });
   }, [collegeId]);
 
   useEffect(() => {
     const debounceTimer = window.setTimeout(() => {
       if (fileSearch === debouncedFileSearch) return;
-      setLoadingFiles(true);
       setCurrentPage(1);
       setDebouncedFileSearch(fileSearch);
     }, 400);
@@ -190,93 +169,58 @@ const DriveClient = () => {
 
   const { ref: folderLoadMoreRef, inView: folderInView } = useInView();
 
+  // --- React Query Fetching ---
+
+  const { data: folderStats = {} } = useQuery({
+    queryKey: ["driveFolderStats", collegeId, userId],
+    queryFn: () => fetchFolderStats(collegeId!, userId!),
+    enabled: !!collegeId && !!userId,
+  });
+
+  const {
+    data: foldersData,
+    fetchNextPage: fetchNextFolderPage,
+    hasNextPage: hasNextFolderPage,
+    isFetchingNextPage: isFetchingNextFolders,
+    isLoading: loadingFolders,
+  } = useInfiniteQuery({
+    queryKey: ["driveFolders", collegeId, userId, sortBy],
+    queryFn: ({ pageParam = 1 }) => fetchRootDriveFolders(collegeId!, userId!, pageParam as number, foldersPerPage, sortBy),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const currentCount = allPages.reduce((sum, page) => sum + page.data.length, 0);
+      return currentCount < lastPage.totalCount ? allPages.length + 1 : undefined;
+    },
+    enabled: !!collegeId && !!userId,
+  });
+
+  const {
+    data: filesData,
+    isLoading: loadingFiles,
+  } = useQuery({
+    queryKey: ["driveRecentFiles", collegeId, userId, currentPage, sortBy, debouncedFileSearch],
+    queryFn: () => fetchRecentDriveFiles(collegeId!, currentPage, rowsPerPage, userId!, sortBy, debouncedFileSearch),
+    enabled: !!collegeId && !!userId,
+  });
+
+  const rawFolders = foldersData?.pages.flatMap(page => page.data) ?? [];
+  const folders = rawFolders.map((f: DriveFolderRow) => ({
+    driveFolderId: f.driveFolderId,
+    name: f.folderName,
+    color: f.color ?? "#0096A6",
+    filesCount: folderStats[f.driveFolderId]?.totalFiles ?? 0,
+    sizeLabel: formatSize(folderStats[f.driveFolderId]?.totalSizeBytes ?? 0),
+  }));
+  const totalFolders = foldersData?.pages[0]?.totalCount ?? 0;
+  
+  const recentFiles = filesData?.data as DriveFileRow[] ?? [];
+  const totalRecords = filesData?.totalCount ?? 0;
+
   useEffect(() => {
-    if (folderInView && folders.length < totalFolders && !loadingFolders) {
-      setFolderCurrentPage((prev) => prev + 1);
+    if (folderInView && hasNextFolderPage && !isFetchingNextFolders) {
+      fetchNextFolderPage();
     }
-  }, [folderInView, folders.length, totalFolders, loadingFolders]);
-
-  useEffect(() => {
-    if (!collegeId || !userId) return;
-
-    setLoadingFolders(true);
-
-    let isSubscribed = true;
-
-    Promise.all([
-      fetchRootDriveFolders(
-        collegeId,
-        userId,
-        folderCurrentPage,
-        foldersPerPage,
-        sortBy,
-      ),
-      fetchFolderStats(collegeId, userId),
-    ])
-      .then(([folderResult, stats]) => {
-        if (!isSubscribed) return;
-        const { data: folderData, totalCount: folderCount } = folderResult;
-        const mappedFolders = folderData.map((f: DriveFolderRow) => ({
-          driveFolderId: f.driveFolderId,
-          name: f.folderName,
-          color: f.color ?? "#0096A6",
-          filesCount: stats[f.driveFolderId]?.totalFiles ?? 0,
-          sizeLabel: formatSize(stats[f.driveFolderId]?.totalSizeBytes ?? 0),
-        }));
-        
-        setFolders((prev) =>
-          folderCurrentPage === 1 ? mappedFolders : [...prev, ...mappedFolders]
-        );
-        setTotalFolders(folderCount);
-      })
-      .catch(() => {
-        if (isSubscribed) showToast(t("Failed to load data"), "error");
-      })
-      .finally(() => {
-        if (isSubscribed) setLoadingFolders(false);
-      });
-      
-    return () => {
-      isSubscribed = false;
-    };
-  }, [
-    collegeId,
-    userId,
-    folderCurrentPage,
-    folderRefreshKey,
-    sortBy,
-    t,
-  ]);
-
-  useEffect(() => {
-    if (!collegeId || !userId) return;
-
-    let cancelled = false;
-
-    fetchRecentDriveFiles(
-      collegeId,
-      currentPage,
-      rowsPerPage,
-      userId,
-      sortBy,
-      debouncedFileSearch,
-    )
-      .then(({ data, totalCount }) => {
-        if (cancelled) return;
-        setRecentFiles(data as DriveFileRow[]);
-        setTotalRecords(totalCount);
-      })
-      .catch(() => {
-        if (!cancelled) showToast(t("Failed to load data"), "error");
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingFiles(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [collegeId, userId, currentPage, sortBy, debouncedFileSearch, t]);
+  }, [folderInView, hasNextFolderPage, isFetchingNextFolders, fetchNextFolderPage]);
 
   const sortedFolders = [...folders].sort((a, b) => {
     if (sortBy === "name") return a.name.localeCompare(b.name);
@@ -284,338 +228,175 @@ const DriveClient = () => {
     return 0;
   });
 
-  // Action Logic functions preserved exactly as requested
+  // --- Mutations ---
+
+  const createFolderMutation = useMutation({
+    mutationFn: (data: { name: string; color: string }) =>
+      saveDriveFolder({ collegeId: collegeId!, folderName: data.name, parentFolderId: null, color: data.color }, userId!),
+    onSuccess: (res) => {
+      if (!res.success) throw new Error("Failed");
+      queryClient.invalidateQueries({ queryKey: ["driveFolders"] });
+      setIsNewFolderOpen(false);
+      showToast(t("Folder created successfully"), "success");
+    },
+    onError: () => showToast(t("Something went wrong"), "error"),
+  });
+
   const handleCreateFolder = async (data: { name: string; color: string }) => {
     if (!collegeId || !userId) {
       showToast(t(isSchool ? "Missing school or user info" : "Missing college or user info"), "error");
       return;
     }
-
-    const existingFolder = folders.find(
-      (f) => f.name.toLowerCase().trim() === data.name.toLowerCase().trim(),
-    );
-
+    const existingFolder = folders.find((f) => f.name.toLowerCase().trim() === data.name.toLowerCase().trim());
     if (existingFolder) {
       setDuplicateFolderData(data);
       setIsReplaceModalOpen(true);
       return;
     }
-
-    setIsSaving(true);
-    try {
-      const result = await saveDriveFolder(
-        { collegeId, folderName: data.name, parentFolderId: null, color: data.color },
-        userId,
-      );
-
-      if (!result.success) throw new Error("Failed");
-
-      setFolderCurrentPage(1);
-      setFolderRefreshKey((key) => key + 1);
-
-      setIsNewFolderOpen(false);
-      showToast(t("Folder created successfully"), "success");
-    } catch {
-      showToast(t("Something went wrong"), "error");
-    } finally {
-      setIsSaving(false);
-    }
+    createFolderMutation.mutate(data);
   };
+
+  const renameFolderMutation = useMutation({
+    mutationFn: (newName: string) =>
+      saveDriveFolder({
+        driveFolderId: folderToRename!.driveFolderId,
+        collegeId: collegeId!,
+        folderName: newName,
+        parentFolderId: null,
+      }, userId!),
+    onSuccess: (res) => {
+      if (!res.success) throw new Error("Failed");
+      queryClient.invalidateQueries({ queryKey: ["driveFolders"] });
+      setFolderToRename(null);
+      showToast(t("Folder renamed"), "success");
+    },
+    onError: () => showToast(t("Something went wrong"), "error"),
+  });
 
   const handleSaveFolderName = async (newName: string) => {
     if (!folderToRename || !collegeId || !userId) return;
-
-    setIsRenaming(true);
-
-    try {
-      const result = await saveDriveFolder(
-        {
-          driveFolderId: folderToRename.driveFolderId,
-          collegeId,
-          folderName: newName,
-          parentFolderId: null,
-        },
-        userId,
-      );
-
-      if (!result.success) {
-        showToast(t("Failed to rename folder"), "error");
-        return;
-      }
-
-      setFolders((prev) =>
-        prev.map((f) =>
-          f.driveFolderId === folderToRename.driveFolderId
-            ? { ...f, name: newName }
-            : f,
-        ),
-      );
-
-      setFolderToRename(null);
-      showToast(t("Folder renamed"), "success");
-    } catch {
-      showToast(t("Something went wrong"), "error");
-    } finally {
-      setIsRenaming(false);
-    }
+    renameFolderMutation.mutate(newName);
   };
+
+  const replaceFolderMutation = useMutation({
+    mutationFn: async () => {
+      const existing = folders.find((f) => f.name.toLowerCase().trim() === duplicateFolderData!.name.toLowerCase().trim());
+      if (existing) {
+        const deleteResult = await deleteDriveFolder(existing.driveFolderId, collegeId!);
+        if (!deleteResult.success) throw new Error("Failed to delete existing");
+      }
+      const result = await saveDriveFolder({
+        collegeId: collegeId!,
+        folderName: duplicateFolderData!.name,
+        parentFolderId: null,
+      }, userId!);
+      if (!result.success) throw new Error("Failed to replace");
+      
+      const savedColors: Record<number, string> = JSON.parse(localStorage.getItem("folderColors") ?? "{}");
+      savedColors[result.driveFolderId!] = duplicateFolderData!.color;
+      if (existing) delete savedColors[existing.driveFolderId];
+      localStorage.setItem("folderColors", JSON.stringify(savedColors));
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["driveFolders"] });
+      setIsNewFolderOpen(false);
+      showToast(t("Folder replaced successfully"), "success");
+      setDuplicateFolderData(null);
+    },
+    onError: () => {
+      showToast(t("Something went wrong"), "error");
+      setDuplicateFolderData(null);
+      setIsReplaceModalOpen(false);
+    }
+  });
 
   const handleConfirmReplace = async () => {
     if (!duplicateFolderData || !collegeId || !userId) return;
-
     setIsReplaceModalOpen(false);
-    setIsSaving(true);
-
-    try {
-      const existing = folders.find(
-        (f) =>
-          f.name.toLowerCase().trim() ===
-          duplicateFolderData.name.toLowerCase().trim(),
-      );
-
-      if (existing) {
-        const deleteResult = await deleteDriveFolder(
-          existing.driveFolderId,
-          collegeId,
-        );
-        if (!deleteResult.success) {
-          showToast(t("Failed to replace folder"), "error");
-          return;
-        }
-      }
-
-      const result = await saveDriveFolder(
-        {
-          collegeId,
-          folderName: duplicateFolderData.name,
-          parentFolderId: null,
-        },
-        userId,
-      );
-
-      if (!result.success) {
-        showToast(t("Failed to replace folder"), "error");
-        return;
-      }
-
-      const savedColors: Record<number, string> = JSON.parse(
-        localStorage.getItem("folderColors") ?? "{}",
-      );
-      savedColors[result.driveFolderId!] = duplicateFolderData.color;
-      localStorage.setItem("folderColors", JSON.stringify(savedColors));
-
-      if (existing) {
-        delete savedColors[existing.driveFolderId];
-        localStorage.setItem("folderColors", JSON.stringify(savedColors));
-      }
-
-      setFolders((prev) => [
-        {
-          driveFolderId: result.driveFolderId!,
-          name: duplicateFolderData.name,
-          color: duplicateFolderData.color,
-          filesCount: 0,
-          sizeLabel: "0 KB",
-        },
-        ...prev.filter(
-          (f) =>
-            f.name.toLowerCase().trim() !==
-            duplicateFolderData.name.toLowerCase().trim(),
-        ),
-      ]);
-
-      setIsNewFolderOpen(false);
-      showToast(t("Folder replaced successfully"), "success");
-    } catch {
-      showToast(t("Something went wrong"), "error");
-    } finally {
-      setIsSaving(false);
-      setDuplicateFolderData(null);
-    }
+    replaceFolderMutation.mutate();
   };
+
+  const deleteFolderMutation = useMutation({
+    mutationFn: async () => {
+      const result = await deleteDriveFolder(folderToDelete!.driveFolderId, collegeId!);
+      if (!result.success) throw new Error("Failed");
+      
+      // Update local storage for recent files too
+      const updatedRecent = getRecentFiles(userId).filter((f) => f.driveFolderId !== folderToDelete!.driveFolderId);
+      localStorage.setItem(getRecentKey(userId), JSON.stringify(updatedRecent));
+      setRecentViewed(updatedRecent);
+      
+      const savedColors: Record<number, string> = JSON.parse(localStorage.getItem("folderColors") ?? "{}");
+      delete savedColors[folderToDelete!.driveFolderId];
+      localStorage.setItem("folderColors", JSON.stringify(savedColors));
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["driveFolders"] });
+      queryClient.invalidateQueries({ queryKey: ["driveRecentFiles"] });
+      queryClient.invalidateQueries({ queryKey: ["driveFolderStats"] });
+      setFolderToDelete(null);
+      showToast(t("Folder and all its files deleted"), "success");
+    },
+    onError: () => showToast(t("Something went wrong"), "error"),
+  });
 
   const handleConfirmDeleteFolder = async () => {
     if (!folderToDelete || !collegeId) return;
-
-    setIsDeleting(true);
-
-    try {
-      const { data: folderFiles } = await supabase
-        .from("drive_files")
-        .select("driveFileId, fileName")
-        .eq("driveFolderId", folderToDelete.driveFolderId)
-        .eq("is_deleted", false);
-
-      if (folderFiles && folderFiles.length > 0) {
-        const storagePaths = folderFiles.map(
-          (f) =>
-            `${collegeId}/${folderToDelete.driveFolderId}/${f.fileName.trim()}`,
-        );
-        await supabase.storage.from("college-drive").remove(storagePaths);
-
-        await supabase
-          .from("drive_files")
-          .update({ is_deleted: true, deletedAt: new Date().toISOString() })
-          .eq("driveFolderId", folderToDelete.driveFolderId);
-      }
-
-      const result = await deleteDriveFolder(
-        folderToDelete.driveFolderId,
-        collegeId,
-      );
-
-      if (!result.success) {
-        showToast(t("Failed to delete folder"), "error");
-        return;
-      }
-
-      setFolders((prev) =>
-        prev.filter((f) => f.driveFolderId !== folderToDelete.driveFolderId),
-      );
-      const remainingFolders = Math.max(0, totalFolders - 1);
-      const lastFolderPage = Math.max(
-        1,
-        Math.ceil(remainingFolders / foldersPerPage),
-      );
-      setFolderCurrentPage((page) => Math.min(page, lastFolderPage));
-      setFolderRefreshKey((key) => key + 1);
-
-      setRecentFiles((prev) =>
-        prev.filter((f) => f.driveFolderId !== folderToDelete.driveFolderId),
-      );
-      const updatedRecent = getRecentFiles(userId).filter(
-        (f) => f.driveFolderId !== folderToDelete.driveFolderId,
-      );
-      localStorage.setItem(getRecentKey(userId), JSON.stringify(updatedRecent));
-      setRecentViewed(updatedRecent);
-      setRecentCurrentPage((page) =>
-        Math.min(
-          page,
-          Math.max(1, Math.ceil(updatedRecent.length / recentItemsPerPage)),
-        ),
-      );
-
-      const savedColors: Record<number, string> = JSON.parse(
-        localStorage.getItem("folderColors") ?? "{}",
-      );
-      delete savedColors[folderToDelete.driveFolderId];
-      localStorage.setItem("folderColors", JSON.stringify(savedColors));
-
-      setFolderToDelete(null);
-      showToast(t("Folder and all its files deleted"), "success");
-    } catch {
-      showToast(t("Something went wrong"), "error");
-    } finally {
-      setIsDeleting(false);
-    }
+    deleteFolderMutation.mutate();
   };
 
-  const handleFilesChanged = (
-    driveFolderId: number,
-    fileCount: number,
-    totalSizeBytes: number,
-  ) => {
-    setFolders((prev) =>
-      prev.map((f) =>
-        f.driveFolderId === driveFolderId
-          ? {
-              ...f,
-              filesCount: fileCount,
-              sizeLabel: formatSize(totalSizeBytes),
-            }
-          : f,
-      ),
-    );
+  const deleteFileMutation = useMutation({
+    mutationFn: async (file: DriveFileRow) => {
+      const result = await deleteDriveFile(file.driveFileId, collegeId!, file.driveFolderId, file.fileName);
+      if (!result.success) throw new Error("Failed to delete file");
+      
+      const updatedRecent = getRecentFiles(userId).filter((f) => f.driveFileId !== file.driveFileId);
+      localStorage.setItem(getRecentKey(userId), JSON.stringify(updatedRecent));
+      setRecentViewed(updatedRecent);
+      
+      return file;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["driveRecentFiles"] });
+      queryClient.invalidateQueries({ queryKey: ["driveFolderStats"] });
+      showToast("File deleted successfully", "success");
+    },
+    onError: () => showToast("Failed to delete file", "error"),
+  });
 
-    if (collegeId && userId) {
-      fetchFolderStats(collegeId, userId)
-        .then((stats) => {
-          setFolders((prev) =>
-            prev.map((f) => ({
-              ...f,
-              filesCount: stats[f.driveFolderId]?.totalFiles ?? f.filesCount,
-              sizeLabel: formatSize(
-                stats[f.driveFolderId]?.totalSizeBytes ?? 0,
-              ),
-            })),
-          );
-        })
-        .catch(console.error);
+  const handleDeleteFile = async (file: DriveFileRow) => {
+    await deleteFileMutation.mutateAsync(file);
+  };
 
-      fetchRecentDriveFiles(
-        collegeId,
-        currentPage,
-        rowsPerPage,
-        userId,
-        sortBy,
-        debouncedFileSearch,
-      )
-        .then(({ data, totalCount }) => {
-          setRecentFiles(data as DriveFileRow[]);
-          setTotalRecords(totalCount);
-        })
-        .catch(console.error);
-    }
+  const handleFilesChanged = () => {
+    queryClient.invalidateQueries({ queryKey: ["driveFolderStats"] });
+    queryClient.invalidateQueries({ queryKey: ["driveRecentFiles"] });
   };
 
   const handleDownloadFile = async (file: DriveFileRow) => {
     try {
-      const storagePath = `${collegeId}/${file.driveFolderId}/${file.fileName.trim()}`;
-      const { data, error } = await supabase.storage
-        .from("college-drive")
-        .createSignedUrl(storagePath, 120, { download: file.fileName });
-
-      if (error || !data?.signedUrl) return;
+      const url = await getDriveFileDownloadUrl(collegeId!, file.driveFolderId, file.fileName);
 
       const a = document.createElement("a");
-      a.href = data.signedUrl;
+      a.href = url;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
 
       const updated = addToRecent(file, userId);
       setRecentViewed(updated);
-    } catch {
-      console.error("Download failed");
+    } catch (error) {
+      console.error("Download failed:", error);
+      showToast("Failed to download file", "error");
     }
   };
 
-  const handleDeleteFile = async (file: DriveFileRow) => {
-    setIsDeletingFile(true);
-    setRecentFiles((prev) =>
-      prev.filter((f) => f.driveFileId !== file.driveFileId),
-    );
-    const updatedRecent = getRecentFiles(userId).filter(
-      (f) => f.driveFileId !== file.driveFileId,
-    );
-    localStorage.setItem(getRecentKey(userId), JSON.stringify(updatedRecent));
-    setRecentViewed(updatedRecent);
-    setRecentCurrentPage((page) =>
-      Math.min(
-        page,
-        Math.max(1, Math.ceil(updatedRecent.length / recentItemsPerPage)),
-      ),
-    );
-
-    try {
-      const { error } = await supabase
-        .from("drive_files")
-        .update({ is_deleted: true, deletedAt: new Date().toISOString() })
-        .eq("driveFileId", file.driveFileId);
-
-      if (error) {
-        setRecentFiles((prev) => [file, ...prev]);
-        showToast(t("Failed to delete file"), "error");
-      } else {
-        showToast(t("File deleted"), "success");
-      }
-    } catch {
-      setRecentFiles((prev) => [file, ...prev]);
-      showToast(t("Something went wrong"), "error");
-    } finally {
-      setIsDeletingFile(false);
-    }
-  };
+  const isSaving = createFolderMutation.isPending || replaceFolderMutation.isPending;
+  const isRenaming = renameFolderMutation.isPending;
+  const isDeleting = deleteFolderMutation.isPending;
+  const isDeletingFile = deleteFileMutation.isPending;
 
   return (
     <div className="flex flex-col h-screen overflow-hidden max-md:bg-[#F4F5F6]">
@@ -624,14 +405,6 @@ const DriveClient = () => {
             100% { transform: translateX(100%); }
         }
       `}</style>
-
-      {toastState && (
-        <div
-          className={`fixed top-5 right-5 z-[200] px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toastState.type === "success" ? "bg-emerald-500" : "bg-red-500"}`}
-        >
-          {toastState.message}
-        </div>
-      )}
 
       <NewFolderModal
         open={isNewFolderOpen}
@@ -673,10 +446,7 @@ const DriveClient = () => {
         <ActionBar
           sortBy={sortBy}
           onSort={(val) => {
-            setLoadingFolders(true);
-            setLoadingFiles(true);
             setSortBy(val as SortOption);
-            setFolderCurrentPage(1);
             setCurrentPage(1);
           }}
           onNew={() => setIsNewFolderOpen(true)}
@@ -691,7 +461,7 @@ const DriveClient = () => {
             {t("Folders")}
           </h2>
 
-          {loadingFolders && folderCurrentPage === 1 ? (
+          {loadingFolders && folders.length === 0 ? (
             <div className="mt-2 flex gap-4 overflow-x-auto custom-scrollbar pb-2 snap-x">
               {[...Array(4)].map((_, i) => (
                 <div
@@ -719,10 +489,10 @@ const DriveClient = () => {
               ))}
               {folders.length < totalFolders && (
                 <div ref={folderLoadMoreRef} className="shrink-0 flex items-center gap-4 justify-center">
-                  {loadingFolders && folderCurrentPage > 1 ? (
+                  {isFetchingNextFolders ? (
                     <>
-                      {[...Array(4)].map((_, i) => (
-                        <div key={i} className="relative overflow-hidden flex min-w-[200px] shrink-0 snap-start flex-col rounded-md p-2 bg-[#EAEAEA] h-[130px] max-md:min-w-[160px] max-md:h-[110px] max-md:rounded-xl">
+                      {[...Array(2)].map((_, i) => (
+                        <div key={`loading-${i}`} className="relative overflow-hidden flex min-w-[200px] shrink-0 snap-start flex-col rounded-md p-2 bg-[#EAEAEA] h-[130px] max-md:min-w-[160px] max-md:h-[110px] max-md:rounded-xl">
                           <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
                         </div>
                       ))}
@@ -746,7 +516,7 @@ const DriveClient = () => {
             {t("Recent")}
           </h2>
 
-          {loadingFiles ? (
+          {loadingFiles && recentViewed.length === 0 ? (
             <div className="mt-2 flex gap-4 overflow-x-auto pb-1">
               {[...Array(4)].map((_, i) => (
                 <div
@@ -792,19 +562,20 @@ const DriveClient = () => {
             onDownload={handleDownloadFile}
             isDeleting={isDeletingFile}
             loading={loadingFiles}
+            containerClassName={totalRecords > 0 && !loadingFiles ? "rounded-t-2xl" : "rounded-2xl"}
           />
 
           {!loadingFiles && totalRecords > 0 && (
-            <div className="mb-2 overflow-hidden rounded-b-2xl shadow-sm">
+            <div className="mb-2 overflow-hidden ">
               <Pagination
                 currentPage={currentPage}
                 totalItems={totalRecords}
                 itemsPerPage={rowsPerPage}
                 onPageChange={(page) => {
-                  setLoadingFiles(true);
                   setCurrentPage(page);
                 }}
                 alwaysShow
+                roundedBottom="rounded-b-2xl"
               />
             </div>
           )}

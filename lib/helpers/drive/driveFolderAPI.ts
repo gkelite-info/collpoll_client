@@ -238,3 +238,8 @@ export async function deleteDriveFolder(
 
   return { success: true };
 }
+
+export async function fetchCollegeName(collegeId: number) {
+  const { data } = await supabase.from('colleges').select('collegeName').eq('collegeId', collegeId).maybeSingle();
+  return data?.collegeName ?? null;
+}

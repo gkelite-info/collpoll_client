@@ -12,13 +12,10 @@ import {
 } from "@/lib/helpers/faculty/facultyTasks";
 import type { Task } from "@/app/utils/taskPanel";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import TaskModal from "@/app/components/modals/taskModal";
 import { RightPageShimmer } from "@/app/components/shimmers/LeaveRequestsShimmer";
 
 export default function FacultyDashRight() {
   const queryClient = useQueryClient();
-  const [openModal, setOpenModal] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [view, setView] = useState<"my" | "others">("others");
 
   const {
@@ -139,24 +136,6 @@ export default function FacultyDashRight() {
         }}
       />
 
-      {openModal && (
-        <TaskModal
-          open={openModal}
-          role="faculty"
-          collegeSubjectId={collegeSubjectId!}
-          facultyId={facultyId!}
-          onClose={() => {
-            setOpenModal(false);
-            setEditingTask(null);
-          }}
-          defaultValues={editingTask}
-          onSave={async (payload, taskId) => {
-            await handleSave(payload, taskId);
-            setOpenModal(false);
-            setEditingTask(null);
-          }}
-        />
-      )}
       <div className="min-h-0 flex-1 mt-4">
         <AnnouncementsCard
           className="h-full"

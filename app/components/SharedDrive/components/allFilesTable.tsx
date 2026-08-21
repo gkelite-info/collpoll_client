@@ -19,6 +19,7 @@ type Props = {
   onDownload: (file: DriveFileRow) => void;
   isDeleting?: boolean;
   loading?: boolean;
+  containerClassName?: string;
 };
 
 export default function FilesTable({
@@ -29,6 +30,7 @@ export default function FilesTable({
   onDownload,
   isDeleting = false,
   loading = false,
+  containerClassName = "rounded-2xl",
 }: Props) {
   const t = useTranslations("Drive.student"); // Hook
   const [fileToDelete, setFileToDelete] = useState<DriveFileRow | null>(null);
@@ -39,8 +41,12 @@ export default function FilesTable({
 
   const handleDeleteConfirm = async () => {
     if (fileToDelete) {
-      await onDelete(fileToDelete);
-      setFileToDelete(null);
+      try {
+        await onDelete(fileToDelete);
+        setFileToDelete(null);
+      } catch (error) {
+        console.error("Deletion failed:", error);
+      }
     }
   };
 
@@ -70,7 +76,7 @@ export default function FilesTable({
         loadingText={t("Deleting")}
       />
 
-      <div className="mt-2 overflow-hidden rounded-2xl bg-white shadow-sm max-md:bg-transparent max-md:shadow-none">
+      <div className={`mt-2 overflow-hidden bg-white shadow-sm max-md:bg-transparent max-md:shadow-none ${containerClassName}`}>
         {/* DESKTOP TABLE */}
         <div className="hidden max-h-[520px] min-h-[150px] overflow-y-auto md:block">
           <table className="min-w-full table-auto text-left text-sm">

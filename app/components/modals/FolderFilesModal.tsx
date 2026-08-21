@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useInView } from "react-intersection-observer";
 import {
   X,
   FilePdf,
@@ -104,12 +106,13 @@ export default function FolderFilesModal({
   onFilesChanged,
 }: FolderFilesModalProps) {
   const { userId } = useUser();
+  const queryClient = useQueryClient();
+  const filesPerPage = 10;
+  const { ref: loadMoreRef, inView } = useInView();
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
 
-  const [files, setFiles] = useState<DriveFileRow[]>([]);
-  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [replacingFileId, setReplacingFileId] = useState<number | null>(null);
   const [toast, setToast] = useState<{
@@ -123,40 +126,49 @@ export default function FolderFilesModal({
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFileIds, setSelectedFileIds] = useState<number[]>([]);
 
-  const totalSizeBytes = files.reduce((acc, f) => acc + (f.fileSize ?? 0), 0);
-
   const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
+  const {
+    data: filesData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useInfiniteQuery({
+    queryKey: ["driveFolderFiles", driveFolderId],
+    queryFn: ({ pageParam = 1 }) => fetchDriveFilesByFolder(driveFolderId!, pageParam as number, filesPerPage),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const loadedCount = allPages.reduce((acc, page) => acc + page.data.length, 0);
+      return loadedCount < lastPage.totalCount ? allPages.length + 1 : undefined;
+    },
+    enabled: !!driveFolderId && open,
+  });
+
+  const files = (filesData?.pages.flatMap((page) => page.data) as DriveFileRow[]) ?? [];
+  const totalFiles = filesData?.pages[0]?.totalCount ?? 0;
+  const totalSizeBytes = files.reduce((acc, f) => acc + (f.fileSize ?? 0), 0);
+
   useEffect(() => {
-    if (!open || !driveFolderId) {
-      setFiles([]);
-      setLoading(false);
+    if (!open) {
       setSelectedFileIds([]);
-      return;
     }
-    setLoading(true);
-    fetchDriveFilesByFolder(driveFolderId)
-      .then((data) => {
-        const fetched = data as DriveFileRow[];
-        setFiles(fetched);
-        const totalBytes = fetched.reduce(
-          (acc, f) => acc + (f.fileSize ?? 0),
-          0,
-        );
-        onFilesChanged?.(driveFolderId, fetched.length, totalBytes);
-      })
-      .catch(() => showToast("Failed to load files", "error"))
-      .finally(() => setLoading(false));
-  }, [open, driveFolderId]);
+  }, [open]);
+
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   useEffect(() => {
     if (!driveFolderId) return;
-    onFilesChanged?.(driveFolderId, files.length, totalSizeBytes);
+    onFilesChanged?.(driveFolderId, totalFiles, totalSizeBytes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [files]);
+  }, [totalFiles, totalSizeBytes]);
 
   const handleUpload = async (
     e: React.ChangeEvent<HTMLInputElement> | null,
@@ -321,12 +333,8 @@ export default function FolderFilesModal({
 
     const failedUploads = uploadResults.filter((success) => !success).length;
 
-    try {
-      const updated = await fetchDriveFilesByFolder(driveFolderId);
-      setFiles(updated as DriveFileRow[]);
-    } catch (error) {
-      console.error("Failed to refresh drive files after upload:", error);
-    }
+    queryClient.invalidateQueries({ queryKey: ["driveFolderFiles", driveFolderId] });
+    queryClient.invalidateQueries({ queryKey: ["driveFolderStats"] });
 
     if (failedUploads === selected.length) {
       showToast("Unable to upload the selected file(s)", "error");
@@ -433,8 +441,8 @@ export default function FolderFilesModal({
         return;
       }
 
-      const updated = await fetchDriveFilesByFolder(driveFolderId);
-      setFiles(updated as DriveFileRow[]);
+      queryClient.invalidateQueries({ queryKey: ["driveFolderFiles", driveFolderId] });
+      queryClient.invalidateQueries({ queryKey: ["driveFolderStats"] });
       showToast("File replaced successfully", "success");
     } catch {
       showToast("Something went wrong", "error");
@@ -455,9 +463,7 @@ export default function FolderFilesModal({
       idsToDelete.includes(f.driveFileId),
     );
 
-    setFiles((prev) =>
-      prev.filter((f) => !idsToDelete.includes(f.driveFileId)),
-    );
+
 
     try {
       const results = await Promise.all(
@@ -472,7 +478,6 @@ export default function FolderFilesModal({
       );
       const anyFailed = results.some((r) => !r.success);
       if (anyFailed) {
-        setFiles((prev) => [...filesToDelete, ...prev]);
         showToast("Failed to delete some files", "error");
       } else {
         showToast(
@@ -482,9 +487,10 @@ export default function FolderFilesModal({
           "success",
         );
         setSelectedFileIds([]);
+        queryClient.invalidateQueries({ queryKey: ["driveFolderFiles", driveFolderId] });
+        queryClient.invalidateQueries({ queryKey: ["driveFolderStats"] });
       }
     } catch {
-      setFiles((prev) => [...filesToDelete, ...prev]);
       showToast("Something went wrong", "error");
     } finally {
       setIsDeletingFile(false);
@@ -564,7 +570,7 @@ export default function FolderFilesModal({
           </div>
         )}
 
-        <div className="bg-white w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[80vh]">
+        <div className="bg-white w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col min-h-[400px] max-h-[80vh]">
           {/* Header */}
           <div className="bg-[#43C17A] py-3 px-4 md:px-5 flex items-center justify-between text-white shrink-0">
             <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
@@ -579,7 +585,7 @@ export default function FolderFilesModal({
                   {folderName}
                 </h2>
                 <p className="text-white/80 text-xs hidden md:block">
-                  {files.length} {files.length === 1 ? "File" : "Files"} ·{" "}
+                  {totalFiles} {totalFiles === 1 ? "File" : "Files"} ·{" "}
                   {formatSize(totalSizeBytes)}
                 </p>
               </div>
@@ -702,7 +708,7 @@ export default function FolderFilesModal({
               </div>
             )}
 
-            {!loading && files.length > 0 && (
+            {!isLoading && files.length > 0 && (
               <div className="flex items-center justify-between mb-1 px-1">
                 <label className="flex items-center gap-2 cursor-pointer text-xs md:text-sm text-gray-500 select-none">
                   <input
@@ -740,7 +746,7 @@ export default function FolderFilesModal({
               </div>
             )}
 
-            {loading ? (
+            {isLoading ? (
               <>
                 {[...Array(5)].map((_, i) => (
                   <ShimmerRow key={i} />
@@ -850,6 +856,16 @@ export default function FolderFilesModal({
                   </div>
                 );
               })
+            )}
+
+            {files.length > 0 && files.length < totalFiles && (
+              <div ref={loadMoreRef} className="w-full flex flex-col gap-2 pb-4">
+                {isFetchingNextPage ? (
+                  [...Array(4)].map((_, i) => <ShimmerRow key={`shimmer-${i}`} />)
+                ) : (
+                  <div className="h-10 w-full" />
+                )}
+              </div>
             )}
           </div>
         </div>
