@@ -9,15 +9,12 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 import type { Task } from "@/app/utils/taskPanel";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import TaskModal from "@/app/components/modals/taskModal";
 
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function AssignmentsRight() {
   const queryClient = useQueryClient();
-  const [openModal, setOpenModal] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [view, setView] = useState<"my" | "others">("others");
 
   const {
@@ -97,32 +94,13 @@ export default function AssignmentsRight() {
         loading={isTasksLoading}
         collegeSubjectId={collegeSubjectId ?? undefined}
         facultyId={facultyId ?? undefined}
-        onAddTask={() => setOpenModal(true)}
+        onAddTask={() => {}}
         onSaveTask={handleSave}
         onDeleteTask={async () => {
           queryClient.invalidateQueries({ queryKey: ["facultyTasksInfinite", facultyId, collegeSubjectId] });
           queryClient.invalidateQueries({ queryKey: ["facultyTasks", facultyId, collegeSubjectId, collegeSectionId] });
         }}
       />
-
-      {openModal && (
-        <TaskModal
-          open={openModal}
-          role="faculty"
-          collegeSubjectId={collegeSubjectId!}
-          facultyId={facultyId!}
-          onClose={() => {
-            setOpenModal(false);
-            setEditingTask(null);
-          }}
-          defaultValues={editingTask}
-          onSave={async (payload, taskId) => {
-            await handleSave(payload, taskId);
-            setOpenModal(false);
-            setEditingTask(null);
-          }}
-        />
-      )}
 
       <div className="min-h-0 flex-1 mt-4">
         <AnnouncementsCard

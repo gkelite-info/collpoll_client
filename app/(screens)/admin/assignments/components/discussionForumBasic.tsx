@@ -129,7 +129,6 @@ export default function DiscussionForumBasic({
   const discussionView = searchParams.get("discussionView") || "active";
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [facultyTasks, setFacultyTasks] = useState<Task[]>([]);
-  const [openTaskModal, setOpenTaskModal] = useState(false);
   const { collegeId, role } = useUser();
   const [view, setView] = useState<"my" | "others">("others");
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -664,33 +663,13 @@ export default function DiscussionForumBasic({
                 <TaskCardShimmer />
                 <TaskCardShimmer />
               </div>
-            ) : facultyTasks.length === 0 ? (
-              <div className="bg-white mt-5 rounded-md shadow-md p-4 min-h-[345px] flex flex-col">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-[#E7F7EE] rounded-full p-1">
-                      <CheckCircle size={22} weight="fill" color="#43C17A" />
-                    </div>
-                    <p className="text-[#282828] font-medium">My Tasks</p>
-                  </div>
-                  <button
-                    onClick={() => setOpenTaskModal(true)}
-                    className="flex items-center gap-2 px-3 py-1 rounded-full border border-[#43C17A] text-[#43C17A] text-xs font-medium hover:bg-[#43C17A] hover:text-white transition cursor-pointer"
-                  >
-                    + Add Task
-                  </button>
-                </div>
-                <div className="flex-1 flex items-center justify-center">
-                  <p className="text-xs text-gray-400">No tasks available</p>
-                </div>
-              </div>
             ) : (
               <TaskPanel
                 role="faculty"
                 facultyTasks={facultyTasks}
                 facultyId={facultyId}
                 collegeSubjectId={collegeSubjectId}
-                onAddTask={() => setOpenTaskModal(true)}
+                onAddTask={() => {}}
                 onSaveTask={handleSaveFacultyTask}
                 onDeleteTask={handleDeleteTask}
               />

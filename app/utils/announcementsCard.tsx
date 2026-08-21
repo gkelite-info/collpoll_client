@@ -58,7 +58,6 @@ type AnnouncementsCardProps = {
   currentView?: "my" | "others";
   enableInfiniteScroll?: boolean;
   isLoading?: boolean;
-  onAddClick?: () => void;
   onViewChange?: (view: "my" | "others") => void;
   refreshAnnouncements?: () => Promise<void>;
   readOnly?: boolean;
@@ -243,7 +242,6 @@ export default function AnnouncementsCard({
   currentView,
   enableInfiniteScroll = false,
   isLoading = false,
-  onAddClick,
   onViewChange,
   refreshAnnouncements,
   readOnly,
