@@ -6,12 +6,11 @@ import { CaretLeft } from "@phosphor-icons/react";
 
 import StudentProfileCard from "./components/stuProfileCard";
 import AssignmentsTable from "./components/assignmentsTable";
-import ParentsList, { Parent } from "./components/parentsList";
 import GradesTable from "./components/gradesTable";
 import { AttendanceSummaryCard } from "./components/attendanceSummaryCard";
 import AcademicPerformance from "./components/academicPerformanceChart";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import ChatWindow from "./components/chatWindow";
+import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { getAdminStudentProgressDetails } from "@/lib/helpers/admin/studentProgress/getAdminStudentProgressDetails";
@@ -235,10 +234,12 @@ export default function DashboardLayout() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const { loading: adminLoading, collegeId, collegeEducationId, collegeEducationType: defaultEducationType } = useAdmin();
+  const { loading: adminLoading, collegeId, collegeEducationId: defaultEducationId, collegeEducationType: defaultEducationType } = useAdmin();
   const currentEducationType = searchParams.get("educationType") || defaultEducationType;
+  const routeEducationId = parseId(searchParams.get("educationId"));
+  const collegeEducationId = routeEducationId ?? defaultEducationId;
   const isSchool = isSchoolEducation(currentEducationType);
-  const [activeChatParent, setActiveChatParent] = useState<Parent | null>(null);
+  const isInter = currentEducationType?.trim().toLowerCase().includes("inter") ?? false;
   const [detailsLoading, setDetailsLoading] = useState(true);
   const [details, setDetails] = useState<StudentProgressDetails>(null);
 
@@ -433,7 +434,7 @@ export default function DashboardLayout() {
             {!isSchool && (
               <>
                 <span className="text-sm font-medium text-gray-600">
-                  Branch:{" "}
+                  {isInter ? "Group:" : "Branch:"}{" "}
                 </span>
                 <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
                   {details.departmentLabel}
@@ -453,7 +454,7 @@ export default function DashboardLayout() {
               {details.sectionLabel}
             </span>
           </div>
-          {!isSchool && (
+          {!isSchool && !isInter && (
             <div className="flex items-center gap-1">
               <span className="text-sm font-medium text-gray-600">Semester:</span>
               <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
@@ -468,48 +469,13 @@ export default function DashboardLayout() {
         </article>
       </section>
       <div className="mx-auto max-w-[1400px]">
-        {activeChatParent ? (
-          <div className="flex h-[calc(100vh-3rem)] flex-col items-start gap-6 lg:flex-row">
-            <div className="scrollbar-hide flex h-full w-full flex-col gap-6 overflow-y-auto pb-2 pr-2 lg:w-[60%]">
-              <StudentProfileCard {...details.studentProfile} isSchool={isSchool} />
-              <AcademicPerformance data={details.academicPerformance} />
-              <AssignmentsTable
-                scope={{
-                  rollNo: rollNo as string,
-                  collegeId: collegeId as number,
-                  collegeEducationId: collegeEducationId as number,
-                  collegeBranchIds: activeBranchIds,
-                  academicYearIds: activeYearIds,
-                  semesterIds: activeSemesterIds,
-                  sectionIds: activeSectionIds,
-                  subjectIds: activeSubjectIds,
-                  facultyIds: activeFacultyIds,
-                  isSchool,
-                  departmentLabel: selectedBranch?.collegeBranchCode ?? branchLabel ?? "ALL",
-                }}
-                weightages={details.taskWeightages}
-                insights={details.taskInsights}
-              />
-            </div>
-
-            <div className="sticky top-0 h-full w-full rounded-[30px] bg-white lg:w-[40%]">
-              <ChatWindow
-                parent={activeChatParent}
-                onClose={() => setActiveChatParent(null)}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-5">
               <div className="h-full lg:col-span-3">
                 <StudentProfileCard {...details.studentProfile} isSchool={isSchool} />
               </div>
               <div className="h-full lg:col-span-2">
-                <ParentsList
-                  parents={details.parents}
-                  onChatOpen={(parent) => setActiveChatParent(parent)}
-                />
+                <WorkWeekCalendar />
               </div>
             </div>
 
@@ -543,12 +509,12 @@ export default function DashboardLayout() {
                 />
               </div>
               <div className="h-full lg:col-span-2">
-                <GradesTable isSchool={isSchool} />
+                <GradesTable grades={details.grades} />
               </div>
             </div>
-          </div>
-        )}
+        </div>
       </div>
+
     </div>
   );
 }

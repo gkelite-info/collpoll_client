@@ -249,19 +249,20 @@ export default function DiscussionDeptCard({
                 return (
                   <div
                     key={i}
-                    title={fac?.name || "Faculty"}
-                    className="w-8 h-8 rounded-full border-2 border-white bg-gray-200 overflow-hidden shadow-sm relative flex items-center justify-center cursor-help"
+                    tabIndex={0}
+                    aria-label={fac?.name || "Faculty"}
+                    className="group relative flex h-8 w-8 cursor-help items-center justify-center rounded-full border-2 border-white bg-gray-200 shadow-sm outline-none"
                   >
-                    {/* <img
-                      src={displayPhotos[i]}
-                      alt={fac?.name || "faculty"}
-                      className="w-full h-full object-cover"
-                    /> */}
-                    <Avatar
-                      src={displayPhotos[i]}
-                      alt={fac?.name || "faculty"}
-                      size={32}
-                    />
+                    <div className="overflow-hidden rounded-full">
+                      <Avatar
+                        src={displayPhotos[i]}
+                        alt={fac?.name || "faculty"}
+                        size={32}
+                      />
+                    </div>
+                    <span className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-30 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-[#16284F] px-2.5 py-1.5 text-[11px] font-medium text-white shadow-lg group-hover:block group-focus:block">
+                      {fac?.name || "Faculty"}
+                    </span>
                   </div>
                 );
               })}

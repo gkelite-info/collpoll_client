@@ -68,15 +68,17 @@ export type AcademicCardData = {
 };
 
 const AcademicPage = () => {
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const searchParams = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
+  const [debouncedSearch, setDebouncedSearch] = useState(
+    () => searchParams.get("search")?.trim() ?? "",
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const { userId } = useUser();
   const [mounted, setMounted] = useState(false);
   const { collegeId: adminCollegeId, collegeEducationId, collegeEducationType, loading: adminLoading } = useAdmin();
 
   const cardsPerPage = 9;
-  const searchParams = useSearchParams();
   const view = searchParams.get("view");
   const router = useRouter();
 
@@ -86,7 +88,7 @@ const AcademicPage = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(search);
+      setDebouncedSearch(search.trim());
     }, 400);
     return () => clearTimeout(timer);
   }, [search]);
@@ -117,10 +119,6 @@ const AcademicPage = () => {
   const isSchool = isSchoolEducation(
     education?.collegeEducationType || collegeEducationType
   );
-  const isInter =
-    education?.collegeEducationType === "Inter" ||
-    collegeEducationType === "Inter";
-
   const currentEducationId =
     education?.collegeEducationId ?? collegeEducationId ?? null;
 
@@ -139,15 +137,57 @@ const AcademicPage = () => {
   }, [debouncedSearch, apiFiltersStr]);
 
   useEffect(() => {
-    if (collegeEducationId && educations.length > 0 && !education) {
+    if (educations.length > 0 && !education) {
+      const requestedEducationId =
+        Number(searchParams.get("educationId")) || collegeEducationId;
       const assignedEdu = educations.find(
-        (e) => Number(e.collegeEducationId) === Number(collegeEducationId)
+        (e) => Number(e.collegeEducationId) === Number(requestedEducationId)
       );
       if (assignedEdu) {
         selectEducation(assignedEdu);
       }
     }
-  }, [collegeEducationId, educations, education, selectEducation]);
+  }, [collegeEducationId, educations, education, searchParams, selectEducation]);
+
+  useEffect(() => {
+    const requestedId = Number(searchParams.get("branchId"));
+    if (!branch && requestedId && branches.length) {
+      const requested = branches.find(
+        (item) => Number(item.collegeBranchId) === requestedId,
+      );
+      if (requested) selectBranch(requested);
+    }
+  }, [branch, branches, searchParams, selectBranch]);
+
+  useEffect(() => {
+    const requestedId = Number(searchParams.get("yearId"));
+    if (!year && requestedId && years.length) {
+      const requested = years.find(
+        (item) => Number(item.collegeAcademicYearId) === requestedId,
+      );
+      if (requested) selectYear(requested);
+    }
+  }, [searchParams, selectYear, year, years]);
+
+  useEffect(() => {
+    const requestedId = Number(searchParams.get("sectionId"));
+    if (!section && requestedId && sections.length) {
+      const requested = sections.find(
+        (item) => Number(item.collegeSectionsId) === requestedId,
+      );
+      if (requested) setSection(requested);
+    }
+  }, [searchParams, section, sections, setSection]);
+
+  useEffect(() => {
+    const requestedId = Number(searchParams.get("subjectId"));
+    if (!subject && requestedId && subjects.length) {
+      const requested = subjects.find(
+        (item) => Number(item.collegeSubjectId) === requestedId,
+      );
+      if (requested) setSubject(requested);
+    }
+  }, [searchParams, setSubject, subject, subjects]);
 
   const { data: cardsQueryData, isLoading: isCardsLoading } = useQuery({
     queryKey: ["adminAcademicsCards", adminCollegeId, currentPage, cardsPerPage, debouncedSearch, apiFiltersStr],
@@ -167,6 +207,16 @@ const AcademicPage = () => {
   const cards = cardsQueryData?.mappedCards || [];
   const totalRecords = cardsQueryData?.totalCount || 0;
   const loading = isCardsLoading || adminLoading;
+  const returnQuery = new URLSearchParams(
+    Object.entries({
+      educationId: currentEducationId?.toString() ?? "",
+      branchId: branch?.collegeBranchId?.toString() ?? "",
+      yearId: year?.collegeAcademicYearId?.toString() ?? "",
+      sectionId: section?.collegeSectionsId?.toString() ?? "",
+      subjectId: subject?.collegeSubjectId?.toString() ?? "",
+      search: search.trim(),
+    }).filter(([, value]) => value !== ""),
+  ).toString();
 
   if (!mounted) return null;
 
@@ -200,7 +250,11 @@ const AcademicPage = () => {
         <div className="relative w-full md:w-[32%] shrink-0">
           <input
             type="text"
-            placeholder="Search here..."
+            placeholder={
+              education?.collegeEducationType === "Inter"
+                ? "Search by group..."
+                : "Search by branch..."
+            }
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full text-black h-11 pl-5 pr-12 rounded-full bg-[#EAEAEA] text-sm outline-none"
@@ -239,7 +293,7 @@ const AcademicPage = () => {
             }}
           />
 
-          {!isSchool && !isInter && (
+          {!isSchool && (
             <FilterDropdown
               label={education?.collegeEducationType === "Inter" ? "Group" : "Branch"}
               isLoading={adminLoading}
@@ -339,14 +393,14 @@ const AcademicPage = () => {
         </div>
       </div>
 
-      <div className="flex flex-col flex-1 justify-between bg-[#F3F6F9] rounded-xl p-4">
+      <div className="flex flex-col flex-1 justify-between rounded-xl p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-[1200px] mx-auto">
           {loading ? (
             [...Array(6)].map((_, i) => <AcademicSectionsSkeleton key={i} />)
           ) : !loading && cards.length === 0 ? (
             <div className="col-span-full flex justify-center py-20 text-gray-400">
               {debouncedSearch
-                ? "No matches found on this page."
+                ? "No matching branches found."
                 : "No academic records found."}
             </div>
           ) : (
@@ -369,6 +423,7 @@ const AcademicPage = () => {
                   text={style.text}
                   color={style.color}
                   bgColor={style.bgColor}
+                  returnQuery={returnQuery}
                 />
               );
             })

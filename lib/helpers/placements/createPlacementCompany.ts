@@ -19,8 +19,8 @@ type CreatePlacementCompanyPayload = {
     endDate: string;
     eligibilityCriteria: string;
     collegeId: number;
-    collegeBranchId: number;
-    collegeAcademicYearId: number;
+    collegeBranchIds: number[];
+    collegeAcademicYearIds: number[];
     createdBy: number;
 };
 
@@ -151,17 +151,32 @@ export async function createPlacementCompany(payload: CreatePlacementCompanyPayl
         endDate: payload.endDate,
         eligibilityCriteria: payload.eligibilityCriteria,
         collegeId: payload.collegeId,
-        collegeBranchId: payload.collegeBranchId,
-        collegeAcademicYearId: payload.collegeAcademicYearId,
         createdBy: payload.createdBy,
         createdAt: now,
         updatedAt: now,
     };
 
-    const insertPayload = companyCertificateUrls.map((certificateUrl) => ({
-        ...baseInsertPayload,
-        companyCertificate: certificateUrl,
-    }));
+    const insertPayload: any[] = [];
+    for (const branchId of payload.collegeBranchIds) {
+        for (const yearId of payload.collegeAcademicYearIds) {
+            const baseObj = {
+                ...baseInsertPayload,
+                collegeBranchId: branchId,
+                collegeAcademicYearId: yearId,
+            };
+            
+            if (companyCertificateUrls.length > 0) {
+                for (const certificateUrl of companyCertificateUrls) {
+                    insertPayload.push({
+                        ...baseObj,
+                        companyCertificate: certificateUrl,
+                    });
+                }
+            } else {
+                insertPayload.push(baseObj);
+            }
+        }
+    }
 
     const { data, error } = await supabase
         .from("placement_companies")
@@ -229,8 +244,8 @@ export async function updatePlacementCompany(payload: UpdatePlacementCompanyPayl
         endDate: payload.endDate,
         eligibilityCriteria: payload.eligibilityCriteria,
         collegeId: payload.collegeId,
-        collegeBranchId: payload.collegeBranchId,
-        collegeAcademicYearId: payload.collegeAcademicYearId,
+        collegeBranchId: payload.collegeBranchIds[0],
+        collegeAcademicYearId: payload.collegeAcademicYearIds[0],
         updatedAt: now,
     };
 

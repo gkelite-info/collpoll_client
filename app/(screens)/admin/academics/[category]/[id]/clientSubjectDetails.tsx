@@ -27,8 +27,10 @@ import { SubjectDetailsSkeleton } from "../../shimmer/subjectDetailsSkeleton";
 import AddNewClassModal from "../../modal/addNewClassModal";
 import AddWeightageModal from "@/app/(screens)/faculty/academics/components/weightageModal";
 import { TopicPdfModal } from "@/app/(screens)/faculty/academics/modal/Topicpdfmodal";
-import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { isSchoolOrInterSubject } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
+import { getUnitsPaginated } from "@/lib/helpers/faculty/getUnitsPaginated";
+import { getTopicsPaginated } from "@/lib/helpers/faculty/getTopicsPaginated";
 
 const colorMap = {
   purple: {
@@ -385,6 +387,7 @@ export default function ClientSubjectDetails({
   const router = useRouter();
   const { category } = useParams();
   const sectionId = parseInt(category as string, 10);
+  const subjectSectionKey = `${subjectId}:${sectionId}`;
   const { userId, role } = useUser();
 
   const [loading, setLoading] = useState(true);
@@ -421,7 +424,32 @@ export default function ClientSubjectDetails({
       );
 
       if (data) {
-        setUnits(data.units);
+        // Use the same section/global resolution used by Faculty Academics.
+        const unitsResult = await getUnitsPaginated({
+          collegeId: ctx.collegeId,
+          collegeSubjectId: subjectId,
+          collegeSectionsId: sectionId,
+          page: 1,
+          limit: 100,
+        });
+        const facultyStyleUnits = await Promise.all(
+          unitsResult.units.map(async (unit) => {
+            const topicsResult = await getTopicsPaginated({
+              collegeId: ctx.collegeId,
+              collegeSubjectUnitId: unit.id,
+              collegeSectionsId: sectionId,
+              page: 1,
+              limit: 100,
+            });
+
+            return {
+              ...unit,
+              topics: topicsResult.topics,
+            } as UiUnit;
+          }),
+        );
+
+        setUnits(facultyStyleUnits);
         setHeaderInfo(data.details);
         setContext(data.context);
       }
@@ -434,7 +462,7 @@ export default function ClientSubjectDetails({
 
   useEffect(() => {
     init();
-  }, [userId, subjectId]);
+  }, [userId, subjectSectionKey]);
 
   useEffect(() => {
     const storedSubject = sessionStorage.getItem("selectedSubject");
@@ -514,7 +542,7 @@ export default function ClientSubjectDetails({
     init();
   };
 
-  const isSchool = isSchoolEducation(context?.educationType);
+  const isSchoolOrInter = isSchoolOrInterSubject(context?.educationType);
 
   if (loading) return <SubjectDetailsSkeleton />;
   if (!headerInfo)
@@ -532,7 +560,7 @@ export default function ClientSubjectDetails({
               {headerInfo.subjectName}
             </h1>
           </div>
-          {!isSchool && (
+          {!isSchoolOrInter && (
             <p className="text-[#525252] text-sm ml-5">
               Credits: {headerInfo.credits || "N/A"}
             </p>
@@ -546,7 +574,7 @@ export default function ClientSubjectDetails({
         subjectName={headerInfo.subjectName}
         semester={headerInfo.semester}
         year={headerInfo.year}
-        isSchool={isSchool}
+        isSchool={isSchoolOrInter}
         onAddUnit={() => setIsModalOpen(true)}
         onManageWeightage={() => setIsWeightageModalOpen(true)}
         onAddWeightage={() => setIsWeightageModalOpen(true)}

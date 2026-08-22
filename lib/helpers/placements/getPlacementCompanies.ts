@@ -61,8 +61,9 @@ type PlacementSortOption =
 type PlacementStatusOption = "All" | "Open" | "Completed";
 
 type PlacementCompanyFilters = {
-  cycle?: string;
-  branchName?: string;
+  educationTypeId?: number | null;
+  branchId?: number | null;
+  academicYearId?: number | null;
   status?: PlacementStatusOption;
   sortBy?: PlacementSortOption;
 };
@@ -324,8 +325,9 @@ export async function getPlacementCompanies({
   includeExpired = false,
   page,
   pageSize,
-  cycle,
-  branchName,
+  educationTypeId,
+  branchId,
+  academicYearId,
   status,
   sortBy,
 }: PlacementCompanyPaginatedParams | PlacementCompanyUnpaginatedParams) {
@@ -355,14 +357,14 @@ export async function getPlacementCompanies({
 
   let branchIdsForFilter: number[] = [];
 
-  if (branchName && branchName !== "All") {
+  if (educationTypeId && !branchId) {
     const { data: branchRows, error: branchError } = await supabase
       .from("college_branch")
       .select("collegeBranchId")
-      .or(`collegeBranchCode.eq.${branchName},collegeBranchType.eq.${branchName}`);
+      .eq("collegeEducationId", educationTypeId);
 
     if (branchError) {
-      console.error("Failed to fetch placement branch filter:", branchError);
+      console.error("Failed to fetch placement branch filter by education:", branchError);
       throw branchError;
     }
 
@@ -391,15 +393,16 @@ export async function getPlacementCompanies({
     query = query.lt("endDate", today);
   }
 
-  if (cycle) {
-    query = query.gte("startDate", `${cycle}-01-01`).lte("startDate", `${cycle}-12-31`);
+  if (academicYearId) {
+    query = query.eq("collegeAcademicYearId", academicYearId);
   }
 
-  if (branchName && branchName !== "All") {
+  if (branchId) {
+    query = query.eq("collegeBranchId", branchId);
+  } else if (educationTypeId) {
     if (branchIdsForFilter.length === 0) {
       return page && pageSize ? { data: [], totalCount: 0 } : [];
     }
-
     query = query.in("collegeBranchId", branchIdsForFilter);
   }
 

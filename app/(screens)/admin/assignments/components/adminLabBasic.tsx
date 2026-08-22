@@ -1,10 +1,11 @@
 "use client";
 
-import { CaretLeftIcon, CaretRight } from "@phosphor-icons/react";
+import { CaretLeftIcon } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 import FacultyLabCard, {
   type LabManual,
 } from "@/app/(screens)/faculty/assignments/components/FacultyLabCard";
@@ -21,7 +22,7 @@ import DiscussionDeptCard from "./discussionDeptCard";
 import DiscussionCourseCard from "./discussionCourseCard";
 import { DiscussionDeptCardSkeleton } from "./shimmers/DiscussionDeptCardSkeleton";
 import { DiscussionCourseCardSkeleton } from "./shimmers/courseCardSkeleton";
-import { FilterDropdown } from "./filterDropdown";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 import { fetchQuizFilterOptions } from "@/lib/helpers/admin/assignments/quiz/adminQuizAPI";
 import { fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns";
 import {
@@ -38,6 +39,7 @@ import {
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 type AdminLabRow = {
   labManualId: number;
@@ -58,7 +60,7 @@ type AdminLabRow = {
   } | null;
 };
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 9;
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -142,12 +144,14 @@ export default function AdminLabBasic() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { adminId, collegeId, collegeEducationId: defaultEducationId, collegeEducationType: defaultEducationType } = useAdmin();
+  const { isSchool } = useInstitutionTerminology();
   const action = searchParams.get("action");
   const branchIdParam = searchParams.get("branchId");
   const yearIdParam = searchParams.get("yearId");
   const dept = searchParams.get("dept");
   const year = searchParams.get("year");
   const subjectId = searchParams.get("subjectId");
+  const sectionIdParam = searchParams.get("sectionId");
   const facultyIdParam = searchParams.get("facultyId");
   const facultyId =
     facultyIdParam && facultyIdParam !== "-" ? Number(facultyIdParam) : undefined;
@@ -160,8 +164,9 @@ export default function AdminLabBasic() {
   const [deptCards, setDeptCards] = useState<any[]>([]);
   const [deptLoading, setDeptLoading] = useState(false);
   const [deptPage, setDeptPage] = useState(1);
-  const [deptTotalPages, setDeptTotalPages] = useState(1);
+  const [deptTotalCount, setDeptTotalCount] = useState(0);
   const [subjectCards, setSubjectCards] = useState<any[]>([]);
+  const [subjectPage, setSubjectPage] = useState(1);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
   const [branchFilter, setBranchFilter] = useState("All");
   const [yearFilter, setYearFilter] = useState("All");
@@ -191,6 +196,127 @@ export default function AdminLabBasic() {
   const currentEducationId = education?.collegeEducationId ?? defaultEducationId;
   const currentEducationType = education?.collegeEducationType ?? defaultEducationType;
 
+  const [allSubjects, setAllSubjects] = useState<any[]>([]);
+  const [allSections, setAllSections] = useState<any[]>([]);
+  const [subjectFilter, setSubjectFilter] = useState("All");
+  const [sectionFilter, setSectionFilter] = useState("All");
+
+  useEffect(() => {
+    if (subjectId) setSubjectFilter(subjectId);
+    else setSubjectFilter("All");
+  }, [subjectId]);
+
+  useEffect(() => {
+    if (sectionIdParam) setSectionFilter(sectionIdParam);
+    else setSectionFilter("All");
+  }, [sectionIdParam]);
+
+  useEffect(() => {
+    if (dept) setBranchFilter(dept);
+    else setBranchFilter("All");
+  }, [dept]);
+
+  useEffect(() => {
+    if (year) setYearFilter(year);
+    else setYearFilter("All");
+  }, [year]);
+
+  useEffect(() => {
+    if (!collegeId || !currentEducationId) return;
+
+    supabase
+      .from("college_subjects")
+      .select(`
+        collegeSubjectId, subjectName, collegeBranchId, collegeAcademicYearId,
+        college_branch ( collegeBranchCode ),
+        college_academic_year ( collegeAcademicYear )
+      `)
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", currentEducationId)
+      .eq("isActive", true)
+      .is("deletedAt", null)
+      .then(({ data }) => setAllSubjects(data || []));
+
+    supabase
+      .from("college_sections")
+      .select("collegeSectionsId, collegeSections, collegeBranchId, collegeAcademicYearId")
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", currentEducationId)
+      .eq("isActive", true)
+      .is("deletedAt", null)
+      .then(({ data }) => setAllSections(data || []));
+  }, [collegeId, currentEducationId]);
+
+  const filteredSubjects = allSubjects.filter(s => {
+    const bMatch = branchFilter === "All" || (Array.isArray(s.college_branch) ? s.college_branch[0]?.collegeBranchCode : s.college_branch?.collegeBranchCode) === branchFilter;
+    const yMatch = yearFilter === "All" || (Array.isArray(s.college_academic_year) ? s.college_academic_year[0]?.collegeAcademicYear : s.college_academic_year?.collegeAcademicYear) === yearFilter;
+    return bMatch && yMatch;
+  });
+
+  const subjectOptions = [
+    { label: "All", value: "All" },
+    ...filteredSubjects.map(s => ({ label: s.subjectName, value: String(s.collegeSubjectId) }))
+  ];
+
+  const selectedSubjectData = subjectFilter !== "All" ? allSubjects.find(s => String(s.collegeSubjectId) === subjectFilter) : null;
+
+  const filteredSections = allSections.filter(s => {
+    if (selectedSubjectData) {
+      return s.collegeBranchId === selectedSubjectData.collegeBranchId && s.collegeAcademicYearId === selectedSubjectData.collegeAcademicYearId;
+    }
+
+    const branchMatches = branchIdParam
+      ? s.collegeBranchId === Number(branchIdParam)
+      : true;
+    const yearMatches = yearIdParam
+      ? s.collegeAcademicYearId === Number(yearIdParam)
+      : true;
+
+    return branchMatches && yearMatches;
+  });
+
+  const sectionOptions = [
+    { label: "All", value: "All" },
+    ...filteredSections.map(s => ({ label: s.collegeSections, value: String(s.collegeSectionsId) }))
+  ];
+
+  const handleSubjectChange = (val: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (val === "All") {
+      params.delete("subjectId");
+      params.delete("sectionId");
+      params.delete("branchId");
+      params.delete("yearId");
+      params.delete("dept");
+      params.delete("year");
+      router.push(`${pathname}?${params.toString()}`);
+    } else {
+      const subj = allSubjects.find(s => String(s.collegeSubjectId) === val);
+      if (subj) {
+        params.set("branchId", String(subj.collegeBranchId));
+        params.set("yearId", String(subj.collegeAcademicYearId));
+        const branchCode = Array.isArray(subj.college_branch) ? subj.college_branch[0]?.collegeBranchCode : subj.college_branch?.collegeBranchCode;
+        const yearStr = Array.isArray(subj.college_academic_year) ? subj.college_academic_year[0]?.collegeAcademicYear : subj.college_academic_year?.collegeAcademicYear;
+        if (branchCode) params.set("dept", branchCode);
+        if (yearStr) params.set("year", yearStr);
+        params.set("subjectId", String(subj.collegeSubjectId));
+        params.delete("sectionId");
+        router.push(`${pathname}?${params.toString()}`);
+      }
+    }
+  };
+
+  const handleSectionChange = (val: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (val === "All") {
+      params.delete("sectionId");
+    } else {
+      params.set("sectionId", val);
+    }
+    setCurrentPage(1);
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   const selectEducation = (edu: any) => {
     setEducation(edu);
   };
@@ -201,7 +327,7 @@ export default function AdminLabBasic() {
     }
   }, [collegeId]);
 
-  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const labSubjectSectionFilter = `${subjectId ?? ""}:${sectionIdParam ?? ""}`;
   const branchYearTitle =
     [dept || branchYearLabel.branch, year || branchYearLabel.year]
       .filter(Boolean)
@@ -226,6 +352,7 @@ export default function AdminLabBasic() {
         collegeBranchId: Number(branchIdParam),
         collegeAcademicYearId: Number(yearIdParam),
         collegeSubjectId: Number(subjectId),
+        collegeSectionsId: sectionIdParam ? Number(sectionIdParam) : undefined,
         page: currentPage,
         pageSize: ITEMS_PER_PAGE,
       });
@@ -271,7 +398,7 @@ export default function AdminLabBasic() {
     currentEducationId,
     branchIdParam,
     yearIdParam,
-    subjectId,
+    labSubjectSectionFilter,
     currentPage,
   ]);
 
@@ -441,7 +568,7 @@ export default function AdminLabBasic() {
     )
       .then((response) => {
         setDeptCards(response.data);
-        setDeptTotalPages(response.totalPages);
+        setDeptTotalCount(response.totalCount);
       })
       .finally(() => setDeptLoading(false));
   }, [
@@ -462,9 +589,17 @@ export default function AdminLabBasic() {
       Number(branchIdParam),
       Number(yearIdParam),
     )
-      .then(setSubjectCards)
+      .then((cards) => {
+        setSubjectCards(cards);
+        setSubjectPage(1);
+      })
       .finally(() => setSubjectsLoading(false));
   }, [collegeId, branchIdParam, yearIdParam, subjectId]);
+
+  const paginatedSubjectCards = subjectCards.slice(
+    (subjectPage - 1) * ITEMS_PER_PAGE,
+    subjectPage * ITEMS_PER_PAGE,
+  );
 
   const handleBackToDepartments = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -555,45 +690,106 @@ export default function AdminLabBasic() {
     <div className="flex flex-col m-4">
       <TabNavigation />
 
-      {!branchIdParam && !dept ? (
-        <>
-          <div className="flex flex-wrap items-center gap-6 mt-1 mb-5">
-            <FilterDropdown
-              label="Education"
-              value={currentEducationId?.toString() ?? ""}
-              options={educations.map((e) => ({
-                label: e.collegeEducationType,
-                value: e.collegeEducationId.toString(),
-              }))}
-              onChange={(val) => {
-                const edu = educations.find((e) => e.collegeEducationId === +val);
-                if (edu) {
-                  selectEducation(edu);
-                  setBranchFilter("All");
-                  setYearFilter("All");
-                }
-              }}
-            />
-            <FilterDropdown
-              label={currentEducationType === "Inter" ? "Group" : "Branch"}
-              value={branchFilter}
-              options={branchOptions}
-              onChange={(value) => {
-                setBranchFilter(value);
-                setDeptPage(1);
-              }}
-            />
-            <FilterDropdown
-              label="Year"
-              value={yearFilter}
-              options={yearOptions}
-              onChange={(value) => {
-                setYearFilter(value);
-                setDeptPage(1);
-              }}
-            />
-          </div>
+      <div className="flex w-full items-center gap-4 mt-1 mb-5 overflow-x-auto custom-scrollbar pb-2">
+        <CustomDropdown
+          label="Education"
+          value={currentEducationId?.toString() ?? ""}
+          options={educations.map((e) => ({
+            label: e.collegeEducationType,
+            value: e.collegeEducationId.toString(),
+          }))}
+          theme="green"
+          widthClassName="min-w-[160px] shrink-0"
+          onChange={(val) => {
+            const edu = educations.find((e) => e.collegeEducationId === +val);
+            if (edu) {
+              selectEducation(edu);
+              const params = new URLSearchParams(searchParams.toString());
+              params.delete("branchId");
+              params.delete("yearId");
+              params.delete("dept");
+              params.delete("year");
+              params.delete("subjectId");
+              params.delete("sectionId");
+              router.push(`${pathname}?${params.toString()}`);
+            }
+          }}
+        />
+        {!isSchool && (
+          <CustomDropdown
+            label={currentEducationType === "Inter" ? "Group" : "Branch"}
+            value={branchFilter}
+            options={branchOptions}
+            disabled={!currentEducationId}
+            theme="green"
+            widthClassName="min-w-[160px] shrink-0"
+            onChange={(value) => {
+              const params = new URLSearchParams(searchParams.toString());
+              if (value === "All") {
+                params.delete("dept");
+                params.delete("branchId");
+                params.delete("year");
+                params.delete("yearId");
+                params.delete("subjectId");
+                params.delete("sectionId");
+              } else {
+                params.set("dept", String(value));
+                params.delete("branchId");
+                params.delete("yearId");
+                params.delete("subjectId");
+                params.delete("sectionId");
+              }
+              setDeptPage(1);
+              router.push(`${pathname}?${params.toString()}`);
+            }}
+          />
+        )}
+        <CustomDropdown
+          label="Year"
+          value={yearFilter}
+          options={yearOptions}
+          disabled={!currentEducationId || (!isSchool && branchFilter === "All")}
+          theme="green"
+          widthClassName="min-w-[160px] shrink-0"
+          onChange={(value) => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (value === "All") {
+              params.delete("year");
+              params.delete("yearId");
+              params.delete("subjectId");
+              params.delete("sectionId");
+            } else {
+              params.set("year", String(value));
+              params.delete("yearId");
+              params.delete("subjectId");
+              params.delete("sectionId");
+            }
+            setDeptPage(1);
+            router.push(`${pathname}?${params.toString()}`);
+          }}
+        />
+        <CustomDropdown
+          label="Subject"
+          value={subjectFilter}
+          options={subjectOptions}
+          disabled={yearFilter === "All"}
+          theme="green"
+          widthClassName="min-w-[160px] shrink-0"
+          onChange={(val) => handleSubjectChange(String(val))}
+        />
+        <CustomDropdown
+          label="Section"
+          value={sectionFilter}
+          options={sectionOptions}
+          disabled={subjectFilter === "All"}
+          theme="green"
+          widthClassName="min-w-[160px] shrink-0"
+          onChange={(val) => handleSectionChange(String(val))}
+        />
+      </div>
 
+      {!branchIdParam || !yearIdParam ? (
+        <>
           <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto">
               {deptLoading ? (
@@ -615,54 +811,15 @@ export default function AdminLabBasic() {
               )}
             </div>
 
-            {!deptLoading && deptTotalPages > 1 && (
-              <div className="flex justify-center pb-4 shrink-0 pt-6">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setDeptPage((page) => Math.max(1, page - 1))}
-                    disabled={deptPage === 1}
-                    className={`p-2 rounded-md text-sm font-medium border border-gray-200 transition-colors duration-150 ${
-                      deptPage === 1
-                        ? "bg-gray-50 text-gray-400 cursor-not-allowed"
-                        : "bg-white text-gray-700 hover:bg-gray-100 cursor-pointer"
-                    }`}
-                  >
-                    <CaretLeftIcon size={16} weight="bold" />
-                  </button>
-
-                  <div className="flex items-center gap-2 max-w-[60vw] overflow-x-auto scrollbar-hide">
-                    {Array.from({ length: deptTotalPages }, (_, i) => i + 1).map(
-                      (page) => (
-                        <button
-                          key={page}
-                          onClick={() => setDeptPage(page)}
-                          className={`px-3 py-1 rounded-md text-sm font-medium border transition-colors duration-150 ${
-                            deptPage === page
-                              ? "bg-[#16284F] text-white border-[#16284F]"
-                              : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 cursor-pointer"
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ),
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() =>
-                      setDeptPage((page) => Math.min(deptTotalPages, page + 1))
-                    }
-                    disabled={deptPage === deptTotalPages}
-                    className={`p-2 rounded-md text-sm font-medium border border-gray-200 transition-colors duration-150 ${
-                      deptPage === deptTotalPages
-                        ? "bg-gray-50 text-gray-400 cursor-not-allowed"
-                        : "bg-white text-gray-700 hover:bg-gray-100 cursor-pointer"
-                    }`}
-                  >
-                    <CaretRight size={16} weight="bold" />
-                  </button>
-                </div>
-              </div>
+            {!deptLoading && (
+              <Pagination
+                currentPage={deptPage}
+                totalItems={deptTotalCount}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setDeptPage}
+                alwaysShow
+                roundedBottom="rounded-xl"
+              />
             )}
           </div>
         </>
@@ -696,7 +853,7 @@ export default function AdminLabBasic() {
                 No subjects found.
               </div>
             ) : (
-              subjectCards.map((course) => (
+              paginatedSubjectCards.map((course) => (
                 <DiscussionCourseCard
                   key={course.id}
                   {...course}
@@ -707,10 +864,20 @@ export default function AdminLabBasic() {
               ))
             )}
           </div>
+          {!subjectsLoading && (
+            <Pagination
+              currentPage={subjectPage}
+              totalItems={subjectCards.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+              onPageChange={setSubjectPage}
+              alwaysShow
+              bgClassName="bg-transparent"
+            />
+          )}
         </div>
       ) : (
         <div className="flex w-full gap-4 mt-2">
-        <div className="w-[68%] bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col p-4">
+        <div className="w-[68%] min-h-screen rounded-xl flex flex-col p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-1">
               <button
@@ -755,48 +922,15 @@ export default function AdminLabBasic() {
           )}
         </div>
 
-        {!labsLoading && totalPages > 1 && (
-          <div className="flex justify-end items-center gap-3 mt-6 mb-4 max-w-[1200px] w-full mx-auto">
-            <button
-              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-              disabled={currentPage === 1}
-              className={`w-10 h-10 flex items-center justify-center rounded-lg border ${
-                currentPage === 1
-                  ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                  : "border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer"
-              }`}
-            >
-              <CaretLeftIcon size={18} weight="bold" />
-            </button>
-
-            {[...Array(totalPages)].map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentPage(index + 1)}
-                className={`w-10 h-10 rounded-lg font-semibold cursor-pointer ${
-                  currentPage === index + 1
-                    ? "bg-[#16284F] text-white"
-                    : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                {index + 1}
-              </button>
-            ))}
-
-            <button
-              onClick={() =>
-                setCurrentPage((page) => Math.min(totalPages, page + 1))
-              }
-              disabled={currentPage === totalPages}
-              className={`w-10 h-10 flex items-center justify-center rounded-lg border ${
-                currentPage === totalPages
-                  ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                  : "border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer"
-              }`}
-            >
-              <CaretRight size={18} weight="bold" />
-            </button>
-          </div>
+        {!labsLoading && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalCount}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+            alwaysShow
+            bgClassName="bg-transparent"
+          />
         )}
       </div>
       <AdminLabRightPanel

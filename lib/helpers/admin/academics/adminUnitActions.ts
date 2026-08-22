@@ -77,7 +77,26 @@ export async function getAdminSubjectDetails(
         college_semester ( collegeSemester ),
         college_academic_year ( collegeAcademicYear ),
         college_education ( collegeEducationType ),
-        college_branch ( collegeBranchCode )
+        college_branch ( collegeBranchCode ),
+        college_subject_units (
+          collegeSubjectUnitId,
+          unitNumber,
+          unitTitle,
+          startDate,
+          endDate,
+          completionPercentage,
+          collegeSectionsId,
+          isActive,
+          college_subject_unit_topics (
+            collegeSubjectUnitTopicId,
+            topicTitle,
+            isCompleted,
+            displayOrder,
+            collegeSubjectUnitId,
+            collegeSectionsId,
+            isActive
+          )
+        )
       `,
       )
       .eq("collegeSubjectId", subjectId)
@@ -144,50 +163,46 @@ export async function getAdminSubjectDetails(
       sectionName: sectionName,
     };
 
-    const { data: units, error: unitError } = await supabase
-      .from("college_subject_units")
-      .select(
-        `
-        collegeSubjectUnitId,
-        unitNumber,
-        unitTitle,
-        startDate,
-        endDate,
-        completionPercentage
-      `,
-      )
-      .eq("collegeSubjectId", subjectId)
-      .eq("isActive", true)
-      .order("unitNumber", { ascending: true });
+    // Units are fetched through the selected subject (and therefore its
+    // academic year). A section-specific unit overrides its global version.
+    const rawUnits = (subject.college_subject_units || []).filter(
+      (unit: any) =>
+        unit.isActive !== false &&
+        (unit.collegeSectionsId == null || unit.collegeSectionsId === sectionId),
+    );
+    const unitsByNumber = new Map<number, any>();
+    rawUnits.forEach((unit: any) => {
+      const existing = unitsByNumber.get(unit.unitNumber);
+      if (
+        !existing ||
+        (existing.collegeSectionsId == null && unit.collegeSectionsId != null)
+      ) {
+        unitsByNumber.set(unit.unitNumber, unit);
+      }
+    });
+    const resolvedUnits = Array.from(unitsByNumber.values()).sort(
+      (a, b) => a.unitNumber - b.unitNumber,
+    );
 
-    if (unitError) throw unitError;
-
-    const unitIds = units.map((u) => u.collegeSubjectUnitId);
-    let allTopics: any[] = [];
-
-    if (unitIds.length > 0) {
-      const { data: topics, error: topicError } = await supabase
-        .from("college_subject_unit_topics")
-        .select(
-          `
-            collegeSubjectUnitTopicId,
-            topicTitle,
-            isCompleted,
-            displayOrder,
-            collegeSubjectUnitId
-        `,
-        )
-        .in("collegeSubjectUnitId", unitIds)
-        .eq("isActive", true)
-        .order("displayOrder", { ascending: true });
-
-      if (topicError) throw topicError;
-      allTopics = topics;
-    }
-
-    const uiUnits: UiUnit[] = units.map((u) => {
-      const unitTopics = allTopics.filter(
-        (t) => t.collegeSubjectUnitId === u.collegeSubjectUnitId,
+    const uiUnits: UiUnit[] = resolvedUnits.map((u) => {
+      const rawUnitTopics = (u.college_subject_unit_topics || []).filter(
+        (topic: any) =>
+          topic.isActive !== false &&
+          (topic.collegeSectionsId == null || topic.collegeSectionsId === sectionId),
+      );
+      const topicsByTitle = new Map<string, (typeof rawUnitTopics)[number]>();
+      rawUnitTopics.forEach((topic: any) => {
+        const key = topic.topicTitle?.trim().toLowerCase() || String(topic.collegeSubjectUnitTopicId);
+        const existing = topicsByTitle.get(key);
+        if (
+          !existing ||
+          (existing.collegeSectionsId == null && topic.collegeSectionsId != null)
+        ) {
+          topicsByTitle.set(key, topic);
+        }
+      });
+      const unitTopics = Array.from(topicsByTitle.values()).sort(
+        (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
       );
       const sDate = formatDate(u.startDate);
       const eDate = formatDate(u.endDate);

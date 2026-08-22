@@ -71,7 +71,7 @@ export async function sendProgressChatMessage(payload: {
   message?: string;
   file?: File;
   senderUserId: number;
-  senderRole: "STUDENT" | "PARENT" | "FACULTY";
+  senderRole: "STUDENT" | "PARENT" | "FACULTY" | "ADMIN";
 }) {
   if (!payload.senderUserId) throw new Error("Sender ID is missing");
 
@@ -125,12 +125,14 @@ export async function sendProgressChatMessage(payload: {
 export async function markProgressMessagesAsRead(
   studentId: number,
   facultyId: number,
-  receiverRole: "STUDENT" | "PARENT" | "FACULTY",
+  receiverRole: "STUDENT" | "PARENT" | "FACULTY" | "ADMIN",
 ) {
   // If I am a Faculty, I mark messages sent by STUDENT/PARENT as read.
   // If I am a STUDENT/PARENT, I mark messages sent by FACULTY as read.
   const senderRolesToMark =
-    receiverRole === "FACULTY" ? ["STUDENT", "PARENT"] : ["FACULTY"];
+    receiverRole === "FACULTY" || receiverRole === "ADMIN"
+      ? ["STUDENT", "PARENT"]
+      : ["FACULTY", "ADMIN"];
 
   await supabase
     .from("student_progress_chats")

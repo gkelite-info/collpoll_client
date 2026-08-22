@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser } from "@/app/utils/context/UserContext";
-import { fetchAcademicYears, fetchBranches, fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns";
+import { fetchAcademicYearsMulti, fetchBranchesMulti, fetchPlacementOfficerEducations, fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns";
 import { createPlacementCompany, updatePlacementCompany } from "@/lib/helpers/placements/createPlacementCompany";
 import { CaretDown, CaretLeft, FilePdf, ImageSquare, Trash, UploadSimple, X } from "@phosphor-icons/react";
 import { ReactNode, useEffect, useRef, useState } from "react";
@@ -36,9 +36,9 @@ type CompanyFormState = {
   driveType: string;
   startDate: string;
   endDate: string;
-  educationType: CascadeOption | null;
-  branch: CascadeOption | null;
-  academicYear: CascadeOption | null;
+  educationType: CascadeOption[];
+  branch: CascadeOption[];
+  academicYear: CascadeOption[];
   eligibilityCriteria: string;
   companyLogo: File | null;
   certificates: File[];
@@ -63,9 +63,9 @@ const initialFormState: CompanyFormState = {
   driveType: "",
   startDate: "",
   endDate: "",
-  educationType: null,
-  branch: null,
-  academicYear: null,
+  educationType: [],
+  branch: [],
+  academicYear: [],
   eligibilityCriteria: "",
   companyLogo: null,
   certificates: [],
@@ -172,9 +172,9 @@ function validate(
     errors.endDate = "End date must be after start date";
   }
 
-  if (!form.educationType) errors.educationType = "Education type is required";
-  if (!form.branch) errors.branch = "Branch is required";
-  if (!form.academicYear) errors.academicYear = "Academic year is required";
+  if (!form.educationType || form.educationType.length === 0) errors.educationType = "Education type is required";
+  if (!form.branch || form.branch.length === 0) errors.branch = "Branch is required";
+  if (!form.academicYear || form.academicYear.length === 0) errors.academicYear = "Academic year is required";
 
   if (!form.eligibilityCriteria.trim())
     errors.eligibilityCriteria = "Eligibility criteria is required";
@@ -332,6 +332,116 @@ function CascadeSelect({
     </div>
   );
 }
+
+function MultiCascadeSelect({
+  label,
+  required,
+  placeholder,
+  options,
+  value,
+  onChange,
+  disabled,
+  loading,
+  hasError,
+  errorMsg,
+}: {
+  label: string;
+  required?: boolean;
+  placeholder: string;
+  options: CascadeOption[];
+  value: CascadeOption[];
+  onChange: (opt: CascadeOption[]) => void;
+  disabled?: boolean;
+  loading?: boolean;
+  hasError?: boolean;
+  errorMsg?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const toggleOption = (opt: CascadeOption) => {
+    if (value.some((v) => v.id === opt.id)) {
+      onChange(value.filter((v) => v.id !== opt.id));
+    } else {
+      onChange([...value, opt]);
+    }
+  };
+
+  return (
+    <div>
+      <SectionLabel required={required}>{label}</SectionLabel>
+      <div ref={ref} className="relative">
+        <button
+          type="button"
+          disabled={disabled || loading}
+          onClick={() => setOpen((p) => !p)}
+          className={`flex w-full items-center justify-between rounded-lg border bg-white px-4 py-2.5 text-sm shadow-sm outline-none transition focus:border-[#49C77F]
+            ${hasError ? "border-red-400" : "border-[#CCCCCC]"}
+            ${disabled || loading ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
+            ${value.length > 0 ? "text-[#525252]" : "text-gray-400"}
+          `}
+        >
+          <span className="truncate">
+            {loading
+              ? "Loading..."
+              : value.length > 0
+              ? value.map((v) => v.label).join(", ")
+              : placeholder}
+          </span>
+          <CaretDown
+            size={15}
+            weight="bold"
+            className={`ml-2 shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        {open && !disabled && !loading && (
+          <>
+            <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+            <div className="absolute z-30 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+              {options.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-gray-400">No options available</div>
+              ) : (
+                options.map((opt) => {
+                  const isSelected = value.some((v) => v.id === opt.id);
+                  return (
+                    <div
+                      key={opt.id}
+                      onClick={() => toggleOption(opt)}
+                      className={`flex cursor-pointer items-center gap-2.5 px-4 py-2.5 text-sm transition
+                        ${isSelected ? "bg-green-50 font-medium text-[#1e7a4a]" : "text-[#525252] hover:bg-gray-50"}
+                      `}
+                    >
+                      <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${isSelected ? "border-[#49C77F] bg-[#49C77F]" : "border-gray-300 bg-white"}`}>
+                        {isSelected && (
+                          <svg viewBox="0 0 12 12" className="h-2.5 w-2.5">
+                            <path d="M2 6l2.5 2.5L10 3" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </div>
+                      {opt.label}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </>
+        )}
+      </div>
+      <FieldError msg={errorMsg} />
+    </div>
+  );
+}
+
 
 
 function JobRoleDropdown({
@@ -595,39 +705,46 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
   const [loadingEdu, setLoadingEdu] = useState(false);
   const [loadingBranch, setLoadingBranch] = useState(false);
   const [loadingYear, setLoadingYear] = useState(false);
-  const educationTypeId = form.educationType?.id;
-  const branchId = form.branch?.id;
+  const educationTypeIds = form.educationType.map(e => e.id);
+  const branchIds = form.branch.map(b => b.id);
 
   useEffect(() => {
     if (!collegeId) return;
     setLoadingEdu(true);
-    fetchEducations(collegeId)
-      .then((data) => setEducations(data.map((e: any) => ({ id: e.collegeEducationId, label: e.collegeEducationType }))))
-      .catch(console.error)
-      .finally(() => setLoadingEdu(false));
-  }, [collegeId]);
+    if (placementEmployeeId) {
+      fetchPlacementOfficerEducations(placementEmployeeId, collegeId)
+        .then((data) => setEducations(data.map((e: any) => ({ id: e.collegeEducationId, label: e.collegeEducationType }))))
+        .catch(console.error)
+        .finally(() => setLoadingEdu(false));
+    } else {
+      fetchEducations(collegeId)
+        .then((data) => setEducations(data.map((e: any) => ({ id: e.collegeEducationId, label: e.collegeEducationType }))))
+        .catch(console.error)
+        .finally(() => setLoadingEdu(false));
+    }
+  }, [collegeId, placementEmployeeId]);
 
   useEffect(() => {
-    if (!collegeId || !educationTypeId) { setBranches([]); return; }
+    if (!collegeId || educationTypeIds.length === 0) { setBranches([]); return; }
     setLoadingBranch(true);
-    fetchBranches(collegeId, educationTypeId)
+    fetchBranchesMulti(collegeId, educationTypeIds)
       .then((data) => setBranches(data.map((b) => ({
         id: b.collegeBranchId,
-        label: b.collegeBranchCode,
+        label: b.collegeBranchCode || b.collegeBranchType || "",
         code: b.collegeBranchCode
       }))))
       .catch(console.error)
       .finally(() => setLoadingBranch(false));
-  }, [collegeId, educationTypeId]);
+  }, [collegeId, JSON.stringify(educationTypeIds)]);
 
   useEffect(() => {
-    if (!collegeId || !educationTypeId || !branchId) { setAcademicYears([]); return; }
+    if (!collegeId || educationTypeIds.length === 0 || branchIds.length === 0) { setAcademicYears([]); return; }
     setLoadingYear(true);
-    fetchAcademicYears(collegeId, educationTypeId, branchId)
+    fetchAcademicYearsMulti(collegeId, educationTypeIds, branchIds)
       .then((data) => setAcademicYears(data.map((y) => ({ id: y.collegeAcademicYearId, label: y.collegeAcademicYear }))))
       .catch(console.error)
       .finally(() => setLoadingYear(false));
-  }, [collegeId, educationTypeId, branchId]);
+  }, [collegeId, JSON.stringify(educationTypeIds), JSON.stringify(branchIds)]);
 
   function set<K extends keyof CompanyFormState>(key: K, value: CompanyFormState[K]) {
     setForm((prev: CompanyFormState) => ({ ...prev, [key]: value }));
@@ -680,8 +797,8 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
         endDate: form.endDate,
         eligibilityCriteria: form.eligibilityCriteria,
         collegeId,
-        collegeBranchId: form.branch!.id,
-        collegeAcademicYearId: form.academicYear!.id,
+        collegeBranchIds: form.branch.map(b => b.id),
+        collegeAcademicYearIds: form.academicYear.map(a => a.id),
         createdBy: placementEmployeeId,
       };
 
@@ -916,32 +1033,32 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
         </div>
 
         <div className="grid gap-5 md:grid-cols-2">
-          <CascadeSelect
+          <MultiCascadeSelect
             label="Education Type"
             required
             placeholder="Select Education Type"
             options={educations}
             value={form.educationType}
-            onChange={(opt) => {
-              set("educationType", opt);
-              set("branch", null);
-              set("academicYear", null);
+            onChange={(opts) => {
+              set("educationType", opts);
+              set("branch", []);
+              set("academicYear", []);
             }}
             loading={loadingEdu}
             hasError={!!errors.educationType}
             errorMsg={errors.educationType}
           />
-          <CascadeSelect
+          <MultiCascadeSelect
             label="Branch"
             required
             placeholder="Select Branch"
             options={branches}
             value={form.branch}
-            onChange={(opt) => {
-              set("branch", opt);
-              set("academicYear", null);
+            onChange={(opts) => {
+              set("branch", opts);
+              set("academicYear", []);
             }}
-            disabled={!form.educationType}
+            disabled={form.educationType.length === 0}
             loading={loadingBranch}
             hasError={!!errors.branch}
             errorMsg={errors.branch}
@@ -949,14 +1066,14 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
         </div>
 
         <div className="grid gap-5 md:grid-cols-2">
-          <CascadeSelect
+          <MultiCascadeSelect
             label="Academic Year"
             required
             placeholder="Select Academic Year"
             options={academicYears}
             value={form.academicYear}
-            onChange={(opt) => set("academicYear", opt)}
-            disabled={!form.branch}
+            onChange={(opts) => set("academicYear", opts)}
+            disabled={form.branch.length === 0}
             loading={loadingYear}
             hasError={!!errors.academicYear}
             errorMsg={errors.academicYear}

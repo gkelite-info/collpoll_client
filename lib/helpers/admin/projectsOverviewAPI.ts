@@ -166,13 +166,14 @@ export async function getBatchFacultyData(
  */
 export async function getBatchProjectCounts(
     collegeId: number,
-    cards: CardKey[]
+    cards: CardKey[],
+    filters?: { sectionId?: number | null; subjectId?: number | null },
 ): Promise<Map<string, number>> {
     const result = new Map<string, number>();
     if (cards.length === 0) return result;
 
     try {
-        const today = new Date().toISOString();
+        const today = new Date().toISOString().slice(0, 10);
         const yearIds = [...new Set(cards.map((c) => c.yearId))];
 
         // Step 1 & 2: Get faculty and faculty_sections in parallel
@@ -219,32 +220,58 @@ export async function getBatchProjectCounts(
             cardFacultyMap.get(key)!.add(sec.facultyId);
         }
 
-        // Step 3: Get all active projects for all matched faculty (single query)
+        // Step 3: Fetch projects with their saved academic scope. Projects store
+        // the selected year and section directly, so those values must be the
+        // primary source for the Admin overview instead of inferring scope only
+        // from the faculty's current section assignments.
         const allMatchedFacultyIds = [...new Set(sectionData.map((s: any) => s.facultyId))];
 
-        const { data: projectData, error: projectError } = await supabase
+        let projectQuery = supabase
             .from("projects")
-            .select("projectId, facultyId")
+            .select(`
+                projectId,
+                facultyId,
+                collegeAcademicYearId,
+                collegeSectionsId,
+                collegeSubjectId,
+                college_sections:collegeSectionsId ( collegeBranchId ),
+                college_subjects:collegeSubjectId ( collegeBranchId )
+            `)
             .in("facultyId", allMatchedFacultyIds)
             .eq("collegeId", collegeId)
             .is("deletedAt", null)
             .gte("endDate", today);
 
+        if (filters?.sectionId) {
+            projectQuery = projectQuery.eq("collegeSectionsId", filters.sectionId);
+        }
+        if (filters?.subjectId) {
+            projectQuery = projectQuery.eq("collegeSubjectId", filters.subjectId);
+        }
+
+        const { data: projectData, error: projectError } = await projectQuery;
+
         if (projectError) return result;
 
         // Count projects per card
-        for (const project of projectData ?? []) {
-            const branchId = facultyBranchMap.get(project.facultyId);
-            if (branchId === undefined) continue;
+        for (const project of (projectData ?? []) as any[]) {
+            const projectSection = Array.isArray(project.college_sections)
+                ? project.college_sections[0]
+                : project.college_sections;
+            const projectSubject = Array.isArray(project.college_subjects)
+                ? project.college_subjects[0]
+                : project.college_subjects;
+            const branchId =
+                projectSection?.collegeBranchId ??
+                projectSubject?.collegeBranchId ??
+                facultyBranchMap.get(project.facultyId);
+            const projectYearId = project.collegeAcademicYearId;
 
-            // Find which yearIds this faculty teaches in
-            const yearEntries = sectionData.filter((s: any) => s.facultyId === project.facultyId);
-            for (const entry of yearEntries) {
-                const key = makeKey(branchId, entry.collegeAcademicYearId);
-                // Only count if this card is in our requested set
-                if (cardFacultyMap.has(key)) {
-                    result.set(key, (result.get(key) ?? 0) + 1);
-                }
+            if (branchId === undefined || branchId === null || !projectYearId) continue;
+
+            const key = makeKey(branchId, projectYearId);
+            if (cardFacultyMap.has(key)) {
+                result.set(key, (result.get(key) ?? 0) + 1);
             }
         }
     } catch (err) {

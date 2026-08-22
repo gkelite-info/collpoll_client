@@ -30,6 +30,8 @@ function ProjectsOverview() {
   const [countsData, setCountsData] = useState<any[]>([]);
   const [branchFilter, setBranchFilter] = useState("All");
   const [yearFilter, setYearFilter] = useState("All");
+  const [sectionFilter, setSectionFilter] = useState("All");
+  const [subjectFilter, setSubjectFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const [currentCoursePage, setCurrentCoursePage] = useState(1);
   const [totalCourses, setTotalCourses] = useState(0);
@@ -64,6 +66,12 @@ function ProjectsOverview() {
   const [yearOptions, setYearOptions] = useState<
     { id: number; label: string }[]
   >([]);
+  const [sectionOptions, setSectionOptions] = useState<
+    { id: number; label: string }[]
+  >([]);
+  const [subjectOptions, setSubjectOptions] = useState<
+    { id: number; label: string }[]
+  >([]);
 
   const [branchYearsMap, setBranchYearsMap] = useState<Record<number, { id: number; label: string }[]>>({});
 
@@ -72,6 +80,103 @@ function ProjectsOverview() {
   const selectedYear = yearOptions.find(y => String(y.id) === yearId);
 
   const [dbEducationType, setDbEducationType] = useState<string | null>(null);
+
+  const isSchool = isSchoolEducation(
+    education?.collegeEducationType || collegeEducationType || "unknown"
+  );
+
+  const resolvedFilterYearId = useMemo(() => {
+    if (yearFilter === "All") return null;
+    const scopedYears = isSchool
+      ? yearOptions
+      : branchFilter !== "All"
+        ? branchYearsMap[Number(branchFilter)] ?? []
+        : yearOptions;
+    return scopedYears.find((item) => item.label === yearFilter)?.id ?? null;
+  }, [branchFilter, branchYearsMap, isSchool, yearFilter, yearOptions]);
+
+  useEffect(() => {
+    if (
+      !collegeId ||
+      educationFilter === "All" ||
+      !resolvedFilterYearId ||
+      (!isSchool && branchFilter === "All")
+    ) {
+      setSectionOptions([]);
+      setSubjectOptions([]);
+      setSectionFilter("All");
+      setSubjectFilter("All");
+      return;
+    }
+
+    let mounted = true;
+    let sectionQuery = supabase
+      .from("college_sections")
+      .select("collegeSectionsId, collegeSections")
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", Number(educationFilter))
+      .eq("collegeAcademicYearId", resolvedFilterYearId)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    if (!isSchool) sectionQuery = sectionQuery.eq("collegeBranchId", Number(branchFilter));
+
+    sectionQuery.then(({ data, error }) => {
+      if (!mounted) return;
+      if (error) {
+        console.error("Failed to load project sections", error);
+        setSectionOptions([]);
+        return;
+      }
+      setSectionOptions(
+        (data ?? []).map((item) => ({
+          id: item.collegeSectionsId,
+          label: item.collegeSections,
+        })),
+      );
+    });
+
+    return () => { mounted = false; };
+  }, [branchFilter, collegeId, educationFilter, isSchool, resolvedFilterYearId]);
+
+  useEffect(() => {
+    if (sectionFilter === "All") {
+      setSubjectOptions([]);
+      setSubjectFilter("All");
+      return;
+    }
+
+    let mounted = true;
+    supabase
+      .from("faculty_sections")
+      .select("collegeSubjectId, college_subjects:collegeSubjectId(subjectName)")
+      .eq("collegeSectionsId", Number(sectionFilter))
+      .eq("collegeAcademicYearId", resolvedFilterYearId!)
+      .eq("isActive", true)
+      .is("deletedAt", null)
+      .then(({ data, error }) => {
+        if (!mounted) return;
+        if (error) {
+          console.error("Failed to load project subjects", error);
+          setSubjectOptions([]);
+          return;
+        }
+        const unique = new Map<number, string>();
+        (data ?? []).forEach((item: any) => {
+          const subject = Array.isArray(item.college_subjects)
+            ? item.college_subjects[0]
+            : item.college_subjects;
+          if (item.collegeSubjectId && subject?.subjectName) {
+            unique.set(item.collegeSubjectId, subject.subjectName);
+          }
+        });
+        setSubjectOptions(
+          Array.from(unique, ([id, label]) => ({ id, label })),
+        );
+      });
+
+    return () => { mounted = false; };
+  }, [resolvedFilterYearId, sectionFilter]);
 
   useEffect(() => {
     if (!branchId) {
@@ -119,10 +224,6 @@ function ProjectsOverview() {
 
   const normalizedRole =
     role?.toLowerCase() === "admin" ? "admin" : "faculty";
-
-  const isSchool = isSchoolEducation(
-    education?.collegeEducationType || collegeEducationType || "unknown"
-  );
 
   // Load educations first, then auto-select based on what's actually available
   useEffect(() => {
@@ -400,14 +501,6 @@ function ProjectsOverview() {
         return;
       }
 
-      // Optimization: if we already have the exact data for these cards, skip fetching
-      // This prevents the redundant double-fetch after loadMetadata runs
-      const currentKeys = paginatedCards.map((c) => `${c.branchId}-${c.yearId}`).join(",");
-      const existingKeys = countsData.map((c) => `${c.branchId}-${c.yearId}`).join(",");
-      if (currentKeys === existingKeys && countsData.length > 0) {
-          return;
-      }
-
       try {
         setIsFetchingCounts(true);
 
@@ -420,7 +513,10 @@ function ProjectsOverview() {
         const [studentCountsMap, facultyDataMap, projectCountsMap] = await Promise.all([
           getBatchStudentCounts(Number(educationFilter), cardKeys),
           getBatchFacultyData(Number(educationFilter), cardKeys),
-          getBatchProjectCounts(collegeId as number, cardKeys),
+          getBatchProjectCounts(collegeId as number, cardKeys, {
+            sectionId: sectionFilter === "All" ? null : Number(sectionFilter),
+            subjectId: subjectFilter === "All" ? null : Number(subjectFilter),
+          }),
         ]);
 
         const results = paginatedCards.map((card) => {
@@ -447,7 +543,14 @@ function ProjectsOverview() {
     };
 
     getAllOverviewCounts();
-  }, [paginatedCards, educationFilter, collegeId, isMetadataLoading]);
+  }, [
+    paginatedCards,
+    educationFilter,
+    collegeId,
+    isMetadataLoading,
+    sectionFilter,
+    subjectFilter,
+  ]);
 
 
   const handleBack = () => {
@@ -510,6 +613,10 @@ function ProjectsOverview() {
                     setEducationFilter(val);
                     setBranchFilter("All");
                     setYearFilter("All");
+                    setSectionFilter("All");
+                    setSubjectFilter("All");
+                    setSectionOptions([]);
+                    setSubjectOptions([]);
                     setBranches([]);
                     setYearOptions([]);
                     setBranchOptions([]);
@@ -536,6 +643,10 @@ function ProjectsOverview() {
                       setCurrentPage(1);
                       setBranchFilter(val);
                       setYearFilter("All");
+                      setSectionFilter("All");
+                      setSubjectFilter("All");
+                      setSectionOptions([]);
+                      setSubjectOptions([]);
                     }}
                   />
                 )}
@@ -559,6 +670,48 @@ function ProjectsOverview() {
                     setIsFetchingCounts(true);
                     setCurrentPage(1);
                     setYearFilter(val);
+                    setSectionFilter("All");
+                    setSubjectFilter("All");
+                    setSectionOptions([]);
+                    setSubjectOptions([]);
+                  }}
+                />
+
+                <FilterDropdown
+                  label="Section"
+                  value={sectionFilter}
+                  disabled={!resolvedFilterYearId || sectionOptions.length === 0}
+                  options={[
+                    { label: "All", value: "All" },
+                    ...sectionOptions.map((section) => ({
+                      label: section.label,
+                      value: String(section.id),
+                    })),
+                  ]}
+                  onChange={(val) => {
+                    setIsFetchingCounts(true);
+                    setCurrentPage(1);
+                    setSectionFilter(val);
+                    setSubjectFilter("All");
+                    setSubjectOptions([]);
+                  }}
+                />
+
+                <FilterDropdown
+                  label="Subject"
+                  value={subjectFilter}
+                  disabled={sectionFilter === "All" || subjectOptions.length === 0}
+                  options={[
+                    { label: "All", value: "All" },
+                    ...subjectOptions.map((subject) => ({
+                      label: subject.label,
+                      value: String(subject.id),
+                    })),
+                  ]}
+                  onChange={(val) => {
+                    setIsFetchingCounts(true);
+                    setCurrentPage(1);
+                    setSubjectFilter(val);
                   }}
                 />
               </div>
