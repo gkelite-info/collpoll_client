@@ -72,26 +72,12 @@ export default function Announcements() {
 
 
     return (
-        <div
-            className="
-        bg-white
-        rounded-xl
-        shadow-sm
-        w-full
-        h-full
-        flex
-        flex-col
-      "
-        >
-            <div className="flex-1 overflow-y-auto">
-                <AnnouncementsCard
-                    announceCard={announcements}
-                    height="80vh"
-                    currentView={view}
-                    onViewChange={(v) => setView(v)}
-                    refreshAnnouncements={fetchAnnouncements}
-                />
-            </div>
-        </div>
+        <AnnouncementsCard
+            announceCard={announcements}
+            currentView={view}
+            onViewChange={(v) => setView(v)}
+            refreshAnnouncements={fetchAnnouncements}
+            className="min-h-[380px] shrink-0"
+        />
     );
 }

@@ -36,7 +36,7 @@ interface SharedProgressChatModalProps {
   facultyId: number;
   collegeId: number;
   senderUserId: number;
-  senderRole: "PARENT" | "STUDENT" | "FACULTY";
+  senderRole: "PARENT" | "STUDENT" | "FACULTY" | "ADMIN";
   chatParticipantName: string;
   chatParticipantSubtitle: string;
   chatParticipantAvatar?: string | null;

@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { CaretLeftIcon, CaretRight, X } from "@phosphor-icons/react";
 
@@ -189,6 +191,12 @@ function PlacementDetailsModal({
     );
 }
 
+import {
+  fetchEducations,
+  fetchBranches,
+  fetchAcademicYears,
+} from "@/lib/helpers/admin/academics/academicDropdowns";
+
 function AdminPlacementHeaderShimmer() {
     return (
         <div className="shrink-0 space-y-4">
@@ -221,15 +229,21 @@ function AdminPlacementRightShimmer() {
 
 export default function PlacementsPage() {
     const { collegeId, loading: adminLoading } = useAdmin();
+    const { isSchool } = useInstitutionTerminology();
     const [placements, setPlacements] = useState<PlacementCompany[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [isListLoading, setIsListLoading] = useState(true);
     const [filterLoadingKey, setFilterLoadingKey] = useState<
-        "cycle" | "branch" | "status" | "sort" | null
+        "education" | "branch" | "academicYear" | "status" | "sort" | null
     >(null);
-    const [serverCycles, setServerCycles] = useState<string[]>([]);
-    const [serverBranches, setServerBranches] = useState<string[]>([]);
-    const [cycle, setCycle] = useState("");
-    const [branch, setBranch] = useState("All");
+
+    const [educations, setEducations] = useState<{ id: number; label: string }[]>([]);
+    const [branches, setBranches] = useState<{ id: number; label: string }[]>([]);
+    const [academicYears, setAcademicYears] = useState<{ id: number; label: string }[]>([]);
+
+    const [educationTypeId, setEducationTypeId] = useState<number | null>(null);
+    const [branchId, setBranchId] = useState<number | null>(null);
+    const [academicYearId, setAcademicYearId] = useState<number | null>(null);
     const [status, setStatus] =
         useState<(typeof placementStatusOptions)[number]>("All");
     const [sortBy, setSortBy] =
@@ -246,22 +260,25 @@ export default function PlacementsPage() {
 
         if (!collegeId) {
             setPlacements([]);
-            setIsLoading(false);
+            setTotalRecords(0);
+            setIsInitialLoad(false);
+            setIsListLoading(false);
             return;
         }
 
         let isMounted = true;
 
         const loadPlacements = async () => {
-            setIsLoading(true);
+            setIsListLoading(true);
             try {
                 const data = await getPlacementCompanies({
                     collegeId,
                     includeExpired: true,
                     page: currentPage,
                     pageSize: rowsPerPage,
-                    cycle,
-                    branchName: branch,
+                    educationTypeId,
+                    branchId,
+                    academicYearId,
                     status,
                     sortBy,
                 });
@@ -277,7 +294,10 @@ export default function PlacementsPage() {
                     setTotalRecords(0);
                 }
             } finally {
-                if (isMounted) setIsLoading(false);
+                if (isMounted) {
+                    setIsListLoading(false);
+                    setIsInitialLoad(false);
+                }
             }
         };
 
@@ -286,101 +306,113 @@ export default function PlacementsPage() {
         return () => {
             isMounted = false;
         };
-    }, [adminLoading, branch, collegeId, currentPage, cycle, sortBy, status]);
+    }, [adminLoading, educationTypeId, branchId, academicYearId, collegeId, currentPage, sortBy, status]);
 
-    const loadFilterOptions = useCallback(async (
-        loadingKey: "cycle" | "branch" | "status" | "sort",
-    ) => {
+    const loadEducations = useCallback(async () => {
         if (!collegeId) return;
-
-        const startedAt = Date.now();
-        setFilterLoadingKey(loadingKey);
+        setFilterLoadingKey("education");
         try {
-            const options = await fetchAdminPlacementFilterOptions(collegeId);
-            setServerCycles(options.cycles);
-            setServerBranches(options.branches);
+            const data = await fetchEducations(collegeId);
+            setEducations(
+                data.map((item: any) => ({
+                    id: item.collegeEducationId,
+                    label: item.collegeEducationType || "Unknown",
+                })),
+            );
         } catch (error) {
-            console.error("Failed to refresh admin placement filter options:", error);
+            console.error("Failed to load educations:", error);
         } finally {
-            const remainingDelay = 350 - (Date.now() - startedAt);
-            if (remainingDelay > 0) {
-                await new Promise((resolve) => setTimeout(resolve, remainingDelay));
-            }
             setFilterLoadingKey(null);
         }
     }, [collegeId]);
 
-    const handleCycleChange = (value: string) => {
-        setCurrentPage(1);
-        setCycle(value);
-        void loadFilterOptions("cycle");
+    const loadBranches = useCallback(async (eduId: number) => {
+        if (!collegeId) return;
+        setFilterLoadingKey("branch");
+        try {
+            const data = await fetchBranches(collegeId, eduId);
+            setBranches(
+                data.map((item: any) => ({
+                    id: item.collegeBranchId,
+                    label: item.collegeBranchType || item.collegeBranchCode || "Unknown",
+                })),
+            );
+        } catch (error) {
+            console.error("Failed to load branches:", error);
+        } finally {
+            setFilterLoadingKey(null);
+        }
+    }, [collegeId]);
+
+    const loadAcademicYears = useCallback(async (eduId: number, branchId: number | null) => {
+        if (!collegeId) return;
+        setFilterLoadingKey("academicYear");
+        try {
+            const data = await fetchAcademicYears(collegeId, eduId, branchId);
+            setAcademicYears(
+                data.map((item: any) => ({
+                    id: item.collegeAcademicYearId,
+                    label: item.collegeAcademicYear || "Unknown",
+                })),
+            );
+        } catch (error) {
+            console.error("Failed to load academic years:", error);
+        } finally {
+            setFilterLoadingKey(null);
+        }
+    }, [collegeId]);
+
+    const handleEducationOpen = () => {
+        if (educations.length === 0) void loadEducations();
     };
 
-    const handleBranchChange = (value: string) => {
+    const handleBranchOpen = () => {
+        if (branches.length === 0 && educationTypeId) void loadBranches(educationTypeId);
+    };
+
+    const handleAcademicYearOpen = () => {
+        if (academicYears.length === 0 && educationTypeId) void loadAcademicYears(educationTypeId, branchId);
+    };
+
+    const handleEducationChange = (value: number | null) => {
         setCurrentPage(1);
-        setBranch(value);
-        void loadFilterOptions("branch");
+        setEducationTypeId(value);
+        setBranchId(null);
+        setAcademicYearId(null);
+        setBranches([]);
+        setAcademicYears([]);
+        if (value) {
+            void loadBranches(value);
+            void loadAcademicYears(value, null);
+        }
+    };
+
+    const handleBranchChange = (value: number | null) => {
+        setCurrentPage(1);
+        setBranchId(value);
+        setAcademicYearId(null);
+        setAcademicYears([]);
+        if (educationTypeId) {
+            void loadAcademicYears(educationTypeId, value);
+        }
+    };
+
+    const handleAcademicYearChange = (value: number | null) => {
+        setCurrentPage(1);
+        setAcademicYearId(value);
     };
 
     const handleStatusChange = (value: (typeof placementStatusOptions)[number]) => {
         setCurrentPage(1);
         setStatus(value);
-        void loadFilterOptions("status");
     };
 
     const handleSortChange = (value: (typeof placementSortOptions)[number]) => {
         setCurrentPage(1);
         setSortBy(value);
-        void loadFilterOptions("sort");
     };
 
-    const cycles = useMemo(() => {
-        const placementYears = placements.map(getPlacementCycle).filter(Boolean);
-        const currentYear = new Date().getFullYear();
-        const defaultYears = Array.from(
-            new Set([
-                "2025",
-                String(currentYear - 1),
-                String(currentYear),
-                String(currentYear + 1),
-                String(currentYear + 2),
-            ]),
-        );
-
-        return Array.from(new Set([...defaultYears, ...placementYears, ...serverCycles])).sort(
-            (a, b) => Number(b) - Number(a),
-        );
-    }, [placements, serverCycles]);
-
-    useEffect(() => {
-        const currentYear = String(new Date().getFullYear());
-
-        if (!cycle && cycles.length > 0) {
-            setCycle(cycles.includes(currentYear) ? currentYear : cycles[0]);
-        } else if (Number(cycle) > Number(currentYear)) {
-            setCycle(currentYear);
-        } else if (cycle && !cycles.includes(cycle)) {
-            setCycle(cycles.includes(currentYear) ? currentYear : cycles[0]);
-        }
-    }, [cycle, cycles]);
-
-    const branches = useMemo(() => {
-        const placementBranches = placements
-            .map((placement) => placement.branchName)
-            .filter((item): item is string => Boolean(item));
-
-        return Array.from(
-            new Set([...placementBranches, ...serverBranches]),
-        ).sort((a, b) => a.localeCompare(b));
-    }, [placements, serverBranches]);
-
-    useEffect(() => {
-        if (branch !== "All" && !branches.includes(branch)) {
-            setBranch("All");
-        }
-    }, [branch, branches]);
-
-    const pageLoading = adminLoading || isLoading;
+    const pageLoading = adminLoading || isInitialLoad;
     const filterRefreshing = filterLoadingKey !== null;
 
     return (
@@ -399,18 +431,26 @@ export default function PlacementsPage() {
                         </p>
 
                         <PlacementFilters
-                            cycle={cycle}
-                            cycles={cycles}
-                            branch={branch}
+                            isSchool={isSchool}
+                            educationTypeId={educationTypeId}
+                            educations={educations}
+                            branchId={branchId}
                             branches={branches}
+                            academicYearId={academicYearId}
+                            academicYears={academicYears}
                             status={status}
                             sortBy={sortBy}
-                            isCycleLoading={filterLoadingKey === "cycle"}
+                            isEducationLoading={filterLoadingKey === "education"}
                             isBranchLoading={filterLoadingKey === "branch"}
+                            isAcademicYearLoading={filterLoadingKey === "academicYear"}
                             isStatusLoading={filterLoadingKey === "status"}
                             isSortLoading={filterLoadingKey === "sort"}
-                            onCycleChange={handleCycleChange}
+                            onEducationChange={handleEducationChange}
+                            onEducationOpen={handleEducationOpen}
                             onBranchChange={handleBranchChange}
+                            onBranchOpen={handleBranchOpen}
+                            onAcademicYearChange={handleAcademicYearChange}
+                            onAcademicYearOpen={handleAcademicYearOpen}
                             onStatusChange={handleStatusChange}
                             onSortChange={handleSortChange}
                         />
@@ -421,59 +461,20 @@ export default function PlacementsPage() {
                 <div className="flex-1 overflow-y-auto pr-1 pb-4 mt-2">
                     <PlacementList
                         placements={placements}
-                        isLoading={adminLoading || isLoading || filterRefreshing}
-                        cycle={cycle}
+                        isLoading={adminLoading || isListLoading || filterRefreshing}
+                        cycle=""
                         onPlacementClick={setSelectedPlacement}
                     />
 
-                    {!pageLoading && !filterRefreshing && totalPages > 1 && (
-                        <div className="mb-2 mt-5 flex items-center justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                                disabled={currentPage === 1}
-                                className={`flex h-10 w-10 items-center justify-center rounded-lg border transition ${
-                                    currentPage === 1
-                                        ? "cursor-not-allowed border-gray-200 text-gray-300"
-                                        : "border-gray-300 text-gray-600 hover:bg-gray-100"
-                                }`}
-                            >
-                                <CaretLeftIcon size={18} weight="bold" />
-                            </button>
-
-                            {Array.from({ length: totalPages }).map((_, index) => {
-                                const page = index + 1;
-
-                                return (
-                                    <button
-                                        key={page}
-                                        type="button"
-                                        onClick={() => setCurrentPage(page)}
-                                        className={`h-10 w-10 rounded-lg font-semibold transition ${
-                                            currentPage === page
-                                                ? "bg-[#16284F] text-white"
-                                                : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-                                        }`}
-                                    >
-                                        {page}
-                                    </button>
-                                );
-                            })}
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setCurrentPage((page) => Math.min(totalPages, page + 1))
-                                }
-                                disabled={currentPage === totalPages}
-                                className={`flex h-10 w-10 items-center justify-center rounded-lg border transition ${
-                                    currentPage === totalPages
-                                        ? "cursor-not-allowed border-gray-200 text-gray-300"
-                                        : "border-gray-300 text-gray-600 hover:bg-gray-100"
-                                }`}
-                            >
-                                <CaretRight size={18} weight="bold" />
-                            </button>
+                    {!pageLoading && !filterRefreshing && totalRecords > rowsPerPage && (
+                        <div className="mb-2 mt-5">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalItems={totalRecords}
+                                itemsPerPage={rowsPerPage}
+                                onPageChange={setCurrentPage}
+                                bgClassName="bg-transparent"
+                            />
                         </div>
                     )}
                 </div>

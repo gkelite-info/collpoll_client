@@ -279,7 +279,7 @@ export const ProjectDetailsModal = ({
                 <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-2">
                   Team Members
                 </h2>
-                <div className="flex flex-col gap-3">
+                <div className="custom-scrollbar flex h-[190px] flex-col gap-3 overflow-y-auto pr-2">
                   {project.teamMembers.length > 0 ? (
                     project.teamMembers.map((member, i) => (
                       <div key={i} className="flex items-center gap-3">
@@ -310,7 +310,7 @@ export const ProjectDetailsModal = ({
                 <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-2">
                   Mentor(s)
                 </h2>
-                <div className="flex flex-col gap-3">
+                <div className="custom-scrollbar flex h-[190px] flex-col gap-3 overflow-y-auto pr-2">
                   {project.mentors.length > 0 ? (
                     project.mentors.map((mentor, i) => (
                       <div key={i} className="flex items-center gap-3">

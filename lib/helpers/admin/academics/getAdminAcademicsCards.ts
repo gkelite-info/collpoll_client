@@ -148,6 +148,51 @@ export async function getAdminAcademicsCards(
 ) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
+  const eduId = parseIntegerId(filters?.educationId);
+  const brId = parseIntegerId(filters?.branchId);
+  const yrId = parseIntegerId(filters?.academicYearId);
+  const secId = parseIntegerId(filters?.sectionId);
+  const subId = parseIntegerId(filters?.subjectId);
+  const facultySectionsRelation = subId
+    ? "faculty_sections!inner"
+    : "faculty_sections";
+
+  const searchText = search
+    ?.trim()
+    .replace(/[,%()]/g, " ")
+    .replace(/\s+/g, " ");
+  let searchedBranchIds: number[] | null = null;
+
+  if (searchText) {
+    let branchSearchQuery = supabase
+      .from("college_branch")
+      .select("collegeBranchId")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .is("deletedAt", null)
+      .or(
+        `collegeBranchCode.ilike.%${searchText}%,collegeBranchType.ilike.%${searchText}%`,
+      );
+
+    if (eduId) branchSearchQuery = branchSearchQuery.eq("collegeEducationId", eduId);
+    if (brId) branchSearchQuery = branchSearchQuery.eq("collegeBranchId", brId);
+
+    const { data: matchingBranches, error: branchSearchError } =
+      await branchSearchQuery;
+
+    if (branchSearchError) {
+      console.error("getAdminAcademicsCards branch search error", branchSearchError);
+      throw new Error("Failed to search academic branches");
+    }
+
+    searchedBranchIds = (matchingBranches ?? []).map(
+      (item) => item.collegeBranchId,
+    );
+
+    if (!searchedBranchIds.length) {
+      return { data: [], totalCount: 0 };
+    }
+  }
 
   let query = supabase
     .from("college_sections")
@@ -166,7 +211,7 @@ export async function getAdminAcademicsCards(
         collegeBranchType,
         collegeBranchCode
       ),
-      faculty_sections (
+      ${facultySectionsRelation} (
         facultyId,
         collegeAcademicYearId,
         collegeEducationId,
@@ -187,31 +232,7 @@ export async function getAdminAcademicsCards(
     .eq("isActive", true)
     .is("deletedAt", null);
 
-  const searchText = search?.trim().toLowerCase();
-  let branchSearch: string | null = null;
-  let sectionSearch: string | null = null;
-
-  if (searchText) {
-    searchText.split(/[-\s]+/).forEach((part) => {
-      if (part.length === 1) sectionSearch = part.toUpperCase();
-      else branchSearch = part;
-    });
-  }
-
-  if (branchSearch) {
-    query = query.or(
-      `collegeBranchCode.ilike.%${branchSearch}%,collegeBranchType.ilike.%${branchSearch}%`,
-      { foreignTable: "collegeBranch" },
-    );
-  }
-
-  if (sectionSearch) query = query.eq("collegeSections", sectionSearch);
-
-  const eduId = parseIntegerId(filters?.educationId);
-  const brId = parseIntegerId(filters?.branchId);
-  const yrId = parseIntegerId(filters?.academicYearId);
-  const secId = parseIntegerId(filters?.sectionId);
-  const subId = parseIntegerId(filters?.subjectId);
+  if (searchedBranchIds) query = query.in("collegeBranchId", searchedBranchIds);
 
   if (eduId) query = query.eq("collegeEducationId", eduId);
   if (brId) query = query.eq("collegeBranchId", brId);

@@ -1,7 +1,6 @@
 "use client";
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
 import { Avatar } from "@/app/utils/Avatar";
 
 export type CardProps = {
@@ -24,12 +23,10 @@ export type CardProps = {
 type SubjectCardProps = { subjectProps: CardProps[]; isSchool?: boolean };
 
 export default function SubjectCard({ subjectProps, isSchool }: SubjectCardProps) {
-  const [cards] = useState<CardProps[]>(subjectProps);
-
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {cards.map((item, index) => (
+        {subjectProps.map((item, index) => (
           <IndividualCard key={index} item={item} isSchool={isSchool} />
         ))}
       </div>

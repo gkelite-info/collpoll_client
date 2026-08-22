@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getPlacementCompanies } from "@/lib/helpers/placements/getPlacementCompanies";
@@ -21,6 +22,15 @@ import CreateCompanyScreen from "./components/CreateCompanyScreen";
 import CreateDriveScreen from "./components/CreateDriveScreen";
 import AddSelectedStudentScreen from "./components/AddSelectedStudentScreen";
 import DriveStudentsScreen from "./components/DriveStudentsScreen";
+import PlacementFilters, {
+  placementSortOptions,
+  placementStatusOptions,
+} from "@/app/(screens)/admin/placements/components/PlacementFilters";
+import {
+  fetchEducations,
+  fetchBranches,
+  fetchAcademicYears,
+} from "@/lib/helpers/admin/academics/academicDropdowns";
 import {
   placementTabs,
   PlacementTabId,
@@ -77,23 +87,29 @@ function mapCompanyToInitialForm(company: PlacementCompany) {
     startDate: company.startDate || "",
     endDate: company.endDate || "",
     educationType: company.collegeEducationId
-      ? {
-        id: company.collegeEducationId,
-        label: company.educationTypeName || "Selected Education",
-      }
-      : null,
+      ? [
+        {
+          id: company.collegeEducationId,
+          label: company.educationTypeName || "Selected Education",
+        },
+      ]
+      : [],
     branch: company.collegeBranchId
-      ? {
-        id: company.collegeBranchId,
-        label: company.branchName || String(company.collegeBranchId),
-      }
-      : null,
+      ? [
+        {
+          id: company.collegeBranchId,
+          label: company.branchName || String(company.collegeBranchId),
+        },
+      ]
+      : [],
     academicYear: company.collegeAcademicYearId
-      ? {
-        id: company.collegeAcademicYearId,
-        label: company.academicYear || String(company.collegeAcademicYearId),
-      }
-      : null,
+      ? [
+        {
+          id: company.collegeAcademicYearId,
+          label: company.academicYear || String(company.collegeAcademicYearId),
+        },
+      ]
+      : [],
     eligibilityCriteria: company.eligibilityCriteria || "",
     existingLogoName: getFileNameFromUrl(company.logo),
     existingCertificates: company.attachments.map(getFileNameFromUrl),
@@ -125,6 +141,7 @@ function PlacementPageContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { collegeId, placementEmployeeId, loading: userLoading } = useUser();
+  const { isSchool } = useInstitutionTerminology();
   const [isPlacementLoading, setIsPlacementLoading] = useState(true);
   const [companies, setCompanies] = useState<PlacementCompany[]>([]);
   const [placementDrives, setPlacementDrives] = useState<PlacementDrive[]>([]);
@@ -137,6 +154,20 @@ function PlacementPageContent() {
   const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
   const [isDrivesLoading, setIsDrivesLoading] = useState(true);
   const [isResultsOffersLoading, setIsResultsOffersLoading] = useState(true);
+
+  const [filterLoadingKey, setFilterLoadingKey] = useState<
+    "education" | "branch" | "academicYear" | "status" | "sort" | null
+  >(null);
+
+  const [educations, setEducations] = useState<{ id: number; label: string }[]>([]);
+  const [branches, setBranches] = useState<{ id: number; label: string }[]>([]);
+  const [academicYears, setAcademicYears] = useState<{ id: number; label: string }[]>([]);
+
+  const [educationTypeId, setEducationTypeId] = useState<number | null>(null);
+  const [branchId, setBranchId] = useState<number | null>(null);
+  const [academicYearId, setAcademicYearId] = useState<number | null>(null);
+  const [status, setStatus] = useState<(typeof placementStatusOptions)[number]>("All");
+  const [sortBy, setSortBy] = useState<(typeof placementSortOptions)[number]>("Recently Uploaded");
 
   useEffect(() => {
     const timer = window.setTimeout(() => setIsPlacementLoading(false), 350);
@@ -169,6 +200,11 @@ function PlacementPageContent() {
           collegeId,
           placementOfficerId: placementEmployeeId,
           includeExpired: true,
+          educationTypeId,
+          branchId,
+          academicYearId,
+          status,
+          sortBy,
         }),
         getPlacementResultsOffers({
           collegeId,
@@ -196,11 +232,110 @@ function PlacementPageContent() {
       setIsDrivesLoading(false);
       setIsResultsOffersLoading(false);
     }
-  }, [collegeId, placementEmployeeId, userLoading]);
+  }, [collegeId, placementEmployeeId, userLoading, educationTypeId, branchId, academicYearId, status, sortBy]);
 
   useEffect(() => {
     void loadCompanies();
   }, [loadCompanies]);
+
+  const loadEducations = useCallback(async () => {
+    if (!collegeId) return;
+    setFilterLoadingKey("education");
+    try {
+      const data = await fetchEducations(collegeId);
+      setEducations(
+        data.map((item: any) => ({
+          id: item.collegeEducationId,
+          label: item.collegeEducationType || "Unknown",
+        })),
+      );
+    } catch (error) {
+      console.error("Failed to load educations:", error);
+    } finally {
+      setFilterLoadingKey(null);
+    }
+  }, [collegeId]);
+
+  const loadBranches = useCallback(async (eduId: number) => {
+    if (!collegeId) return;
+    setFilterLoadingKey("branch");
+    try {
+      const data = await fetchBranches(collegeId, eduId);
+      setBranches(
+        data.map((item: any) => ({
+          id: item.collegeBranchId,
+          label: item.collegeBranchType || item.collegeBranchCode || "Unknown",
+        })),
+      );
+    } catch (error) {
+      console.error("Failed to load branches:", error);
+    } finally {
+      setFilterLoadingKey(null);
+    }
+  }, [collegeId]);
+
+  const loadAcademicYears = useCallback(async (eduId: number, branchId: number | null) => {
+    if (!collegeId) return;
+    setFilterLoadingKey("academicYear");
+    try {
+      const data = await fetchAcademicYears(collegeId, eduId, branchId);
+      setAcademicYears(
+        data.map((item: any) => ({
+          id: item.collegeAcademicYearId,
+          label: item.collegeAcademicYear || "Unknown",
+        })),
+      );
+    } catch (error) {
+      console.error("Failed to load academic years:", error);
+    } finally {
+      setFilterLoadingKey(null);
+    }
+  }, [collegeId]);
+
+  const handleEducationOpen = () => {
+    if (educations.length === 0) void loadEducations();
+  };
+
+  const handleBranchOpen = () => {
+    if (branches.length === 0 && educationTypeId) void loadBranches(educationTypeId);
+  };
+
+  const handleAcademicYearOpen = () => {
+    if (academicYears.length === 0 && educationTypeId) void loadAcademicYears(educationTypeId, branchId);
+  };
+
+  const handleEducationChange = (value: number | null) => {
+    setEducationTypeId(value);
+    setBranchId(null);
+    setAcademicYearId(null);
+    setBranches([]);
+    setAcademicYears([]);
+    if (value) {
+      void loadBranches(value);
+      void loadAcademicYears(value, null);
+    }
+  };
+
+  const handleBranchChange = (value: number | null) => {
+    setBranchId(value);
+    setAcademicYearId(null);
+    setAcademicYears([]);
+    if (educationTypeId) {
+      void loadAcademicYears(educationTypeId, value);
+    }
+  };
+
+  const handleAcademicYearChange = (value: number | null) => {
+    setAcademicYearId(value);
+  };
+
+  const handleStatusChange = (value: (typeof placementStatusOptions)[number]) => {
+    setStatus(value);
+  };
+
+  const handleSortChange = (value: (typeof placementSortOptions)[number]) => {
+    setSortBy(value);
+  };
 
   const handleResultsOfferStatusSaved = (
     studentPlacementApplicationId: number,
@@ -422,7 +557,34 @@ function PlacementPageContent() {
 
           <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-2 pb-4">
             {activeTab === "company-management" && (
-              isCompaniesLoading ? (
+              <>
+                <div className="mb-4">
+                  <PlacementFilters
+                    isSchool={isSchool}
+                    educationTypeId={educationTypeId}
+                    educations={educations}
+                    branchId={branchId}
+                    branches={branches}
+                    academicYearId={academicYearId}
+                    academicYears={academicYears}
+                    status={status}
+                    sortBy={sortBy}
+                    isEducationLoading={filterLoadingKey === "education"}
+                    isBranchLoading={filterLoadingKey === "branch"}
+                    isAcademicYearLoading={filterLoadingKey === "academicYear"}
+                    isStatusLoading={filterLoadingKey === "status"}
+                    isSortLoading={filterLoadingKey === "sort"}
+                    onEducationChange={handleEducationChange}
+                    onEducationOpen={handleEducationOpen}
+                    onBranchChange={handleBranchChange}
+                    onBranchOpen={handleBranchOpen}
+                    onAcademicYearChange={handleAcademicYearChange}
+                    onAcademicYearOpen={handleAcademicYearOpen}
+                    onStatusChange={handleStatusChange}
+                    onSortChange={handleSortChange}
+                  />
+                </div>
+                {isCompaniesLoading ? (
                 <div className="h-full overflow-y-auto pr-2 pb-4">
                   <CompanyCardsShimmer />
                 </div>
@@ -434,8 +596,9 @@ function PlacementPageContent() {
                   onEditCompany={modalActions.openEditCompany}
                   onDeleteCompany={handleDeleteCompany}
                 />
-              )
-            )}
+              )}
+            </>
+          )}
 
             {activeTab === "placement-drives" && (
               <PlacementDrivesView

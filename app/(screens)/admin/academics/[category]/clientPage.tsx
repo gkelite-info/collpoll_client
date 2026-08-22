@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import SubjectCard, { CardProps } from "../components/subjectCards";
 import { SubjectCardSkeleton } from "../shimmer/subjectCardSkeleton";
 import toast from "react-hot-toast";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 export function ClientAcademicsWrapper({
   category,
@@ -29,6 +30,8 @@ export function ClientAcademicsWrapper({
   const [subjectData, setSubjectData] = useState<CardProps[]>([]);
   const [meta, setMeta] = useState({ title: "Loading...", year: "" });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const subjectsPerPage = 9;
 
   const loadData = async () => {
     if (!userId) return;
@@ -45,6 +48,7 @@ export function ClientAcademicsWrapper({
 
       const response = await getAdminSubjectsList(collegeId, sectionId);
       setSubjectData(response.subjects);
+      setCurrentPage(1);
       setMeta(response.meta);
       sessionStorage.setItem("subjectsList", JSON.stringify(response.subjects));
     } catch (err) {
@@ -61,6 +65,11 @@ export function ClientAcademicsWrapper({
   const handleBack = () => {
     router.back();
   };
+
+  const paginatedSubjects = subjectData.slice(
+    (currentPage - 1) * subjectsPerPage,
+    currentPage * subjectsPerPage,
+  );
 
   return (
     <div className="p-2 flex flex-col lg:pb-5 m-4">
@@ -92,7 +101,17 @@ export function ClientAcademicsWrapper({
             ))}
           </div>
         ) : subjectData.length > 0 ? (
-          <SubjectCard subjectProps={subjectData} isSchool={isSchool} />
+          <div className="flex flex-col gap-5">
+            <SubjectCard subjectProps={paginatedSubjects} isSchool={isSchool} />
+            <Pagination
+              currentPage={currentPage}
+              totalItems={subjectData.length}
+              itemsPerPage={subjectsPerPage}
+              onPageChange={setCurrentPage}
+              alwaysShow
+              bgClassName="bg-transparent"
+            />
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20">
             <p className="text-gray-500 text-lg">

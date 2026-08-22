@@ -66,11 +66,15 @@ export async function getAdminSubjectsList(
             startDate,
             endDate,
             completionPercentage,
+            collegeSectionsId,
+            isActive,
             college_subject_unit_topics (
+                collegeSubjectUnitTopicId,
                 topicTitle,
                 isCompleted,
                 displayOrder,
-                isActive
+                isActive,
+                collegeSectionsId
             )
         )
       `,
@@ -127,7 +131,22 @@ export async function getAdminSubjectsList(
     const cards: CardProps[] = (subjectsData || []).map((subject: any) => {
       const faculty = facultyMap[subject.collegeSubjectId];
 
-      const units = subject.college_subject_units || [];
+      const rawUnits = (subject.college_subject_units || []).filter(
+        (unit: any) =>
+          unit.isActive !== false &&
+          (unit.collegeSectionsId == null || unit.collegeSectionsId === sectionId),
+      );
+      const unitsByNumber = new Map<number, any>();
+      rawUnits.forEach((unit: any) => {
+        const existing = unitsByNumber.get(unit.unitNumber);
+        if (
+          !existing ||
+          (existing.collegeSectionsId == null && unit.collegeSectionsId != null)
+        ) {
+          unitsByNumber.set(unit.unitNumber, unit);
+        }
+      });
+      const units = Array.from(unitsByNumber.values());
       // Sort units by Unit Number (1, 2, 3...)
       units.sort((a: any, b: any) => (a.unitNumber || 0) - (b.unitNumber || 0));
 
@@ -160,8 +179,23 @@ export async function getAdminSubjectsList(
 
       // Process topics inside units
       units.forEach((u: any) => {
-        const rawTopics = u.college_subject_unit_topics || [];
-        const activeTopics = rawTopics.filter((t: any) => t.isActive !== false);
+        const rawTopics = (u.college_subject_unit_topics || []).filter(
+          (topic: any) =>
+            topic.isActive !== false &&
+            (topic.collegeSectionsId == null || topic.collegeSectionsId === sectionId),
+        );
+        const topicsByTitle = new Map<string, any>();
+        rawTopics.forEach((topic: any) => {
+          const key = topic.topicTitle?.trim().toLowerCase() || String(topic.collegeSubjectUnitTopicId);
+          const existing = topicsByTitle.get(key);
+          if (
+            !existing ||
+            (existing.collegeSectionsId == null && topic.collegeSectionsId != null)
+          ) {
+            topicsByTitle.set(key, topic);
+          }
+        });
+        const activeTopics = Array.from(topicsByTitle.values());
         activeTopics.sort(
           (a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0),
         );

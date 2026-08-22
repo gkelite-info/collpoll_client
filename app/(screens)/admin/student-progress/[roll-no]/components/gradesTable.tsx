@@ -1,34 +1,19 @@
 "use client";
 
-interface GradeEntry {
+export interface GradeEntry {
   subject: string;
   grade: string;
   improvement: "Improved" | "Declining";
 }
 
-const mockGradesCollege: GradeEntry[] = [
-  { subject: "Java Programmi...", grade: "A", improvement: "Improved" },
-  { subject: "Data Structures", grade: "B", improvement: "Declining" },
-  { subject: "Database Manage..", grade: "A", improvement: "Improved" },
-  { subject: "Operating Systems", grade: "A", improvement: "Improved" },
-  { subject: "Web Development", grade: "B", improvement: "Declining" },
-];
-
-const mockGradesSchool: GradeEntry[] = [
-  { subject: "Mathematics", grade: "A", improvement: "Improved" },
-  { subject: "Science", grade: "B", improvement: "Declining" },
-  { subject: "Social Studies", grade: "A", improvement: "Improved" },
-  { subject: "English", grade: "A", improvement: "Improved" },
-  { subject: "Physical Education", grade: "A", improvement: "Improved" },
-];
-
-export default function GradesTable({ isSchool }: { isSchool?: boolean }) {
-  const data = isSchool ? mockGradesSchool : mockGradesCollege;
+export default function GradesTable({ grades = [] }: { grades?: GradeEntry[] }) {
 
   return (
-    <div className="bg-white p-6 rounded-[20px] shadow-sm w-full h-full font-sans">
-      <h2 className="text-[#333333] text-xl font-bold mb-6">Grades</h2>
-      <table className="w-full text-left border-collapse">
+    <div className="flex h-full w-full flex-col rounded-2xl bg-white p-4 font-sans shadow-sm md:rounded-[20px] md:p-6">
+      <h2 className="mb-4 text-base font-bold text-[#333333] md:mb-6 md:text-xl">Grades</h2>
+      {grades.length ? (
+      <div className="w-full flex-1 overflow-x-auto scrollbar-hide">
+      <table className="w-full min-w-[320px] border-collapse text-left">
         <thead>
           <tr className="text-[#8E8E8E] text-sm font-medium">
             <th className="pb-4 font-normal">Subject</th>
@@ -37,9 +22,9 @@ export default function GradesTable({ isSchool }: { isSchool?: boolean }) {
           </tr>
         </thead>
         <tbody className="text-sm">
-          {data.map((item, idx) => (
+          {grades.map((item, idx) => (
             <tr
-              key={idx}
+              key={`${item.subject}-${item.grade}-${idx}`}
               className="text-[#333333] border-b border-gray-50 last:border-0"
             >
               <td className="py-4 pr-4 font-medium">{item.subject}</td>
@@ -59,6 +44,12 @@ export default function GradesTable({ isSchool }: { isSchool?: boolean }) {
           ))}
         </tbody>
       </table>
+      </div>
+      ) : (
+        <div className="flex flex-1 items-center justify-center py-8 text-center text-sm text-[#6B7280]">
+          No grades available for this student.
+        </div>
+      )}
     </div>
   );
 }

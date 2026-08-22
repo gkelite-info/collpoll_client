@@ -15,6 +15,7 @@ export interface Department {
   avgAttendance: number;
   belowThresholdCount: number;
   year?: string;
+  returnQuery?: string;
   faculties?: {
     facultyId: number;
     fullName: string;
@@ -34,12 +35,20 @@ const FacultyAcademicCard = ({
   belowThresholdCount,
   year,
   faculties,
+  returnQuery,
 }: Department) => {
   const router = useRouter();
 
   const handleViewDetails = () => {
     sessionStorage.setItem("cardFaculties", JSON.stringify(faculties ?? []));
     sessionStorage.setItem("cardYear", year ?? "");
+    if (returnQuery) {
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `/admin/academics?${returnQuery}`,
+      );
+    }
     router.push(`/admin/academics/${id}?year=${year}`);
   };
 
@@ -72,12 +81,17 @@ const FacultyAcademicCard = ({
             <>
               {faculties.slice(0, 5).map((f, index) => (
                 <div
-                  // key={f.facultyId}
-                  key={index}
-                  title={f.fullName}
-                  className="rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
+                  key={f.facultyId || index}
+                  tabIndex={0}
+                  aria-label={f.fullName}
+                  className="group relative rounded-full border-2 border-white bg-gray-100 shadow-sm outline-none"
                 >
-                  <Avatar src={f.profileUrl} alt={f.fullName} size={32} />
+                  <div className="overflow-hidden rounded-full">
+                    <Avatar src={f.profileUrl} alt={f.fullName} size={32} />
+                  </div>
+                  <span className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-30 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-[#16284F] px-2.5 py-1.5 text-[11px] font-medium text-white shadow-lg group-hover:block group-focus:block">
+                    {f.fullName}
+                  </span>
                 </div>
               ))}
               {faculties.length > 5 && (

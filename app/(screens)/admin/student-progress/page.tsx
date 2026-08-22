@@ -192,13 +192,17 @@ export default function Page() {
   const activeView = getSearchView(searchParams.get("view"));
   const selectedResultId = searchParams.get("resultId");
   const requestedEducationId = Number(searchParams.get("educationId")) || null;
+  const requestedBranchId = Number(searchParams.get("branchId")) || null;
   const requestedYearId = Number(searchParams.get("yearId")) || null;
+  const requestedSemesterId = Number(searchParams.get("semesterId")) || null;
   const requestedSubjectId = Number(searchParams.get("subjectId")) || null;
   const requestedSectionId = Number(searchParams.get("sectionId")) || null;
   const requestedFacultyId = Number(searchParams.get("facultyId")) || null;
   const restoredFiltersRef = useRef({
     education: false,
+    branch: false,
     year: false,
+    semester: false,
     subject: false,
     section: false,
     faculty: false,
@@ -280,35 +284,71 @@ export default function Page() {
   }, [currentEducationId, educations, requestedEducationId]);
 
   useEffect(() => {
-    if (!restoredFiltersRef.current.year && requestedYearId && years.length) {
+    if (
+      !restoredFiltersRef.current.branch &&
+      requestedBranchId &&
+      branches.length
+    ) {
+      selectBranch(
+        branches.find((item) => item.collegeBranchId === requestedBranchId) ?? null,
+      );
+      restoredFiltersRef.current.branch = true;
+    }
+  }, [branches, requestedBranchId]);
+
+  useEffect(() => {
+    if (
+      !restoredFiltersRef.current.year &&
+      requestedYearId &&
+      (!requestedBranchId || !!selectedBranch) &&
+      years.length
+    ) {
       selectYear(years.find((item) => item.collegeAcademicYearId === requestedYearId) ?? null);
       restoredFiltersRef.current.year = true;
     }
-  }, [requestedYearId, selectedYear, years]);
+  }, [requestedBranchId, requestedYearId, selectedBranch, years]);
+
+  useEffect(() => {
+    if (
+      !restoredFiltersRef.current.semester &&
+      requestedSemesterId &&
+      (!requestedYearId || !!selectedYear) &&
+      semesters.length
+    ) {
+      selectSemester(
+        semesters.find((item) => item.collegeSemesterId === requestedSemesterId) ?? null,
+      );
+      restoredFiltersRef.current.semester = true;
+    }
+  }, [requestedSemesterId, requestedYearId, selectedYear, semesters]);
 
   useEffect(() => {
     if (
       !restoredFiltersRef.current.subject &&
       requestedSubjectId &&
-      (!requestedYearId || !!selectedYear) &&
+      (isSchool
+        ? (!requestedYearId || !!selectedYear)
+        : (!requestedSectionId || !!selectedSection)) &&
       subjects.length
     ) {
       selectSubject(subjects.find((item) => item.collegeSubjectId === requestedSubjectId) ?? null);
       restoredFiltersRef.current.subject = true;
     }
-  }, [requestedSubjectId, selectedSubject, subjects]);
+  }, [isSchool, requestedSectionId, requestedSubjectId, selectedSection, selectedYear, subjects]);
 
   useEffect(() => {
     if (
       !restoredFiltersRef.current.section &&
       requestedSectionId &&
-      (!requestedSubjectId || !!selectedSubject) &&
+      (isSchool
+        ? (!requestedSubjectId || !!selectedSubject)
+        : (!requestedSemesterId || !!selectedSemester)) &&
       sections.length
     ) {
       selectSection(sections.find((item) => item.collegeSectionsId === requestedSectionId) ?? null);
       restoredFiltersRef.current.section = true;
     }
-  }, [requestedSectionId, sections, selectedSection]);
+  }, [isSchool, requestedSemesterId, requestedSectionId, requestedSubjectId, sections, selectedSemester, selectedSubject]);
 
   useEffect(() => {
     if (

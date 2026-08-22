@@ -254,6 +254,8 @@ type ParentInfo = {
   name: string;
   relation: string;
   avatar: string;
+  parentId: number;
+  userId: number;
 };
 
 type ProgressWeights = {
@@ -390,6 +392,8 @@ const getParentRelation = (gender: string | null | undefined, index: number) => 
 };
 
 export type AdminStudentProgressDetails = {
+  studentDbId: number;
+  chatFacultyId: number | null;
   departmentLabel: string;
   yearLabel: string;
   sectionLabel: string;
@@ -1241,6 +1245,8 @@ export async function getAdminStudentProgressDetails(
       return {
         name: parentUser?.fullName ?? `Parent ${index + 1}`,
         relation: getParentRelation(parentUser?.gender, index),
+        parentId: parent.parentId,
+        userId: parent.userId,
         avatar:
           parentProfilesByUserId.get(parent.userId) ||
           (parentUser?.gender?.toLowerCase() === "female"
@@ -1251,6 +1257,8 @@ export async function getAdminStudentProgressDetails(
   );
 
   return {
+    studentDbId: studentRow.studentId,
+    chatFacultyId: facultyIds[0] ?? null,
     departmentLabel: resolvedDepartmentLabel,
     yearLabel: getFirst(historyRow.college_academic_year)?.collegeAcademicYear ?? "N/A",
     sectionLabel: getFirst(historyRow.college_sections)?.collegeSections ?? "N/A",

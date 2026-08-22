@@ -186,3 +186,112 @@ export async function fetchSections(
   if (error) throw error;
   return data ?? [];
 }
+
+/* =========================
+   PLACEMENT OFFICER
+========================= */
+export async function fetchPlacementOfficerEducations(
+  placementEmployeeId: number,
+  collegeId: number
+) {
+  const { data: peData, error: peError } = await supabase
+    .from("placement_employee")
+    .select("createdBy")
+    .eq("placementEmployeeId", placementEmployeeId)
+    .single();
+
+  if (peError || !peData?.createdBy) {
+    return fetchEducations(collegeId);
+  }
+
+  const adminId = peData.createdBy;
+  const { data: adminEdu, error: adminEduError } = await supabase
+    .from("admin_education_types")
+    .select(`
+      collegeEducationId,
+      college_education:collegeEducationId (
+        collegeEducationType
+      )
+    `)
+    .eq("adminId", adminId)
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null);
+
+  if (adminEduError) throw adminEduError;
+
+  if (adminEdu && adminEdu.length > 0) {
+    return adminEdu.map((d: any) => {
+      const edu = Array.isArray(d.college_education)
+        ? d.college_education[0]
+        : d.college_education;
+      return {
+        collegeEducationId: d.collegeEducationId,
+        collegeEducationType: edu?.collegeEducationType || "Unknown",
+      };
+    });
+  } else {
+    const { data: admin } = await supabase
+      .from("admins")
+      .select("collegeEducationId, college_education:collegeEducationId (collegeEducationType)")
+      .eq("adminId", adminId)
+      .maybeSingle();
+
+    if (admin?.collegeEducationId) {
+      const edu = Array.isArray(admin.college_education)
+        ? admin.college_education[0]
+        : admin.college_education;
+      return [
+        {
+          collegeEducationId: admin.collegeEducationId,
+          collegeEducationType: edu?.collegeEducationType || "Unknown",
+        },
+      ];
+    }
+  }
+
+  return fetchEducations(collegeId);
+}
+
+export async function fetchBranchesMulti(
+  collegeId: number,
+  collegeEducationIds: number[]
+) {
+  if (!collegeEducationIds.length) return [];
+  const { data, error } = await supabase
+    .from("college_branch")
+    .select("collegeBranchId, collegeBranchType, collegeBranchCode, collegeEducationId")
+    .eq("collegeId", collegeId)
+    .in("collegeEducationId", collegeEducationIds)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchAcademicYearsMulti(
+  collegeId: number,
+  collegeEducationIds: number[],
+  collegeBranchIds: number[]
+) {
+  if (!collegeEducationIds.length) return [];
+  
+  let query = supabase
+    .from("college_academic_year")
+    .select("collegeAcademicYearId, collegeAcademicYear")
+    .eq("collegeId", collegeId)
+    .in("collegeEducationId", collegeEducationIds)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("collegeAcademicYear", { ascending: true });
+
+  if (collegeBranchIds.length > 0) {
+    query = query.in("collegeBranchId", collegeBranchIds);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+  return data ?? [];
+}

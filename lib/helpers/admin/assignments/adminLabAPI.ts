@@ -40,7 +40,6 @@ export async function fetchAdminLabDepartments(
   const [
     { data: branches },
     { data: years },
-    { data: faculty },
     { data: students },
     { data: history },
     { data: labs },
@@ -48,13 +47,6 @@ export async function fetchAdminLabDepartments(
   ] = await Promise.all([
     branchQuery,
     yearQuery,
-    supabase
-      .from("faculty")
-      .select(
-        "facultyId, fullName, collegeBranchId, users:userId(user_profile(profileUrl))",
-      )
-      .eq("collegeId", collegeId)
-      .eq("isActive", true),
     supabase
       .from("students")
       .select("studentId, collegeBranchId")
@@ -81,8 +73,22 @@ export async function fetchAdminLabDepartments(
       .eq("college_subjects.collegeEducationId", collegeEducationId),
     supabase
       .from("faculty_sections")
-      .select("facultyId, collegeAcademicYearId")
-      .eq("isActive", true),
+      .select(`
+        facultyId,
+        collegeAcademicYearId,
+        collegeEducationId,
+        collegeBranchId,
+        faculty!inner (
+          facultyId,
+          fullName,
+          isActive,
+          users:userId (user_profile(profileUrl))
+        )
+      `)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("isActive", true)
+      .eq("faculty.isActive", true)
+      .is("deletedAt", null),
   ]);
 
   const studentBranchMap = new Map<number, number>();
@@ -102,21 +108,23 @@ export async function fetchAdminLabDepartments(
         continue;
       }
 
-      const validFacultyIdsForYear = new Set(
-        facultyAssignments
-          ?.filter(
-            (assignment) =>
-              assignment.collegeAcademicYearId === year.collegeAcademicYearId,
-          )
-          .map((assignment) => assignment.facultyId),
-      );
+      const branchFacultyMap = new Map<number, any>();
+      facultyAssignments
+        ?.filter(
+          (assignment) =>
+            assignment.collegeAcademicYearId === year.collegeAcademicYearId &&
+            assignment.collegeBranchId === branch.collegeBranchId,
+        )
+        .forEach((assignment: any) => {
+          const assignedFaculty = Array.isArray(assignment.faculty)
+            ? assignment.faculty[0]
+            : assignment.faculty;
 
-      const branchFaculty =
-        faculty?.filter(
-          (item) =>
-            item.collegeBranchId === branch.collegeBranchId &&
-            validFacultyIdsForYear.has(item.facultyId),
-        ) || [];
+          if (assignedFaculty?.facultyId && assignedFaculty.fullName) {
+            branchFacultyMap.set(assignedFaculty.facultyId, assignedFaculty);
+          }
+        });
+      const branchFaculty = Array.from(branchFacultyMap.values());
 
       const studentCount =
         history?.filter(
@@ -169,6 +177,7 @@ export async function fetchAdminLabDepartments(
 
   return {
     data: results.slice(startIndex, startIndex + limit),
+    totalCount,
     totalPages: Math.ceil(totalCount / limit) || 1,
   };
 }
