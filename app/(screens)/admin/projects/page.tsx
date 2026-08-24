@@ -7,7 +7,7 @@ import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagi
 import { fetchBranchOptionsDirectly } from "@/lib/helpers/admin/collegeBranchAPI";
 import { fetchAcademicYearOptionsDirectly, fetchAcademicYearOptionsBulkDirectly } from "@/lib/helpers/admin/collegeAcademicYearAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
-import { FilterDropdown } from "../assignments/components/filterDropdown";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 import { fetchAdminEducationTypes, fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns";
 import { getBatchStudentCounts, getBatchFacultyData, getBatchProjectCounts } from "@/lib/helpers/admin/projectsOverviewAPI";
 import { fetchSubjectFacultyList } from "@/lib/helpers/admin/facultyCountAPI";
@@ -599,14 +599,18 @@ function ProjectsOverview() {
           ) : (
             <>
               <div className="flex flex-col md:flex-row gap-4 mt-4 w-full">
-                <FilterDropdown
+                <CustomDropdown
                   label="Education"
                   value={educationFilter}
+                  widthClassName="w-full md:w-[210px]"
+                  theme="always-green"
+                  className="rounded-full min-h-9"
                   options={educations.map((e) => ({
                     label: e.collegeEducationType,
                     value: e.collegeEducationId.toString()
                   }))}
-                  onChange={(val) => {
+                  onChange={(value) => {
+                    const val = String(value);
                     setIsMetadataLoading(true);
                     setIsFetchingCounts(true);
                     setCurrentPage(1);
@@ -627,10 +631,14 @@ function ProjectsOverview() {
                   }}
                 />
 
-                {!isSchool && isEducationReady && (
-                  <FilterDropdown
+                {!isSchool && (
+                  <CustomDropdown
                     label={education?.collegeEducationType === "Inter" ? "Group" : "Branch"}
                     value={branchFilter}
+                    disabled={!isEducationReady}
+                    widthClassName="w-full md:w-[180px]"
+                    theme="always-green"
+                    className="rounded-full min-h-9"
                     options={[
                       { label: "All", value: "All" },
                       ...branchOptions.map((b) => ({
@@ -638,7 +646,8 @@ function ProjectsOverview() {
                         value: String(b.id),
                       })),
                     ]}
-                    onChange={(val) => {
+                    onChange={(value) => {
+                      const val = String(value);
                       setIsFetchingCounts(true);
                       setCurrentPage(1);
                       setBranchFilter(val);
@@ -651,10 +660,17 @@ function ProjectsOverview() {
                   />
                 )}
 
-                <FilterDropdown
+                <CustomDropdown
                   label="Year"
                   value={yearFilter}
-                  disabled={yearOptions.length === 0}
+                  disabled={
+                    !isEducationReady ||
+                    (!isSchool && branchFilter === "All") ||
+                    yearOptions.length === 0
+                  }
+                  widthClassName="w-full md:w-[180px]"
+                  theme="always-green"
+                  className="rounded-full min-h-9"
                   options={
                     yearOptions.length === 0
                       ? [{ label: "Loading...", value: "loading" }]
@@ -666,7 +682,8 @@ function ProjectsOverview() {
                         })),
                       ]
                   }
-                  onChange={(val) => {
+                  onChange={(value) => {
+                    const val = String(value);
                     setIsFetchingCounts(true);
                     setCurrentPage(1);
                     setYearFilter(val);
@@ -677,10 +694,13 @@ function ProjectsOverview() {
                   }}
                 />
 
-                <FilterDropdown
+                <CustomDropdown
                   label="Section"
                   value={sectionFilter}
-                  disabled={!resolvedFilterYearId || sectionOptions.length === 0}
+                  disabled={yearFilter === "All" || !resolvedFilterYearId || sectionOptions.length === 0}
+                  widthClassName="w-full md:w-[180px]"
+                  theme="always-green"
+                  className="rounded-full min-h-9"
                   options={[
                     { label: "All", value: "All" },
                     ...sectionOptions.map((section) => ({
@@ -688,7 +708,8 @@ function ProjectsOverview() {
                       value: String(section.id),
                     })),
                   ]}
-                  onChange={(val) => {
+                  onChange={(value) => {
+                    const val = String(value);
                     setIsFetchingCounts(true);
                     setCurrentPage(1);
                     setSectionFilter(val);
@@ -697,10 +718,13 @@ function ProjectsOverview() {
                   }}
                 />
 
-                <FilterDropdown
+                <CustomDropdown
                   label="Subject"
                   value={subjectFilter}
                   disabled={sectionFilter === "All" || subjectOptions.length === 0}
+                  widthClassName="w-full md:w-[180px]"
+                  theme="always-green"
+                  className="rounded-full min-h-9"
                   options={[
                     { label: "All", value: "All" },
                     ...subjectOptions.map((subject) => ({
@@ -708,7 +732,8 @@ function ProjectsOverview() {
                       value: String(subject.id),
                     })),
                   ]}
-                  onChange={(val) => {
+                  onChange={(value) => {
+                    const val = String(value);
                     setIsFetchingCounts(true);
                     setCurrentPage(1);
                     setSubjectFilter(val);

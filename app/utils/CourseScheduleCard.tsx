@@ -4,6 +4,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { extractAcademicYearNumber } from "@/app/utils/academicYear";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { useAssignedAdminEducationTypes } from "@/app/(screens)/admin/my-attendance/useAssignedAdminEducationTypes";
 
 type Props = {
   style?: string;
@@ -51,8 +52,13 @@ export default function CourseScheduleCard({
     collegeBranchCode,
     collegeAcademicYear,
     role,
+    adminId,
     loading: userLoading,
   } = useUser();
+  const assignedAdminEducationTypes = useAssignedAdminEducationTypes(
+    role === "Admin" ? adminId : null,
+    collegeEducationType || "",
+  );
   const academicYearNumber = extractAcademicYearNumber(collegeAcademicYear);
   const { college_branch, faculty_edu_type, sections, selectedSectionIndex, loading: facultyLoading } = useFaculty();
 
@@ -117,6 +123,10 @@ export default function CourseScheduleCard({
           ) : role === "Faculty" ? (
             <p className="text-[#EFEFEF] text-md font-medium text-center">
               {displayEducation || "—"}
+            </p>
+          ) : role === "Admin" ? (
+            <p className="max-w-full break-words text-center text-sm font-medium leading-tight text-[#EFEFEF]" title={assignedAdminEducationTypes}>
+              {assignedAdminEducationTypes || "—"}
             </p>
           ) : role === "Finance" || role === "FinanceManager" ? (
             <p className="text-[#EFEFEF] text-md font-medium">

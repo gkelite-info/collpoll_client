@@ -10,6 +10,7 @@ import AttendanceTableShimmer from "../shimmers/AttendanceTableShimmer";
 import { getAttendanceData } from "@/lib/helpers/myAttendance/getAttendanceData";
 import { getAttendanceMonthlyStats } from "@/lib/helpers/myAttendance/getAttendanceMonthlyStats";
 import { useHrAttendanceRealtime } from "@/lib/helpers/Hr/attendance/liveHrAttendanceAPI";
+import { useAssignedAdminEducationTypes } from "../useAssignedAdminEducationTypes";
 
 export interface AdminProfile {
   name: string;
@@ -66,6 +67,10 @@ const AttendancePage = () => {
   const { adminId, identifierId, email, profilePhoto, mobile, fullName, dateOfJoining,
     professionalExperienceYears, collegeEducationType, userId } = useUser()
   const [profile, setProfile] = useState<AdminProfile | null>(null);
+  const assignedEducationTypes = useAssignedAdminEducationTypes(
+    adminId,
+    collegeEducationType || "",
+  );
   const [infoLoading, setInfoLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(true);
@@ -227,7 +232,7 @@ const AttendancePage = () => {
         name: fullName!,
         mobile: mobile!,
         adminId: identifierId || adminId,
-        EducationType: collegeEducationType!,
+        EducationType: assignedEducationTypes || "—",
         email: email ?? mockProfile.email,
         joiningDate: formatDate(dateOfJoining),
         image: profilePhoto ?? "",
@@ -238,7 +243,7 @@ const AttendancePage = () => {
     } finally {
       setInfoLoading(false);
     }
-  }, [adminId, identifierId, collegeEducationType, email, profilePhoto, fullName, dateOfJoining, mobile, professionalExperienceYears]);
+  }, [adminId, identifierId, assignedEducationTypes, collegeEducationType, email, profilePhoto, fullName, dateOfJoining, mobile, professionalExperienceYears]);
 
 
   return (

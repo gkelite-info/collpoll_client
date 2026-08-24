@@ -15,6 +15,7 @@ import AttendanceTableShimmer from "../shimmers/AttendanceTableShimmer";
 import AttendancePerformanceChartShimmer from "../shimmers/AttendancePerformanceChartShimmer";
 import AnalyticsFacultyInfoShimmer from "../shimmers/AnalyticsFacultyInfoShimmer";
 import { getAttendanceMonthlyStats } from "@/lib/helpers/myAttendance/getAttendanceMonthlyStats";
+import { useAssignedAdminEducationTypes } from "../useAssignedAdminEducationTypes";
 
 const mockProfile: AnalyticsFacultyProfile = {
   name: "",
@@ -45,6 +46,10 @@ const AttendanceAnalyticsPage = () => {
   const [workingDaysLoading, setWorkingDaysLoading] = useState(true);
   const [leavesTaken, setLeavesTaken] = useState(0);
   const itemsPerPage = 15;
+  const assignedEducationTypes = useAssignedAdminEducationTypes(
+    adminId,
+    collegeEducationType || "",
+  );
 
   useEffect(() => {
     if (!userId) return;
@@ -80,7 +85,7 @@ const AttendanceAnalyticsPage = () => {
         name: fullName,
         department: collegeBranchCode || "",
         employeeId: identifierId || adminId,
-        collegeEducationType: collegeEducationType || "",
+        collegeEducationType: assignedEducationTypes,
         experience: professionalExperienceYears ? `${professionalExperienceYears} ${Number(professionalExperienceYears) > 1 ? 'years' : 'year'} ` : "—",
         workingDays,
         leavesTaken
@@ -89,7 +94,7 @@ const AttendanceAnalyticsPage = () => {
     } finally {
       setInfoLoading(false)
     }
-  }, [adminId, identifierId, collegeBranchCode, fullName, collegeEducationType, workingDays, professionalExperienceYears]);
+  }, [adminId, identifierId, collegeBranchCode, fullName, assignedEducationTypes, workingDays, professionalExperienceYears]);
 
   useEffect(() => {
     if (!userId) return;

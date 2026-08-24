@@ -144,7 +144,7 @@ const AttendanceTable: React.FC<Props> = ({
 
 
   return (
-    <div className="w-full">
+    <div className="w-full pb-6">
       <div className="flex justify-between items-end mb-2.5" ref={containerRef}>
         <h2 className="text-[#282828] text-[17px] font-bold">
           {title || "Attendance Table"}

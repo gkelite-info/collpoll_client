@@ -8,7 +8,6 @@ import { CaretLeftIcon, CaretRight, X } from "@phosphor-icons/react";
 
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { getPlacementCompanies } from "@/lib/helpers/placements/getPlacementCompanies";
-import { fetchAdminPlacementFilterOptions } from "@/lib/helpers/placements/getPlacementFilterOptions";
 import type { PlacementCompany } from "@/app/(screens)/placement/placements/components/mockData";
 import PlacementFilters, {
     placementSortOptions,
@@ -253,7 +252,6 @@ export default function PlacementsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalRecords, setTotalRecords] = useState(0);
     const rowsPerPage = 10;
-    const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
     useEffect(() => {
         if (adminLoading) return;
@@ -362,6 +360,16 @@ export default function PlacementsPage() {
         }
     }, [collegeId]);
 
+    useEffect(() => {
+        if (!collegeId) return;
+
+        const timer = window.setTimeout(() => {
+            void loadEducations();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, [collegeId, loadEducations]);
+
     const handleEducationOpen = () => {
         if (educations.length === 0) void loadEducations();
     };
@@ -466,13 +474,15 @@ export default function PlacementsPage() {
                         onPlacementClick={setSelectedPlacement}
                     />
 
-                    {!pageLoading && !filterRefreshing && totalRecords > rowsPerPage && (
+                    {!pageLoading && !filterRefreshing && (
                         <div className="mb-2 mt-5">
                             <Pagination
                                 currentPage={currentPage}
                                 totalItems={totalRecords}
                                 itemsPerPage={rowsPerPage}
                                 onPageChange={setCurrentPage}
+                                disabled={isListLoading}
+                                alwaysShow
                                 bgClassName="bg-transparent"
                             />
                         </div>
