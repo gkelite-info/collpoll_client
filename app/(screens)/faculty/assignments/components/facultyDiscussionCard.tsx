@@ -49,6 +49,14 @@ const getFileIcon = (fileName: string) => {
     }
 };
 
+const getSecureUrl = (url: string) => {
+    if (!url) return url;
+    const marker = "/storage/v1/object/public/";
+    const idx = url.indexOf(marker);
+    if (idx !== -1) return `/api/files/${url.slice(idx + marker.length)}`;
+    return url;
+};
+
 export default function FacultyDiscussionCard({ data, discussionView = "active", onDelete }: { data: any, discussionView?: "active" | "completed", onDelete?: (discussionId: number) => void; }) {
     const router = useRouter();
     const pathname = usePathname();
@@ -58,6 +66,9 @@ export default function FacultyDiscussionCard({ data, discussionView = "active",
         const params = new URLSearchParams(searchParams.toString());
         params.set("action", "viewSubmissions");
         params.set("discussionId", String(data.discussionId));
+        if (data.collegeSectionsId) {
+            params.set("discussionSectionId", String(data.collegeSectionsId));
+        }
         router.push(`${pathname}?${params.toString()}`);
     };
 
@@ -75,7 +86,12 @@ export default function FacultyDiscussionCard({ data, discussionView = "active",
                 <div className="flex justify-between items-start">
                     <div className="flex flex-col gap-1 lg:w-[60%]">
                         <h3 className="text-lg font-bold text-[#282828]">{data.title}</h3>
-                        <p className="text-sm text-[#111827] whitespace-pre-line leading-relaxed">{data.description}</p>
+                        {data.subtitle && (
+                            <p className="text-sm font-medium text-gray-500 mt-0.5">
+                                {data.subtitle}
+                            </p>
+                        )}
+                        <p className="text-sm text-[#111827] truncate mt-1">{data.description}</p>
                     </div>
                     <div className="flex items-center gap-3 w-fit">
                         {discussionView === "active" && (
@@ -134,7 +150,7 @@ export default function FacultyDiscussionCard({ data, discussionView = "active",
                             {(data.discussion_file_uploads ?? []).map((file: { fileUrl: string }, idx: number) => (
                                 <a
                                     key={idx}
-                                    href={file.fileUrl}
+                                    href={getSecureUrl(file.fileUrl)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="flex items-center cursor-pointer gap-2 bg-[#16284F38] text-[#16284F] px-3 py-1 rounded-md text-xs font-medium flex-shrink-0">
@@ -153,7 +169,12 @@ export default function FacultyDiscussionCard({ data, discussionView = "active",
             <div className="md:hidden flex flex-col gap-3 w-full">
                 <div className="flex flex-col gap-1">
                     <h3 className="text-[15px] font-bold text-[#282828] leading-tight">{data.title}</h3>
-                    <p className="text-[13px] text-[#111827] whitespace-pre-line leading-relaxed">{data.description}</p>
+                    {data.subtitle && (
+                        <p className="text-[13px] font-medium text-gray-500 mt-0.5">
+                            {data.subtitle}
+                        </p>
+                    )}
+                    <p className="text-[13px] text-[#111827] truncate mt-0.5">{data.description}</p>
                 </div>
 
                 <div className="flex flex-col gap-2 pt-2 border-t border-gray-50">
@@ -184,7 +205,7 @@ export default function FacultyDiscussionCard({ data, discussionView = "active",
                             {data.discussion_file_uploads.map((file: { fileUrl: string }, idx: number) => (
                                 <a
                                     key={idx}
-                                    href={file.fileUrl}
+                                    href={getSecureUrl(file.fileUrl)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="flex items-center cursor-pointer gap-2 bg-[#16284F38] text-[#16284F] px-2.5 py-1 rounded-md text-[11px] font-medium flex-shrink-0"

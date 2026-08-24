@@ -4,21 +4,24 @@ export type QuizRow = {
   quizId: number;
   facultyId?: number | null;
   adminId?: number | null;
+  collegeEducationId?: number | null;
+  collegeBranchId?: number | null;
+  collegeSemesterId?: number | null;
   collegeSubjectId: number;
   collegeAcademicYearId: number;
   collegeSectionsId: number;
-  collegeSubjectUnitId: number;
-  collegeSubjectUnitTopicId: number;
+  collegeSubjectUnitId?: number | null;
+  collegeSubjectUnitTopicId?: number | null;
   quizTitle: string;
-  totalMarks: number;
-  questionsCount: number;
-  marksPerQuestion: number;
-  startTime: string;
-  endTime: string;
-  durationMinutes: number;
-  startDate: string;
-  endDate: string;
-  maxAttempts: number;
+  totalMarks?: number | null;
+  questionsCount?: number | null;
+  marksPerQuestion?: number | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  durationMinutes?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  maxAttempts?: number | null;
   status: "Draft" | "Active" | "Completed";
   isActive: boolean;
   createdAt: string;
@@ -33,6 +36,9 @@ export async function fetchQuizzesByFacultyId(facultyId: number) {
       quizId,
       facultyId,
       adminId,
+      collegeEducationId,
+      collegeBranchId,
+      collegeSemesterId,
       collegeSubjectId,
       collegeAcademicYearId,
       collegeSectionsId,
@@ -73,6 +79,9 @@ export async function fetchQuizzesByStatus(
   page: number = 1,
   limit: number = 10,
   dateStr?: string,
+  filters?: {
+    sectionIds?: number[];
+  }
 ) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -91,8 +100,17 @@ export async function fetchQuizzesByStatus(
             startTime,
             endTime,
             status,
+            collegeEducationId,
+            collegeBranchId,
+            collegeSemesterId,
+            collegeAcademicYearId,
+            collegeSubjectId,
+            collegeSectionsId,
             college_subjects (
-                subjectName
+                subjectName,
+                college_semester (
+                    collegeSemester
+                )
             ),
             college_sections (
                 collegeSections
@@ -113,12 +131,21 @@ export async function fetchQuizzesByStatus(
     query = query.lte("startDate", formattedDate).gte("endDate", formattedDate);
   }
 
+  if (filters?.sectionIds && filters.sectionIds.length > 0) {
+    query = query.in("collegeSectionsId", filters.sectionIds);
+  }
+
   const { data, error, count } = await query
     .order("createdAt", { ascending: false })
     .range(from, to);
 
   if (error) {
-    console.error("fetchQuizzesByStatus error:", error);
+    console.error("fetchQuizzesByStatus error details:", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
     throw error;
   }
 
@@ -129,21 +156,24 @@ export async function saveQuiz(payload: {
   quizId?: number;
   facultyId?: number | null;
   adminId?: number | null;
+  collegeEducationId?: number | null;
+  collegeBranchId?: number | null;
+  collegeSemesterId?: number | null;
   collegeSubjectId: number;
   collegeAcademicYearId: number;
   collegeSectionsId: number;
-  collegeSubjectUnitId: number;
-  collegeSubjectUnitTopicId: number;
+  collegeSubjectUnitId?: number | null;
+  collegeSubjectUnitTopicId?: number | null;
   quizTitle: string;
-  totalMarks: number;
-  questionsCount: number;
-  marksPerQuestion: number;
-  startTime: string;
-  endTime: string;
-  durationMinutes: number;
-  startDate: string;
-  endDate: string;
-  maxAttempts?: number;
+  totalMarks?: number | null;
+  questionsCount?: number | null;
+  marksPerQuestion?: number | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  durationMinutes?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  maxAttempts?: number | null;
   status?: "Draft" | "Active" | "Completed";
 }) {
   const now = new Date().toISOString();
@@ -151,6 +181,9 @@ export async function saveQuiz(payload: {
   const upsertPayload: any = {
     facultyId: payload.facultyId,
     adminId: payload.adminId,
+    collegeEducationId: payload.collegeEducationId,
+    collegeBranchId: payload.collegeBranchId,
+    collegeSemesterId: payload.collegeSemesterId,
     collegeSubjectId: payload.collegeSubjectId,
     collegeAcademicYearId: payload.collegeAcademicYearId,
     collegeSectionsId: payload.collegeSectionsId,

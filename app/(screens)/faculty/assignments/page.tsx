@@ -4,7 +4,7 @@ import AssignmentsRight from "./components/right";
 
 export default function Page() {
   return (
-    <main className="flex w-full max-h-screen overflow-y-auto focus:outline-none">
+    <main className="flex w-full h-full overflow-hidden focus:outline-none">
       <AssignmentsLeft />
       <AssignmentsRight />
     </main>

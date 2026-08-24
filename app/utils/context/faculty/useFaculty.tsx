@@ -33,6 +33,12 @@ export type FacultySection = {
     faculty_edu_type?: {
         collegeEducationType: string;
     } | null;
+    college_academic_year?: {
+        collegeAcademicYear: string;
+    } | null;
+    college_education?: {
+        collegeEducationType: string;
+    } | null;
 };
 
 export type FacultyContextType = {

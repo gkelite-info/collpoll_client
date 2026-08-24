@@ -156,9 +156,12 @@ export const CustomDropdown = ({
               >
                 <span className="flex items-center gap-2 pr-2">
                   {isMultiSelect && (
-                    <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isSelected ? "bg-[#43C17A] border-[#43C17A] text-white" : "border-gray-300 bg-white"}`}>
-                      {isSelected && <Check size={11} weight="bold" />}
-                    </span>
+                    <input 
+                      type="checkbox" 
+                      checked={isSelected} 
+                      readOnly 
+                      className="w-4 h-4 cursor-pointer accent-[#43C17A] pointer-events-none" 
+                    />
                   )}
                   {opt.label}
                 </span>
@@ -175,7 +178,11 @@ export const CustomDropdown = ({
     <div className={`flex flex-col gap-1 ${widthClassName} overflow-visible`}>
       {label && (
         <label className="text-sm font-semibold text-gray-700">
-          {label}
+          {typeof label === 'string' && label.trim().endsWith('*') ? (
+            <>{label.replace(/\*$/, '').trim()} <span className="text-red-500">*</span></>
+          ) : (
+            label
+          )}
         </label>
       )}
 

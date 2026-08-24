@@ -29,7 +29,6 @@ export async function fetchQuestionsByQuizId(quizId: number) {
       deletedAt
     `)
         .eq("quizId", quizId)
-        .eq("isActive", true)
         .is("deletedAt", null)
         .order("displayOrder", { ascending: true });
 
@@ -59,6 +58,7 @@ export async function saveQuizQuestion(
         questionType: payload.questionType,
         marks: payload.marks ?? 1,
         displayOrder: payload.displayOrder ?? 0,
+        isActive: true,
         updatedAt: now,
     };
 
@@ -122,11 +122,12 @@ export async function fetchQuestionsWithOptionsByQuizId(quizId: number) {
                 optionId,
                 optionText,
                 isCorrect,
-                displayOrder
+                displayOrder,
+                isActive,
+                deletedAt
             )
         `)
         .eq("quizId", quizId)
-        .eq("isActive", true)
         .is("deletedAt", null)
         .order("displayOrder", { ascending: true });
 
@@ -135,5 +136,15 @@ export async function fetchQuestionsWithOptionsByQuizId(quizId: number) {
         throw error;
     }
 
-    return data ?? [];
+    if (!data) return [];
+
+    // Filter out logically deleted options and sort them
+    return data.map((q: any) => ({
+        ...q,
+        quiz_question_options: q.quiz_question_options
+            ? q.quiz_question_options
+                .filter((o: any) => o.isActive && !o.deletedAt)
+                .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
+            : []
+    }));
 }

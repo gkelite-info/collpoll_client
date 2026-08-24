@@ -84,6 +84,11 @@ export async function saveDiscussionForum(
     title: string;
     description: string;
     deadline: string;
+    collegeEducationId?: number | null;
+    collegeBranchId?: number | null;
+    collegeAcademicYearId?: number | null;
+    collegeSemesterId?: number | null;
+    collegeSubjectId?: number | null;
   },
   options: {
     facultyId?: number;
@@ -96,6 +101,11 @@ export async function saveDiscussionForum(
     title: payload.title.trim(),
     description: payload.description.trim(),
     deadline: payload.deadline,
+    collegeEducationId: payload.collegeEducationId ?? null,
+    collegeBranchId: payload.collegeBranchId ?? null,
+    collegeAcademicYearId: payload.collegeAcademicYearId ?? null,
+    collegeSemesterId: payload.collegeSemesterId ?? null,
+    collegeSubjectId: payload.collegeSubjectId ?? null,
     updatedAt: now,
   };
 
@@ -350,10 +360,21 @@ export async function fetchDiscussionById(discussionId: number) {
             description,
             deadline,
             createdAt,
+            collegeEducationId,
+            collegeBranchId,
+            collegeSemesterId,
+            collegeAcademicYearId,
+            collegeSubjectId,
             discussion_forum_sections (
                 discussionSectionId,
                 collegeSectionsId,
                 marks
+            ),
+            college_subjects (
+                subjectName,
+                college_semester (
+                    collegeSemester
+                )
             ),
             discussion_file_uploads (
                 discussionFileUploadId,
@@ -382,6 +403,7 @@ export async function fetchDiscussionsByFacultyId(
   page: number = 1,
   limit: number = 10,
   dateStr?: string,
+  filters?: { sectionIds?: number[] | string[] }
 ) {
   const today = new Date().toISOString().split("T")[0];
   const from = (page - 1) * limit;
@@ -406,6 +428,22 @@ export async function fetchDiscussionsByFacultyId(
             description,
             deadline,
             createdAt,
+            collegeEducationId,
+            collegeBranchId,
+            collegeSemesterId,
+            collegeAcademicYearId,
+            collegeSubjectId,
+            discussion_forum_sections!inner(
+                discussionSectionId,
+                collegeSectionsId,
+                marks
+            ),
+            college_subjects (
+                subjectName,
+                college_semester (
+                    collegeSemester
+                )
+            ),
             discussion_file_uploads (
                 fileUrl,
                 isActive,
@@ -417,8 +455,14 @@ export async function fetchDiscussionsByFacultyId(
     )
     .eq("createdBy", facultyId)
     .eq("isActive", true)
-    .eq("is_deleted", false) // 🟢 ADDED: Exclude deleted
+    .eq("is_deleted", false)
     .is("deletedAt", null);
+
+  if (filters?.sectionIds && filters.sectionIds.length > 0) {
+    query = query.in("discussion_forum_sections.collegeSectionsId", filters.sectionIds.map(Number));
+  } else if (filters?.sectionIds && filters.sectionIds.length === 0) {
+    return { data: [], totalCount: 0 };
+  }
 
   if (dateStr) {
     const formattedDate = dateStr.split("T")[0];
@@ -436,12 +480,24 @@ export async function fetchDiscussionsByFacultyId(
     throw error;
   }
 
-  const mappedData = (data ?? []).map((d) => ({
-    ...d,
-    discussion_file_uploads: (d.discussion_file_uploads ?? []).filter(
+  let totalCardsCount = 0;
+
+  const mappedData = (data ?? []).flatMap((d) => {
+    const files = (d.discussion_file_uploads ?? []).filter(
       (f: any) => f.isActive && !f.is_deleted && !f.deletedAt,
-    ),
-  }));
+    );
+
+    const sections = Array.isArray(d.discussion_forum_sections) ? d.discussion_forum_sections : [];
+    totalCardsCount += sections.length;
+
+    return sections.map((sec: any) => ({
+      ...d,
+      discussion_forum_sections: undefined, // remove raw nested array
+      collegeSectionsId: sec.collegeSectionsId,
+      marks: sec.marks,
+      discussion_file_uploads: files,
+    }));
+  });
 
   return { data: mappedData, totalCount: count ?? 0 };
 }
@@ -451,6 +507,7 @@ export async function fetchCompletedDiscussionsByFacultyId(
   page: number = 1,
   limit: number = 10,
   dateStr?: string,
+  filters?: { sectionIds?: number[] | string[] }
 ) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -464,6 +521,22 @@ export async function fetchCompletedDiscussionsByFacultyId(
             description,
             deadline,
             createdAt,
+            collegeEducationId,
+            collegeBranchId,
+            collegeSemesterId,
+            collegeAcademicYearId,
+            collegeSubjectId,
+            discussion_forum_sections!inner(
+                discussionSectionId,
+                collegeSectionsId,
+                marks
+            ),
+            college_subjects (
+                subjectName,
+                college_semester (
+                    collegeSemester
+                )
+            ),
             discussion_file_uploads (
                 fileUrl,
                 isActive,
@@ -476,6 +549,12 @@ export async function fetchCompletedDiscussionsByFacultyId(
     .eq("createdBy", facultyId)
     .eq("isActive", false)
     .eq("is_deleted", false);
+
+  if (filters?.sectionIds && filters.sectionIds.length > 0) {
+    query = query.in("discussion_forum_sections.collegeSectionsId", filters.sectionIds.map(Number));
+  } else if (filters?.sectionIds && filters.sectionIds.length === 0) {
+    return { data: [], totalCount: 0 };
+  }
 
   if (dateStr) {
     const formattedDate = dateStr.split("T")[0];
@@ -493,12 +572,24 @@ export async function fetchCompletedDiscussionsByFacultyId(
     throw error;
   }
 
-  const mappedData = (data ?? []).map((d) => ({
-    ...d,
-    discussion_file_uploads: (d.discussion_file_uploads ?? []).filter(
+  let totalCardsCount = 0;
+
+  const mappedData = (data ?? []).flatMap((d) => {
+    const files = (d.discussion_file_uploads ?? []).filter(
       (f: any) => f.isActive && !f.is_deleted && !f.deletedAt,
-    ),
-  }));
+    );
+
+    const sections = Array.isArray(d.discussion_forum_sections) ? d.discussion_forum_sections : [];
+    totalCardsCount += sections.length;
+
+    return sections.map((sec: any) => ({
+      ...d,
+      discussion_forum_sections: undefined,
+      collegeSectionsId: sec.collegeSectionsId,
+      marks: sec.marks,
+      discussion_file_uploads: files,
+    }));
+  });
 
   return { data: mappedData, totalCount: count ?? 0 };
 }

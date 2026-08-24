@@ -1,12 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { CaretLeftIcon, PlusCircleIcon } from "@phosphor-icons/react";
+import { CaretLeftIcon, PlusCircleIcon, X } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-import { saveQuizQuestion } from "@/lib/helpers/quiz/quizQuestionAPI";
+import { saveQuizQuestion, fetchQuestionsWithOptionsByQuizId, deactivateQuizQuestion } from "@/lib/helpers/quiz/quizQuestionAPI";
 import { saveBulkOptions } from "@/lib/helpers/quiz/quizQuestionOptionAPI";
 import { fetchQuizById, updateQuizStatus } from "@/lib/helpers/quiz/quizAPI";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Option {
   id: number;
@@ -37,10 +38,15 @@ export default function FacultyAddQuestions({
   isLoading,
   quizId,
 }: FacultyAddQuestionsProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+
   const [deleteQuestionId, setDeleteQuestionId] = useState<number | null>(null);
   const [questions, setQuestions] = useState<Question[]>([
     {
-      id: 1,
+      id: 2000000000000,
       title: "",
       type: "Multiple Choice",
       correctAnswer: "",
@@ -53,29 +59,55 @@ export default function FacultyAddQuestions({
     },
   ]);
 
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [quizDetails, setQuizDetails] = useState<{
-    quizTitle: string;
-    topicTitle: string;
-    maxQuestions: number;
-  } | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isDrafting, setIsDrafting] = useState(false);
+  const { data: quizDetails, isLoading: isQuizLoading } = useQuery({
+    queryKey: ["quizDetails", quizId],
+    queryFn: async () => {
+      if (!quizId) return null;
+      const data = await fetchQuizById(quizId);
+      return {
+        quizTitle: data.quizTitle,
+        topicTitle: data.college_subject_unit_topics?.topicTitle || "General Topic",
+        maxQuestions: data.questionsCount || 0,
+      };
+    },
+    enabled: !!quizId,
+  });
+
+  const { data: existingQuestions, isLoading: isQuestionsLoading } = useQuery({
+    queryKey: ["quizQuestions", quizId],
+    queryFn: async () => {
+      if (!quizId) return null;
+      const existing = await fetchQuestionsWithOptionsByQuizId(quizId);
+      if (!existing || existing.length === 0) return null;
+
+      return existing.map((eq: any) => ({
+        id: eq.questionId,
+        title: eq.questionText,
+        type: eq.questionType,
+        correctAnswer: eq.questionType === "Fill in the Blanks" ? (eq.quiz_question_options?.[0]?.optionText || "") : "",
+        options:
+          eq.questionType === "Multiple Choice" && eq.quiz_question_options?.length > 0
+            ? eq.quiz_question_options.map((o: any) => ({
+                id: o.optionId,
+                text: o.optionText,
+                isCorrect: o.isCorrect,
+              }))
+            : [
+                { id: 1, text: "", isCorrect: false },
+                { id: 2, text: "", isCorrect: false },
+                { id: 3, text: "", isCorrect: false },
+                { id: 4, text: "", isCorrect: false },
+              ],
+      }));
+    },
+    enabled: !!quizId,
+  });
 
   useEffect(() => {
-    if (!quizId) return;
-    fetchQuizById(quizId)
-      .then((data) => {
-        setQuizDetails({
-          quizTitle: data.quizTitle,
-          topicTitle: data.college_subject_unit_topics?.topicTitle || "General Topic",
-          maxQuestions: data.questionsCount || 0,
-        });
-      })
-      .catch(() => toast.error("Failed to fetch quiz details"));
-  }, [quizId]);
+    if (existingQuestions && existingQuestions.length > 0) {
+      setQuestions(existingQuestions);
+    }
+  }, [existingQuestions]);
 
   const addQuestion = () => {
     if (quizDetails && questions.length >= quizDetails.maxQuestions) {
@@ -99,20 +131,47 @@ export default function FacultyAddQuestions({
     setQuestions((prev) => [...prev, newQuestion]);
   };
 
+  const isQuestionEmpty = (q: Question) => {
+    const hasTitle = q.title.trim().length > 0;
+    const hasOptions = q.options.some((o) => o.text.trim().length > 0);
+    const hasAnswer = q.correctAnswer.trim().length > 0;
+    return !(hasTitle || hasOptions || hasAnswer);
+  };
+
   const deleteQuestion = (id: number) => {
     const question = questions.find((q) => q.id === id);
     if (!question) return;
-    if (isQuestionEmpty(question)) {
+    
+    // If it's a completely unsaved local question, just remove it directly
+    if (isQuestionEmpty(question) || id >= 1000000000000) {
       setQuestions((prev) => prev.filter((q) => q.id !== id));
       return;
     }
     setDeleteQuestionId(id);
   };
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      if (id < 1000000000000) {
+        const res = await deactivateQuizQuestion(id);
+        if (!res.success) throw new Error("Failed to delete question from DB");
+      }
+      return id;
+    },
+    onSuccess: (id) => {
+      setQuestions((prev) => prev.filter((q) => q.id !== id));
+      setDeleteQuestionId(null);
+      toast.success("Question deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["quizQuestions", quizId] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete question");
+    }
+  });
+
   const confirmDeleteQuestion = () => {
     if (!deleteQuestionId) return;
-    setQuestions((prev) => prev.filter((q) => q.id !== deleteQuestionId));
-    setDeleteQuestionId(null);
+    deleteMutation.mutate(deleteQuestionId);
   };
 
   const updateQuestionTitle = (id: number, title: string) => {
@@ -158,50 +217,61 @@ export default function FacultyAddQuestions({
 
   const addOption = (qId: number) => {
     setQuestions((prev) =>
-      prev.map((q) =>
-        q.id === qId
-          ? {
+      prev.map((q) => {
+        if (q.id === qId) {
+          if (q.options.length >= 10) return q;
+          return {
             ...q,
             options: [
               ...q.options,
               { id: Date.now(), text: "", isCorrect: false },
             ],
-          }
+          };
+        }
+        return q;
+      }),
+    );
+  };
+
+  const removeOption = (qId: number, optId: number) => {
+    setQuestions((prev) =>
+      prev.map((q) =>
+        q.id === qId
+          ? {
+              ...q,
+              options: q.options.filter((o) => o.id !== optId),
+            }
           : q,
       ),
     );
   };
 
-  const handleSave = async (status: "Draft" | "Active") => {
-    if (!quizId) return toast.error("Quiz ID not found");
+  const saveMutation = useMutation({
+    mutationFn: async (status: "Draft" | "Active") => {
+      if (!quizId) throw new Error("Quiz ID not found");
 
-    for (const q of questions) {
-      if (!q.title.trim())
-        return toast.error("All questions must have a title");
-      if (q.type === "Multiple Choice") {
-        const hasCorrect = q.options.some((o) => o.isCorrect);
-        if (!hasCorrect)
-          return toast.error(`Please mark a correct answer for: "${q.title}"`);
+      for (const q of questions) {
+        if (!q.title.trim()) throw new Error("All questions must have a title");
+        if (q.type === "Multiple Choice") {
+          const hasCorrect = q.options.some((o) => o.isCorrect);
+          if (!hasCorrect) throw new Error(`Please mark a correct answer for: "${q.title}"`);
+        }
+        if (q.type === "Fill in the Blanks" && !q.correctAnswer.trim()) {
+          throw new Error(`Please enter correct answer for: "${q.title}"`);
+        }
       }
-      if (q.type === "Fill in the Blanks" && !q.correctAnswer.trim()) {
-        return toast.error(`Please enter correct answer for: "${q.title}"`);
-      }
-    }
 
-    const isComplete = quizDetails && questions.length === quizDetails.maxQuestions;
-    const finalStatus = (status === "Active" && isComplete) ? "Active" : "Draft";
-
-    if (status === "Active" && !isComplete) {
-      toast.error(`You need ${quizDetails?.maxQuestions} questions to publish. Saving as Draft.`);
-    }
-
-    try {
-      setIsSaving(status === "Active");
-      setIsDrafting(status === "Draft");
+      const isComplete = quizDetails && questions.length === quizDetails.maxQuestions;
+      const finalStatus = (status === "Active" && isComplete) ? "Active" : "Draft";
 
       for (let i = 0; i < questions.length; i++) {
         const q = questions[i];
+        
+        // Use questionId if it is an existing DB record to safely UPDATE instead of INSERTing duplicate
+        const existingQuestionId = typeof q.id === "number" && q.id < 1000000000000 ? q.id : undefined;
+
         const qResult = await saveQuizQuestion({
+          questionId: existingQuestionId,
           quizId,
           questionText: q.title,
           questionType: q.type,
@@ -236,35 +306,39 @@ export default function FacultyAddQuestions({
       const statusResult = await updateQuizStatus(quizId, finalStatus);
       if (!statusResult.success) throw new Error("Failed to update status");
 
-      toast.success(
-        finalStatus === "Active"
-          ? "Quiz published successfully!"
-          : "Quiz saved as draft!"
-      );
+      return { finalStatus, isComplete, requestedStatus: status };
+    },
+    onSuccess: (data) => {
+      if (data.requestedStatus === "Active" && !data.isComplete) {
+        toast.error(`You need ${quizDetails?.maxQuestions} questions to publish. Saved as Draft.`);
+      } else {
+        toast.success(data.finalStatus === "Active" ? "Quiz published successfully!" : "Quiz saved as draft!");
+      }
+
+      // Aggressively invalidate queries to keep UI perfectly synchronized
+      queryClient.invalidateQueries({ queryKey: ["quizQuestions", quizId] });
+      queryClient.invalidateQueries({ queryKey: ["quizDetails", quizId] });
+      queryClient.invalidateQueries({ queryKey: ["quizList"] });
 
       const params = new URLSearchParams();
       params.set("tab", "quiz");
-      params.set("quizView", finalStatus === "Active" ? "active" : "drafts");
+      params.set("quizView", data.finalStatus === "Active" ? "active" : "drafts");
       params.set("refreshQuiz", "1");
       router.push(`${pathname}?${params.toString()}`);
-
-    } catch (err) {
-      console.error("handleSave error:", err);
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setIsSaving(false);
-      setIsDrafting(false);
+    },
+    onError: (error: any) => {
+      console.error("Save error:", error);
+      toast.error(error.message || "Something went wrong");
     }
-  };
+  });
 
-  const isQuestionEmpty = (q: Question) => {
-    const hasTitle = q.title.trim().length > 0;
-    const hasOptions = q.options.some((o) => o.text.trim().length > 0);
-    const hasAnswer = q.correctAnswer.trim().length > 0;
-    return !(hasTitle || hasOptions || hasAnswer);
+  const handleSave = (status: "Draft" | "Active") => {
+    saveMutation.mutate(status);
   };
 
   const hasMultipleChoice = questions.some((q) => q.type === "Multiple Choice");
+  
+  const isMutating = saveMutation.isPending || deleteMutation.isPending;
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -276,20 +350,20 @@ export default function FacultyAddQuestions({
             className="text-[#282828] cursor-pointer active:scale-90"
             onClick={onBack}
           />
-          <h1 className="font-bold text-2xl text-[#282828]">Create New Quiz</h1>
+          <h1 className="font-bold text-2xl text-[#282828]">{quizId ? "Edit Quiz Questions" : "Create New Quiz"}</h1>
         </div>
         <p className="text-[#282828] text-sm lg:ml-6">
           Enter details below to set up and publish your quiz for students.
         </p>
       </div>
 
-      <div className="bg-white rounded-md px-4 py-3 mb-3 min-h-[60px] flex items-center justify-between">
+      <div className="bg-white rounded-md px-4 py-3 mb-3 min-h-[60px] flex items-center justify-between shadow-sm">
         <div className="bg-red-00 flex flex-col items-start">
           <p className="font-bold text-[#282828] text-sm">
-            {quizDetails?.quizTitle || "Loading Quiz..."}
+            {isQuizLoading ? "Loading..." : (quizDetails?.quizTitle || "Untitled Quiz")}
           </p>
           <p className="text-[#282828] text-xs mt-0.5">
-            {quizDetails?.topicTitle || "N/A"}
+            {isQuizLoading ? "..." : (quizDetails?.topicTitle || "N/A")}
           </p>
         </div>
         <div className="bg-blue-00">
@@ -320,7 +394,7 @@ export default function FacultyAddQuestions({
           disabled={!!(quizDetails && questions.length >= quizDetails.maxQuestions)}
           className={`flex items-center gap-2 text-white text-sm font-medium p-2 rounded-md transition-colors shrink-0 whitespace-nowrap ${(quizDetails && questions.length >= quizDetails.maxQuestions)
             ? "bg-gray-400 cursor-not-allowed"
-            : "bg-[#43C17A] hover:bg-[#35a868] cursor-pointer"
+            : "bg-[#43C17A] hover:bg-[#35a868] cursor-pointer shadow-sm"
             }`}
         >
           <PlusCircleIcon size={20} weight="fill" color="white" />
@@ -332,7 +406,7 @@ export default function FacultyAddQuestions({
         {questions.map((question, index) => (
           <div
             key={question.id}
-            className={`bg-white rounded-md px-4 py-4 border-2 ${index === 0 ? "border-[#43C17A]" : "border-transparent"
+            className={`bg-white rounded-md px-4 py-4 border-2 shadow-sm ${index === 0 ? "border-[#43C17A]" : "border-transparent"
               }`}
           >
             <div className="flex items-center justify-between gap-4 mb-3">
@@ -362,8 +436,8 @@ export default function FacultyAddQuestions({
 
             <div className="flex flex-col gap-2 mb-3">
               {question.type === "Multiple Choice" ? (
-                question.options.map((option) => (
-                  <div key={option.id} className="flex items-center gap-2">
+                question.options.map((option, index) => (
+                  <div key={option.id} className="group flex items-center gap-2">
                     <input
                       type="radio"
                       name={`question-${question.id}`}
@@ -374,12 +448,21 @@ export default function FacultyAddQuestions({
                     <input
                       type="text"
                       value={option.text}
-                      placeholder={`Option ${question.options.findIndex((o) => o.id === option.id) + 1}`}
+                      placeholder={`Option ${index + 1}`}
                       onChange={(e) =>
                         updateOptionText(question.id, option.id, e.target.value)
                       }
                       className="text-sm text-[#282828] outline-none border-b border-transparent focus:border-gray-300 bg-transparent flex-1"
                     />
+                    {index > 3 && (
+                      <button
+                        onClick={() => removeOption(question.id, option.id)}
+                        className="text-gray-400 hover:text-red-500 cursor-pointer p-1 transition-opacity opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                        title="Remove Option"
+                      >
+                        <X size={14} weight="bold" />
+                      </button>
+                    )}
                   </div>
                 ))
               ) : (
@@ -425,18 +508,18 @@ export default function FacultyAddQuestions({
             </div>
 
             <div className="flex items-center justify-between mt-2">
-              {question.type === "Multiple Choice" && (
+              {question.type === "Multiple Choice" && question.options.length < 10 && (
                 <button
                   onClick={() => addOption(question.id)}
                   className="text-[#43C17A] text-sm w-[100px] font-medium cursor-pointer hover:underline"
                 >
-                  Add Other
+                  Add Option
                 </button>
               )}
               <div className="flex justify-end gap-3 w-full">
                 <button
                   onClick={() => deleteQuestion(question.id)}
-                  className="text-gray-400 text-red-500 cursor-pointer transition-colors p-1"
+                  className="text-gray-400 hover:text-red-500 cursor-pointer transition-colors p-1"
                   title="Delete Question"
                 >
                   <svg
@@ -458,23 +541,24 @@ export default function FacultyAddQuestions({
             </div>
           </div>
         ))}
-      </div>
-
-      <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
-        <button
-          onClick={() => handleSave("Draft")}
-          disabled={isDrafting}
-          className="px-8 py-2.5 rounded-md bg-[#16284F] text-white text-sm font-bold cursor-pointer hover:bg-[#102040] transition-colors disabled:opacity-50 shadow-sm"
-        >
-          {isDrafting ? "Saving..." : "Draft"}
-        </button>
-        <button
-          onClick={() => handleSave("Active")}
-          disabled={isSaving}
-          className="px-8 py-2.5 rounded-md bg-[#43C17A] text-white text-sm font-bold cursor-pointer hover:bg-[#35a868] transition-colors disabled:opacity-50 shadow-sm"
-        >
-          {isSaving ? "Saving..." : "Save"}
-        </button>
+        {isQuestionsLoading && <div className="text-center py-6 text-gray-500 text-sm animate-pulse">Loading saved questions...</div>}
+        
+        <div className="flex justify-end gap-3 pt-3 mt-4 border-t border-gray-100">
+          <button
+            onClick={() => handleSave("Draft")}
+            disabled={isMutating}
+            className="px-8 py-2.5 rounded-md bg-[#16284F] text-white text-sm font-bold transition-colors shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#102040]"
+          >
+            {saveMutation.isPending && saveMutation.variables === "Draft" ? "Saving..." : "Draft"}
+          </button>
+          <button
+            onClick={() => handleSave("Active")}
+            disabled={isMutating}
+            className="px-8 py-2.5 rounded-md bg-[#43C17A] text-white text-sm font-bold transition-colors shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#35a868]"
+          >
+            {saveMutation.isPending && saveMutation.variables === "Active" ? "Saving..." : "Save"}
+          </button>
+        </div>
       </div>
 
       <ConfirmDeleteModal
