@@ -12,6 +12,7 @@ import { Pagination } from "./pagination";
 import { Pagination as AssignmentPagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import FacultyQuizCard from "./facultyQuizCard";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import FacultyDiscussionCard from "./facultyDiscussionCard";
 import FacultyDiscussionForm from "./facultyDiscussionForm";
@@ -23,7 +24,6 @@ import {
   fetchDiscussionsByFacultyId,
 } from "@/lib/helpers/discussionForum/discussionForumAPI";
 import FacultyDiscussionShimmer from "../shimmer/discussionShimmer";
-import ConfirmDeleteModal from "./confirmDeleteModal";
 import CalendarConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import FacultyQuizForm from "./facultyQuizForm";
 import FacultyAddQuestions from "./FacultyAddQuizQuestions";
@@ -63,10 +63,83 @@ function formatDate(dateStr: string) {
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
-  return `${day}-${month}-${year}`;
+  return `${day}/${month}/${year}`;
 }
 
 const ITEMS_PER_PAGE = 10;
+
+export const getSafeSubjectName = (apiData: any, matchedSection: any) => {
+  if (Array.isArray(apiData?.college_subjects)) return apiData.college_subjects[0]?.subjectName;
+  if (apiData?.college_subjects?.subjectName) return apiData.college_subjects.subjectName;
+  if (Array.isArray(matchedSection?.faculty_subject)) return matchedSection.faculty_subject[0]?.subjectName;
+  if (matchedSection?.faculty_subject?.subjectName) return matchedSection.faculty_subject.subjectName;
+  if (Array.isArray(matchedSection?.college_subjects)) return matchedSection.college_subjects[0]?.subjectName;
+  if (matchedSection?.college_subjects?.subjectName) return matchedSection.college_subjects.subjectName;
+  return null;
+}
+
+export const getSafeSemName = (apiData: any, matchedSection: any) => {
+  let semInfo = null;
+  if (Array.isArray(apiData?.college_subjects)) semInfo = apiData.college_subjects[0]?.college_semester;
+  else if (apiData?.college_subjects?.college_semester) semInfo = apiData.college_subjects.college_semester;
+  
+  if (!semInfo) semInfo = matchedSection?.college_semester || matchedSection?.faculty_subject?.college_semester || matchedSection?.college_subjects?.college_semester;
+
+  return Array.isArray(semInfo) ? semInfo[0]?.collegeSemester : semInfo?.collegeSemester;
+}
+
+export const getSafeEduName = (matchedSection: any) => {
+  if (Array.isArray(matchedSection?.faculty_edu_type)) return matchedSection.faculty_edu_type[0]?.collegeEducationType;
+  if (matchedSection?.faculty_edu_type?.collegeEducationType) return matchedSection.faculty_edu_type.collegeEducationType;
+  if (Array.isArray(matchedSection?.college_education)) return matchedSection.college_education[0]?.collegeEducationType;
+  if (matchedSection?.college_education?.collegeEducationType) return matchedSection.college_education.collegeEducationType;
+  return null;
+}
+
+export const getSafeBranchName = (matchedSection: any) => {
+  if (Array.isArray(matchedSection?.college_branch)) return matchedSection.college_branch[0]?.collegeBranchCode;
+  if (matchedSection?.college_branch?.collegeBranchCode) return matchedSection.college_branch.collegeBranchCode;
+  return null;
+}
+
+export const getSafeYearName = (matchedSection: any) => {
+  if (Array.isArray(matchedSection?.college_academic_year)) return matchedSection.college_academic_year[0]?.collegeAcademicYear;
+  if (matchedSection?.college_academic_year?.collegeAcademicYear) return matchedSection.college_academic_year.collegeAcademicYear;
+  return null;
+}
+
+export const getSafeSectionName = (apiData: any, matchedSection: any) => {
+  if (Array.isArray(apiData?.college_sections)) return apiData.college_sections[0]?.collegeSections;
+  if (apiData?.college_sections?.collegeSections) return apiData.college_sections.collegeSections;
+  if (Array.isArray(matchedSection?.college_sections)) return matchedSection.college_sections[0]?.collegeSections;
+  if (matchedSection?.college_sections?.collegeSections) return matchedSection.college_sections.collegeSections;
+  return null;
+}
+
+export const buildCardSubtitle = (apiData: any, matchedSection: any) => {
+  const eduName = getSafeEduName(matchedSection);
+  const branchName = getSafeBranchName(matchedSection);
+  const yearName = getSafeYearName(matchedSection);
+  const semName = getSafeSemName(apiData, matchedSection);
+  const subjName = getSafeSubjectName(apiData, matchedSection);
+  const secName = getSafeSectionName(apiData, matchedSection);
+
+  const isSchool = isSchoolEducation(eduName);
+  const isInter = eduName?.toUpperCase() === "INTER" || eduName?.toUpperCase() === "INTERMEDIATE";
+
+  let parts = [];
+  if (eduName) parts.push(`Education - ${eduName}`);
+  if (isInter && branchName) parts.push(`Group - ${branchName}`);
+  if (!isSchool && !isInter && branchName) parts.push(`Branch - ${branchName}`);
+  if (yearName) parts.push(`Year - ${yearName}`);
+  if (!isSchool && !isInter && semName) {
+    const parsedSem = String(semName).replace(/Semester/i, "").trim() || semName;
+    parts.push(`Sem - ${parsedSem}`);
+  }
+  if (subjName) parts.push(`Subject - ${subjName}`);
+  if (secName) parts.push(`Section - ${secName}`);
+  return parts.join(" • ");
+}
 
 function AssignmentsLeftContent() {
   const router = useRouter();
@@ -97,33 +170,19 @@ function AssignmentsLeftContent() {
   const [totalCount, setTotalCount] = useState(0);
 
   const [quizCurrentPage, setQuizCurrentPage] = useState(1);
-  const [quizTotalCount, setQuizTotalCount] = useState(0);
 
   const [discussionCurrentPage, setDiscussionCurrentPage] = useState(1);
-  const [discussionTotalCount, setDiscussionTotalCount] = useState(0);
-
   const [isLoading, setIsLoading] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
 
-  const [discussions, setDiscussions] = useState<any[]>([]);
-  const [discussionsLoading, setDiscussionsLoading] = useState(true);
-  const [completedDiscussions, setCompletedDiscussions] = useState<any[]>([]);
-  const [completedDiscussionsLoading, setCompletedDiscussionsLoading] =
-    useState(true);
-
-  const [deleteDiscussionId, setDeleteDiscussionId] = useState<number | null>(
-    null,
-  );
+  // Discussions state handled by useQuery now
+  const [deleteDiscussionId, setDeleteDiscussionId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const [activeQuizzes, setActiveQuizzes] = useState<any[]>([]);
-  const [draftQuizzes, setDraftQuizzes] = useState<any[]>([]);
-  const [completedQuizzes, setCompletedQuizzes] = useState<any[]>([]);
-  const [quizzesLoading, setQuizzesLoading] = useState(false);
+
 
   const [deleteQuizId, setDeleteQuizId] = useState<number | null>(null);
-  const [isDeletingQuiz, setIsDeletingQuiz] = useState(false);
 
   const [deleteLabId, setDeleteLabId] = useState<number | null>(null);
   const [isDeletingLab, setIsDeletingLab] = useState(false);
@@ -141,22 +200,32 @@ function AssignmentsLeftContent() {
   const [filterSubjectId, setFilterSubjectId] = useState("");
   const [filterSectionId, setFilterSectionId] = useState("");
 
-  const { facultyId, sections } = useFaculty();
+  const { 
+    facultyId, 
+    sections,
+    collegeEducationId: mainEduId,
+    faculty_edu_type: mainEduName,
+    collegeBranchId: mainBranchId,
+    college_branch: mainBranchName,
+    loading: isFacultyContextLoading
+  } = useFaculty();
   const { isSchool: isSchoolTerminology } = useInstitutionTerminology();
-  const { collegeEducationType } = useUser();
+  const { collegeEducationType, loading: isUserContextLoading } = useUser();
 
   const availableEducationTypes = useMemo(() => {
     const typesMap = new Map();
     sections?.forEach((s) => {
-      if (s.collegeEducationId && s.faculty_edu_type) {
-        typesMap.set(s.collegeEducationId, {
-          id: String(s.collegeEducationId),
-          name: s.faculty_edu_type.collegeEducationType,
+      const eduId = s.collegeEducationId || mainEduId;
+      const eduName = s.faculty_edu_type?.collegeEducationType || s.college_education?.collegeEducationType || mainEduName;
+      if (eduId && eduName) {
+        typesMap.set(eduId, {
+          id: String(eduId),
+          name: eduName,
         });
       }
     });
     return Array.from(typesMap.values());
-  }, [sections]);
+  }, [sections, mainEduId, mainEduName]);
 
   const isSchool = useMemo(() => {
     if (!filterEducationTypeId) {
@@ -180,23 +249,29 @@ function AssignmentsLeftContent() {
     if (!filterEducationTypeId) return [];
     const branchesMap = new Map();
     sections?.forEach((s) => {
-      if (String(s.collegeEducationId) === filterEducationTypeId && s.collegeBranchId && s.college_branch) {
-        branchesMap.set(s.collegeBranchId, {
-          id: String(s.collegeBranchId),
-          name: s.college_branch.collegeBranchCode,
+      const eduId = s.collegeEducationId || mainEduId;
+      const branchId = s.collegeBranchId || mainBranchId;
+      if (String(eduId) === filterEducationTypeId && branchId) {
+        const branchName = s.college_branch?.collegeBranchCode || mainBranchName || `Branch ${branchId}`;
+        branchesMap.set(branchId, {
+          id: String(branchId),
+          name: branchName,
         });
       }
     });
     return Array.from(branchesMap.values());
-  }, [filterEducationTypeId, sections]);
+  }, [filterEducationTypeId, sections, mainEduId, mainBranchId, mainBranchName]);
 
   const availableYears = useMemo(() => {
     if (!filterEducationTypeId) return [];
     const yearsMap = new Map();
     sections?.forEach((s: any) => {
+      const eduId = s.collegeEducationId || mainEduId;
+      const branchId = s.collegeBranchId || mainBranchId;
       if (
-        String(s.collegeEducationId) === filterEducationTypeId &&
-        (isSchool || String(s.collegeBranchId) === filterBranchId)
+        String(eduId) === filterEducationTypeId &&
+        (isSchool || String(branchId) === filterBranchId) &&
+        s.collegeAcademicYearId
       ) {
         yearsMap.set(s.collegeAcademicYearId, {
           id: String(s.collegeAcademicYearId),
@@ -205,36 +280,50 @@ function AssignmentsLeftContent() {
       }
     });
     return Array.from(yearsMap.values());
-  }, [filterEducationTypeId, filterBranchId, isSchool, sections]);
+  }, [filterEducationTypeId, filterBranchId, isSchool, sections, mainEduId, mainBranchId]);
+
+  const isInter = useMemo(() => {
+    if (!filterEducationTypeId) return false;
+    const selectedEdu = availableEducationTypes.find(e => e.id === filterEducationTypeId);
+    if (!selectedEdu) return false;
+    const name = selectedEdu.name.toUpperCase();
+    return name === "INTER" || name === "INTERMEDIATE";
+  }, [filterEducationTypeId, availableEducationTypes]);
 
   const availableSubjects = useMemo(() => {
     if (!filterYearId) return [];
     const subjectsMap = new Map();
     sections?.forEach((s: any) => {
+      const eduId = s.collegeEducationId || mainEduId;
+      const branchId = s.collegeBranchId || mainBranchId;
+      const subjName = s.faculty_subject?.subjectName || s.college_subjects?.subjectName;
       if (
-        String(s.collegeEducationId) === filterEducationTypeId &&
-        (isSchool || String(s.collegeBranchId) === filterBranchId) &&
+        String(eduId) === filterEducationTypeId &&
+        (isSchool || String(branchId) === filterBranchId) &&
         String(s.collegeAcademicYearId) === filterYearId &&
-        s.collegeSubjectId && s.faculty_subject
+        s.collegeSubjectId && subjName
       ) {
         subjectsMap.set(s.collegeSubjectId, {
           id: String(s.collegeSubjectId),
-          name: s.faculty_subject.subjectName,
+          name: subjName,
         });
       }
     });
     return Array.from(subjectsMap.values());
-  }, [filterEducationTypeId, filterBranchId, filterYearId, isSchool, sections]);
+  }, [filterEducationTypeId, filterBranchId, filterYearId, isSchool, isInter, sections, mainEduId, mainBranchId]);
 
   const availableSections = useMemo(() => {
     if (!filterSubjectId) return [];
     const sectionsMap = new Map();
     sections?.forEach((s: any) => {
+      const eduId = s.collegeEducationId || mainEduId;
+      const branchId = s.collegeBranchId || mainBranchId;
       if (
-        String(s.collegeEducationId) === filterEducationTypeId &&
-        (isSchool || String(s.collegeBranchId) === filterBranchId) &&
+        String(eduId) === filterEducationTypeId &&
+        (isSchool || String(branchId) === filterBranchId) &&
         String(s.collegeAcademicYearId) === filterYearId &&
-        String(s.collegeSubjectId) === filterSubjectId
+        String(s.collegeSubjectId) === filterSubjectId &&
+        s.collegeSectionsId
       ) {
         sectionsMap.set(s.collegeSectionsId, {
           id: String(s.collegeSectionsId),
@@ -243,112 +332,161 @@ function AssignmentsLeftContent() {
       }
     });
     return Array.from(sectionsMap.values());
-  }, [filterEducationTypeId, filterBranchId, filterYearId, filterSubjectId, isSchool, sections]);
+  }, [filterEducationTypeId, filterBranchId, filterYearId, filterSubjectId, isSchool, isInter, sections, mainEduId, mainBranchId]);
 
+  useEffect(() => {
+    if (availableBranches.length === 1 && !filterBranchId) {
+      setFilterBranchId(String(availableBranches[0].id));
+    }
+  }, [availableBranches, filterBranchId]);
 
-  async function fetchQuizzes() {
-    if (!facultyId) return;
-    try {
-      setQuizzesLoading(true);
+  useEffect(() => {
+    if (availableYears.length === 1 && !filterYearId) {
+      setFilterYearId(String(availableYears[0].id));
+    }
+  }, [availableYears, filterYearId]);
+
+  useEffect(() => {
+    if (availableSubjects.length === 1 && !filterSubjectId) {
+      setFilterSubjectId(String(availableSubjects[0].id));
+    }
+  }, [availableSubjects, filterSubjectId]);
+
+  useEffect(() => {
+    if (availableSections.length === 1 && !filterSectionId) {
+      setFilterSectionId(String(availableSections[0].id));
+    }
+  }, [availableSections, filterSectionId]);
+
+  const queryClient = useQueryClient();
+
+  const { data: quizData, isLoading: quizzesLoading } = useQuery({
+    queryKey: ["quizzes", facultyId, quizView, quizCurrentPage, selectedDate, refreshQuiz, filterEducationTypeId, filterBranchId, filterYearId, filterSubjectId, filterSectionId],
+    queryFn: async () => {
+      if (!facultyId) return { data: [], totalCount: 0 };
+      
       await autoCompleteExpiredQuizzes(facultyId);
 
-      let result;
-      if (quizView === "active") {
-        result = await fetchQuizzesByStatus(
-          facultyId,
-          "Active",
-          quizCurrentPage,
-          ITEMS_PER_PAGE,
-          selectedDate || undefined
-        );
-        setActiveQuizzes(result.data);
-      } else if (quizView === "drafts") {
-        result = await fetchQuizzesByStatus(
-          facultyId,
-          "Draft",
-          quizCurrentPage,
-          ITEMS_PER_PAGE,
-          selectedDate || undefined
-        );
-        setDraftQuizzes(result.data);
-      } else {
-        result = await fetchQuizzesByStatus(
-          facultyId,
-          "Completed",
-          quizCurrentPage,
-          ITEMS_PER_PAGE,
-          selectedDate || undefined
-        );
-        setCompletedQuizzes(result.data);
+      const statusMap: Record<string, "Active" | "Draft" | "Completed"> = {
+        active: "Active",
+        drafts: "Draft",
+        completed: "Completed"
+      };
+
+      let matchingSections = sections || [];
+      if (filterEducationTypeId) {
+        matchingSections = matchingSections.filter(s => String(s.collegeEducationId || mainEduId) === filterEducationTypeId);
       }
+      if (filterBranchId && !isSchool) {
+        matchingSections = matchingSections.filter(s => String(s.collegeBranchId || mainBranchId) === filterBranchId);
+      }
+      if (filterYearId) {
+        matchingSections = matchingSections.filter(s => String(s.collegeAcademicYearId) === filterYearId);
+      }
+      if (filterSubjectId) {
+        matchingSections = matchingSections.filter(s => String(s.collegeSubjectId) === filterSubjectId);
+      }
+      if (filterSectionId) {
+        matchingSections = matchingSections.filter(s => String(s.collegeSectionsId) === filterSectionId);
+      }
+      
+      const isAnyFilterActive = filterEducationTypeId || filterBranchId || filterYearId || filterSubjectId || filterSectionId;
+      // if filters are active but no sections match, validSectionIds should be empty array to fetch 0 results. 
+      // if no filters are active, validSectionIds should be undefined to fetch all.
+      const validSectionIds = isAnyFilterActive ? matchingSections.map(s => s.collegeSectionsId) : undefined;
 
-      setQuizTotalCount(result?.totalCount || 0);
+      const filtersObj = {
+        sectionIds: validSectionIds,
+      };
 
+      const result = await fetchQuizzesByStatus(
+        facultyId,
+        statusMap[quizView],
+        quizCurrentPage,
+        ITEMS_PER_PAGE,
+        selectedDate || undefined,
+        filtersObj
+      );
+
+      // Clear the refresh parameter if it exists
       const params = new URLSearchParams(searchParams.toString());
       if (params.has("refreshQuiz")) {
         params.delete("refreshQuiz");
         router.replace(`${pathname}?${params.toString()}`);
       }
-    } catch (err) {
-      toast.error("Failed to fetch quizzes");
-    } finally {
-      setQuizzesLoading(false);
-    }
-  }
 
-  useEffect(() => {
-    if (activeTab === "quiz") {
-      fetchQuizzes();
-    }
-  }, [activeTab, facultyId, quizView, quizCurrentPage, refreshQuiz, selectedDate]);
+      return result;
+    },
+    enabled: activeTab === "quiz" && !!facultyId,
+  });
 
-  async function fetchCompletedDiscussions() {
-    if (!facultyId) return;
-    try {
-      setCompletedDiscussionsLoading(true);
-      const { data, totalCount } = await fetchCompletedDiscussionsByFacultyId(
-        facultyId,
-        discussionCurrentPage,
-        ITEMS_PER_PAGE,
-        selectedDate || undefined
-      );
-      setCompletedDiscussions(data);
-      setDiscussionTotalCount(totalCount);
-    } catch (err) {
-      toast.error("Failed to fetch completed discussions");
-    } finally {
-      setCompletedDiscussionsLoading(false);
-    }
-  }
+  const quizzes = quizData?.data || [];
+  const quizTotalCount = quizData?.totalCount || 0;
 
-  async function fetchDiscussions() {
-    if (!facultyId) return;
-    try {
-      setDiscussionsLoading(true);
-      const { data, totalCount } = await fetchDiscussionsByFacultyId(
-        facultyId,
-        discussionCurrentPage,
-        ITEMS_PER_PAGE,
-        selectedDate || undefined
-      );
-      setDiscussions(data);
-      setDiscussionTotalCount(totalCount);
-    } catch (err) {
-      toast.error("Failed to fetch discussions");
-      console.error("fetchDiscussions error:", err);
-    } finally {
-      setDiscussionsLoading(false);
-    }
-  }
+  const { data: discussionData, isLoading: discussionsLoading } = useQuery({
+    queryKey: [
+      "discussions",
+      facultyId,
+      discussionView,
+      discussionCurrentPage,
+      selectedDate,
+      refreshKey,
+      filterEducationTypeId,
+      filterBranchId,
+      filterYearId,
+      filterSubjectId,
+      filterSectionId,
+    ],
+    queryFn: async () => {
+      if (!facultyId) return { data: [], totalCount: 0 };
 
-  useEffect(() => {
-    if (activeTab !== "discussion") return;
-    if (discussionView === "active") {
-      fetchDiscussions();
-    } else {
-      fetchCompletedDiscussions();
-    }
-  }, [activeTab, discussionView, facultyId, refreshKey, discussionCurrentPage, selectedDate]);
+      let matchingSections = sections || [];
+      if (filterEducationTypeId) {
+        matchingSections = matchingSections.filter(s => String(s.collegeEducationId || mainEduId) === filterEducationTypeId);
+      }
+      if (filterBranchId && !isSchool) {
+        matchingSections = matchingSections.filter(s => String(s.collegeBranchId || mainBranchId) === filterBranchId);
+      }
+      if (filterYearId) {
+        matchingSections = matchingSections.filter(s => String(s.collegeAcademicYearId) === filterYearId);
+      }
+      if (filterSubjectId) {
+        matchingSections = matchingSections.filter(s => String(s.collegeSubjectId) === filterSubjectId);
+      }
+      if (filterSectionId) {
+        matchingSections = matchingSections.filter(s => String(s.collegeSectionsId) === filterSectionId);
+      }
+      
+      const isAnyFilterActive = filterEducationTypeId || filterBranchId || filterYearId || filterSubjectId || filterSectionId;
+      const validSectionIds = isAnyFilterActive ? matchingSections.map(s => s.collegeSectionsId) : undefined;
+
+      const filtersObj = {
+        sectionIds: validSectionIds,
+      };
+
+      if (discussionView === "active") {
+        return await fetchDiscussionsByFacultyId(
+          facultyId,
+          discussionCurrentPage,
+          ITEMS_PER_PAGE,
+          selectedDate || undefined,
+          filtersObj
+        );
+      } else {
+        return await fetchCompletedDiscussionsByFacultyId(
+          facultyId,
+          discussionCurrentPage,
+          ITEMS_PER_PAGE,
+          selectedDate || undefined,
+          filtersObj
+        );
+      }
+    },
+    enabled: activeTab === "discussion" && !!facultyId,
+  });
+
+  const discussions = discussionData?.data || [];
+  const discussionTotalCount = discussionData?.totalCount || 0;
 
   async function fetchLabs() {
     if (!facultyId) return;
@@ -526,7 +664,7 @@ function AssignmentsLeftContent() {
       const result = await deactivateDiscussionForum(deleteDiscussionId);
       if (result.success) {
         toast.success("Discussion deleted successfully.");
-        fetchDiscussions();
+        setRefreshKey((prev) => prev + 1);
       } else {
         toast.error("Failed to delete discussion.");
       }
@@ -568,33 +706,46 @@ function AssignmentsLeftContent() {
     setDeleteQuizId(quizId);
   };
 
-  const executeDeleteQuiz = async () => {
-    if (!deleteQuizId) return;
-    try {
-      setIsDeletingQuiz(true);
-      const res = await deactivateQuiz(deleteQuizId);
-      if (res.success) {
-        toast.success("Quiz deleted successfully");
-        fetchQuizzes();
-      } else {
-        toast.error("Failed to delete quiz");
-      }
-    } catch (error) {
-      toast.error("Failed to delete quiz");
-    } finally {
-      setIsDeletingQuiz(false);
+  const deleteQuizMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await deactivateQuiz(id);
+      if (!res.success) throw new Error("Failed to delete quiz");
+      return res;
+    },
+    onSuccess: () => {
+      toast.success("Quiz deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["quizzes"] });
       setDeleteQuizId(null);
+    },
+    onError: () => {
+      toast.error("Failed to delete quiz");
+      setDeleteQuizId(null);
+    }
+  });
+
+  const executeDeleteQuiz = () => {
+    if (deleteQuizId) {
+      deleteQuizMutation.mutate(deleteQuizId);
     }
   };
 
-  const handlePublishQuiz = async (quizId: number) => {
-    const res = await updateQuizStatus(quizId, "Active");
-    if (res.success) {
+  const publishQuizMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await updateQuizStatus(id, "Active");
+      if (!res.success) throw new Error("Failed to publish quiz");
+      return res;
+    },
+    onSuccess: () => {
       toast.success("Quiz published successfully");
-      fetchQuizzes();
-    } else {
+      queryClient.invalidateQueries({ queryKey: ["quizzes"] });
+    },
+    onError: () => {
       toast.error("Failed to publish quiz");
     }
+  });
+
+  const handlePublishQuiz = (quizId: number) => {
+    publishQuizMutation.mutate(quizId);
   };
 
   const executeDeleteLab = async () => {
@@ -746,6 +897,92 @@ function AssignmentsLeftContent() {
     );
   }
 
+  const filtersBlock = (
+    <div className="flex w-full gap-4 mt-2 overflow-x-auto custom-scrollbar pb-2">
+      <CustomDropdown
+        label="Education Type"
+        options={availableEducationTypes.map(t => ({ label: t.name, value: t.id }))}
+        value={filterEducationTypeId}
+        onChange={(v) => {
+          setFilterEducationTypeId(String(v));
+          setFilterBranchId("");
+          setFilterYearId("");
+          setFilterSubjectId("");
+          setFilterSectionId("");
+          setQuizCurrentPage(1);
+        }}
+        placeholder="Select Education Type"
+        theme="green"
+        disabled={availableEducationTypes.length <= 1}
+        widthClassName="min-w-[160px] shrink-0"
+      />
+
+      {!isSchool && (
+        <CustomDropdown
+          label={isInter ? "Group" : "Branch"}
+          options={availableBranches.map(b => ({ label: b.name, value: b.id }))}
+          value={filterBranchId}
+          onChange={(v) => {
+            setFilterBranchId(String(v));
+            setFilterYearId("");
+            setFilterSubjectId("");
+            setFilterSectionId("");
+            setQuizCurrentPage(1);
+          }}
+          placeholder={isInter ? "Select Group" : "Select Branch"}
+          theme="green"
+          disabled={!filterEducationTypeId || availableBranches.length <= 1}
+          widthClassName="min-w-[160px] shrink-0"
+        />
+      )}
+
+      <CustomDropdown
+        label="Year"
+        options={availableYears.map(y => ({ label: y.name, value: y.id }))}
+        value={filterYearId}
+        onChange={(v) => {
+          setFilterYearId(String(v));
+          setFilterSubjectId("");
+          setFilterSectionId("");
+          setQuizCurrentPage(1);
+        }}
+        placeholder="Select Year"
+        theme="green"
+        disabled={!filterEducationTypeId || (!isSchool && !filterBranchId) || availableYears.length <= 1}
+        widthClassName="min-w-[160px] shrink-0"
+      />
+
+      <CustomDropdown
+        label="Subject"
+        options={availableSubjects.map(s => ({ label: s.name, value: s.id }))}
+        value={filterSubjectId}
+        onChange={(v) => {
+          setFilterSubjectId(String(v));
+          setFilterSectionId("");
+          setQuizCurrentPage(1);
+        }}
+        placeholder="Select Subject"
+        theme="green"
+        disabled={!filterYearId || availableSubjects.length <= 1}
+        widthClassName="min-w-[160px] shrink-0"
+      />
+
+      <CustomDropdown
+        label="Section"
+        options={availableSections.map(s => ({ label: s.name, value: s.id }))}
+        value={filterSectionId}
+        onChange={(v) => {
+          setFilterSectionId(String(v));
+          setQuizCurrentPage(1);
+        }}
+        placeholder="Select Section"
+        theme="green"
+        disabled={!filterSubjectId || availableSections.length <= 1}
+        widthClassName="min-w-[160px] shrink-0"
+      />
+    </div>
+  );
+
   return (
     <div className="w-[68%] max-md:w-full h-full p-2 max-md:p-3 max-md:pb-20 flex flex-col">
       <div className="mb-2 md:mb-4">
@@ -797,7 +1034,7 @@ function AssignmentsLeftContent() {
         <div className="md:hidden flex gap-5 overflow-x-auto scrollbar-hide pb-2 border-b border-gray-200 mt-2 mb-2 [&::-webkit-scrollbar]:hidden">
           <span
             onClick={() => handleMainTabChange("assignments")}
-            className={`whitespace-nowrap text-base font-bold pb-2 cursor-pointer ${activeTab === "assignments"
+            className={`cursor-pointer pb-2 whitespace-nowrap text-sm font-bold ${activeTab === "assignments"
               ? "border-b-2 border-[#43C17A] text-[#43C17A]"
               : "border-b-2 border-transparent text-gray-500"
               }`}
@@ -806,7 +1043,7 @@ function AssignmentsLeftContent() {
           </span>
           <span
             onClick={() => handleMainTabChange("quiz")}
-            className={`whitespace-nowrap text-base font-bold pb-2 cursor-pointer ${activeTab === "quiz"
+            className={`cursor-pointer pb-2 text-sm font-bold ${activeTab === "quiz"
               ? "border-b-2 border-[#43C17A] text-[#43C17A]"
               : "border-b-2 border-transparent text-gray-500"
               }`}
@@ -815,7 +1052,7 @@ function AssignmentsLeftContent() {
           </span>
           <span
             onClick={() => handleMainTabChange("discussion")}
-            className={`whitespace-nowrap text-base font-bold pb-2 cursor-pointer ${activeTab === "discussion"
+            className={`cursor-pointer pb-2 whitespace-nowrap text-sm font-bold ${activeTab === "discussion"
               ? "border-b-2 border-[#43C17A] text-[#43C17A]"
               : "border-b-2 border-transparent text-gray-500"
               }`}
@@ -824,7 +1061,7 @@ function AssignmentsLeftContent() {
           </span>
           <span
             onClick={() => handleMainTabChange("lab")}
-            className={`whitespace-nowrap text-base font-bold pb-2 cursor-pointer ${activeTab === "lab"
+            className={`cursor-pointer pb-2 text-sm font-bold ${activeTab === "lab"
               ? "border-b-2 border-[#43C17A] text-[#43C17A]"
               : "border-b-2 border-transparent text-gray-500"
               }`}
@@ -916,83 +1153,7 @@ function AssignmentsLeftContent() {
               </div>
             )}
 
-            {(activeTab === "assignments" || activeTab === "lab") && view === "list" && (
-              <div className="flex w-full gap-4 mt-2 overflow-x-auto custom-scrollbar pb-2">
-                <CustomDropdown
-                  label="Education Type"
-                  options={availableEducationTypes.map(t => ({ label: t.name, value: t.id }))}
-                  value={filterEducationTypeId}
-                  onChange={(v) => {
-                    setFilterEducationTypeId(String(v));
-                    setFilterBranchId("");
-                    setFilterYearId("");
-                    setFilterSubjectId("");
-                    setFilterSectionId("");
-                  }}
-                  placeholder="Select Education Type"
-                  theme="green"
-                  widthClassName="min-w-[160px] shrink-0"
-                />
-
-                {!isSchool && (
-                  <CustomDropdown
-                    label="Branch"
-                    options={availableBranches.map(b => ({ label: b.name, value: b.id }))}
-                    value={filterBranchId}
-                    onChange={(v) => {
-                      setFilterBranchId(String(v));
-                      setFilterYearId("");
-                      setFilterSubjectId("");
-                      setFilterSectionId("");
-                    }}
-                    placeholder="Select Branch"
-                    theme="green"
-                    disabled={!filterEducationTypeId}
-                    widthClassName="min-w-[160px] shrink-0"
-                  />
-                )}
-
-                <CustomDropdown
-                  label="Year"
-                  options={availableYears.map(y => ({ label: y.name, value: y.id }))}
-                  value={filterYearId}
-                  onChange={(v) => {
-                    setFilterYearId(String(v));
-                    setFilterSubjectId("");
-                    setFilterSectionId("");
-                  }}
-                  placeholder="Select Year"
-                  theme="green"
-                  disabled={!filterEducationTypeId || (!isSchool && !filterBranchId)}
-                  widthClassName="min-w-[160px] shrink-0"
-                />
-
-                <CustomDropdown
-                  label="Subject"
-                  options={availableSubjects.map(s => ({ label: s.name, value: s.id }))}
-                  value={filterSubjectId}
-                  onChange={(v) => {
-                    setFilterSubjectId(String(v));
-                    setFilterSectionId("");
-                  }}
-                  placeholder="Select Subject"
-                  theme="green"
-                  disabled={!filterYearId}
-                  widthClassName="min-w-[160px] shrink-0"
-                />
-
-                <CustomDropdown
-                  label="Section"
-                  options={availableSections.map(s => ({ label: s.name, value: s.id }))}
-                  value={filterSectionId}
-                  onChange={(v) => setFilterSectionId(String(v))}
-                  placeholder="Select Section"
-                  theme="green"
-                  disabled={!filterSubjectId}
-                  widthClassName="min-w-[160px] shrink-0"
-                />
-              </div>
-            )}
+            {(activeTab === "assignments" || activeTab === "lab") && view === "list" && filtersBlock}
 
             {activeTab === "quiz" && (
               <div className="w-full">
@@ -1059,19 +1220,22 @@ function AssignmentsLeftContent() {
                       Completed Quizzes
                     </div>
                   </div>
-                  <button
-                    className="w-full text-sm text-white cursor-pointer bg-[#16284F] px-4 py-2.5 rounded-md font-bold hover:bg-[#102040] transition-colors"
-                    onClick={() => {
-                      const params = new URLSearchParams(searchParams.toString());
-                      params.set("action", "createQuiz");
-                      router.push(`${pathname}?${params.toString()}`);
-                    }}
-                  >
-                    Create Quiz
-                  </button>
+                    <button
+                      className="w-full text-sm text-white cursor-pointer bg-[#16284F] px-4 py-2.5 rounded-md font-bold hover:bg-[#102040] transition-colors"
+                      onClick={() => {
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.set("action", "createQuiz");
+                        router.push(`${pathname}?${params.toString()}`);
+                      }}
+                    >
+                      Create Quiz
+                    </button>
+                  </div>
+                  
+                  {/* Filters block for Quiz tab */}
+                  {view === "list" && filtersBlock}
                 </div>
-              </div>
-            )}
+              )}
 
             {activeTab === "discussion" && (
               <div className="flex justify-between w-full max-md:flex-col gap-2">
@@ -1125,12 +1289,11 @@ function AssignmentsLeftContent() {
               </div>
             )}
 
+            {activeTab === "discussion" && view === "list" && filtersBlock}          </div>
 
-          </div>
-
-          <div className="max-h-[115vh] overflow-y-auto w-full pr-1">
+          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar w-full pr-1">
             {activeTab === "assignments" &&
-              (isLoading ? (
+              (isLoading || isFacultyContextLoading || isUserContextLoading ? (
                 <div className="w-full">
                   {[1, 2, 3].map((i) => (
                     <AssignmentSkeleton key={i} />
@@ -1160,194 +1323,142 @@ function AssignmentsLeftContent() {
                     }}
                     onDelete={handleDelete}
                   />
-
-                  {totalCount > 0 && (
-                    <AssignmentPagination
-                      currentPage={currentPage}
-                      totalItems={totalCount}
-                      itemsPerPage={ITEMS_PER_PAGE}
-                      onPageChange={handlePageChange}
-                      disabled={isFetchingMore}
-                      alwaysShow
-                    />
-                  )}
                 </div>
               ))}
 
             {activeTab === "quiz" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-10 h-full">
-                <div className="md:col-span-2">
-                  <FacultyQuizResumeBanner />
+              <div className="flex flex-col min-h-full pb-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <FacultyQuizResumeBanner />
+                  </div>
+
+                  {isFacultyContextLoading || isUserContextLoading || quizzesLoading ? (
+                    <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[1, 2, 3, 4].map((i) => (
+                        <FacultyQuizShimmer key={i} />
+                      ))}
+                    </div>
+                  ) : (
+                    <>
+                      {quizzes.length === 0 ? (
+                        <div className="col-span-2 py-10 text-center text-gray-500 text-sm">
+                          No {quizView} quizzes found.
+                        </div>
+                      ) : (
+                        quizzes.map((quiz: any) => {
+                          const matchedSection = sections?.find((s: any) => s.collegeSectionsId === quiz.collegeSectionsId) as any;
+                          const quizData = quiz as any;
+                          
+                          const subtitleStr = buildCardSubtitle(quizData, matchedSection);
+
+                          return (
+                          <FacultyQuizCard
+                            key={quiz.quizId}
+                            data={{
+                              quizId: quiz.quizId,
+                              title: quiz.quizTitle,
+                              subtitle: subtitleStr,
+                              duration: `${formatDate(quiz.startDate)} → ${formatDate(quiz.endDate)}`,
+                              totalQuestions: quiz.quiz_questions?.length ?? 0,
+                              totalMarks: quiz.totalMarks,
+                              status: quiz.status,
+                            }}
+                            onViewSubmissions={
+                              quizView !== "drafts"
+                                ? (quizId) => {
+                                    const params = new URLSearchParams(searchParams.toString());
+                                    params.set("action", "viewQuizSubmissions");
+                                    params.set("quizId", String(quizId));
+                                    router.push(`${pathname}?${params.toString()}`);
+                                  }
+                                : undefined
+                            }
+                            onEdit={quizView !== "completed" ? handleEditQuiz : undefined}
+                            onDelete={quizView !== "completed" ? confirmDeleteQuiz : undefined}
+                            onPublish={quizView === "drafts" ? handlePublishQuiz : undefined}
+                          />
+                        );
+                        })
+                      )}
+                    </>
+                  )}
                 </div>
-
-                {quizzesLoading ? (
-                  <>
-                    {[1, 2, 3, 4].map((i) => (
-                      <FacultyQuizShimmer key={i} />
-                    ))}
-                  </>
-                ) : (
-                  <>
-                    {quizView === "active" &&
-                      (activeQuizzes.length === 0 ? (
-                        <div className="col-span-2 py-10 text-center text-gray-500 text-sm">
-                          No active quizzes found.
-                        </div>
-                      ) : (
-                        activeQuizzes.map((quiz) => (
-                          <FacultyQuizCard
-                            key={quiz.quizId}
-                            data={{
-                              quizId: quiz.quizId,
-                              title: quiz.quizTitle,
-                              subtitle: `${quiz.college_subjects?.subjectName || "-"} • ${quiz.college_sections?.collegeSections || "-"}`,
-                              duration: `${formatDate(quiz.startDate)} → ${formatDate(quiz.endDate)}`,
-                              totalQuestions: quiz.quiz_questions?.length ?? 0,
-                              totalMarks: quiz.totalMarks,
-                              status: quiz.status,
-                            }}
-                            onViewSubmissions={(quizId) => {
-                              const params = new URLSearchParams(
-                                searchParams.toString(),
-                              );
-                              params.set("action", "viewQuizSubmissions");
-                              params.set("quizId", String(quizId));
-                              router.push(`${pathname}?${params.toString()}`);
-                            }}
-                            onEdit={handleEditQuiz}
-                            onDelete={confirmDeleteQuiz}
-                          />
-                        ))
-                      ))}
-
-                    {quizView === "drafts" &&
-                      (draftQuizzes.length === 0 ? (
-                        <div className="col-span-2 py-10 text-center text-gray-500 text-sm">
-                          No draft quizzes found.
-                        </div>
-                      ) : (
-                        draftQuizzes.map((quiz) => (
-                          <FacultyQuizCard
-                            key={quiz.quizId}
-                            data={{
-                              quizId: quiz.quizId,
-                              title: quiz.quizTitle,
-                              subtitle: `${quiz.college_subjects?.subjectName || "-"} • ${quiz.college_sections?.collegeSections || "-"}`,
-                              duration: `${formatDate(quiz.startDate)} → ${formatDate(quiz.endDate)}`,
-                              totalQuestions: quiz.quiz_questions?.length ?? 0,
-                              totalMarks: quiz.totalMarks,
-                              status: quiz.status,
-                            }}
-                            onEdit={handleEditQuiz}
-                            onDelete={confirmDeleteQuiz}
-                            onPublish={handlePublishQuiz}
-                          />
-                        ))
-                      ))}
-
-                    {quizView === "completed" &&
-                      (completedQuizzes.length === 0 ? (
-                        <div className="col-span-2 py-10 text-center text-gray-500 text-sm">
-                          No completed quizzes found.
-                        </div>
-                      ) : (
-                        completedQuizzes.map((quiz) => (
-                          <FacultyQuizCard
-                            key={quiz.quizId}
-                            data={{
-                              quizId: quiz.quizId,
-                              title: quiz.quizTitle,
-                              subtitle: `${quiz.college_subjects?.subjectName || "-"} • ${quiz.college_sections?.collegeSections || "-"}`,
-                              duration: `${formatDate(quiz.startDate)} → ${formatDate(quiz.endDate)}`,
-                              totalQuestions: quiz.quiz_questions?.length ?? 0,
-                              totalMarks: quiz.totalMarks,
-                              status: quiz.status,
-                            }}
-                            onViewSubmissions={(quizId) => {
-                              const params = new URLSearchParams(
-                                searchParams.toString(),
-                              );
-                              params.set("action", "viewQuizSubmissions");
-                              params.set("quizId", String(quizId));
-                              router.push(`${pathname}?${params.toString()}`);
-                            }}
-                          />
-                        ))
-                      ))}
-
-                    {quizTotalCount > ITEMS_PER_PAGE && (
-                      <div className="col-span-2 mt-4 flex justify-center">
-                        <Pagination
-                          currentPage={quizCurrentPage}
-                          totalItems={quizTotalCount}
-                          itemsPerPage={ITEMS_PER_PAGE}
-                          onPageChange={setQuizCurrentPage}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
               </div>
             )}
 
             {activeTab === "discussion" && (
               <div className="flex flex-col gap-4 pb-10">
                 {discussionView === "active" &&
-                  (discussionsLoading ? (
-                    [1, 2, 3].map((i) => <FacultyDiscussionShimmer key={i} />)
+                  (discussionsLoading || isFacultyContextLoading || isUserContextLoading ? (
+                    <div className="flex flex-col gap-4">
+                      {[1, 2, 3].map((i) => <FacultyDiscussionShimmer key={i} />)}
+                    </div>
                   ) : discussions.length === 0 ? (
                     <div className="w-full py-10 text-center text-gray-500">
                       No active discussions found.
                     </div>
                   ) : (
                     <>
-                      {discussions.map((discussion) => (
-                        <FacultyDiscussionCard
-                          key={discussion.discussionId}
-                          data={discussion}
-                          discussionView="active"
-                          onDelete={(id) => setDeleteDiscussionId(id)}
-                        />
-                      ))}
+                      {discussions.map((discussion, idx) => {
+                        const matchedSection = sections?.find((s: any) => s.collegeSectionsId === discussion.collegeSectionsId) as any;
+                        
+                        const subtitleStr = buildCardSubtitle(discussion, matchedSection);
+
+                        return (
+                          <FacultyDiscussionCard
+                            key={`${discussion.discussionId}-${discussion.collegeSectionsId || idx}`}
+                            data={{
+                              ...discussion,
+                              subtitle: subtitleStr
+                            }}
+                            discussionView="active"
+                            onDelete={(id) => setDeleteDiscussionId(id)}
+                          />
+                        );
+                      })}
                     </>
                   ))}
 
                 {discussionView === "completed" &&
-                  (completedDiscussionsLoading ? (
-                    [1, 2, 3].map((i) => <FacultyDiscussionShimmer key={i} />)
-                  ) : completedDiscussions.length === 0 ? (
+                  (discussionsLoading || isFacultyContextLoading || isUserContextLoading ? (
+                    <div className="flex flex-col gap-4">
+                      {[1, 2, 3].map((i) => <FacultyDiscussionShimmer key={i} />)}
+                    </div>
+                  ) : discussions.length === 0 ? (
                     <div className="w-full py-10 text-center text-gray-500">
                       No completed discussions found.
                     </div>
                   ) : (
                     <>
-                      {completedDiscussions.map((discussion) => (
-                        <FacultyDiscussionCard
-                          key={discussion.discussionId}
-                          data={discussion}
-                          discussionView="completed"
-                        />
-                      ))}
+                      {discussions.map((discussion, idx) => {
+                        const matchedSection = sections?.find((s: any) => s.collegeSectionsId === discussion.collegeSectionsId) as any;
+                        
+                        const subtitleStr = buildCardSubtitle(discussion, matchedSection);
+
+                        return (
+                          <FacultyDiscussionCard
+                            key={`${discussion.discussionId}-${discussion.collegeSectionsId || idx}`}
+                            data={{
+                              ...discussion,
+                              subtitle: subtitleStr
+                            }}
+                            discussionView="completed"
+                          />
+                        );
+                      })}
                     </>
                   ))}
 
-                {discussionTotalCount > ITEMS_PER_PAGE && (
-                  <div className="mt-4 flex justify-center">
-                    <Pagination
-                      currentPage={discussionCurrentPage}
-                      totalItems={discussionTotalCount}
-                      itemsPerPage={ITEMS_PER_PAGE}
-                      onPageChange={setDiscussionCurrentPage}
-                    />
-                  </div>
-                )}
               </div>
             )}
 
             {activeTab === "lab" && (
-              <div className="flex flex-col gap-4 pb-10">
-                {labsLoading ? (
-                  [1, 2, 3].map((i) => <FacultyDiscussionShimmer key={i} />)
+              <div className="flex flex-col gap-4 pb-2">
+                {labsLoading || isFacultyContextLoading || isUserContextLoading ? (
+                  <div className="flex flex-col gap-4">
+                    {[1, 2, 3].map((i) => <FacultyDiscussionShimmer key={i} />)}
+                  </div>
                 ) : labs.length === 0 ? (
                   <div className="w-full py-10 text-center text-gray-500">
                     No lab manuals uploaded yet.
@@ -1362,35 +1473,89 @@ function AssignmentsLeftContent() {
                         onEdit={handleEditLab}
                       />
                     ))}
-                    <AssignmentPagination
-                      currentPage={labCurrentPage}
-                      totalItems={labTotalCount}
-                      itemsPerPage={ITEMS_PER_PAGE}
-                      onPageChange={setLabCurrentPage}
-                      alwaysShow
-                    />
                   </>
                 )}
               </div>
             )}
           </div>
+
+          <div className="w-full pt-3 pb-2 mt-auto border-t border-gray-100 flex justify-center z-10 bg-[#f4f4f9] rounded-b-lg">
+            {activeTab === "assignments" && totalCount > 0 && (
+              <AssignmentPagination
+                currentPage={currentPage}
+                totalItems={totalCount}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={handlePageChange}
+                disabled={isFetchingMore}
+                alwaysShow
+              />
+            )}
+            
+            {activeTab === "quiz" && (
+              <AssignmentPagination
+                currentPage={quizCurrentPage}
+                totalItems={quizTotalCount}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setQuizCurrentPage}
+                alwaysShow
+              />
+            )}
+            
+            {activeTab === "discussion" && (
+              <AssignmentPagination
+                currentPage={discussionCurrentPage}
+                totalItems={discussionTotalCount}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setDiscussionCurrentPage}
+                alwaysShow
+              />
+            )}
+            
+            {activeTab === "lab" && (
+              <AssignmentPagination
+                currentPage={labCurrentPage}
+                totalItems={labTotalCount}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setLabCurrentPage}
+                alwaysShow
+              />
+            )}
+          </div>
         </div>
       </div>
 
-      <ConfirmDeleteModal
+      <CalendarConfirmDeleteModal
         open={!!deleteDiscussionId}
         onConfirm={handleDeleteDiscussion}
         onCancel={() => setDeleteDiscussionId(null)}
         isDeleting={isDeleting}
-        name="discussion"
+        title="Delete"
+        name="Discussion"
+        customDescription={
+          <>
+            Are you sure you want to delete discussion <span className="font-bold text-slate-800">{deleteDiscussionId ? `"${discussions.find((d: any) => d.discussionId === deleteDiscussionId)?.title || 'discussion'}"` : "discussion"}</span>? This action is permanent and cannot be undone.
+          </>
+        }
+        confirmText="Yes, Delete"
+        loadingText="Deleting..."
+        actionType="remove"
       />
 
-      <ConfirmDeleteModal
+      <CalendarConfirmDeleteModal
         open={!!deleteQuizId}
         onConfirm={executeDeleteQuiz}
         onCancel={() => setDeleteQuizId(null)}
-        isDeleting={isDeletingQuiz}
-        name="quiz"
+        isDeleting={deleteQuizMutation.isPending || false}
+        title="Delete"
+        name="Quiz"
+        customDescription={
+          <>
+            Are you sure you want to delete quiz <span className="font-bold text-slate-800">{deleteQuizId ? `"${quizzes.find((q: any) => q.quizId === deleteQuizId)?.quizTitle || 'quiz'}"` : "quiz"}</span>? This action is permanent and cannot be undone.
+          </>
+        }
+        confirmText="Yes, Delete"
+        loadingText="Deleting..."
+        actionType="remove"
       />
 
       <CalendarConfirmDeleteModal
@@ -1398,8 +1563,13 @@ function AssignmentsLeftContent() {
         onConfirm={executeDeleteLab}
         onCancel={() => setDeleteLabId(null)}
         isDeleting={isDeletingLab}
-        name="lab manual"
         title="Delete"
+        name="Lab Manual"
+        customDescription={
+          <>
+            Are you sure you want to delete lab manual <span className="font-bold text-slate-800">{deleteLabId ? `"${labs.find((l: any) => l.labId === deleteLabId)?.labTitle || 'lab manual'}"` : "lab manual"}</span>? This action is permanent and cannot be undone.
+          </>
+        }
         confirmText="Yes, Delete"
         loadingText="Deleting..."
         actionType="remove"

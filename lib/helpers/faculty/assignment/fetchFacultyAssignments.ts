@@ -57,7 +57,7 @@ export const fetchFacultyAssignments = async (
     }
 
     if (filters?.subjectId) {
-      query = query.eq("collegeSubjectId", filters.subjectId);
+      query = query.eq("subjectId", filters.subjectId);
     }
 
     if (filters?.sectionId) {

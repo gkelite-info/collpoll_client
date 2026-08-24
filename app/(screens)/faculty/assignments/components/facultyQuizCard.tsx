@@ -53,7 +53,7 @@ export default function FacultyQuizCard({
       <div className="flex flex-col gap-2.5 mt-2">
         <div className="flex items-center gap-4 text-sm">
           <span className="font-bold text-[#282828] w-28">Duration</span>
-          <span className="bg-[#F3F0FF] text-[#8B5CF6] px-2 py-0.5 rounded-md text-xs font-semibold">
+          <span className="bg-[#F3F0FF] text-[#8B5CF6] px-2 py-0.5 rounded-md text-xs font-semibold whitespace-nowrap">
             {data.duration}
           </span>
         </div>

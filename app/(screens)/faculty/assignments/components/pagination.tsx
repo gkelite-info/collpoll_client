@@ -5,6 +5,7 @@ interface PaginationProps {
   totalItems: number;
   itemsPerPage: number;
   onPageChange: (page: number) => void;
+  alwaysShow?: boolean;
 }
 
 export function Pagination({
@@ -12,12 +13,14 @@ export function Pagination({
   totalItems,
   itemsPerPage,
   onPageChange,
+  alwaysShow = false,
 }: PaginationProps) {
-  if (totalItems <= itemsPerPage) return null;
+  if (totalItems <= itemsPerPage && !alwaysShow) return null;
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const displayStartIndex = totalItems === 0 ? 0 : startIndex + 1;
 
   const MAX_VISIBLE_PAGES = 5;
   let startPage = Math.max(1, currentPage - Math.floor(MAX_VISIBLE_PAGES / 2));
@@ -38,7 +41,7 @@ export function Pagination({
       <div className="flex sm:flex gap-5 flex-1 items-center justify-between">
         <div>
           <p className="text-sm text-gray-700 max-md:mb-2">
-            Showing <span className="font-medium">{startIndex + 1}</span> to{" "}
+            Showing <span className="font-medium">{displayStartIndex}</span> to{" "}
             <span className="font-medium">{endIndex}</span> of{" "}
             <span className="font-medium">{totalItems}</span> results
           </p>
