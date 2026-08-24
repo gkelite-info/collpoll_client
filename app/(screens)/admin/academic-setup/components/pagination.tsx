@@ -37,7 +37,9 @@ export function Pagination({
   };
   if (totalItems <= itemsPerPage && !alwaysShow) return null;
 
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  // Keep an always-visible paginator on a valid first page even when the
+  // current filters return no records.
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 

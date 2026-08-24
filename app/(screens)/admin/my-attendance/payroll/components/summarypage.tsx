@@ -5,6 +5,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { Avatar } from "@/app/utils/Avatar";
 import { fetchStaffOnboardingSummary } from "@/lib/helpers/staffOnBoarding/onboardingSummaryAPI";
 import { useEffect, useState } from "react";
+import { useAssignedAdminEducationTypes } from "../../useAssignedAdminEducationTypes";
 
 const InfoRow = ({
   label,
@@ -70,6 +71,10 @@ export default function SummaryPage() {
 
   const [onboardingData, setOnboardingData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const assignedEducationTypes = useAssignedAdminEducationTypes(
+    adminId,
+    collegeEducationType || "",
+  );
 
   useEffect(() => {
     const loadData = async () => {
@@ -118,7 +123,7 @@ export default function SummaryPage() {
           <InfoRow label={`${role} ID`} value={systemId} />
           <InfoRow
             label={isInter ? "Group" : "Education Type"}
-            value={collegeEducationType}
+            value={assignedEducationTypes}
           />
           <InfoRow label="Mobile" value={mobile} />
           <InfoRow label="Email" value={email} />

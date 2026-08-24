@@ -431,6 +431,8 @@ export default function AdminLeaveRequestsTable({
         totalItems={totalCount}
         itemsPerPage={ITEMS_PER_PAGE}
         onPageChange={setPage}
+        disabled={isLoading}
+        alwaysShow
         roundedBottom="rounded-b-lg"
       />
 
