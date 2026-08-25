@@ -32,7 +32,7 @@ export function ExamSchedulesTable({
 }: ExamSchedulesTableProps) {
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative z-20">
         <h2 className="text-lg font-bold text-gray-800">Created Exam Schedules</h2>
 
         <div className="flex items-center gap-2">
@@ -57,49 +57,49 @@ export function ExamSchedulesTable({
       </div>
 
       <div className="bg-white border border-gray-150 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-        <div className="w-full overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-[#F3F4F6]">
+        <div className="w-full overflow-x-auto overflow-y-auto max-h-[500px] custom-scrollbar">
+          <table className="min-w-full divide-y divide-gray-200 relative">
+            <thead className="bg-[#F3F4F6] sticky top-0 z-10 shadow-sm">
               <tr>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
+                  className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap"
                 >
                   Schedule Title
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
+                  className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap"
                 >
                   Exam Type
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
+                  className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap"
                 >
                   Education
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
+                  className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap"
                 >
                   Scope / Target
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider"
+                  className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap"
                 >
                   Created At
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider"
+                  className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap"
                 >
                   Status
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider"
+                  className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap"
                 >
                   Actions
                 </th>
@@ -164,7 +164,7 @@ export function ExamSchedulesTable({
                           {!isSchool && !isInter && (
                             <span className="text-xs font-medium text-gray-500">
                               {row.academicYear || "All Years"}
-                              {row.college_semester?.collegeSemester ? ` • ${row.college_semester.collegeSemester}` : ""}
+                              {row.college_semester?.collegeSemester ? ` • Sem - ${row.college_semester.collegeSemester}` : ""}
                             </span>
                           )}
                         </div>

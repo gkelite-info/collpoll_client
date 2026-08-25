@@ -33,10 +33,19 @@ interface ExamSubjectRow {
   subject: string;
   examDate: string;
   time: string;
+  endTime?: string;
   status: "Upcoming" | "Completed";
 }
 
 
+
+const getTodayFormatted = () => {
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2, '0');
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const yyyy = today.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+};
 
 export default function ExamsPage() {
   const { userId } = useUser();
@@ -51,7 +60,7 @@ export default function ExamsPage() {
 
   const [educationSelect, setEducationSelect] = useState<number | null>(null);
   const [branchSelect, setBranchSelect] = useState<number | null>(null);
-  const [yearSelect, setYearSelect] = useState<string>("2nd Year");
+  const [yearSelect, setYearSelect] = useState<string>("");
   const [semesterSelect, setSemesterSelect] = useState<number | null>(null);
   const [sectionSelect, setSectionSelect] = useState<number[]>([]);
   const [examTypeSelect, setExamTypeSelect] = useState<string>("Select");
@@ -143,7 +152,7 @@ export default function ExamsPage() {
     setExamTypeSelect(row.examType);
     setEducationSelect(row.collegeEducationId);
     setBranchSelect(row.collegeBranchId);
-    setYearSelect(row.academicYear || "1st Year");
+    setYearSelect(row.academicYear || "");
     setSemesterSelect(row.collegeSemesterId);
     const mappedSections = row.college_exam_schedule_sections?.map(
       (item: any) => item.collegeSectionsId,
@@ -151,21 +160,45 @@ export default function ExamsPage() {
     setSectionSelect(mappedSections.length > 0
       ? mappedSections
       : row.collegeSectionsId ? [row.collegeSectionsId] : []);
-    setFromDate(row.fromDate || "");
-    setToDate(row.toDate || "");
+    
+    let finalFromDate = row.fromDate ? String(row.fromDate).split("T")[0] : "";
+    let finalToDate = row.toDate ? String(row.toDate).split("T")[0] : "";
+    let isDateRange = !!row.fromDate && !!row.toDate;
 
     try {
       const subs = await fetchExamScheduleSubjects(row.collegeExamScheduleId);
-      const mapped = subs.map((s: any) => ({
-        subject: s.subjectName,
-        examDate: s.examDate,
-        time: s.time,
-        status: s.status as "Upcoming" | "Completed",
-      }));
-      setScheduledSubjects(mapped);
+      
+      const startSub = subs.find((s: any) => s.subjectName === "DATE_RANGE_START");
+      const endSub = subs.find((s: any) => s.subjectName === "DATE_RANGE_END");
+
+      if (startSub && endSub) {
+        finalFromDate = startSub.examDate ? String(startSub.examDate).split("T")[0] : finalFromDate;
+        finalToDate = endSub.examDate ? String(endSub.examDate).split("T")[0] : finalToDate;
+        isDateRange = true;
+      }
+
+      setFromDate(finalFromDate);
+      setToDate(finalToDate);
+      setShowDateRangePicker(isDateRange);
+
+      if (startSub && endSub) {
+        setScheduledSubjects([]);
+      } else {
+        const mapped = subs.map((s: any) => ({
+          subject: s.subjectName,
+          examDate: s.examDate,
+          time: s.time,
+          endTime: s.endTime,
+          status: s.status as "Upcoming" | "Completed",
+        }));
+        setScheduledSubjects(mapped);
+      }
     } catch (error) {
       console.error("Error loading schedule subjects:", error);
       setScheduledSubjects([]);
+      setFromDate(finalFromDate);
+      setToDate(finalToDate);
+      setShowDateRangePicker(isDateRange);
     }
 
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -227,8 +260,9 @@ export default function ExamsPage() {
 
   const [isAddSubjectOpen, setIsAddSubjectOpen] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
-  const [newSubjectDate, setNewSubjectDate] = useState("11/09/2026");
-  const [newSubjectTime, setNewSubjectTime] = useState("11:49 AM");
+  const [newSubjectDate, setNewSubjectDate] = useState(getTodayFormatted());
+  const [newSubjectTime, setNewSubjectTime] = useState("09:00 AM");
+  const [newSubjectEndTime, setNewSubjectEndTime] = useState("10:00 AM");
 
   const [scheduledSubjects, setScheduledSubjects] = useState<ExamSubjectRow[]>([]);
 
@@ -269,10 +303,7 @@ export default function ExamsPage() {
     fetchBranches(collegeId, educationSelect)
       .then((branchList) => {
         setBranches(branchList);
-        if (branchList.length > 0) {
-          setBranchSelect(branchList[0].collegeBranchId);
-          setSelectedBranch(branchList[0].collegeBranchId);
-        } else {
+        if (branchSelect && !branchList.some((b: any) => b.collegeBranchId === branchSelect)) {
           setBranchSelect(null);
           setSelectedBranch(null);
         }
@@ -317,14 +348,12 @@ export default function ExamsPage() {
     fetchAcademicYears(collegeId, educationSelect, isSchool ? null : branchSelect)
       .then((yearList) => {
         setAcademicYears(yearList);
-        const matchedYear = yearList.find((y) => y.collegeAcademicYear === yearSelect);
+        const matchedYear = yearList.find((y: any) => y.collegeAcademicYear === yearSelect);
         if (matchedYear) {
           setCurrentAcademicYearId(matchedYear.collegeAcademicYearId);
         } else {
-          setCurrentAcademicYearId(yearList[0]?.collegeAcademicYearId || null);
-          if (yearList[0]) {
-            setYearSelect(yearList[0].collegeAcademicYear);
-          } else {
+          setCurrentAcademicYearId(null);
+          if (yearSelect && !yearList.some((y: any) => y.collegeAcademicYear === yearSelect)) {
             setYearSelect("");
           }
         }
@@ -349,9 +378,7 @@ export default function ExamsPage() {
 
     if (!isValid || !collegeId || !educationSelect || !currentAcademicYearId) {
       setSemesters([]);
-      setSemesterSelect(null);
       setSections([]);
-      setSectionSelect([]);
       return;
     }
 
@@ -359,9 +386,7 @@ export default function ExamsPage() {
       fetchSemesters(collegeId, educationSelect, currentAcademicYearId)
         .then((semList) => {
           setSemesters(semList);
-          if (semList.length > 0) {
-            setSemesterSelect(semList[0].collegeSemesterId);
-          } else {
+          if (semesterSelect && !semList.some((s: any) => s.collegeSemesterId === semesterSelect)) {
             setSemesterSelect(null);
           }
         })
@@ -374,10 +399,11 @@ export default function ExamsPage() {
     fetchSections(collegeId, educationSelect, isSchool ? null : branchSelect, currentAcademicYearId)
       .then((secList) => {
         setSections(secList);
-        if (secList.length > 0) {
-          setSectionSelect([secList[0].collegeSectionsId]);
-        } else {
-          setSectionSelect([]);
+        if (sectionSelect.length > 0) {
+          const validSections = sectionSelect.filter((id) => secList.some((s: any) => s.collegeSectionsId === id));
+          if (validSections.length !== sectionSelect.length) {
+            setSectionSelect(validSections);
+          }
         }
       })
       .catch((err) => console.error("Error fetching sections:", err));
@@ -420,11 +446,17 @@ export default function ExamsPage() {
     if (editingScheduleId !== null) return;
     if (subjectsList.length > 0) {
       const initialRows: ExamSubjectRow[] = subjectsList.map((sub, index) => {
-        const day = 11 + index;
+        const date = new Date();
+        date.setDate(date.getDate() + index);
+        const dd = String(date.getDate()).padStart(2, '0');
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const yyyy = date.getFullYear();
+        
         return {
           subject: sub.subjectName,
-          examDate: `${day}/09/2026`,
-          time: "11:49 AM",
+          examDate: `${dd}/${mm}/${yyyy}`,
+          time: "09:00 AM",
+          endTime: "10:00 AM",
           status: "Upcoming",
         };
       });
@@ -459,6 +491,10 @@ export default function ExamsPage() {
     const isInter = educations.find((e) => e.collegeEducationId === educationSelect)?.collegeEducationType === "Inter";
     if (!showDateRangePicker && !isSchool && (branchSelect === null || (!isInter && semesterSelect === null))) {
       toast.error(isInter ? "Please select a group." : "Please select branch and semester.");
+      return;
+    }
+    if (!showDateRangePicker && !isSchool && !isInter && !yearSelect) {
+      toast.error("Please select an academic year.");
       return;
     }
     if (showDateRangePicker && (!fromDate || !toDate)) {
@@ -501,11 +537,19 @@ export default function ExamsPage() {
         createdBy: adminId,
       };
 
-      const subjectsPayload = scheduledSubjects.map((sub) => ({
+      let subjectsPayload = scheduledSubjects.map((sub) => ({
         subject: sub.subject,
         examDate: sub.examDate,
         time: sub.time,
+        endTime: sub.endTime,
       }));
+
+      if (showDateRangePicker) {
+        subjectsPayload = [
+          { subject: "DATE_RANGE_START", examDate: fromDate, time: "00:00", endTime: "" },
+          { subject: "DATE_RANGE_END", examDate: toDate, time: "00:00", endTime: "" },
+        ];
+      }
 
       const entityName = isSchool ? "School" : "College";
 
@@ -523,7 +567,7 @@ export default function ExamsPage() {
       setToDate("");
       setExamTypeSelect("Select");
       setBranchSelect(null);
-      setYearSelect("1st Year");
+      setYearSelect("");
       setSemesterSelect(null);
       setSectionSelect([]);
       if (educations.length > 0) {
@@ -536,15 +580,15 @@ export default function ExamsPage() {
     } catch (error: any) {
       console.error("Error creating schedule:", error);
       if (error?.code === "23505") {
-        if (error.message?.includes("unique_college_exam_schedule_title")) {
-          toast.error("An exam schedule with this title already exists. Please choose a different title.");
-        } else if (error.message?.includes("unique_college_exam_type")) {
+        if (error.message?.includes("title") || error.message?.includes("unique_college_exam_schedule_title")) {
+          toast.error("An exam schedule with this title already exists.");
+        } else if (error.message?.includes("type") || error.message?.includes("unique_college_exam_type")) {
           toast.error("This exam type already exists.");
         } else {
-          toast.error("A duplicate entry was found. Please ensure your inputs are unique.");
+          toast.error("A duplicate entry exists. Please ensure unique inputs.");
         }
       } else {
-        toast.error("Failed to create exam schedule. Please try again.");
+        toast.error("Failed to save schedule. Please check your inputs or try again.");
       }
     }
     finally {
@@ -559,10 +603,30 @@ export default function ExamsPage() {
       return;
     }
 
+    const parseTime = (timeStr: string) => {
+      const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+      if (!match) return 0;
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      const ampm = match[3]?.toUpperCase();
+      if (ampm === "PM" && hours < 12) hours += 12;
+      if (ampm === "AM" && hours === 12) hours = 0;
+      return hours * 60 + minutes;
+    };
+
+    const startMinutes = parseTime(newSubjectTime);
+    const endMinutes = parseTime(newSubjectEndTime);
+
+    if (endMinutes <= startMinutes) {
+      toast.error("End Time must be later than Start Time.");
+      return;
+    }
+
     const newRow: ExamSubjectRow = {
       subject: newSubjectName,
       examDate: newSubjectDate,
       time: newSubjectTime,
+      endTime: newSubjectEndTime,
       status: "Upcoming",
     };
 
@@ -633,6 +697,7 @@ export default function ExamsPage() {
             setNewSubjectName={setNewSubjectName}
             setNewSubjectDate={setNewSubjectDate}
             setNewSubjectTime={setNewSubjectTime}
+            setNewSubjectEndTime={setNewSubjectEndTime}
             loading={loading}
             handleCreateSchedule={handleCreateSchedule}
           />
@@ -691,6 +756,8 @@ export default function ExamsPage() {
         setNewSubjectDate={setNewSubjectDate}
         newSubjectTime={newSubjectTime}
         setNewSubjectTime={setNewSubjectTime}
+        newSubjectEndTime={newSubjectEndTime}
+        setNewSubjectEndTime={setNewSubjectEndTime}
       />
 
       <ConfirmDeleteModal

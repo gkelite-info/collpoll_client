@@ -41,6 +41,7 @@ interface ExamFormProps {
   setNewSubjectName: (val: string) => void;
   setNewSubjectDate: (val: string) => void;
   setNewSubjectTime: (val: string) => void;
+  setNewSubjectEndTime: (val: string) => void;
   loading: boolean;
   handleCreateSchedule: (e: React.FormEvent) => void;
 }
@@ -84,6 +85,7 @@ export function ExamForm({
   setNewSubjectName,
   setNewSubjectDate,
   setNewSubjectTime,
+  setNewSubjectEndTime,
   loading,
   handleCreateSchedule,
 }: ExamFormProps) {
@@ -91,6 +93,26 @@ export function ExamForm({
     const updated = [...scheduledSubjects];
     updated.splice(idx, 1);
     setScheduledSubjects(updated);
+  };
+
+  const handleEducationChange = (val: string | number) => {
+    setEducationSelect(Number(val));
+    setBranchSelect(null);
+    setYearSelect("");
+    setSemesterSelect(null);
+    setSectionSelect([]);
+  };
+
+  const handleBranchChange = (val: string | number) => {
+    setBranchSelect(Number(val));
+    setSemesterSelect(null);
+    setSectionSelect([]);
+  };
+
+  const handleYearChange = (val: string | number) => {
+    setYearSelect(val.toString());
+    setSemesterSelect(null);
+    setSectionSelect([]);
   };
 
   let defaultExamTypes: { value: string; label: string }[] = [];
@@ -161,7 +183,7 @@ export function ExamForm({
             <label className="text-xs font-bold text-gray-600 mb-1.5">Education Type</label>
             <CustomSelect
               value={educationSelect?.toString() || ""}
-              onChange={(val) => setEducationSelect(Number(val))}
+              onChange={handleEducationChange}
               options={educations.map((edu) => ({
                 value: edu.collegeEducationId,
                 label: edu.collegeEducationType,
@@ -270,12 +292,13 @@ export function ExamForm({
                   </label>
                   <CustomSelect
                     value={branchSelect?.toString() || ""}
-                    onChange={(val) => setBranchSelect(Number(val))}
+                    onChange={handleBranchChange}
                     options={branches.map((b) => ({
                       value: b.collegeBranchId,
                       label: b.collegeBranchCode,
                     }))}
                     placeholder={`Select ${isInter ? "Group" : "Branch"}`}
+                    disabled={!educationSelect}
                   />
                 </div>
               )}
@@ -286,12 +309,13 @@ export function ExamForm({
                 </label>
                 <CustomSelect
                   value={yearSelect}
-                  onChange={(val) => setYearSelect(val.toString())}
+                  onChange={handleYearChange}
                   options={academicYears.map((yr) => ({
                     value: yr.collegeAcademicYear,
                     label: yr.collegeAcademicYear,
                   }))}
                   placeholder={`Select ${isSchool ? "Class" : "Year"}`}
+                  disabled={!educationSelect || (!isSchool && !branchSelect)}
                 />
               </div>
 
@@ -306,6 +330,7 @@ export function ExamForm({
                       label: s.collegeSemester,
                     }))}
                     placeholder="Select Semester"
+                    disabled={!educationSelect || (!isSchool && !isInter && !branchSelect)}
                   />
                 </div>
               )}
@@ -330,6 +355,7 @@ export function ExamForm({
                   }))}
                   placeholder="Select Sections"
                   theme="green"
+                  disabled={!educationSelect || (!isSchool && !branchSelect) || !yearSelect}
                 />
               </div>
             </div>
@@ -359,7 +385,7 @@ export function ExamForm({
                     <div className="flex flex-col">
                       <span className="text-sm font-bold text-gray-800">{sub.subject}</span>
                       <span className="text-xs font-semibold text-gray-500">
-                        {sub.examDate} at {sub.time}
+                        {sub.examDate} • {sub.time} {sub.endTime ? `to ${sub.endTime}` : ''}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -369,6 +395,8 @@ export function ExamForm({
                           setNewSubjectName(sub.subject);
                           setNewSubjectDate(sub.examDate);
                           setNewSubjectTime(sub.time);
+                          if (sub.endTime) setNewSubjectEndTime(sub.endTime);
+                          else setNewSubjectEndTime("10:00 AM");
                           handleRemoveSubject(idx);
                           setIsAddSubjectOpen(true);
                         }}
@@ -403,7 +431,7 @@ export function ExamForm({
         <div className="flex justify-end pt-4 border-t border-gray-150">
           <button
             type="submit"
-            className="flex-1 bg-[#43C17A] hover:bg-[#38b16d] text-white py-2.5 rounded-xl font-bold text-sm shadow-sm hover:shadow transition-all cursor-pointer"
+            className="flex-1 bg-[#43C17A] hover:bg-[#38b16d] text-white py-2.5 rounded-xl font-bold text-sm shadow-sm hover:shadow transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:bg-[#43C17A]"
             disabled={loading}
           >
             {loading ? "Saving..." : editingScheduleId !== null ? "Update" : "Create Exam Schedule"}
