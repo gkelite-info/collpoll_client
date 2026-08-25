@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import TableComponent from "@/app/utils/table/table";
 import { X, User, CaretLeftIcon } from "@phosphor-icons/react";
-import { useTranslations } from "next-intl";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import jsPDF from "jspdf";
@@ -18,6 +17,7 @@ import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelpe
 
 type MidExamsProps = {
   onBack: () => void;
+  progressData?: any;
 };
 
 type ExamSchedule = {
@@ -36,6 +36,9 @@ type ExamSchedule = {
   college_exam_schedule_sections?: Array<{
     collegeSectionsId: number;
   }>;
+  college_exam_schedule_subjects?: Array<{
+    examDate: string;
+  }>;
 };
 
 type ExamSubject = {
@@ -53,10 +56,21 @@ const normalizeSubjectName = (value: string | null | undefined) =>
 const normalizeAcademicYear = (value: string | null | undefined) =>
   (value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 
+const parseCustomDate = (dateStr: string | null | undefined) => {
+  if (!dateStr) return null;
+  if (dateStr.includes("-")) return new Date(dateStr);
+  const parts = dateStr.split("/");
+  if (parts.length === 3) {
+    const [dd, mm, yyyy] = parts;
+    return new Date(`${yyyy}-${mm}-${dd}`);
+  }
+  return new Date(dateStr);
+};
+
 const formatExamDate = (value: string | null | undefined) => {
   if (!value) return "Not scheduled";
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
+  const date = parseCustomDate(value);
+  if (!date || Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("en-US", {
     day: "numeric",
     month: "short",
@@ -64,12 +78,11 @@ const formatExamDate = (value: string | null | undefined) => {
   });
 };
 
-export default function MidExams({ onBack }: MidExamsProps) {
+export default function MidExams({ onBack, progressData }: MidExamsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const routedScheduleId = Number(searchParams.get("scheduleId")) || null;
   const routedTab = searchParams.get("tab");
-  const t = useTranslations("Dashboard.student");
   const { identifierId, fullName, profilePhoto, loading: userLoading } = useUser();
   const {
     userId,
@@ -105,9 +118,11 @@ export default function MidExams({ onBack }: MidExamsProps) {
   const [selectedSubject, setSelectedSubject] = useState<any | null>(null);
   const viewingHallTicket = Boolean(selectedSchedule && routedTab === "hall-ticket");
   const [schedulePage, setSchedulePage] = useState(1);
-  const [scheduleItemsPerPage, setScheduleItemsPerPage] = useState(4);
+  const [scheduleItemsPerPage, setScheduleItemsPerPage] = useState(20);
+  const [totalSchedules, setTotalSchedules] = useState(0);
   const [subjectPage, setSubjectPage] = useState(1);
   const [subjectItemsPerPage, setSubjectItemsPerPage] = useState(5);
+  const [totalSubjects, setTotalSubjects] = useState(0);
   const normalizedEducationType = (collegeEducationType || "").trim().toLowerCase();
   const isSchool =
     isSchoolEducation(collegeEducationType) ||
@@ -197,52 +212,35 @@ export default function MidExams({ onBack }: MidExamsProps) {
       return;
     }
 
-    const loadInitialData = async () => {
+    const fetchInitialData = async () => {
       try {
         setLoading(true);
-
-        const scheduleResponse = await fetch("/api/student/exam-schedules", {
-          cache: "no-store",
-        });
-        const scheduleResult = await scheduleResponse.json();
-        if (!scheduleResponse.ok) {
-          throw new Error(scheduleResult.error || "Unable to fetch exam schedules");
-        }
-        const scheduleData = (scheduleResult.schedules || []) as ExamSchedule[];
-
-        const filtered = (scheduleData || []).filter((s) => {
-          if (
-            s.academicYear &&
-            normalizeAcademicYear(s.academicYear) !== normalizeAcademicYear(collegeAcademicYear)
-          ) return false;
-
-          // School schedules are class/year based. Branch, semester, and section
-          // are intentionally not used to exclude a matching class schedule.
-          if (isSchool) return true;
-
-          const scheduleSectionIds = s.college_exam_schedule_sections?.map(
-            (item: { collegeSectionsId: number }) => item.collegeSectionsId,
-          ) || (s.collegeSectionsId ? [s.collegeSectionsId] : []);
-          if (
-            scheduleSectionIds.length > 0 &&
-            (collegeSectionsId === null || !scheduleSectionIds.includes(collegeSectionsId))
-          ) return false;
-
-          // Preserve the existing college branch/semester filtering.
-          if (s.collegeBranchId && s.collegeBranchId !== collegeBranchId) return false;
-          if (s.collegeSemesterId && s.collegeSemesterId !== collegeSemesterId) return false;
-          return true;
+        const queryParams = new URLSearchParams({
+          page: schedulePage.toString(),
+          limit: scheduleItemsPerPage.toString(),
+          academicYear: collegeAcademicYear || "",
+          isSchool: isSchool.toString(),
+          branchId: collegeBranchId?.toString() || "",
+          semesterId: collegeSemesterId?.toString() || "",
+          sectionId: collegeSectionsId?.toString() || "",
         });
 
-        setSchedules(filtered);
+        const scheduleResponse = await fetch(`/api/student/exam-schedules?${queryParams}`);
+        const scheduleData = await scheduleResponse.json();
+        const { schedules: fetchedSchedules, totalCount } = scheduleData;
 
-        const progress = await getStudentProgressData(userId);
+        setSchedules(fetchedSchedules || []);
+        setTotalSchedules(totalCount || 0);
+
+        const progress = progressData || await getStudentProgressData(userId);
         const attStats: Record<string, number> = {};
-        progress.subjectProgressRows?.forEach((row: any) => {
-          attStats[row.subject.trim().toLowerCase()] = parseInt(row.attendance) || 0;
-        });
+        if (progress?.subjectProgressRows) {
+          progress.subjectProgressRows.forEach((row: any) => {
+            attStats[row.subject.trim().toLowerCase()] = parseInt(row.attendance) || 0;
+          });
+        }
         setAttendanceMap(attStats);
-        setOverallAttendance(progress.overallAttendancePercentage || 0);
+        setOverallAttendance(progress?.overallAttendancePercentage || 0);
 
       } catch (err) {
         console.error("Failed to load initial exams data", err);
@@ -252,8 +250,8 @@ export default function MidExams({ onBack }: MidExamsProps) {
       }
     };
 
-    loadInitialData();
-  }, [collegeId, collegeEducationId, collegeBranchId, collegeAcademicYear, collegeSemesterId, collegeSectionsId, userId, userLoading, studentLoading, isSchool]);
+    fetchInitialData();
+  }, [collegeId, collegeEducationId, collegeBranchId, collegeAcademicYear, collegeSemesterId, collegeSectionsId, userId, userLoading, studentLoading, isSchool, schedulePage, scheduleItemsPerPage]);
 
   useEffect(() => {
     if (!selectedSchedule || !studentId) return;
@@ -262,9 +260,12 @@ export default function MidExams({ onBack }: MidExamsProps) {
       try {
         setLoading(true);
 
+        const from = (subjectPage - 1) * subjectItemsPerPage;
+        const to = from + subjectItemsPerPage - 1;
+
         let query = supabase
           .from("college_subjects")
-          .select("*")
+          .select("*", { count: "exact" })
           .eq("collegeId", collegeId)
           .eq("collegeEducationId", collegeEducationId)
           .filter("collegeBranchId", collegeBranchId === null ? "is" : "eq", collegeBranchId)
@@ -277,10 +278,13 @@ export default function MidExams({ onBack }: MidExamsProps) {
           query = query.is("collegeSemesterId", null);
         }
 
-        const { data: subjectData, error: subjectError } = await query;
+        query = query.range(from, to);
+
+        const { data: subjectData, count: subjectCount, error: subjectError } = await query;
 
         if (subjectError) throw subjectError;
         setCollegeSubjectsList(subjectData || []);
+        setTotalSubjects(subjectCount || 0);
 
         const { data: scheduleSubData, error: scheduleSubError } = await supabase
           .from("college_exam_schedule_subjects")
@@ -312,7 +316,7 @@ export default function MidExams({ onBack }: MidExamsProps) {
     };
 
     loadEnrollmentDetails();
-  }, [selectedSchedule, studentId, collegeId, collegeEducationId, collegeBranchId, collegeAcademicYearId, collegeSemesterId]);
+  }, [selectedSchedule, studentId, collegeId, collegeEducationId, collegeBranchId, collegeAcademicYearId, collegeSemesterId, subjectPage, subjectItemsPerPage]);
 
   const confirmEnrollment = async () => {
     if (!studentId || !selectedSchedule || !selectedSubject) return;
@@ -415,9 +419,9 @@ export default function MidExams({ onBack }: MidExamsProps) {
   }, [selectedSchedule]);
 
   const columns = [
-    { title: t("Subject"), key: "subject" },
-    { title: t("Attendance"), key: "attendance" },
-    { title: t("Actions"), key: "actions" },
+    { title: "Subject", key: "subject" },
+    { title: "Attendance", key: "attendance" },
+    { title: "Actions", key: "actions" },
   ];
 
   const tableData = collegeSubjectsList.map((item) => {
@@ -450,7 +454,7 @@ export default function MidExams({ onBack }: MidExamsProps) {
             </div>
           ) : isScheduleExpired ? (
             <div className="rounded-md bg-gray-200 text-gray-400 text-sm font-semibold px-3 py-1 cursor-not-allowed">
-              {t("CLOSED")}
+              CLOSED
             </div>
           ) : attendance >= 75 ? (
             <button
@@ -460,29 +464,23 @@ export default function MidExams({ onBack }: MidExamsProps) {
               }}
               className="rounded-md bg-[#43C17A] hover:bg-[#35a868] text-white text-sm font-semibold px-3 py-1 cursor-pointer transition-colors"
             >
-              {t("ENROLL")}
+              ENROLL
             </button>
           ) : (
             <div className="rounded-md bg-gray-200 text-gray-400 text-sm font-semibold px-3 py-1 cursor-not-allowed">
-              {t("NOT ELIGIBLE")}
+              NOT ELIGIBLE
             </div>
           )}
         </div>
       ),
     };
   });
-  const subjectTotalPages = Math.max(1, Math.ceil(tableData.length / subjectItemsPerPage));
+  const subjectTotalPages = Math.max(1, Math.ceil(totalSubjects / subjectItemsPerPage));
   const safeSubjectPage = Math.min(subjectPage, subjectTotalPages);
-  const paginatedTableData = tableData.slice(
-    (safeSubjectPage - 1) * subjectItemsPerPage,
-    safeSubjectPage * subjectItemsPerPage,
-  );
-  const scheduleTotalPages = Math.max(1, Math.ceil(schedules.length / scheduleItemsPerPage));
+  const paginatedTableData = tableData;
+  const scheduleTotalPages = Math.max(1, Math.ceil(totalSchedules / scheduleItemsPerPage));
   const safeSchedulePage = Math.min(schedulePage, scheduleTotalPages);
-  const paginatedSchedules = schedules.slice(
-    (safeSchedulePage - 1) * scheduleItemsPerPage,
-    safeSchedulePage * scheduleItemsPerPage,
-  );
+  const paginatedSchedules = schedules;
 
   if (viewingHallTicket && selectedSchedule) {
     return (
@@ -913,12 +911,19 @@ export default function MidExams({ onBack }: MidExamsProps) {
   }
 
   if (selectedSchedule) {
-    const formattedFromDate = selectedSchedule.fromDate
-      ? new Date(selectedSchedule.fromDate).toLocaleDateString("en-US", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
+    const subjectDates = (selectedSchedule.college_exam_schedule_subjects || [])
+      .map((subject: any) => subject.examDate)
+      .filter((date: any): date is string => Boolean(date))
+      .sort((a: string, b: string) => {
+        const dateA = parseCustomDate(a);
+        const dateB = parseCustomDate(b);
+        return (dateA?.getTime() || 0) - (dateB?.getTime() || 0);
+      });
+      
+    const effectiveFromDate = selectedSchedule.fromDate || subjectDates[0] || null;
+
+    const formattedFromDate = effectiveFromDate
+      ? formatExamDate(effectiveFromDate)
       : "-";
 
     return (
@@ -962,10 +967,10 @@ export default function MidExams({ onBack }: MidExamsProps) {
 
           <div className="flex items-center">
             <div className="w-[20%] min-w-[125px]">
-              <h6 className="text-[#282828] text-md">{t("Note")}</h6>
+              <h6 className="text-[#282828] text-md">Note</h6>
             </div>
             <p className="text-[#282828] text-md font-medium text-gray-700">
-              {t("You’re eligible to enroll if your attendance ≥ 75%")}
+              You’re eligible to enroll if your attendance ≥ 75%
             </p>
           </div>
         </div>
@@ -973,28 +978,23 @@ export default function MidExams({ onBack }: MidExamsProps) {
         <div className="bg-white w-full rounded-lg p-3 shadow-md mt-2 pb-5">
           <div className="flex items-center justify-between mb-3">
             <h5 className="text-[#282828] font-medium">
-              {t("Select Subjects to Enroll")}
+              Select Subjects to Enroll
             </h5>
             <button
               onClick={() => routeToExamView(selectedSchedule, "hall-ticket")}
               className="rounded-lg bg-[#E5F6EC] hover:bg-[#d4f2df] px-3 py-1.5 text-[#43C17A] font-medium cursor-pointer transition-colors text-sm"
             >
-              {t("Hall Ticket")}
+              Hall Ticket
             </button>
           </div>
 
           <TableComponent columns={columns} tableData={paginatedTableData} />
-          {tableData.length > 0 && (
+          {collegeSubjectsList.length > 0 && (
             <Pagination
               currentPage={safeSubjectPage}
-              totalItems={tableData.length}
+              totalItems={totalSubjects}
               itemsPerPage={subjectItemsPerPage}
               onPageChange={setSubjectPage}
-              itemsPerPageOptions={[5, 10, 20]}
-              onItemsPerPageChange={(items) => {
-                setSubjectItemsPerPage(items);
-                setSubjectPage(1);
-              }}
               alwaysShow
             />
           )}
@@ -1072,7 +1072,7 @@ export default function MidExams({ onBack }: MidExamsProps) {
   }
 
   return (
-    <div className="relative flex flex-col items-start justify-start gap-4 w-full animate-in fade-in duration-200">
+    <div className="relative flex flex-col items-start justify-start gap-4 w-full min-h-[600px] h-full animate-in fade-in duration-200">
       <div className="flex items-center gap-3">
         <CaretLeftIcon
           size={22}
@@ -1088,8 +1088,8 @@ export default function MidExams({ onBack }: MidExamsProps) {
       </p>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-          {[1, 2].map((i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full pr-2">
+          {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
               className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between h-[180px] animate-pulse"
@@ -1108,7 +1108,7 @@ export default function MidExams({ onBack }: MidExamsProps) {
           ))}
         </div>
       ) : schedules.length === 0 ? (
-        <div className="bg-white rounded-xl p-8 w-full text-center border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-xl p-8 w-full text-center border border-gray-200 shadow-sm flex-1">
           <p className="text-gray-500 font-medium text-sm">
             {isSchool
               ? "No exam schedules available for your class/year."
@@ -1116,24 +1116,28 @@ export default function MidExams({ onBack }: MidExamsProps) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-          {paginatedSchedules.map((sch) => {
-            const formattedFrom = sch.fromDate
-              ? new Date(sch.fromDate).toLocaleDateString("en-US", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })
-              : "-";
-            const formattedTo = sch.toDate
-              ? new Date(sch.toDate).toLocaleDateString("en-US", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })
-              : "-";
+        <div className="w-full flex-1 min-h-[300px] overflow-y-auto custom-scrollbar pr-2 pb-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full items-start content-start">
+            {paginatedSchedules.map((sch) => {
+              const subjectDates = (sch.college_exam_schedule_subjects || [])
+                .map((subject: any) => subject.examDate)
+                .filter((date: any): date is string => Boolean(date))
+                .sort((a: string, b: string) => {
+                  const dateA = parseCustomDate(a);
+                  const dateB = parseCustomDate(b);
+                  return (dateA?.getTime() || 0) - (dateB?.getTime() || 0);
+                });
+                
+              const effectiveFromDate = sch.fromDate || subjectDates[0] || null;
+              const effectiveToDate = sch.toDate || subjectDates[subjectDates.length - 1] || effectiveFromDate;
 
-            return (
+              const formattedFrom = formatExamDate(effectiveFromDate);
+              const formattedTo = formatExamDate(effectiveToDate);
+              const dateDisplay = (formattedFrom === "Not scheduled" && formattedTo === "Not scheduled") 
+                ? "Not scheduled" 
+                : `${formattedFrom} – ${formattedTo}`;
+
+              return (
               <div
                 key={sch.collegeExamScheduleId}
                 className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between h-[180px]"
@@ -1143,12 +1147,12 @@ export default function MidExams({ onBack }: MidExamsProps) {
                     <h4 className="text-[#16284F] font-bold text-lg truncate pr-2">
                       {sch.scheduleTitle}
                     </h4>
-                    <span className="bg-[#E5F6EC] text-[#43C17A] text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                    <span className="bg-[#E5F6EC] text-[#43C17A] text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider shrink-0">
                       {sch.examType.replace(" Exam", "")}
                     </span>
                   </div>
                   <p className="text-gray-400 text-xs mt-2 font-medium">
-                    Dates: {formattedFrom} – {formattedTo}
+                    Dates: {dateDisplay}
                   </p>
                 </div>
 
@@ -1164,20 +1168,18 @@ export default function MidExams({ onBack }: MidExamsProps) {
             );
           })}
         </div>
+        </div>
       )}
-      {!loading && schedules.length > 0 && (
-        <Pagination
-          currentPage={safeSchedulePage}
-          totalItems={schedules.length}
-          itemsPerPage={scheduleItemsPerPage}
-          onPageChange={setSchedulePage}
-          itemsPerPageOptions={[4, 8, 12]}
-          onItemsPerPageChange={(items) => {
-            setScheduleItemsPerPage(items);
-            setSchedulePage(1);
-          }}
-          alwaysShow
-        />
+      {!loading && (
+        <div className="mt-auto w-full pt-4">
+          <Pagination
+            currentPage={safeSchedulePage}
+            totalItems={totalSchedules}
+            itemsPerPage={scheduleItemsPerPage}
+            onPageChange={setSchedulePage}
+            alwaysShow
+          />
+        </div>
       )}
     </div>
   );

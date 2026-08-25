@@ -1,7 +1,7 @@
 'use client'
 import { Suspense } from "react";
-import { Loader } from "../../(student)/calendar/right/timetable";
-import FacultyExamsPage from "./facultyExams";
+import { Loader } from "../../../(student)/calendar/right/timetable";
+import FacultyExamsPage from "../facultyExams";
 
 export default function FacultyExams() {
     return (

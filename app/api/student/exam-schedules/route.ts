@@ -8,8 +8,17 @@ const supabaseAdmin = createServiceClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const academicYear = searchParams.get("academicYear");
+    const isSchool = searchParams.get("isSchool") === "true";
+    const branchId = searchParams.get("branchId") ? parseInt(searchParams.get("branchId")!, 10) : null;
+    const semesterId = searchParams.get("semesterId") ? parseInt(searchParams.get("semesterId")!, 10) : null;
+    const sectionId = searchParams.get("sectionId") ? parseInt(searchParams.get("sectionId")!, 10) : null;
+
     const authClient = await createAuthClient();
     const { data: { user }, error: authError } = await authClient.auth.getUser();
     if (authError || !user) {
@@ -48,22 +57,59 @@ export async function GET() {
 
     const scheduleIds = (schedules || []).map((schedule) => schedule.collegeExamScheduleId);
     let sectionRows: Array<{ collegeExamScheduleId: number; collegeSectionsId: number }> = [];
+    let subjectRows: Array<{ collegeExamScheduleId: number; examDate: string }> = [];
+    
     if (scheduleIds.length > 0) {
       const sectionResult = await supabaseAdmin
         .from("college_exam_schedule_sections")
         .select("collegeExamScheduleId, collegeSectionsId")
         .in("collegeExamScheduleId", scheduleIds);
       if (!sectionResult.error) sectionRows = sectionResult.data || [];
+      
+      const subjectResult = await supabaseAdmin
+        .from("college_exam_schedule_subjects")
+        .select("collegeExamScheduleId, examDate")
+        .in("collegeExamScheduleId", scheduleIds)
+        .is("deletedAt", null);
+      if (!subjectResult.error) subjectRows = subjectResult.data || [];
     }
 
-    const data = (schedules || []).map((schedule) => ({
+    const normalizeAcademicYear = (value: string | null | undefined) =>
+      (value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+
+    const allData = (schedules || []).map((schedule) => ({
       ...schedule,
       college_exam_schedule_sections: sectionRows.filter(
         (row) => row.collegeExamScheduleId === schedule.collegeExamScheduleId,
       ),
+      college_exam_schedule_subjects: subjectRows.filter(
+        (row) => row.collegeExamScheduleId === schedule.collegeExamScheduleId,
+      ),
     }));
 
-    return NextResponse.json({ schedules: data }, {
+    const filtered = allData.filter((s) => {
+      if (
+        s.academicYear && academicYear &&
+        normalizeAcademicYear(s.academicYear) !== normalizeAcademicYear(academicYear)
+      ) return false;
+      if (isSchool) return true;
+      const scheduleSectionIds = s.college_exam_schedule_sections?.map(
+        (item: { collegeSectionsId: number }) => item.collegeSectionsId,
+      ) || (s.collegeSectionsId ? [s.collegeSectionsId] : []);
+      if (
+        scheduleSectionIds.length > 0 &&
+        (sectionId === null || !scheduleSectionIds.includes(sectionId))
+      ) return false;
+      if (s.collegeBranchId && branchId && s.collegeBranchId !== branchId) return false;
+      if (s.collegeSemesterId && semesterId && s.collegeSemesterId !== semesterId) return false;
+      return true;
+    });
+
+    const totalCount = filtered.length;
+    const startIndex = (page - 1) * limit;
+    const paginatedData = filtered.slice(startIndex, startIndex + limit);
+
+    return NextResponse.json({ schedules: paginatedData, totalCount }, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {

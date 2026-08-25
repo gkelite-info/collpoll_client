@@ -108,7 +108,7 @@ export default function FacultyDashRight() {
   const isAnnouncementsLoadingFinal = facultyLoading || (!collegeId || !userId || !role);
 
   return (
-    <div className="hidden h-full min-h-0 flex-col overflow-hidden p-2 pb-4 md:flex md:w-[35%] lg:w-[32%]">
+    <div className="hidden h-full min-h-0 flex-col overflow-y-auto custom-scrollbar p-2 pb-4 md:flex md:w-[35%] lg:w-[32%]">
       <CourseScheduleCard />
       <WorkWeekCalendar 
         activeDate={selectedDate || undefined}

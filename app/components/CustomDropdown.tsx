@@ -1,6 +1,6 @@
 "use client";
 
-import { CaretDown, Check, LockSimple } from "@phosphor-icons/react";
+import { CaretDown, Check } from "@phosphor-icons/react";
 import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { createPortal } from "react-dom";
@@ -208,25 +208,17 @@ export const CustomDropdown = ({
           <span className={`text-[13px] font-medium truncate ${disabled ? (theme === "always-green" ? "text-[#43C17A] opacity-70" : "text-gray-500") : theme === "always-green" ? "text-[#43C17A] font-semibold" : isOpen ? (theme === "green" ? "text-[#43C17A] font-semibold" : "text-blue-600 font-semibold") : "text-gray-700"}`}>
             {selectedLabel || placeholder}
           </span>
-          {disabled ? (
-            <LockSimple
-              size={15}
-              className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 ${
-                theme === "always-green"
-                  ? "text-[#43C17A] opacity-70"
-                  : "text-gray-400"
-              }`}
-              weight="bold"
-            />
-          ) : (
-            <CaretDown
-              size={14}
-              className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-300 ease-in-out ${
-                isOpen ? (theme === "green" || theme === "always-green" ? "rotate-180 text-[#43C17A]" : "rotate-180 text-blue-500") : theme === "always-green" ? "text-[#43C17A]" : "text-gray-500"
-              }`}
-              weight="bold"
-            />
-          )}
+          <CaretDown
+            size={14}
+            className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-300 ease-in-out ${
+              disabled 
+                ? (theme === "always-green" ? "text-[#43C17A] opacity-70" : "text-gray-400")
+                : isOpen 
+                  ? (theme === "green" || theme === "always-green" ? "rotate-180 text-[#43C17A]" : "rotate-180 text-blue-500") 
+                  : theme === "always-green" ? "text-[#43C17A]" : "text-gray-500"
+            }`}
+            weight="bold"
+          />
         </button>
 
         {typeof document !== "undefined" ? createPortal(menu, document.body) : menu}

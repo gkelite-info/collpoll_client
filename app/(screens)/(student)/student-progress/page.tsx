@@ -637,7 +637,7 @@ const StudentProgressPage = () => {
 
         {activeTab === "exams" && (
           <div className="max-w-5xl mx-auto w-full">
-            <MidExams onBack={() => setActiveTab("progress")} />
+            <MidExams onBack={() => setActiveTab("progress")} progressData={progressData} />
           </div>
         )}
 
