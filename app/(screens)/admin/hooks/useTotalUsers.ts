@@ -2,19 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-
-type RoleCounts = {
-  ADMIN: number;
-  FACULTY: number;
-  STUDENT: number;
-  PARENT: number;
-  FINANCE: number;
-  COLLEGE_HR: number;
-};
+import { getAdminUserRoleCounts, type AdminUserRoleCounts } from "@/lib/helpers/admin/dashboard";
 
 type DepartmentRow = {
   departmentId: number;
   departmentName: string;
+  collegeEducationId: number;
   faculty: number;
   students: number;
   total: number;
@@ -24,13 +17,19 @@ export function useTotalUsers(
   collegeId: number | null,
   collegeEducationId: number | null,
 ) {
-  const [roles, setRoles] = useState<RoleCounts>({
+  const [roles, setRoles] = useState<AdminUserRoleCounts>({
     ADMIN: 0,
     FACULTY: 0,
     STUDENT: 0,
     PARENT: 0,
     FINANCE: 0,
+    FINANCE_MANAGER: 0,
+    ACCOUNTANT: 0,
     COLLEGE_HR: 0,
+    PLACEMENT_OFFICER: 0,
+    WELLBEING_EXECUTIVE: 0,
+    WELLBEING_MANAGER: 0,
+    GROUND_STAFF: 0,
   });
 
   const [departments, setDepartments] = useState<DepartmentRow[]>([]);
@@ -38,90 +37,32 @@ export function useTotalUsers(
 
   useEffect(() => {
     async function load() {
-      if (!collegeId || !collegeEducationId) return;
+      if (!collegeId) return;
 
       setLoading(true);
       try {
-        const [
-          { count: studentsCount },
-          { count: facultyCount },
-          { count: adminsCount },
-          { count: parentsCount },
-          { count: financeCount },
-          { count: hrCount },
-        ] = await Promise.all([
-          supabase
-            .from("students")
-            .select("studentId", { count: "exact", head: true })
-            .eq("collegeId", collegeId)
-            .eq("collegeEducationId", collegeEducationId)
-            .eq("isActive", true),
+        setRoles(await getAdminUserRoleCounts(collegeId));
 
-          supabase
-            .from("faculty")
-            .select("facultyId", { count: "exact", head: true })
-            .eq("collegeId", collegeId)
-            .eq("collegeEducationId", collegeEducationId)
-            .eq("isActive", true),
-
-          supabase
-            .from("admins")
-            .select("adminId", { count: "exact", head: true })
-            .eq("collegeId", collegeId)
-            .eq("collegeEducationId", collegeEducationId)
-            .eq("is_deleted", false),
-
-          supabase
-            .from("parents")
-            .select("parentId, students!inner(collegeEducationId)", {
-              count: "exact",
-              head: true,
-            })
-            .eq("collegeId", collegeId)
-            .eq("students.collegeEducationId", collegeEducationId)
-            .eq("is_deleted", false),
-
-          // New Query: Finance Manager
-          supabase
-            .from("finance_manager")
-            .select("financeManagerId", { count: "exact", head: true })
-            .eq("collegeId", collegeId)
-            .eq("collegeEducationId", collegeEducationId)
-            .eq("isActive", true)
-            .eq("is_deleted", false),
-
-          // New Query: College HR
-          supabase
-            .from("college_hr")
-            .select("collegeHrId", { count: "exact", head: true })
-            .eq("collegeId", collegeId)
-            .eq("isActive", true)
-            .eq("is_deleted", false),
-        ]);
-
-        setRoles({
-          ADMIN: adminsCount ?? 0,
-          FACULTY: facultyCount ?? 0,
-          STUDENT: studentsCount ?? 0,
-          PARENT: parentsCount ?? 0,
-          FINANCE: financeCount ?? 0,
-          COLLEGE_HR: hrCount ?? 0,
-        });
-
-        const { data, error } = await supabase
+        let branchQuery = supabase
           .from("college_branch")
           .select(
             `
             collegeBranchId,
             collegeBranchType,
+            collegeEducationId,
             students(count),
             faculty(count)
           `,
           )
           .eq("collegeId", collegeId)
-          .eq("collegeEducationId", collegeEducationId)
           .eq("isActive", true)
           .is("deletedAt", null);
+
+        if (collegeEducationId) {
+          branchQuery = branchQuery.eq("collegeEducationId", collegeEducationId);
+        }
+
+        const { data, error } = await branchQuery;
 
         if (error) throw error;
 
@@ -134,6 +75,7 @@ export function useTotalUsers(
             return {
               departmentId: d.collegeBranchId,
               departmentName: d.collegeBranchType,
+              collegeEducationId: d.collegeEducationId,
               students: studentsCount,
               faculty: facultyCount,
               total: studentsCount + facultyCount,

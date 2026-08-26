@@ -9,6 +9,8 @@ export interface CardProps {
   icon: React.ReactElement<IconProps>;
   iconBgColor: string;
   iconColor: string;
+  onClick?: () => void;
+  selected?: boolean;
 }
 
 export default function CardComponent({
@@ -18,6 +20,8 @@ export default function CardComponent({
   icon,
   iconBgColor,
   iconColor,
+  onClick,
+  selected = false,
 }: CardProps) {
   const styledIcon = React.cloneElement(icon, {
     size: 24,
@@ -27,7 +31,8 @@ export default function CardComponent({
 
   return (
     <div
-      className={`rounded-lg shadow-md px-3.5 py-3 flex flex-col justify-between h-[135px] w-full text-[#282828] ${bgColor}`}
+      onClick={onClick}
+      className={`rounded-lg shadow-md px-3.5 py-3 flex flex-col justify-between h-[135px] w-full text-[#282828] transition-shadow duration-200 ${bgColor} ${onClick ? "cursor-pointer hover:shadow-lg" : ""} ${selected ? "ring-2 ring-inset ring-[#43C17A] shadow-lg" : ""}`}
     >
       <div
         className={`w-10 h-10 aspect-square rounded-lg flex items-center justify-center mb-2 ${iconBgColor}`}

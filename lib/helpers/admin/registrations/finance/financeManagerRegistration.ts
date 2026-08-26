@@ -22,7 +22,7 @@ export const createFinanceManager = async (
     .insert({
       userId: payload.userId,
       collegeId: payload.collegeId,
-      collegeEducationId: null,
+      collegeEducationId: payload.collegeEducationId ?? null,
       createdBy: payload.createdBy,
       isActive: payload.isActive ?? true,
       is_deleted: false,

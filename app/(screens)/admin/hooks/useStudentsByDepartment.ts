@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { getAdminStudentProgressSummary } from "@/lib/helpers/admin/studentProgress/getAdminStudentProgressSummary";
 
 export function useStudentsByDepartment(
   departmentId: number,
@@ -48,9 +49,6 @@ export function useStudentsByDepartment(
             collegeSemesterId,
             college_semester(collegeSemester),
             college_sections!inner(collegeAcademicYearId)
-          ),
-          attendance_record (
-            status
           )
         `,
           { count: "exact" }
@@ -88,6 +86,69 @@ export function useStudentsByDepartment(
 
       if (!error && data) {
         setTotalCount(count ?? 0);
+        const sectionIds = [...new Set(data.flatMap((student: any) => {
+          const histories = Array.isArray(student.student_academic_history)
+            ? student.student_academic_history
+            : [student.student_academic_history];
+          return histories.map((history: any) => history?.collegeSectionsId).filter(Boolean);
+        }))] as number[];
+        const semesterIds = [...new Set(data.flatMap((student: any) => {
+          const histories = Array.isArray(student.student_academic_history)
+            ? student.student_academic_history
+            : [student.student_academic_history];
+          return histories.map((history: any) => history?.collegeSemesterId).filter(Boolean);
+        }))] as number[];
+        const progressByStudent = new Map<number, {
+          attendancePercentage: number;
+          progressPercent: number;
+        }>();
+
+        if (sectionIds.length) {
+          try {
+            let subjectsQuery = supabase
+              .from("college_subjects")
+              .select("collegeSubjectId")
+              .eq("collegeId", collegeId)
+              .eq("collegeEducationId", collegeEducationId)
+              .eq("collegeBranchId", departmentId)
+              .eq("collegeAcademicYearId", yearId)
+              .eq("isActive", true)
+              .is("deletedAt", null);
+            if (semesterIds.length) {
+              subjectsQuery = subjectsQuery.or(
+                `collegeSemesterId.in.(${semesterIds.join(",")}),collegeSemesterId.is.null`,
+              );
+            } else {
+              subjectsQuery = subjectsQuery.is("collegeSemesterId", null);
+            }
+            const { data: subjectRows } = await subjectsQuery;
+            const subjectIds = (subjectRows ?? []).map((subject) => subject.collegeSubjectId);
+            if (subjectIds.length) {
+              const progress = await getAdminStudentProgressSummary({
+                collegeId,
+                collegeEducationId,
+                collegeBranchIds: [departmentId],
+                academicYearIds: [yearId],
+                semesterIds,
+                sectionIds,
+                subjectIds,
+                facultyIds: [],
+                includeStudentsWithoutProgress: true,
+                page: 1,
+                pageSize: 10000,
+              });
+              progress.studentRows.forEach((student) => {
+                progressByStudent.set(student.studentId, {
+                  attendancePercentage: student.attendancePercentage,
+                  progressPercent: student.progressPercent,
+                });
+              });
+            }
+          } catch (performanceError) {
+            console.error("Failed to load student performance", performanceError);
+          }
+        }
+
         const mapped = data.map((s: any) => {
           const history = Array.isArray(s.student_academic_history)
             ? s.student_academic_history[0]
@@ -100,23 +161,7 @@ export function useStudentsByDepartment(
             ? semData[0]?.collegeSemester
             : semData?.collegeSemester;
 
-          const attendanceRecords = s.attendance_record || [];
-          let total = 0;
-          let present = 0;
-
-          attendanceRecords.forEach((r: any) => {
-            if (
-              !["CLASS_CANCEL", "CANCELLED", "CANCEL_CLASS"].includes(r.status)
-            ) {
-              total++;
-              if (["PRESENT", "LATE"].includes(r.status)) {
-                present++;
-              }
-            }
-          });
-
-          const attendancePct =
-            total > 0 ? Math.round((present / total) * 100) + "%" : "—";
+          const progressMetrics = progressByStudent.get(s.studentId);
 
           const studentPin =
             Array.isArray(s.student_pins)
@@ -127,8 +172,12 @@ export function useStudentsByDepartment(
             studentId: s.studentId,
             rollNumber: studentPin ?? s.studentId.toString(),
             semester: sem ? `Sem ${sem}` : "—",
-            attendance: attendancePct,
-            performance: "—",
+            attendance: progressMetrics
+              ? `${progressMetrics.attendancePercentage}%`
+              : "—",
+            performance: progressMetrics
+              ? `${progressMetrics.progressPercent}%`
+              : "—",
             userId: s.userId,
             users: {
               fullName: s.users?.fullName || "Unknown",

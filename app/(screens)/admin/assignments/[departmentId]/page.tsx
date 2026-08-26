@@ -12,7 +12,7 @@ import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagi
 import { DiscussionDeptCardSkeleton } from "../components/shimmers/DiscussionDeptCardSkeleton";
 import { DiscussionCourseCardSkeleton } from "../components/shimmers/courseCardSkeleton";
 import { useUser } from "@/app/utils/context/UserContext";
-import { FilterDropdown } from "../../academics/components/filterDropdown";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -124,26 +124,32 @@ const DepartmentSubjectPage = () => {
 
       <div className="mb-5 flex justify-end">
         <div className="flex flex-wrap gap-4 rounded-xl border border-gray-100 bg-white px-4 py-2 shadow-sm">
-          <FilterDropdown
+          <CustomDropdown
             label="Subject"
             value={subjectFilter}
             onChange={(value) => {
-              setSubjectFilter(value);
+              const nextSubject = String(value);
+              setSubjectFilter(nextSubject);
               setFacultyFilter("All");
               setCurrentPage(1);
-              persistFilters(value, "All", 1);
+              persistFilters(nextSubject, "All", 1);
             }}
-            options={subjectOptions}
+            options={subjectOptions.map((value) => ({ label: value, value }))}
+            theme="green"
+            widthClassName="w-[220px]"
           />
-          <FilterDropdown
+          <CustomDropdown
             label="Faculty"
             value={facultyFilter}
             onChange={(value) => {
-              setFacultyFilter(value);
+              const nextFaculty = String(value);
+              setFacultyFilter(nextFaculty);
               setCurrentPage(1);
-              persistFilters(subjectFilter, value, 1);
+              persistFilters(subjectFilter, nextFaculty, 1);
             }}
-            options={facultyOptions}
+            options={facultyOptions.map((value) => ({ label: value, value }))}
+            theme="green"
+            widthClassName="w-[220px]"
           />
         </div>
       </div>

@@ -1,13 +1,11 @@
 "use client";
-import React, { useEffect, useState, Fragment } from "react";
+import React, { useEffect, useState } from "react";
 import {
   CaretLeft,
-  CaretDown,
   MagnifyingGlass,
   UserCircle,
 } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Listbox, Transition } from "@headlessui/react";
 import CardComponent from "./totalUsersCard";
 import FacultyDetail from "./facultyDetail";
 import { useFacultyByDepartment } from "../../hooks/useFacultyByDepartment";
@@ -18,6 +16,7 @@ import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { Pagination } from "../../academic-setup/components/pagination";
 import { Avatar } from "@/app/utils/Avatar";
 import { CardValueShimmer, TableShimmer } from "../utils/TableShimmer";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 
 interface FacultyViewProps {
   departmentId: number;
@@ -26,69 +25,6 @@ interface FacultyViewProps {
   collegeEducationId: number;
   onBack: () => void;
 }
-
-const FilterDropdownChip = ({
-  label,
-  selectedValue,
-  valueText,
-  options,
-  onChange,
-  loading,
-}: any) => {
-  return (
-    <div className="flex items-center gap-1.5 text-xs text-[#525252]">
-      <span className="text-sm">{label}</span>
-      <Listbox value={selectedValue} onChange={onChange} disabled={loading}>
-        <div className="relative">
-          <Listbox.Button
-            className={`relative flex items-center justify-between gap-2.5 pl-4 pr-3 py-1 text-white bg-[#3EAD6F] rounded-full transition-all  ${loading
-              ? "opacity-70 cursor-not-allowed"
-              : "cursor-pointer hover:bg-emerald-600"
-              }`}
-          >
-            <span className="block truncate font-medium">
-              {loading ? "Loading..." : valueText}
-            </span>
-            <span className="flex items-center pointer-events-none">
-              <CaretDown
-                size={14}
-                weight="bold"
-                color="white"
-                className="mt-0.5"
-              />
-            </span>
-          </Listbox.Button>
-          <Transition
-            as={Fragment}
-            leave="transition ease-in duration-100"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <Listbox.Options className="absolute left-0 z-10 w-full min-w-[140px] mt-2 overflow-auto text-sm bg-white rounded-lg shadow-lg max-h-60 ring-1 ring-black ring-opacity-5 focus:outline-none">
-              {options.map((option: any) => (
-                <Listbox.Option
-                  key={option.id}
-                  className={({ active }) =>
-                    `relative cursor-pointer select-none px-4 py-2.5 ${active ? "bg-gray-100 text-black" : "text-[#525252]"}`
-                  }
-                  value={option.id}
-                >
-                  {({ selected }) => (
-                    <span
-                      className={`block truncate ${selected ? "font-semibold" : "font-normal"}`}
-                    >
-                      {option.label}
-                    </span>
-                  )}
-                </Listbox.Option>
-              ))}
-            </Listbox.Options>
-          </Transition>
-        </div>
-      </Listbox>
-    </div>
-  );
-};
 
 const FacultyView: React.FC<FacultyViewProps> = ({
   departmentId,
@@ -99,7 +35,8 @@ const FacultyView: React.FC<FacultyViewProps> = ({
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") || "Faculty";
+  const selectedRole = searchParams.get("role");
+  const activeTab = selectedRole === "STUDENT" ? "Students" : "Faculty";
   const yearIdParam = searchParams.get("yearId");
   const activeYearId = yearIdParam ? parseInt(yearIdParam) : null;
   const sectionIdParam = searchParams.get("sectionId");
@@ -109,9 +46,41 @@ const FacultyView: React.FC<FacultyViewProps> = ({
   const [availableSections, setAvailableSections] = useState<any[]>([]);
   const [sectionsLoading, setSectionsLoading] = useState(false);
   const [selectedFaculty, setSelectedFaculty] = useState<any | null>(null);
+  const [branchCounts, setBranchCounts] = useState({ students: 0, sections: 0 });
+  const [branchCountsLoading, setBranchCountsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const { collegeEducationType } = useAdmin();
+
+  useEffect(() => {
+    let mounted = true;
+    async function fetchBranchCounts() {
+      setBranchCountsLoading(true);
+      const [studentsResult, sectionsResult] = await Promise.all([
+        supabase.from("students").select("studentId", { count: "exact", head: true })
+          .eq("collegeId", collegeId).eq("collegeEducationId", collegeEducationId)
+          .eq("collegeBranchId", departmentId).eq("isActive", true).is("deletedAt", null),
+        supabase.from("college_sections").select("collegeSections")
+          .eq("collegeId", collegeId).eq("collegeEducationId", collegeEducationId)
+          .eq("collegeBranchId", departmentId).eq("isActive", true).is("deletedAt", null),
+      ]);
+      if (!mounted) return;
+      if (studentsResult.error) console.error("Failed to load branch student count", studentsResult.error);
+      if (sectionsResult.error) console.error("Failed to load branch section count", sectionsResult.error);
+      const uniqueSections = new Set(
+        (sectionsResult.data ?? [])
+          .map((section) => String(section.collegeSections ?? "").trim().toLowerCase())
+          .filter(Boolean),
+      );
+      setBranchCounts({
+        students: studentsResult.count ?? 0,
+        sections: uniqueSections.size,
+      });
+      setBranchCountsLoading(false);
+    }
+    fetchBranchCounts();
+    return () => { mounted = false; };
+  }, [collegeId, collegeEducationId, departmentId]);
 
   useEffect(() => {
     async function fetchYears() {
@@ -206,12 +175,15 @@ const FacultyView: React.FC<FacultyViewProps> = ({
     itemsPerPage
   );
 
-  const loading = activeTab === "Faculty" ? facLoading : stuLoading;
+  const studentScopeLoading =
+    yearsLoading ||
+    sectionsLoading ||
+    (!activeYearId && availableYears.length > 0) ||
+    (availableSections.length > 0 && !activeSectionId);
+  const studentLoading = stuLoading || studentScopeLoading;
+  const loading = activeTab === "Faculty" ? facLoading : studentLoading;
   const activeTotalItems = activeTab === "Faculty" ? facultyTotal : studentTotal;
   const currentYearOption = availableYears.find((yr) => yr.id === activeYearId);
-  const currentSectionOption = availableSections.find(
-    (sec) => sec.id === activeSectionId,
-  );
 
   const dynamicHeader =
     activeTab === "Faculty"
@@ -271,7 +243,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
       iconColor: "text-[#6C20CA]",
     },
     {
-      value: stuLoading ? <CardValueShimmer /> : (studentTotal || 0).toString(),
+      value: branchCountsLoading ? <CardValueShimmer /> : branchCounts.students.toString(),
       label: "Students",
       bgColor: "bg-[#FFEDDA]",
       icon: <UserCircle />,
@@ -279,7 +251,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
       iconColor: "text-[#FFBB70]",
     },
     {
-      value: sectionsLoading ? <CardValueShimmer /> : availableSections.length.toString(),
+      value: branchCountsLoading ? <CardValueShimmer /> : branchCounts.sections.toString(),
       label: "Sections",
       bgColor: "bg-[#E6FBEA]",
       icon: <UserCircle />,
@@ -292,7 +264,12 @@ const FacultyView: React.FC<FacultyViewProps> = ({
     return (
       <FacultyDetail
         faculty={selectedFaculty}
-        onBack={() => setSelectedFaculty(null)}
+        onBack={() => {
+          setSelectedFaculty(null);
+          const params = new URLSearchParams(searchParams.toString());
+          params.delete("month");
+          router.replace(`?${params.toString()}`);
+        }}
         collegeEdu={collegeEducationType}
       />
     );
@@ -301,45 +278,53 @@ const FacultyView: React.FC<FacultyViewProps> = ({
   return (
     <div className="flex flex-col w-[92.5vw] landscape:w-[95.5vw] md:w-full landscape:md:w-full lg:w-full min-h-screen pb-7 md:pb-0 lg:pb-0">
       <div className="mb-3">
-        <div className="flex items-center gap-2 w-fit">
-          <CaretLeft
-            onClick={onBack}
-            weight="bold"
-            className="text-[#2D3748] cursor-pointer hover:-translate-x-1 transition-transform h-10 w-10 landscape:h-6 landscape:w-6 landscape:md:h-6 landscape:md:w-6 md:h-8 md:w-8 lg:h-6 lg:w-6"
-          />
-          <h1 className="text-xl font-bold text-[#282828]">{dynamicHeader}</h1>
+        <div>
+          <div className="flex items-center gap-2 w-fit">
+            <CaretLeft
+              onClick={onBack}
+              weight="bold"
+              className="text-[#2D3748] cursor-pointer hover:-translate-x-1 transition-transform h-10 w-10 landscape:h-6 landscape:w-6 landscape:md:h-6 landscape:md:w-6 md:h-8 md:w-8 lg:h-6 lg:w-6"
+            />
+            <h1 className="text-xl font-bold text-[#282828]">{dynamicHeader}</h1>
+          </div>
+
+          {activeTab === "Faculty" ? (
+            <p className="text-[#282828] mt-1 ml-8 text-sm">
+              Overview of all faculty in this branch
+            </p>
+          ) : null}
         </div>
 
-        {activeTab === "Faculty" ? (
-          <p className="text-[#282828] mt-1 ml-8 text-sm">
-            Overview of all faculty in this branch
-          </p>
-        ) : (
+        {activeTab !== "Faculty" && (
           <div className="flex items-center gap-8 mt-5 ml-8">
-            <FilterDropdownChip
-              label="Year :"
-              selectedValue={activeYearId}
-              valueText={
-                currentYearOption ? currentYearOption.label : "Select Year"
-              }
-              options={availableYears}
-              onChange={handleYearChange}
-              loading={yearsLoading}
-            />
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-[#525252]">Year :</span>
+              <CustomDropdown
+                value={activeYearId ?? ""}
+                options={availableYears.map((year) => ({ value: year.id, label: year.label }))}
+                onChange={(value) => handleYearChange(Number(value))}
+                disabled={yearsLoading}
+                placeholder={yearsLoading ? "Loading..." : "Select Year"}
+                widthClassName="w-[150px]"
+                theme="always-green"
+                hideCheckmark
+              />
+            </div>
 
             {activeYearId && (
-              <FilterDropdownChip
-                label="Section :"
-                selectedValue={activeSectionId}
-                valueText={
-                  currentSectionOption
-                    ? currentSectionOption.label
-                    : "Select Sec"
-                }
-                options={availableSections}
-                onChange={handleSectionChange}
-                loading={sectionsLoading}
-              />
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-[#525252]">Section :</span>
+                <CustomDropdown
+                  value={activeSectionId ?? ""}
+                  options={availableSections.map((section) => ({ value: section.id, label: section.label }))}
+                  onChange={(value) => handleSectionChange(Number(value))}
+                  disabled={sectionsLoading}
+                  placeholder={sectionsLoading ? "Loading..." : "Select Section"}
+                  widthClassName="w-[130px]"
+                  theme="always-green"
+                  hideCheckmark
+                />
+              </div>
             )}
           </div>
         )}
@@ -352,7 +337,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
       </article>
 
       <div className="flex items-center gap-14 mb-3 border-b border-gray-100 px-2 relative z-0">
-        {["Faculty", "Students"].map((tab) => (
+        {[activeTab].map((tab) => (
           <button
             key={tab}
             onClick={() => handleTabChange(tab)}
@@ -512,12 +497,13 @@ const FacultyView: React.FC<FacultyViewProps> = ({
             )}
           </tbody>
         </table>
-        {!loading && activeTotalItems > itemsPerPage && (
+        {!loading && (
           <Pagination
             currentPage={currentPage}
             totalItems={activeTotalItems || 0}
             itemsPerPage={itemsPerPage}
             onPageChange={(page) => setCurrentPage(page)}
+            alwaysShow
           />
         )}
       </div>

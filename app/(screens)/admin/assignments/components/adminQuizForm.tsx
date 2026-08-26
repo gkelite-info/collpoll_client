@@ -1,13 +1,15 @@
 "use client";
 import { CaretLeftIcon } from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { saveQuiz } from "@/lib/helpers/quiz/quizAPI";
 import { getTopicsBySubjectId } from "@/lib/helpers/faculty/getFacultySubjects";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { fetchFacultyForSubject } from "@/lib/helpers/admin/assignments/quiz/adminQuizAPI";
-import { fetchFacultyYears, fetchFacultySections } from "@/lib/helpers/faculty/facultyAPI";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
+import { useFacultyAssignmentsHierarchy } from "@/lib/helpers/faculty/assignment/useFacultyAssignmentsHierarchy";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 interface AdminQuizFormProps {
   onCancel: () => void;
@@ -31,10 +33,15 @@ export default function AdminQuizForm({ onCancel }: AdminQuizFormProps) {
   const [selectedFacultyIdentifier, setSelectedFacultyIdentifier] = useState<string | null>(null);
   const [assignedFacultyName, setAssignedFacultyName] = useState<string>("Loading...");
 
-  const [academicYears, setAcademicYears] = useState<{ id: number; label: string }[]>([]);
-  const [availableSections, setAvailableSections] = useState<any[]>([]);
+  const [selectedEducationId, setSelectedEducationId] = useState<number | null>(null);
+  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
   const [selectedYearId, setSelectedYearId] = useState<number | null>(null);
+  const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(
+    subjectId ? Number(subjectId) : null,
+  );
   const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
+  const { data: hierarchyData = [] } = useFacultyAssignmentsHierarchy(selectedFacultyId);
 
   const [quizTitle, setQuizTitle] = useState("");
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
@@ -58,10 +65,6 @@ export default function AdminQuizForm({ onCancel }: AdminQuizFormProps) {
 
   useEffect(() => {
     if (subjectId) {
-      getTopicsBySubjectId(Number(subjectId))
-        .then(setTopics)
-        .catch(() => toast.error("Failed to fetch topics"));
-
       fetchFacultyForSubject(Number(subjectId)).then((facultyData) => {
         if (facultyData) {
           setSelectedFacultyId(facultyData.facultyId);
@@ -76,23 +79,84 @@ export default function AdminQuizForm({ onCancel }: AdminQuizFormProps) {
   }, [subjectId]);
 
   useEffect(() => {
-    if (selectedFacultyId) {
-      fetchFacultyYears(selectedFacultyId)
-        .then(setAcademicYears)
-        .catch(() => toast.error("Failed to load academic years"));
+    if (!selectedSubjectId) {
+      setTopics([]);
+      setSelectedTopicId(null);
+      return;
     }
-  }, [selectedFacultyId]);
+    getTopicsBySubjectId(selectedSubjectId)
+      .then(setTopics)
+      .catch(() => toast.error("Failed to fetch topics"));
+    setSelectedSectionId(null);
+  }, [selectedSubjectId]);
+
+  const educations = useMemo(() => hierarchyData.map((education) => ({
+    value: education.collegeEducationId,
+    label: education.educationType,
+  })), [hierarchyData]);
+  const selectedEducation = hierarchyData.find((education) => education.collegeEducationId === selectedEducationId);
+  const branches = (selectedEducation?.branches || []).map((branch) => ({ value: branch.collegeBranchId, label: branch.branchCode }));
+  const selectedBranch = selectedEducation?.branches.find((branch) => branch.collegeBranchId === selectedBranchId);
+  const years = (selectedBranch?.years || []).map((year) => ({ value: year.collegeAcademicYearId, label: year.yearName }));
+  const selectedYear = selectedBranch?.years.find((year) => year.collegeAcademicYearId === selectedYearId);
+  const semesters = (selectedYear?.semesters || []).map((semester) => ({ value: semester.collegeSemesterId, label: semester.semesterName }));
+  const selectedSemester = selectedYear?.semesters.find((semester) => semester.collegeSemesterId === selectedSemesterId);
+  const subjects = (selectedSemester?.subjects || []).map((subject) => ({ value: subject.collegeSubjectId, label: subject.subjectName }));
+  const selectedSubject = selectedSemester?.subjects.find((subject) => subject.collegeSubjectId === selectedSubjectId);
+  const sections = (selectedSubject?.sections || []).map((section) => ({ value: section.collegeSectionsId, label: section.sectionName }));
+  const isSchool = selectedEducation ? isSchoolEducation(selectedEducation.educationType) : false;
+  const isInter = selectedEducation?.educationType.toUpperCase() === "INTER" || selectedEducation?.educationType.toUpperCase() === "INTERMEDIATE";
 
   useEffect(() => {
-    if (selectedFacultyId && selectedYearId && subjectId) {
-      fetchFacultySections(selectedFacultyId, selectedYearId, Number(subjectId))
-        .then(setAvailableSections)
-        .catch(() => toast.error("Failed to load sections"));
-    } else {
-      setAvailableSections([]);
+    if (!subjectId || hierarchyData.length === 0 || selectedEducationId) return;
+    const targetSubjectId = Number(subjectId);
+    for (const education of hierarchyData) {
+      for (const branch of education.branches) {
+        for (const year of branch.years) {
+          for (const semester of year.semesters) {
+            if (semester.subjects.some((subject) => subject.collegeSubjectId === targetSubjectId)) {
+              setSelectedEducationId(education.collegeEducationId);
+              setSelectedBranchId(branch.collegeBranchId);
+              setSelectedYearId(year.collegeAcademicYearId);
+              setSelectedSemesterId(semester.collegeSemesterId);
+              setSelectedSubjectId(targetSubjectId);
+              return;
+            }
+          }
+        }
+      }
     }
-    setSelectedSectionId(null);
-  }, [selectedYearId, selectedFacultyId, subjectId]);
+  }, [hierarchyData, selectedEducationId, subjectId]);
+
+  useEffect(() => {
+    if (selectedEducation && selectedEducation.branches.length === 1 && !selectedBranchId) {
+      setSelectedBranchId(selectedEducation.branches[0].collegeBranchId);
+    }
+  }, [selectedEducation, selectedBranchId]);
+
+  useEffect(() => {
+    if (selectedBranch && selectedBranch.years.length === 1 && !selectedYearId) {
+      setSelectedYearId(selectedBranch.years[0].collegeAcademicYearId);
+    }
+  }, [selectedBranch, selectedYearId]);
+
+  useEffect(() => {
+    if (selectedYear && selectedYear.semesters.length === 1 && !selectedSemesterId) {
+      setSelectedSemesterId(selectedYear.semesters[0].collegeSemesterId);
+    }
+  }, [selectedYear, selectedSemesterId]);
+
+  useEffect(() => {
+    if (selectedSemester && selectedSemester.subjects.length === 1 && !selectedSubjectId) {
+      setSelectedSubjectId(selectedSemester.subjects[0].collegeSubjectId);
+    }
+  }, [selectedSemester, selectedSubjectId]);
+
+  useEffect(() => {
+    if (sections.length === 1 && !selectedSectionId) {
+      setSelectedSectionId(sections[0].value);
+    }
+  }, [sections, selectedSectionId]);
 
   const formatTo12Hour = (time24: string) => {
     if (!time24) return "";
@@ -103,6 +167,9 @@ export default function AdminQuizForm({ onCancel }: AdminQuizFormProps) {
 
   const handleSave = async (status: "Draft" | "Active") => {
     if (!quizTitle.trim()) return toast.error("Quiz title is required");
+    if (!selectedEducationId) return toast.error("Please select an education type");
+    if (!selectedBranchId) return toast.error(`Please select a ${isInter ? "group" : "branch"}`);
+    if (!selectedSubjectId) return toast.error("Please select a subject");
     if (!selectedTopicId) return toast.error("Please select a topic");
     if (!selectedYearId || !selectedSectionId) return toast.error("Year and Section are required");
     if (!questionsCount || !marksPerQuestion) return toast.error("Question details are required");
@@ -128,7 +195,10 @@ export default function AdminQuizForm({ onCancel }: AdminQuizFormProps) {
       const result = await saveQuiz({
         adminId: adminId,
         facultyId: selectedFacultyId,
-        collegeSubjectId: Number(subjectId),
+        collegeEducationId: selectedEducationId,
+        collegeBranchId: selectedBranchId,
+        collegeSemesterId: selectedSemesterId,
+        collegeSubjectId: Number(selectedSubjectId),
         collegeAcademicYearId: selectedYearId,
         collegeSectionsId: selectedSectionId,
         collegeSubjectUnitId: selectedTopicObj.collegeSubjectUnitId,
@@ -168,63 +238,117 @@ export default function AdminQuizForm({ onCancel }: AdminQuizFormProps) {
       <div className="mb-6">
         <div className="flex items-center lg:mb-1">
           <CaretLeftIcon size={22} weight="bold" className="text-[#282828] cursor-pointer active:scale-90" onClick={onCancel} />
-          <h1 className="font-bold text-2xl text-[#282828] ml-2">Create New Quiz (Admin)</h1>
+          <h1 className="font-bold text-2xl text-[#282828] ml-2">Create New Quiz</h1>
         </div>
-        <p className="text-[#282828] text-sm lg:ml-8">Assign details and scoring logic for this quiz.</p>
+        <p className="text-[#282828] text-sm lg:ml-8">Set up the timing and scoring for your quiz.</p>
       </div>
 
       <div className="bg-white rounded-md p-4 flex flex-col gap-4 flex-1 overflow-y-auto border border-gray-100">
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-bold text-[#282828]">Assign Faculty</label>
-          <div className="border border-gray-200 rounded-md p-2.5 text-sm bg-gray-50 text-gray-500 flex justify-between items-center">
-            <span>{assignedFacultyName}</span>
-            <span className="text-xs font-mono bg-gray-200 px-2 py-0.5 rounded">ID: {selectedFacultyIdentifier ?? "N/A"}</span>
-          </div>
+        <div className="flex flex-col gap-1 w-full">
+          <label className="text-sm font-bold text-[#282828]">Quiz Title <span className="text-red-500">*</span></label>
+          <input type="text" value={quizTitle} onChange={(e) => setQuizTitle(e.target.value)} placeholder="e.g. Unit 1 Assessment" className="border border-gray-200 rounded-md p-2.5 text-[13px] outline-none focus:border-[#43C17A] text-[#282828]" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-bold text-[#282828]">Academic Year <span className="text-red-500">*</span></label>
-            <select
-              value={selectedYearId || ""}
-              onChange={(e) => setSelectedYearId(Number(e.target.value))}
-              className="border border-gray-200 rounded-md p-2.5 text-sm outline-none focus:border-[#43C17A] bg-white text-[#282828] cursor-pointer"
-            >
-              <option value="">Select Year</option>
-              {academicYears.map((y) => <option key={y.id} value={y.id}>{y.label}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-bold text-[#282828]">Section <span className="text-red-500">*</span></label>
-            <select
-              disabled={!selectedYearId}
-              value={selectedSectionId || ""}
-              onChange={(e) => setSelectedSectionId(Number(e.target.value))}
-              className="border border-gray-200 rounded-md p-2.5 text-sm outline-none focus:border-[#43C17A] bg-white disabled:bg-gray-50 text-[#282828] cursor-pointer"
-            >
-              <option value="">Select Section</option>
-              {availableSections.map((sec) => (
-                <option key={sec.collegeSectionsId} value={sec.collegeSectionsId}>
-                  {sec.college_sections?.collegeSections}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+          <CustomDropdown
+            label="Education *"
+            value={selectedEducationId ?? ""}
+            options={educations}
+            onChange={(value) => {
+              setSelectedEducationId(Number(value));
+              setSelectedBranchId(null);
+              setSelectedYearId(null);
+              setSelectedSemesterId(null);
+              setSelectedSubjectId(null);
+              setSelectedSectionId(null);
+            }}
+            placeholder="Select Education"
+            theme="green"
+          />
+          {!isSchool ? (
+            <CustomDropdown
+              label={isInter ? "Group *" : "Branch *"}
+              value={selectedBranchId ?? ""}
+              options={branches}
+              onChange={(value) => {
+                setSelectedBranchId(Number(value));
+                setSelectedYearId(null);
+                setSelectedSemesterId(null);
+                setSelectedSubjectId(null);
+                setSelectedSectionId(null);
+              }}
+              placeholder={isInter ? "Select Group" : "Select Branch"}
+              disabled={!selectedEducationId}
+              theme="green"
+            />
+          ) : <div />}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CustomDropdown
+            label="Academic Year *"
+            value={selectedYearId ?? ""}
+            options={years}
+            onChange={(value) => {
+              setSelectedYearId(Number(value));
+              setSelectedSemesterId(null);
+              setSelectedSubjectId(null);
+              setSelectedSectionId(null);
+            }}
+            placeholder="Select Year"
+            disabled={!selectedBranchId}
+            theme="green"
+          />
+          <CustomDropdown
+            label="Semester *"
+            value={selectedSemesterId ?? ""}
+            options={semesters}
+            onChange={(value) => {
+              setSelectedSemesterId(Number(value));
+              setSelectedSubjectId(null);
+              setSelectedSectionId(null);
+            }}
+            placeholder="Select Semester"
+            disabled={!selectedYearId}
+            theme="green"
+          />
+          <CustomDropdown
+            label="Subject *"
+            value={selectedSubjectId ?? ""}
+            options={subjects}
+            onChange={(value) => {
+              setSelectedSubjectId(Number(value));
+              setSelectedSectionId(null);
+            }}
+            placeholder="Select Subject"
+            disabled={!selectedSemesterId}
+            theme="green"
+          />
+          <CustomDropdown
+            label="Topic *"
+            value={selectedTopicId ?? ""}
+            options={topics.map((topic) => ({
+              value: topic.collegeSubjectUnitTopicId,
+              label: topic.topicTitle,
+            }))}
+            onChange={(value) => setSelectedTopicId(Number(value))}
+            placeholder="Select Topic"
+            disabled={!selectedSubjectId}
+            theme="green"
+          />
+          <CustomDropdown
+            label="Section *"
+            value={selectedSectionId ?? ""}
+            options={sections}
+            onChange={(value) => setSelectedSectionId(Number(value))}
+            placeholder="Select Section"
+            disabled={!selectedSubjectId}
+            theme="green"
+          />
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-bold text-[#282828]">Quiz Title <span className="text-red-500">*</span></label>
-            <input type="text" value={quizTitle} onChange={(e) => setQuizTitle(e.target.value)} placeholder="e.g. Mid-Term Exam" className="border border-gray-200 rounded-md p-2.5 text-sm outline-none focus:border-[#43C17A] text-[#282828]" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-bold text-[#282828]">Topic <span className="text-red-500">*</span></label>
-            <select value={selectedTopicId || ""} onChange={(e) => setSelectedTopicId(parseInt(e.target.value, 10))} className="border border-gray-200 rounded-md p-2.5 text-sm outline-none focus:border-[#43C17A] bg-white text-[#282828] cursor-pointer">
-              <option value="">Select Topic</option>
-              {topics.map((topic, index) => (
-                <option key={index} value={topic.collegeSubjectUnitTopicId}>{topic.topicTitle}</option>
-              ))}
-            </select>
+            <label className="text-sm font-bold text-[#282828]">Assigned Faculty</label>
+            <div className="border border-gray-200 rounded-md p-2.5 text-[13px] bg-gray-50 text-gray-500 flex justify-between items-center min-h-[42px]">
+              <span>{assignedFacultyName}</span>
+              <span className="text-xs font-mono bg-gray-200 px-2 py-0.5 rounded">ID: {selectedFacultyIdentifier ?? "N/A"}</span>
+            </div>
           </div>
         </div>
 

@@ -11,8 +11,9 @@ import {
   fetchAdminQuizzesBySubject,
   publishAdminQuiz,
 } from "@/lib/helpers/admin/assignments/quiz/adminQuizAPI";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
-export default function AdminQuizList({ subjectId, selectedDate }: { subjectId: string, selectedDate?: Date }) {
+export default function AdminQuizList({ subjectId }: { subjectId: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -23,9 +24,15 @@ export default function AdminQuizList({ subjectId, selectedDate }: { subjectId: 
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const quizzesPerPage = 6;
+  // Keep the dependency shape stable during Fast Refresh after removing the
+  // calendar-date filter from this list.
+  const dateFilterKey = null;
 
   useEffect(() => {
     if (!subjectId) return;
+    setCurrentPage(1);
     setIsLoading(true);
     const statusMap = {
       active: "Active",
@@ -33,21 +40,22 @@ export default function AdminQuizList({ subjectId, selectedDate }: { subjectId: 
       completed: "Completed",
     } as const;
 
-    const year = selectedDate?.getFullYear();
-    const month = String((selectedDate?.getMonth() || 0) + 1).padStart(2, "0");
-    const day = String(selectedDate?.getDate()).padStart(2, "0");
-    const dateStr = selectedDate ? `${year}-${month}-${day}` : undefined;
-
-    fetchAdminQuizzesBySubject(Number(subjectId), statusMap[quizView], dateStr)
+    fetchAdminQuizzesBySubject(Number(subjectId), statusMap[quizView])
       .then(setQuizzes)
       .finally(() => setIsLoading(false));
-  }, [subjectId, quizView, refreshKey, selectedDate]);
+  }, [subjectId, quizView, refreshKey, dateFilterKey]);
 
   const handleViewChange = (view: "active" | "drafts" | "completed") => {
+    setCurrentPage(1);
     const params = new URLSearchParams(searchParams.toString());
     params.set("quizView", view);
     router.push(`${pathname}?${params.toString()}`);
   };
+
+  const paginatedQuizzes = quizzes.slice(
+    (currentPage - 1) * quizzesPerPage,
+    currentPage * quizzesPerPage,
+  );
 
   const handleBack = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -124,7 +132,7 @@ export default function AdminQuizList({ subjectId, selectedDate }: { subjectId: 
             No {quizView} quizzes found.
           </div>
         ) : (
-          quizzes.map((quiz, index) => (
+          paginatedQuizzes.map((quiz, index) => (
             <AdminQuizCard
               key={quiz.id || quiz.quizId || `quiz-${index}`}
               data={quiz}
@@ -138,6 +146,15 @@ export default function AdminQuizList({ subjectId, selectedDate }: { subjectId: 
           ))
         )}
       </div>
+      {!isLoading && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={quizzes.length}
+          itemsPerPage={quizzesPerPage}
+          onPageChange={setCurrentPage}
+          alwaysShow
+        />
+      )}
     </div>
   );
 }

@@ -54,7 +54,7 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data, collegeEdu }) => {
       month: "2-digit",
       year: "numeric",
     })
-    : "N/A";
+    : "Not provided";
 
   if (loading) {
     return <FacultyCardShimmer />;
@@ -116,7 +116,7 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data, collegeEdu }) => {
           </div>
           <div>
             <p className="text-base font-bold text-[#1a1a1a]">
-              {raw.experienceYears ? `${raw.experienceYears} years` : 'N/A'}
+              {raw.experienceYears !== null && raw.experienceYears !== undefined ? `${raw.experienceYears} years` : 'Not provided'}
             </p>
             <p className="text-xs font-medium text-[#444444]">Experience</p>
           </div>

@@ -5,7 +5,7 @@ import { CaretLeft, CheckCircle } from "@phosphor-icons/react";
 import TabNavigation from "./tabNavigation";
 import DiscussionDeptCard from "./discussionDeptCard";
 import DiscussionCourseCard from "./discussionCourseCard";
-import { FilterDropdown } from "./filterDropdown";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 import AdminDiscussionList from "./adminDiscussionList";
 import AdminDiscussionForm from "./adminDiscussionForm";
 import AdminDiscussionSubmissions from "./adminDiscussionSubmissions";
@@ -495,7 +495,7 @@ export default function DiscussionForumBasic({
         !dept ? (
           <>
             <div className="flex flex-wrap items-center gap-6 mt-1 mb-5">
-              <FilterDropdown
+              <CustomDropdown
                 label="Education"
                 value={currentEducationId?.toString() ?? ""}
                 options={educations.map((e) => ({
@@ -510,8 +510,10 @@ export default function DiscussionForumBasic({
                     setYearFilter("All");
                   }
                 }}
+                theme="green"
+                widthClassName="w-[180px]"
               />
-              <FilterDropdown
+              <CustomDropdown
                 label={currentEducationType === "Inter" ? "Group" : "Branch"}
                 value={branchFilter}
                 options={[
@@ -522,13 +524,15 @@ export default function DiscussionForumBasic({
                   })),
                 ]}
                 onChange={(val) => {
-                  setBranchFilter(val);
+                  setBranchFilter(String(val));
                   if (val === "All") {
                     setYearFilter("All");
                   }
                 }}
+                theme="green"
+                widthClassName="w-[180px]"
               />
-              <FilterDropdown
+              <CustomDropdown
                 label="Year"
                 value={yearFilter}
                 disabled={yearLoading}
@@ -543,8 +547,10 @@ export default function DiscussionForumBasic({
                       })),
                     ]
                 }
+                theme="green"
+                widthClassName="w-[160px]"
                 onChange={(val) => {
-                  if (val !== "loading") setYearFilter(val);
+                  if (val !== "loading") setYearFilter(String(val));
                 }}
               />
             </div>
