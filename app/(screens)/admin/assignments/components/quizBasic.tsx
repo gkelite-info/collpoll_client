@@ -1,11 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { CaretLeft, CaretRight, CheckCircle } from "@phosphor-icons/react";
+import { CaretLeft, CheckCircle } from "@phosphor-icons/react";
 import TabNavigation from "./tabNavigation";
 import DiscussionDeptCard from "./discussionDeptCard";
 import DiscussionCourseCard from "./discussionCourseCard";
-import { FilterDropdown } from "./filterDropdown";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 import AdminQuizList from "./adminQuizList";
 import AdminQuizForm from "./adminQuizForm";
@@ -269,6 +270,7 @@ export default function QuizBasic() {
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [branchOptions, setBranchOptions] = useState([
     { label: "All", value: "All" },
   ]);
@@ -276,9 +278,11 @@ export default function QuizBasic() {
     { label: "All", value: "All" },
   ]);
 
-  const [dynamicDepts, setDynamicDepts] = useState<any[]>([]);
-  const [dynamicCourses, setDynamicCourses] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+const [dynamicDepts, setDynamicDepts] = useState<any[]>([]);
+const [dynamicCourses, setDynamicCourses] = useState<any[]>([]);
+const [isLoading, setIsLoading] = useState(false);
+  const [subjectPage, setSubjectPage] = useState(1);
+  const subjectsPerPage = 9;
 
   useEffect(() => {
     if (!collegeId || !currentEducationId) return;
@@ -301,7 +305,10 @@ export default function QuizBasic() {
     )
       .then((res) => {
         setDynamicDepts(res.data);
-        setTotalPages(res.totalPages);
+        const nextTotalItems = Number(res.totalCount);
+        const nextTotalPages = Number(res.totalPages);
+        setTotalItems(Number.isFinite(nextTotalItems) ? nextTotalItems : 0);
+        setTotalPages(Number.isFinite(nextTotalPages) ? nextTotalPages : 1);
       })
       .finally(() => setIsLoading(false));
   }, [
@@ -315,6 +322,7 @@ export default function QuizBasic() {
 
   useEffect(() => {
     if (!collegeId || !branchIdParam || !yearIdParam) return;
+    setSubjectPage(1);
     setIsLoading(true);
     fetchAdminQuizSubjects(
       collegeId,
@@ -324,6 +332,11 @@ export default function QuizBasic() {
       .then(setDynamicCourses)
       .finally(() => setIsLoading(false));
   }, [collegeId, branchIdParam, yearIdParam]);
+
+  const paginatedCourses = dynamicCourses.slice(
+    (subjectPage - 1) * subjectsPerPage,
+    subjectPage * subjectsPerPage,
+  );
 
   const handleBackToDepartments = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -385,7 +398,7 @@ export default function QuizBasic() {
       );
     }
     if (subjectId) {
-      return <AdminQuizList subjectId={subjectId} selectedDate={selectedDate} />;
+      return <AdminQuizList subjectId={subjectId} />;
     }
     return null;
   };
@@ -398,7 +411,7 @@ export default function QuizBasic() {
         !branchIdParam ? (
           <>
             <div className="flex flex-wrap items-center gap-6 mt-1 mb-5">
-              <FilterDropdown
+              <CustomDropdown
                 label="Education"
                 value={currentEducationId?.toString() ?? ""}
                 options={educations.map((e) => ({
@@ -414,28 +427,34 @@ export default function QuizBasic() {
                     setPage(1);
                   }
                 }}
+                theme="green"
+                widthClassName="w-[180px]"
               />
-              <FilterDropdown
+              <CustomDropdown
                 label={currentEducationType === "Inter" ? "Group" : "Branch"}
                 value={branchFilter}
                 options={branchOptions}
                 onChange={(val) => {
-                  setBranchFilter(val);
+                  setBranchFilter(String(val));
                   setPage(1);
                 }}
+                theme="green"
+                widthClassName="w-[180px]"
               />
-              <FilterDropdown
+              <CustomDropdown
                 label="Year"
                 value={yearFilter}
                 options={yearOptions}
                 onChange={(val) => {
-                  setYearFilter(val);
+                  setYearFilter(String(val));
                   setPage(1);
                 }}
+                theme="green"
+                widthClassName="w-[160px]"
               />
             </div>
 
-            <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col ">
+            <div className="min-h-screen rounded-xl flex flex-col">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto">
                 {isLoading ? (
                   <>
@@ -457,75 +476,15 @@ export default function QuizBasic() {
                 )}
               </div>
 
-              {/* Dynamic Pagination Component */}
-              {!isLoading && totalPages > 1 && (
-                <div className="flex justify-center pb-4 shrink-0 pt-6">
-                  <div className="flex items-center gap-2">
-                    {/* Prev */}
-                    <button
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                      aria-label="Previous page"
-                      className={`
-          p-2 rounded-md text-sm font-medium
-          border border-gray-200
-          transition-colors duration-150
-          focus:outline-none focus:ring-2 focus:ring-[#43C17A] focus:ring-offset-1
-          ${page === 1
-                          ? "bg-gray-50 text-gray-400 cursor-not-allowed"
-                          : "bg-white text-gray-700 hover:bg-gray-100 cursor-pointer"
-                        }
-        `}
-                    >
-                      <CaretLeft size={16} weight="bold" />
-                    </button>
-
-                    {/* Pages */}
-                    <div className="flex items-center gap-2 max-w-[60vw] overflow-x-auto scrollbar-hide">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                        (p) => (
-                          <button
-                            key={p}
-                            onClick={() => setPage(p)}
-                            aria-current={page === p ? "page" : undefined}
-                            className={`
-              px-3 py-1 rounded-md text-sm font-medium
-              border
-              transition-colors duration-150
-              focus:outline-none focus:ring-2 focus:ring-[#43C17A] focus:ring-offset-1
-              ${page === p
-                                ? "bg-[#16284F] text-white border-[#16284F]"
-                                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 cursor-pointer"
-                              }
-            `}
-                          >
-                            {p}
-                          </button>
-                        ),
-                      )}
-                    </div>
-
-                    {/* Next */}
-                    <button
-                      onClick={() =>
-                        setPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      disabled={page === totalPages}
-                      aria-label="Next page"
-                      className={`
-          p-2 rounded-md text-sm font-medium
-          border border-gray-200
-          transition-colors duration-150
-          focus:outline-none focus:ring-2 focus:ring-[#43C17A] focus:ring-offset-1
-          ${page === totalPages
-                          ? "bg-gray-50 text-gray-400 cursor-not-allowed"
-                          : "bg-white text-gray-700 hover:bg-gray-100 cursor-pointer"
-                        }
-        `}
-                    >
-                      <CaretRight size={16} weight="bold" />
-                    </button>
-                  </div>
+              {!isLoading && totalPages > 0 && (
+                <div className="mt-auto pt-6">
+                  <Pagination
+                    currentPage={page}
+                    totalItems={totalItems}
+                    itemsPerPage={9}
+                    onPageChange={setPage}
+                    alwaysShow
+                  />
                 </div>
               )}
             </div>
@@ -561,7 +520,7 @@ export default function QuizBasic() {
                     No subjects found.
                   </div>
                 ) : (
-                  dynamicCourses.map((course) => (
+                  paginatedCourses.map((course) => (
                     <DiscussionCourseCard
                       key={course.id}
                       {...course}
@@ -571,6 +530,17 @@ export default function QuizBasic() {
                   ))
                 )}
               </div>
+              {!isLoading && dynamicCourses.length > 0 && (
+                <div className="mt-auto pt-6">
+                  <Pagination
+                    currentPage={subjectPage}
+                    totalItems={dynamicCourses.length}
+                    itemsPerPage={subjectsPerPage}
+                    onPageChange={setSubjectPage}
+                    alwaysShow
+                  />
+                </div>
+              )}
             </div>
           </>
         )

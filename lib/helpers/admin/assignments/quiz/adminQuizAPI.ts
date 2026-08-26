@@ -61,7 +61,12 @@ export async function fetchAdminQuizzesBySubject(
       .gte("endDate", startOfDay);
   }
 
-  const { data } = await query.order("createdAt", { ascending: false });
+  const { data, error } = await query.order("createdAt", { ascending: false });
+
+  if (error) {
+    console.error("fetchAdminQuizzesBySubject error:", error);
+    throw error;
+  }
 
   function formatDate(dateStr: string) {
     if (!dateStr) return "-";
@@ -326,6 +331,7 @@ export async function fetchAdminQuizDepartments(
 
   return {
     data: paginatedResults,
+    totalCount,
     totalPages: Math.ceil(totalCount / limit) || 1,
   };
 }
@@ -346,7 +352,7 @@ export async function fetchAdminQuizSubjects(
       .select(
         `
             collegeSubjectId, subjectName, subjectCode,
-            quizzes ( quizId, status, facultyId, quiz_submissions ( submissionId ) )
+            quizzes ( quizId, status, facultyId, isActive, deletedAt, quiz_submissions ( submissionId ) )
         `,
       )
       .eq("collegeId", collegeId)
@@ -436,7 +442,10 @@ export async function fetchAdminQuizSubjects(
 
   return (subjects || []).map((sub: any) => {
     const activeQuizzes =
-      sub.quizzes?.filter((q: any) => q.status === "Active") || [];
+      sub.quizzes?.filter(
+        (q: any) =>
+          q.status === "Active" && q.isActive === true && !q.deletedAt,
+      ) || [];
     const pendingCount = activeQuizzes.reduce(
       (acc: number, q: any) => acc + (q.quiz_submissions?.length || 0),
       0,

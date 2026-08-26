@@ -29,19 +29,24 @@ export function Pagination({
   bgClassName = "bg-white border-t border-gray-200"
 }: PaginationProps) {
   const [dropdownPosition, setDropdownPosition] = useState<"top" | "bottom">("bottom");
+  const safeTotalItems = Number.isFinite(totalItems) ? Math.max(0, totalItems) : 0;
+  const safeItemsPerPage = Number.isFinite(itemsPerPage) && itemsPerPage > 0
+    ? itemsPerPage
+    : 1;
 
   const checkPosition = (e: React.MouseEvent | React.PointerEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
     setDropdownPosition(spaceBelow < 250 ? "top" : "bottom");
   };
-  if (totalItems <= itemsPerPage && !alwaysShow) return null;
+  if (safeTotalItems <= safeItemsPerPage && !alwaysShow) return null;
 
   // Keep an always-visible paginator on a valid first page even when the
   // current filters return no records.
-  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const totalPages = Math.max(1, Math.ceil(safeTotalItems / safeItemsPerPage));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * safeItemsPerPage;
+  const endIndex = Math.min(startIndex + safeItemsPerPage, safeTotalItems);
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
@@ -130,9 +135,9 @@ export function Pagination({
             </div>
           )}
           <p className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">
-            Showing <span className="font-medium">{totalItems === 0 ? 0 : startIndex + 1}</span> to{" "}
+            Showing <span className="font-medium">{safeTotalItems === 0 ? 0 : startIndex + 1}</span> to{" "}
             <span className="font-medium">{endIndex}</span> of{" "}
-            <span className="font-medium">{totalItems}</span> results
+            <span className="font-medium">{safeTotalItems}</span> results
           </p>
         </div>
         <div className="flex justify-center w-full md:w-auto overflow-x-auto max-w-full pb-1 lg:pb-0">

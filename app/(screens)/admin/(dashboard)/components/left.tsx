@@ -134,7 +134,7 @@ export default function AdminDashLeft({
               label={item.label}
               iconBgColor="#FFFFFF"
               onClick={() => {
-                if (item.id === "TOTAL_USERS") router.push("?view=TOTAL_USERS");
+                if (item.id === "TOTAL_USERS") router.push("/admin?view=TOTAL_USERS&role=ADMIN");
                 if (item.id === "SYSTEM_HEALTH") router.push("?view=SYSTEM_HEALTH");
                 if (item.id === "AUTOMATIONS") router.push("?view=automations");
                 if (item.id === "PENDING_APPROVALS") onPendingFull();

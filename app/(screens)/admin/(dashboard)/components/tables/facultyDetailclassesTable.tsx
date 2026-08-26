@@ -1,5 +1,8 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
 import { TableShimmer } from "../../utils/TableShimmer";
+import { Pagination } from "../../../academic-setup/components/pagination";
 
 export interface ClassSession {
   section: string;
@@ -13,13 +16,26 @@ interface SessionTableProps {
 }
 
 const SessionTable: React.FC<SessionTableProps> = ({ sessions, loading }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const paginatedSessions = useMemo(
+    () => sessions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage),
+    [sessions, currentPage, itemsPerPage],
+  );
+
+  useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(sessions.length / itemsPerPage));
+    if (currentPage > lastPage) setCurrentPage(lastPage);
+  }, [sessions.length, itemsPerPage, currentPage]);
+
   return (
     <div className="relative w-full bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-      <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[680px] text-left border-collapse">
         <thead>
           <tr className="bg-gray-100/80">
             <th className="px-6 py-3 text-gray-700 font-semibold text-base">
-              Class / Section
+              Branch / Section
             </th>
             <th className="px-6 py-3 text-gray-700 font-semibold text-base">
               Subject
@@ -39,8 +55,8 @@ const SessionTable: React.FC<SessionTableProps> = ({ sessions, loading }) => {
               </td>
             </tr>
           ) : (
-            sessions.map((session, index) => (
-              <tr key={index} className="hover:bg-gray-50/50 transition-colors">
+            paginatedSessions.map((session, index) => (
+              <tr key={`${session.section}-${session.subject}-${index}`} className="hover:bg-gray-50/50 transition-colors">
                 <td className="px-6 py-3.5 text-[#525252] text-sm">
                   {session.section}
                 </td>
@@ -55,6 +71,22 @@ const SessionTable: React.FC<SessionTableProps> = ({ sessions, loading }) => {
           )}
         </tbody>
       </table>
+      </div>
+      {!loading && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={sessions.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          itemsPerPageOptions={[5, 10, 20]}
+          onItemsPerPageChange={(value) => {
+            setItemsPerPage(value);
+            setCurrentPage(1);
+          }}
+          alwaysShow
+          roundedBottom="rounded-b-xl"
+        />
+      )}
     </div>
   );
 };

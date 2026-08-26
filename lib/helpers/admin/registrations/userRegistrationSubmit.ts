@@ -292,6 +292,7 @@ export const submitUserRegistration = async (
         const financeManagerId = await createFinanceManager({
           userId: targetUserId,
           collegeId: basicData.collegeIntId,
+          collegeEducationId: financeEducationIds[0],
           createdBy: creatorAdminId,
           type: isFinanceManager ? "manager" : "executive",
           isActive: true,

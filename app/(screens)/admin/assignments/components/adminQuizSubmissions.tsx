@@ -6,6 +6,7 @@ import { fetchQuizById } from "@/lib/helpers/quiz/quizAPI";
 import FacultyQuizSubmissionsShimmer from "@/app/(screens)/faculty/assignments/shimmer/FacultyQuizSubmissionsShimmer";
 import toast from "react-hot-toast";
 import { Avatar } from "@/app/utils/Avatar";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 function formatDate(dateStr: string) {
   if (!dateStr) return "-";
@@ -23,9 +24,13 @@ export default function AdminQuizSubmissions({
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [quizDetails, setQuizDetails] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const submissionsPerPage = 10;
 
   useEffect(() => {
     if (!quizId) return;
+    setCurrentPage(1);
+    setIsLoading(true);
     Promise.all([
       fetchSubmissionsWithStudentsByQuizId(quizId),
       fetchQuizById(quizId),
@@ -41,6 +46,11 @@ export default function AdminQuizSubmissions({
       })
       .finally(() => setIsLoading(false));
   }, [quizId]);
+
+  const paginatedSubmissions = submissions.slice(
+    (currentPage - 1) * submissionsPerPage,
+    currentPage * submissionsPerPage,
+  );
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -85,7 +95,7 @@ export default function AdminQuizSubmissions({
             No submissions yet.
           </div>
         ) : (
-          submissions.map((sub) => (
+          paginatedSubmissions.map((sub) => (
             <div
               key={sub.submissionId}
               className="bg-white rounded-md px-4 py-3 flex items-center justify-between border border-gray-100 shadow-sm"
@@ -122,6 +132,15 @@ export default function AdminQuizSubmissions({
           ))
         )}
       </div>
+      {!isLoading && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={submissions.length}
+          itemsPerPage={submissionsPerPage}
+          onPageChange={setCurrentPage}
+          alwaysShow
+        />
+      )}
     </div>
   );
 }

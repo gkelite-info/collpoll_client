@@ -22,7 +22,7 @@ import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelpe
 
 import { AssignmentPageShimmer } from "./components/shimmers/AssignmentPageShimmer";
 import { Pagination } from "../academic-setup/components/pagination";
-import { FilterDropdown } from "../academics/components/filterDropdown";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 
 const AssignmentPage = () => {
   const searchParams = useSearchParams();
@@ -210,44 +210,51 @@ const AssignmentPage = () => {
           />
         </div>
 
-        <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap gap-4 border border-gray-100">
-          <FilterDropdown
+        <div className="flex w-full flex-wrap items-end gap-4">
+          <CustomDropdown
             label="Education Type"
             value={educationFilter}
             onChange={(val) => {
-              setEducationFilter(val);
+              setEducationFilter(String(val));
               setDeptFilter("All");
               setYearFilter("All");
               setCurrentPage(1);
             }}
-            options={["All", ...educations.map((e) => e.collegeEducationId.toString())]}
-            displayModifier={(val) => {
-              if (val === "All") return "All";
-              const edu = educations.find((e) => e.collegeEducationId.toString() === val);
-              return edu ? edu.collegeEducationType : val;
-            }}
+            options={[
+              { label: "All", value: "All" },
+              ...educations.map((e) => ({
+                label: e.collegeEducationType,
+                value: e.collegeEducationId.toString(),
+              })),
+            ]}
+            theme="green"
+            widthClassName="w-[180px]"
           />
 
           {!isSchoolContext && (
-            <FilterDropdown
+            <CustomDropdown
               label={isInter ? "Group" : "Branch"}
               value={deptFilter}
               onChange={(value) => {
-                setDeptFilter(value);
+                setDeptFilter(String(value));
                 setCurrentPage(1);
               }}
-              options={uniqueDepts}
+              options={uniqueDepts.map((value) => ({ label: value, value }))}
+              theme="green"
+              widthClassName="w-[180px]"
             />
           )}
 
-          <FilterDropdown
+          <CustomDropdown
             label={isSchoolContext ? "Class" : "Year"}
             value={yearFilter}
             onChange={(value) => {
-              setYearFilter(value);
+              setYearFilter(String(value));
               setCurrentPage(1);
             }}
-            options={uniqueYears}
+            options={uniqueYears.map((value) => ({ label: value, value }))}
+            theme="green"
+            widthClassName="w-[160px]"
           />
         </div>
       </div>

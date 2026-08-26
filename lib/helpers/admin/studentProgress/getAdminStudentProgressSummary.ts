@@ -19,6 +19,7 @@ type AdminStudentProgressScope = {
   page?: number;
   pageSize?: number;
   searchQuery?: string;
+  includeStudentsWithoutProgress?: boolean;
 };
 
 type FacultySectionRow = {
@@ -1171,7 +1172,7 @@ export async function getAdminStudentProgressSummary(
   // An enrolled school student must remain visible even before attendance or
   // coursework produces a non-zero progress score. Preserve the existing
   // college behavior, which shows only students with progress activity.
-  const visibleStudentProgressRows = scope.isSchool
+  const visibleStudentProgressRows = scope.isSchool || scope.includeStudentsWithoutProgress
     ? studentProgressRows
     : studentProgressRows.filter((student) => student.progressPercent > 0);
 
