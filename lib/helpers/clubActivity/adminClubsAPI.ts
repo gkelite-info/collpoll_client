@@ -38,6 +38,7 @@ export async function getSearchableUsers(
                 fullName,
                 role,
                 user_profile!left(profileUrl),
+                employee_ids!left(employeeId, employeeType),
                 ${roleGroup === "student"
                 ? `students!inner(
                     studentId, 
@@ -56,6 +57,10 @@ export async function getSearchableUsers(
                         facultyId, 
                         college_education!left(collegeEducationType),
                         college_branch!left(collegeBranchCode),
+                        faculty_sections!left(
+                            college_education!left(collegeEducationType),
+                            college_branch!left(collegeBranchCode)
+                        ),
                         responsible_clubs:clubs!clubs_responsibleFacultyId_fkey(clubId, is_deleted),
                         club_mentors(clubId, is_deleted, clubs(is_deleted))
                     )`
@@ -93,24 +98,51 @@ export async function getSearchableUsers(
             let isDisabled = false;
             let disabledReason = "";
 
-            const studentRecord = user.students ?? null;
-            const facultyRecord = user.faculty ?? null;
+            const studentRecordArray = Array.isArray(user.students) ? user.students : (user.students ? [user.students] : []);
+            const facultyRecordArray = Array.isArray(user.faculty) ? user.faculty : (user.faculty ? [user.faculty] : []);
 
-            if (roleGroup === "student" && studentRecord) {
-                specificRoleId = studentRecord?.studentId?.toString() ?? "";
+            const employeeId = Array.isArray(user.employee_ids) && user.employee_ids.length > 0 
+                ? user.employee_ids[0].employeeId 
+                : (user.employee_ids?.employeeId ?? "");
 
-                const eduType = studentRecord?.college_education?.collegeEducationType ?? "";
-                const branch = studentRecord?.college_branch?.collegeBranchCode ?? "";
-                const academicHistory = studentRecord?.student_academic_history ?? [];
+            if (roleGroup === "student" && studentRecordArray.length > 0) {
+                const firstRecord = studentRecordArray[0];
+                specificRoleId = firstRecord.studentId?.toString() ?? "";
+
+                const eduTypes = studentRecordArray.flatMap((r: any) => 
+                    Array.isArray(r.college_education) 
+                        ? r.college_education.map((e: any) => e.collegeEducationType) 
+                        : [r.college_education?.collegeEducationType]
+                ).filter(Boolean);
+                
+                const branches = studentRecordArray.flatMap((r: any) => 
+                    Array.isArray(r.college_branch) 
+                        ? r.college_branch.map((b: any) => b.collegeBranchCode) 
+                        : [r.college_branch?.collegeBranchCode]
+                ).filter(Boolean);
+
+                const eduType = [...new Set(eduTypes)].join(", ");
+                const branch = [...new Set(branches)].join(", ");
+
+                const academicHistory = firstRecord.student_academic_history ?? [];
                 const currentHistory = academicHistory.find((h: any) => h?.isCurrent) ?? academicHistory[0] ?? null;
                 const year = currentHistory?.college_academic_year?.collegeAcademicYear ?? "";
-                const eduBranch = [eduType, branch].filter(Boolean).join(" ");
-                educationStr = eduBranch && year ? `${eduBranch} - ${year}` : eduBranch || "Not Assigned";
 
-                const pClubs = studentRecord.president_clubs || [];
-                const vpClubs = studentRecord.vp_clubs || [];
-                const members = studentRecord.club_members || [];
-                const requests = studentRecord.club_join_requests || [];
+                let baseStr = "";
+                const pinNumber = firstRecord.pinNumber || ""; // if pinNumber is fetched, fallback empty
+                if (pinNumber) {
+                    baseStr += `PIN :- ${pinNumber}, `;
+                }
+
+                const eduText = eduType || "-";
+                const branchText = branch || "-";
+                educationStr = `${baseStr}Education Type :- ${eduText}, Branch/Group :- ${branchText}`;
+                if (year) educationStr += `, Year :- ${year}`;
+
+                const pClubs = studentRecordArray.flatMap((r: any) => r.president_clubs || []);
+                const vpClubs = studentRecordArray.flatMap((r: any) => r.vp_clubs || []);
+                const members = studentRecordArray.flatMap((r: any) => r.club_members || []);
+                const requests = studentRecordArray.flatMap((r: any) => r.club_join_requests || []);
 
                 const activePresident = pClubs.some((c: any) => !c.is_deleted && c.clubId !== currentClubId);
                 const activeVP = vpClubs.some((c: any) => !c.is_deleted && c.clubId !== currentClubId);
@@ -125,16 +157,50 @@ export async function getSearchableUsers(
                     disabledReason = "Pending request";
                 }
 
-            } else if (roleGroup === "faculty" && facultyRecord) {
-                specificRoleId = facultyRecord?.facultyId?.toString() ?? "";
+            } else if (roleGroup === "faculty" && facultyRecordArray.length > 0) {
+                const firstRecord = facultyRecordArray[0];
+                specificRoleId = firstRecord.facultyId?.toString() ?? "";
 
-                const eduType = facultyRecord?.college_education?.collegeEducationType ?? "";
-                const branch = facultyRecord?.college_branch?.collegeBranchCode ?? "";
+                // Note: As per guidelines in lib/helpers/faculty/multiSubjectFacultyHelper.ts and 
+                // lib/helpers/admin/academicSetup/schoolHelper.ts, a faculty might have multiple educations/branches 
+                // assigned via the faculty_sections table instead of the main faculty table.
+                // We first check the faculty table, and if it's there we collect it. Then we also collect from faculty_sections.
+                const eduTypes = facultyRecordArray.flatMap((r: any) => {
+                    const edus = [];
+                    if (r.college_education?.collegeEducationType) edus.push(r.college_education.collegeEducationType);
+                    if (Array.isArray(r.faculty_sections)) {
+                        r.faculty_sections.forEach((fs: any) => {
+                            if (fs.college_education?.collegeEducationType) edus.push(fs.college_education.collegeEducationType);
+                        });
+                    }
+                    return edus;
+                }).filter(Boolean);
+                
+                const branches = facultyRecordArray.flatMap((r: any) => {
+                    const brs = [];
+                    if (r.college_branch?.collegeBranchCode) brs.push(r.college_branch.collegeBranchCode);
+                    if (Array.isArray(r.faculty_sections)) {
+                        r.faculty_sections.forEach((fs: any) => {
+                            if (fs.college_branch?.collegeBranchCode) brs.push(fs.college_branch.collegeBranchCode);
+                        });
+                    }
+                    return brs;
+                }).filter(Boolean);
 
-                educationStr = [eduType, branch].filter(Boolean).join(" ") || "Not Assigned";
+                const eduType = [...new Set(eduTypes)].join(", ");
+                const branch = [...new Set(branches)].join(", ");
 
-                const fClubs = facultyRecord.responsible_clubs || [];
-                const mentors = facultyRecord.club_mentors || [];
+                let baseStr = "";
+                if (employeeId) {
+                    baseStr += `Employee ID :- ${employeeId}, `;
+                }
+
+                const eduText = eduType || "-";
+                const branchText = branch || "-";
+                educationStr = `${baseStr}Education Type :- ${eduText}, Branch/Group :- ${branchText}`;
+
+                const fClubs = facultyRecordArray.flatMap((r: any) => r.responsible_clubs || []);
+                const mentors = facultyRecordArray.flatMap((r: any) => r.club_mentors || []);
 
                 const activeResponsible = fClubs.some((c: any) => !c.is_deleted && c.clubId !== currentClubId);
                 const activeMentor = mentors.some((m: any) => !m.is_deleted && m.clubs && !m.clubs.is_deleted && m.clubId !== currentClubId);
@@ -433,28 +499,60 @@ export async function getClubByIdAPI(clubId: string): Promise<any> {
             imageUrl,
             president:students!clubs_presidentStudentId_fkey(
                 studentId,
-                users!inner(userId, fullName, role, user_profile(profileUrl)),
+                users!inner(
+                    userId, 
+                    fullName, 
+                    role, 
+                    user_profile(profileUrl),
+                    employee_ids!left(employeeId, employeeType)
+                ),
                 college_education(collegeEducationType),
                 college_branch(collegeBranchCode)
             ),
             vicePresident:students!clubs_vicePresidentStudentId_fkey(
                 studentId,
-                users!inner(userId, fullName, role, user_profile(profileUrl)),
+                users!inner(
+                    userId, 
+                    fullName, 
+                    role, 
+                    user_profile(profileUrl),
+                    employee_ids!left(employeeId, employeeType)
+                ),
                 college_education(collegeEducationType),
                 college_branch(collegeBranchCode)
             ),
             faculty:faculty!clubs_responsibleFacultyId_fkey(
                 facultyId,
-                users!inner(userId, fullName, role, user_profile(profileUrl)),
+                users!inner(
+                    userId, 
+                    fullName, 
+                    role, 
+                    user_profile(profileUrl),
+                    employee_ids!left(employeeId, employeeType)
+                ),
                 college_education(collegeEducationType),
-                college_branch(collegeBranchCode)
+                college_branch(collegeBranchCode),
+                faculty_sections!left(
+                    college_education(collegeEducationType),
+                    college_branch(collegeBranchCode)
+                )
             ),
             mentors:club_mentors(
                 faculty(
                     facultyId,
-                    users!inner(userId, fullName, role, user_profile(profileUrl)),
+                    users!inner(
+                        userId, 
+                        fullName, 
+                        role, 
+                        user_profile(profileUrl),
+                        employee_ids!left(employeeId, employeeType)
+                    ),
                     college_education(collegeEducationType),
-                    college_branch(collegeBranchCode)
+                    college_branch(collegeBranchCode),
+                    faculty_sections!left(
+                        college_education(collegeEducationType),
+                        college_branch(collegeBranchCode)
+                    )
                 )
             )
         `)
@@ -467,9 +565,56 @@ export async function getClubByIdAPI(clubId: string): Promise<any> {
     const formatUser = (record: any, roleGroup: "student" | "faculty") => {
         if (!record || !record.users) return null;
 
-        const eduType = record.college_education?.collegeEducationType ?? "";
-        const branch = record.college_branch?.collegeBranchCode ?? "";
-        const educationStr = [eduType, branch].filter(Boolean).join(" ") || "Not Assigned";
+        const getValues = (item: any, key: string) => Array.isArray(item) ? item.map((i: any) => i[key]).filter(Boolean).join(", ") : (item?.[key] ?? "");
+
+        const employeeId = Array.isArray(record.users.employee_ids) && record.users.employee_ids.length > 0 
+            ? record.users.employee_ids[0].employeeId 
+            : (record.users.employee_ids?.employeeId ?? "");
+
+        let eduTypes = [];
+        let branches = [];
+
+        if (roleGroup === "faculty") {
+            // Reference: lib/helpers/faculty/multiSubjectFacultyHelper.ts & lib/helpers/admin/academicSetup/schoolHelper.ts
+            // Faculty can have multiple educations/branches assigned via faculty_sections.
+            if (record.college_education?.collegeEducationType) eduTypes.push(record.college_education.collegeEducationType);
+            if (Array.isArray(record.faculty_sections)) {
+                record.faculty_sections.forEach((fs: any) => {
+                    if (fs.college_education?.collegeEducationType) eduTypes.push(fs.college_education.collegeEducationType);
+                });
+            }
+
+            if (record.college_branch?.collegeBranchCode) branches.push(record.college_branch.collegeBranchCode);
+            if (Array.isArray(record.faculty_sections)) {
+                record.faculty_sections.forEach((fs: any) => {
+                    if (fs.college_branch?.collegeBranchCode) branches.push(fs.college_branch.collegeBranchCode);
+                });
+            }
+        } else {
+            eduTypes = Array.isArray(record.college_education) 
+                ? record.college_education.map((i: any) => i.collegeEducationType).filter(Boolean)
+                : (record.college_education?.collegeEducationType ? [record.college_education.collegeEducationType] : []);
+                
+            branches = Array.isArray(record.college_branch) 
+                ? record.college_branch.map((i: any) => i.collegeBranchCode).filter(Boolean)
+                : (record.college_branch?.collegeBranchCode ? [record.college_branch.collegeBranchCode] : []);
+        }
+
+        const eduType = [...new Set(eduTypes)].join(", ");
+        const branch = [...new Set(branches)].join(", ");
+        
+        let baseStr = "";
+        const pinNumber = record.pinNumber || "";
+
+        if (roleGroup === "faculty" && employeeId) {
+            baseStr += `Employee ID :- ${employeeId}, `;
+        } else if (roleGroup === "student" && pinNumber) {
+            baseStr += `PIN :- ${pinNumber}, `;
+        }
+
+        const eduText = eduType || "-";
+        const branchText = branch || "-";
+        const educationStr = `${baseStr}Education Type :- ${eduText}, Branch/Group :- ${branchText}`;
 
         return {
             id: record.users.userId.toString(),

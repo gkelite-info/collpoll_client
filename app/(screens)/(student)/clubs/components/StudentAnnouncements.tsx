@@ -995,7 +995,7 @@ export default function StudentAnnouncements({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200"
+        className="flex-1 overflow-y-auto pr-2 custom-scrollbar"
       >
         {messages.length === 0 && !loading && (
           <div className="flex h-full flex-col items-center justify-center text-center opacity-80 animate-in fade-in duration-500">

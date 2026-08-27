@@ -17,14 +17,25 @@
  *    dropdowns, or specific records. They are ONLY meant for high-level global context 
  *    or filtering logic. 
  * 
- * 2. SINGLE VS. MULTI-ASSIGNMENT PROFILES
+ * 2. AGGREGATING MULTIPLE EDUCATIONS AND BRANCHES (GLOBAL SEARCH/PROFILE)
+ *    When fetching a faculty profile globally (like in Club Admins, search dropdowns, etc.), 
+ *    a single faculty member might teach across multiple educations or branches. 
+ *    These might NOT all be present in the main `faculty` table!
+ * 
+ *    CRITICAL RULE FOR ALL AGENTS & DEVELOPERS: 
+ *    To get all educations and branches for a faculty member, you MUST:
+ *      1. First check the `faculty` table (e.g., `college_education`, `college_branch`).
+ *      2. Then ALSO check the `faculty_sections` table for additional assignments.
+ *    Aggregate them all together (e.g., using a Set) to ensure no education or branch is missed.
+ * 
+ * 3. SINGLE VS. MULTI-ASSIGNMENT PROFILES
  *    - Single-Assignment Faculty: A faculty teaching 1 subject to 1 branch. Their 
  *      global `collegeBranchId` and `college_branch` will naturally be singular.
  *    - Multi-Assignment Faculty: A faculty teaching multiple subjects across different 
  *      branches or education levels. Their global `collegeBranchId` might default to 
  *      the first available one, or `null`.
  * 
- * 3. THE SOLUTION: ROW-LEVEL CONTEXT RESOLUTION (SaaS / Production Standard)
+ * 4. THE SOLUTION: ROW-LEVEL CONTEXT RESOLUTION (SaaS / Production Standard)
  *    Instead of relying on the global context to render specific data rows, you MUST 
  *    extract the context from the lowest level of the relational hierarchy:
  *    `faculty_sections` -> `college_subjects` -> `college_sections`

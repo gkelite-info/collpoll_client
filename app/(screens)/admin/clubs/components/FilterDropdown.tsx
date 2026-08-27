@@ -38,7 +38,7 @@ export const FilterDropdown = ({
             {isOpen && (
                 <div className="absolute top-full mt-1 left-0 bg-white shadow-xl border border-gray-100 rounded-md py-1 min-w-[120px] z-50">
                     <div 
-                        className="px-4 py-2 hover:bg-green-50 hover:text-[#43C17A] cursor-pointer text-[14px] font-medium transition-colors" 
+                        className="px-4 py-2 text-[#282828] hover:bg-green-50 hover:text-[#43C17A] cursor-pointer text-[14px] font-medium transition-colors" 
                         onClick={() => { onChange(null); onToggle(null); }}
                     >
                         All
@@ -46,7 +46,7 @@ export const FilterDropdown = ({
                     {options.map(opt => (
                         <div 
                             key={opt} 
-                            className="px-4 py-2 hover:bg-green-50 hover:text-[#43C17A] cursor-pointer text-[14px] font-medium transition-colors" 
+                            className="px-4 py-2 text-[#282828] hover:bg-green-50 hover:text-[#43C17A] cursor-pointer text-[14px] font-medium transition-colors" 
                             onClick={() => { onChange(opt); onToggle(null); }}
                         >
                             {opt}

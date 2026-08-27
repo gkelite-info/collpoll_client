@@ -279,16 +279,15 @@ export default function RequestsList({ clubId, currentFilter }: { clubId: any, c
                 </div>
             )}
 
-            {totalItems > 0 && (
-                <div className="w-full mt-auto pt-6">
-                    <Pagination
-                        currentPage={currentPage}
-                        totalItems={totalItems}
-                        itemsPerPage={ITEMS_PER_PAGE}
-                        onPageChange={(page) => setCurrentPage(page)}
-                    />
-                </div>
-            )}
+            <div className="w-full mt-auto pt-6">
+                <Pagination
+                    currentPage={currentPage}
+                    totalItems={totalItems}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    onPageChange={(page) => setCurrentPage(page)}
+                    alwaysShow={true}
+                />
+            </div>
 
             <ConfirmDeleteModal
                 open={modalConfig.open}
