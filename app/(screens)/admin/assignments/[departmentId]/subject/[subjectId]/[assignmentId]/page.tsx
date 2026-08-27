@@ -122,7 +122,7 @@ export default function AdminAssignmentDetailPage() {
         </div>
       </section>
 
-      <section className="flex flex-row items-stretch gap-4 w-full mb-3">
+      <section className="flex flex-row items-stretch gap-5 w-full mb-3 min-h-[210px]">
         {loading ? (
           <>
             {[1, 2, 3].map((i) => (
@@ -140,7 +140,7 @@ export default function AdminAssignmentDetailPage() {
           </>
         ) : assignment ? (
           cardData.map((item, index) => (
-            <div key={index} className="flex-1">
+            <div key={index} className="w-[220px] shrink-0">
               <CardComponent {...item} />
             </div>
           ))
@@ -163,6 +163,7 @@ export default function AdminAssignmentDetailPage() {
         <AssignmentTable
           assignmentId={assignmentId.toString()}
           selectedDate={selectedDate}
+          totalMarks={Number(assignment?.marks) || 0}
         />
       </section>
     </main>

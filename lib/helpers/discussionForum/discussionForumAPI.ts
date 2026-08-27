@@ -403,7 +403,7 @@ export async function fetchDiscussionsByFacultyId(
   page: number = 1,
   limit: number = 10,
   dateStr?: string,
-  filters?: { sectionIds?: number[] | string[] }
+  filters?: { sectionIds?: number[] | string[]; subjectId?: number }
 ) {
   const today = new Date().toISOString().split("T")[0];
   const from = (page - 1) * limit;
@@ -464,6 +464,10 @@ export async function fetchDiscussionsByFacultyId(
     return { data: [], totalCount: 0 };
   }
 
+  if (filters?.subjectId) {
+    query = query.eq("collegeSubjectId", filters.subjectId);
+  }
+
   if (dateStr) {
     const formattedDate = dateStr.split("T")[0];
     query = query
@@ -507,7 +511,7 @@ export async function fetchCompletedDiscussionsByFacultyId(
   page: number = 1,
   limit: number = 10,
   dateStr?: string,
-  filters?: { sectionIds?: number[] | string[] }
+  filters?: { sectionIds?: number[] | string[]; subjectId?: number }
 ) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -554,6 +558,10 @@ export async function fetchCompletedDiscussionsByFacultyId(
     query = query.in("discussion_forum_sections.collegeSectionsId", filters.sectionIds.map(Number));
   } else if (filters?.sectionIds && filters.sectionIds.length === 0) {
     return { data: [], totalCount: 0 };
+  }
+
+  if (filters?.subjectId) {
+    query = query.eq("collegeSubjectId", filters.subjectId);
   }
 
   if (dateStr) {

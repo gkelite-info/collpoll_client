@@ -116,11 +116,10 @@ const AcademicPage = () => {
     setSubject,
   } = useAcademicFilters({ userId: userId ?? undefined, collegeId: adminCollegeId });
 
-  const isSchool = isSchoolEducation(
-    education?.collegeEducationType || collegeEducationType
-  );
-  const currentEducationId =
-    education?.collegeEducationId ?? collegeEducationId ?? null;
+  const isSchool = education
+    ? isSchoolEducation(education.collegeEducationType)
+    : false;
+  const currentEducationId = education?.collegeEducationId ?? null;
 
   const apiFilters = {
     educationId: currentEducationId,
@@ -138,8 +137,8 @@ const AcademicPage = () => {
 
   useEffect(() => {
     if (educations.length > 0 && !education) {
-      const requestedEducationId =
-        Number(searchParams.get("educationId")) || collegeEducationId;
+      const requestedEducationId = Number(searchParams.get("educationId"));
+      if (!requestedEducationId) return;
       const assignedEdu = educations.find(
         (e) => Number(e.collegeEducationId) === Number(requestedEducationId)
       );
@@ -147,7 +146,7 @@ const AcademicPage = () => {
         selectEducation(assignedEdu);
       }
     }
-  }, [collegeEducationId, educations, education, searchParams, selectEducation]);
+  }, [educations, education, searchParams, selectEducation]);
 
   useEffect(() => {
     const requestedId = Number(searchParams.get("branchId"));

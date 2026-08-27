@@ -27,7 +27,7 @@ export default function CardComponent({
 
   return (
     <div
-      className={`rounded-md shadow-sm p-3 flex flex-col gap-6 text-gray-900 h-full ${bgColor}`}
+      className={`rounded-md shadow-sm p-5 flex flex-col justify-between gap-8 text-gray-900 h-full ${bgColor}`}
     >
       <div
         className={`w-10 h-10 shrink-0 rounded-lg flex items-center justify-center  ${iconBgColor}`}
@@ -36,8 +36,8 @@ export default function CardComponent({
       </div>
 
       <div>
-        <div className="text-xl font-semibold leading-none mb-2">{value}</div>
-        <div className="text-[14px] font-medium text-gray-700 mt-1 leading-tight">
+        <div className="text-xl font-semibold leading-none mb-2 whitespace-nowrap">{value}</div>
+        <div className="text-[14px] font-medium text-gray-700 mt-1 leading-tight whitespace-nowrap">
           {label}
         </div>
       </div>

@@ -9,6 +9,8 @@ import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
 type UploadModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -65,24 +67,37 @@ export default function UploadModal({
     fileInputRef.current?.click();
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (existingFilePath || selectedFiles.length > 0) {
+  const validateAndSelectFile = (file: File) => {
+    if ((existingFilePath && !fileDeleted) || selectedFiles.length > 0) {
       toast.error(t("Delete the existing file before uploading a new one"));
-      e.target.value = "";
       return;
     }
 
-    const file = e.target.files?.[0];
-    if (!file) return;
-
     if (file.type !== "application/pdf") {
       toast.error(t("Only PDF files are allowed"));
-      e.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(t("File size must not exceed 10 MB"));
       return;
     }
 
     setSelectedFiles([file]);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) validateAndSelectFile(file);
     e.target.value = "";
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (isLocked) return;
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) validateAndSelectFile(file);
   };
 
   const handleUpload = async () => {
@@ -93,8 +108,13 @@ export default function UploadModal({
 
     if (!card) return;
 
-    if (existingFilePath) {
+    if (existingFilePath && !fileDeleted) {
       toast.error(t("Delete the existing file before uploading a new one"));
+      return;
+    }
+
+    if (selectedFiles[0].size > MAX_FILE_SIZE) {
+      toast.error(t("File size must not exceed 10 MB"));
       return;
     }
 
@@ -260,6 +280,8 @@ export default function UploadModal({
             className={`lg:w-full gap-2 border border-[#707070] border-dashed border-2 rounded-lg p-4 py-3 flex flex-col items-center justify-center
   ${isLocked ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
             onClick={!isLocked ? triggerFileInput : undefined}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop}
           >
             <CloudArrowUp size={65} className="text-[#CECECE]" />
             <h5 className="text-[#666666] text-sm">
@@ -285,6 +307,9 @@ export default function UploadModal({
               onChange={handleFileSelect}
               disabled={isLocked}
             />
+            <p className="text-xs text-[#666666]">
+              {t("Maximum file size: 10 MB")}
+            </p>
           </div>
 
           {selectedFiles.length > 0 && (

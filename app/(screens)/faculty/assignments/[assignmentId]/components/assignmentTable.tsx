@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CaretDown, Check, X, FilePdf } from "@phosphor-icons/react";
+import { CaretDown, Check, X, FilePdf, PencilSimple } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { fetchAssignmentTableData } from "@/lib/helpers/faculty/assignment/fetchAssignmentTableData";
 import { generateSubmissionSignedUrl } from "@/lib/helpers/faculty/assignment/generateSubmissionSignedUrl";
 import { updateSubmissionEvaluation } from "@/lib/helpers/faculty/assignment/updateSubmissionEvaluation";
 import { Avatar } from "@/app/utils/Avatar";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 type Status = "Evaluated" | "Pending" | "Not Submitted";
 
@@ -28,10 +29,12 @@ export default function AssignmentTable({
   assignmentId,
   parentLoading,
   assignmentExists,
+  totalMarks,
 }: {
   assignmentId: string;
   parentLoading?: boolean;
   assignmentExists?: boolean;
+  totalMarks: number;
 }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,21 +48,26 @@ export default function AssignmentTable({
   } | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [marksError, setMarksError] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const pageSize = 10;
 
   useEffect(() => {
     if (assignmentId && assignmentExists) {
-      fetchDynamicData();
+      fetchDynamicData(page);
     } else if (!parentLoading && !assignmentExists) {
       setLoading(false);
     }
-  }, [assignmentId, assignmentExists, parentLoading]);
+  }, [assignmentId, assignmentExists, parentLoading, page, filter]);
 
-  async function fetchDynamicData() {
+  async function fetchDynamicData(currentPage: number) {
     try {
       setLoading(true);
 
-      const { students, submissions } =
-        await fetchAssignmentTableData(assignmentId);
+      const { students, submissions, totalCount: fetchedCount } =
+        await fetchAssignmentTableData(assignmentId, currentPage, pageSize, filter);
+      setTotalCount(fetchedCount);
 
       const mergedRows: Row[] = (students || []).map((student: any) => {
         const sub = submissions?.find((s) => s.studentId === student.studentId);
@@ -128,19 +136,41 @@ export default function AssignmentTable({
       feedback: row.feedback || "",
       status: row.status,
     });
+    setMarksError("");
   };
 
-  const handleSaveRequest = () => setShowConfirm(true);
+  const handleSaveRequest = () => {
+    const enteredMarks = Number(tempData?.marks);
+    if (!tempData?.marks || !Number.isFinite(enteredMarks) || enteredMarks < 0) {
+      setMarksError("Enter valid marks");
+      toast.error("Please enter valid marks");
+      return;
+    }
+    if (enteredMarks > totalMarks) {
+      setMarksError(`Marks cannot exceed ${totalMarks}`);
+      toast.error(`Marks cannot exceed total marks (${totalMarks})`);
+      return;
+    }
+    setMarksError("");
+    setShowConfirm(true);
+  };
 
   const confirmSave = async () => {
     if (!editingId || !tempData) return;
+    const enteredMarks = Number(tempData.marks);
+    if (!Number.isFinite(enteredMarks) || enteredMarks < 0 || enteredMarks > totalMarks) {
+      setShowConfirm(false);
+      setMarksError(`Marks must be between 0 and ${totalMarks}`);
+      toast.error(`Marks must be between 0 and ${totalMarks}`);
+      return;
+    }
     const row = rows.find((r) => r.id === editingId);
     if (!row?.submissionId) return;
 
     setIsSaving(true);
 
     const { error } = await updateSubmissionEvaluation(row.submissionId, {
-      marksScored: parseInt(tempData.marks) || 0,
+      marksScored: enteredMarks,
       feedback: tempData.feedback,
       status: tempData.status as "Evaluated" | "Pending",
     });
@@ -158,9 +188,6 @@ export default function AssignmentTable({
     setIsSaving(false);
     setShowConfirm(false);
   };
-
-  const filtered =
-    filter === "All" ? rows : rows.filter((r) => r.status === filter);
 
   if (parentLoading || loading) {
     return (
@@ -257,7 +284,7 @@ export default function AssignmentTable({
         <span className="text-gray-500">Sort :</span>
         <select
           value={filter}
-          onChange={(e) => setFilter(e.target.value as any)}
+          onChange={(e) => { setPage(1); setFilter(e.target.value as "All" | Status); }}
           className="rounded-full bg-green-50 px-2 py-1 text-green-600 outline-none border-none cursor-pointer"
         >
           <option>All</option>
@@ -267,8 +294,8 @@ export default function AssignmentTable({
         </select>
       </div>
 
-      <div className="overflow-x-auto bg-white rounded-xl border border-gray-100 shadow-sm">
-        <table className="w-full text-sm">
+      <div className="w-full overflow-x-auto bg-white rounded-xl border border-gray-100 shadow-sm">
+        <table className="w-full min-w-[1600px] text-sm whitespace-nowrap">
           <thead className="bg-[#ECECEC] text-[#282828] font-poppins">
             <tr>
               <th className="px-4 py-3 text-left font-semibold">S.No</th>
@@ -283,13 +310,13 @@ export default function AssignmentTable({
             </tr>
           </thead>
           <tbody className="font-poppins">
-            {filtered.map((r, i) => (
+            {rows.map((r, i) => (
               <tr
                 key={r.id}
                 className="text-[#515151] border-b border-gray-50 hover:bg-gray-50"
               >
                 <td className="px-4 py-3 font-medium">
-                  {String(i + 1).padStart(2, "0")}
+                  {String((page - 1) * pageSize + i + 1).padStart(2, "0")}
                 </td>
                 <td className="px-4 py-3">
                   <Avatar src={r.photo} size={32} alt={r.name} />
@@ -323,21 +350,33 @@ export default function AssignmentTable({
 
                 <td className="px-4 py-3">
                   {editingId === r.id ? (
-                    <input
-                      type="number"
-                      value={tempData?.marks}
-                      onChange={(e) =>
-                        setTempData({ ...tempData!, marks: e.target.value })
-                      }
-                      className="w-16 border rounded px-1 py-1 outline-green-500"
-                    />
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          min={0}
+                          max={totalMarks}
+                          value={tempData?.marks}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setTempData({ ...tempData!, marks: value });
+                            setMarksError(value !== "" && Number(value) > totalMarks ? `Maximum ${totalMarks}` : "");
+                          }}
+                          className={`w-16 border rounded px-1 py-1 outline-green-500 ${marksError ? "border-red-400" : ""}`}
+                        />
+                        <span className="text-xs text-gray-400">/ {totalMarks}</span>
+                      </div>
+                      {marksError && <span className="text-[10px] text-red-500 whitespace-nowrap">{marksError}</span>}
+                    </div>
                   ) : (
-                    <span
+                    <button
                       onClick={() => startEditing(r)}
-                      className={`font-bold ${r.status !== "Not Submitted" ? "cursor-pointer text-[#282828]" : "text-gray-300"}`}
+                      disabled={r.status === "Not Submitted"}
+                      className={`inline-flex items-center gap-1.5 font-bold ${r.status !== "Not Submitted" ? "cursor-pointer text-[#282828]" : "cursor-not-allowed text-gray-300"}`}
                     >
-                      {r.marks || "-"}
-                    </span>
+                      <span>{r.marks ? `${r.marks} / ${totalMarks}` : `- / ${totalMarks}`}</span>
+                      {r.status !== "Not Submitted" && <PencilSimple size={15} weight="bold" className="text-[#43C17A]" />}
+                    </button>
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -389,7 +428,7 @@ export default function AssignmentTable({
                       </button>
                     </div>
                   ) : r.status === "Not Submitted" ? (
-                    <span className="inline-block rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-500">
+                    <span className="inline-block whitespace-nowrap rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-500">
                       Not Submitted
                     </span>
                   ) : (
@@ -410,6 +449,14 @@ export default function AssignmentTable({
           </tbody>
         </table>
       </div>
+      <Pagination
+        currentPage={page}
+        totalItems={totalCount}
+        itemsPerPage={pageSize}
+        onPageChange={setPage}
+        alwaysShow
+        bgClassName="bg-transparent border-t border-gray-200"
+      />
     </div>
   );
 }

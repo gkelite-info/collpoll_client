@@ -8,6 +8,9 @@ import {
   fetchCompletedDiscussionsByFacultyId,
   fetchDiscussionsByFacultyId,
 } from "@/lib/helpers/discussionForum/discussionForumAPI";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+
+const ITEMS_PER_PAGE = 10;
 
 export default function AdminDiscussionList({
   subjectId,
@@ -20,6 +23,8 @@ export default function AdminDiscussionList({
   const [discussions, setDiscussions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refetchTrigger, setRefetchTrigger] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   const facultyId = searchParams.get("facultyId");
   const discussionView = searchParams.get("discussionView") || "active";
@@ -41,13 +46,19 @@ export default function AdminDiscussionList({
         //     setDiscussions(data || []);
         // }
         if (discussionView === "active") {
-          const response = await fetchDiscussionsByFacultyId(Number(facultyId));
-          setDiscussions(response?.data || []);
-        } else {
-          const response = await fetchCompletedDiscussionsByFacultyId(
-            Number(facultyId),
+          const response = await fetchDiscussionsByFacultyId(
+            Number(facultyId), currentPage, ITEMS_PER_PAGE, undefined,
+            { subjectId: Number(subjectId) },
           );
           setDiscussions(response?.data || []);
+          setTotalCount(response?.totalCount || 0);
+        } else {
+          const response = await fetchCompletedDiscussionsByFacultyId(
+            Number(facultyId), currentPage, ITEMS_PER_PAGE, undefined,
+            { subjectId: Number(subjectId) },
+          );
+          setDiscussions(response?.data || []);
+          setTotalCount(response?.totalCount || 0);
         }
       } catch (err) {
         console.error("Failed to fetch discussions:", err);
@@ -58,13 +69,14 @@ export default function AdminDiscussionList({
     };
 
     getDiscussions();
-  }, [facultyId, discussionView, refetchTrigger]);
+  }, [facultyId, subjectId, discussionView, currentPage, refetchTrigger]);
 
   const filteredDiscussions = useMemo(() => {
     return discussions || [];
   }, [discussions]);
 
   const handleViewChange = (view: "active" | "completed") => {
+    setCurrentPage(1);
     const params = new URLSearchParams(searchParams.toString());
     params.set("discussionView", view);
     router.push(`${pathname}?${params.toString()}`);
@@ -168,6 +180,16 @@ export default function AdminDiscussionList({
           </div>
         )}
       </div>
+      {!loading && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={totalCount}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+          alwaysShow
+          bgClassName="bg-transparent border-t border-gray-200"
+        />
+      )}
     </div>
   );
 }

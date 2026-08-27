@@ -821,6 +821,21 @@ function AssignmentsLeftContent() {
   ) {
     return (
       <div className="w-[68%] max-md:w-full h-full p-2 max-md:p-3 max-md:pb-20 flex flex-col max-md:min-h-screen">
+        <div className="mb-5">
+          <h1 className="hidden md:flex font-bold text-2xl mb-1 items-center gap-2">
+            <span onClick={() => handleMainTabChange("assignments")} className="cursor-pointer text-[#282828] transition-colors">Assignments</span>
+            <span className="text-[#282828]">/</span>
+            <span onClick={() => handleMainTabChange("quiz")} className="cursor-pointer text-[#43C17A] transition-colors">Quiz</span>
+            <span className="text-[#282828]">/</span>
+            <span onClick={() => handleMainTabChange("discussion")} className="cursor-pointer text-[#282828] transition-colors">Discussion forum</span>
+            <span className="text-[#282828]">/</span>
+            <span onClick={() => handleMainTabChange("lab")} className="cursor-pointer text-[#282828] transition-colors">Lab</span>
+          </h1>
+          <h1 className="md:hidden font-bold text-2xl mb-1 text-[#43C17A]">Quiz</h1>
+          <p className="text-[#282828] text-sm">
+            Design, organize, and publish quizzes to assess your students effectively.
+          </p>
+        </div>
         <FacultyQuizForm
           onCancel={() => {
             const params = new URLSearchParams(searchParams.toString());

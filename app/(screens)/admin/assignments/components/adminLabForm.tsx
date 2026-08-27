@@ -11,6 +11,7 @@ import {
   saveLabManual,
   uploadLabManualFile,
 } from "@/lib/helpers/faculty/facultyLabManualHelper";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 
 type AdminLabFormProps = {
   initialData?: any;
@@ -59,7 +60,6 @@ export default function AdminLabForm({ initialData, onSaved }: AdminLabFormProps
   const [loadedInitialData, setLoadedInitialData] = useState<any>(initialData);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const subjectSelectRef = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
     if (!collegeId || !collegeEducationId) return;
@@ -191,9 +191,6 @@ export default function AdminLabForm({ initialData, onSaved }: AdminLabFormProps
     setAcademicYearId(String(subject.collegeAcademicYearId || yearIdParam || ""));
   }, [loadedInitialData, subjectIdParam, subjects, yearIdParam]);
 
-  const selectedSubject = subjects.find(
-    (subject) => String(subject.collegeSubjectId) === subjectId,
-  );
   const availableYears = Array.from(
     new Map(
       subjects
@@ -217,15 +214,6 @@ export default function AdminLabForm({ initialData, onSaved }: AdminLabFormProps
     );
     setAcademicYearId(subject?.collegeAcademicYearId ? String(subject.collegeAcademicYearId) : "");
     setSectionId("");
-  };
-
-  const openSubjectSelect = () => {
-    const select = subjectSelectRef.current as
-      | (HTMLSelectElement & { showPicker?: () => void })
-      | null;
-    if (!select || select.disabled) return;
-    select.showPicker?.();
-    select.focus();
   };
 
   const handleBack = () => {
@@ -364,99 +352,45 @@ export default function AdminLabForm({ initialData, onSaved }: AdminLabFormProps
             <label className="text-sm font-medium text-[#282828]">
               Subject <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <select
-                ref={subjectSelectRef}
+            <CustomDropdown
                 value={subjectId}
-                onChange={(e) => handleSubjectChange(e.target.value)}
+                onChange={(value) => handleSubjectChange(String(value))}
                 disabled={subjectsLoading || !!subjectIdParam}
-                className="sr-only"
-              >
-                <option value="">
-                  {subjectsLoading ? "Loading..." : "Select subject"}
-                </option>
-                {subjects.map((subject) => (
-                  <option
-                    key={subject.collegeSubjectId}
-                    value={subject.collegeSubjectId}
-                  >
-                    {subject.subjectName}
-                  </option>
-                  ))}
-              </select>
-              <div
-                onClick={openSubjectSelect}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 pr-8 text-sm text-[#282828] bg-white focus-within:ring-2 focus-within:ring-[#43C17A] cursor-pointer disabled:bg-gray-50"
-              >
-                <div className="overflow-x-auto whitespace-nowrap scrollbar-thin">
-                  {selectedSubject?.subjectName ||
-                    (subjectsLoading ? "Loading..." : "Select subject")}
-                </div>
-              </div>
-              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </div>
-            </div>
+                placeholder={subjectsLoading ? "Loading..." : "Select subject"}
+                options={subjects.map((subject) => ({ label: subject.subjectName, value: subject.collegeSubjectId }))}
+                theme="green"
+              />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-[#282828]">
               Year <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <select
+            <CustomDropdown
                 value={academicYearId}
-                onChange={(e) => {
-                  setAcademicYearId(e.target.value);
+                onChange={(value) => {
+                  setAcademicYearId(String(value));
                   setSectionId("");
                 }}
                 disabled={!subjectId || sectionsLoading}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-[#282828] bg-white focus:outline-none appearance-none cursor-pointer disabled:bg-gray-50"
-              >
-                <option value="">Select year</option>
-                {availableYears.map((year) => (
-                  <option key={year.id} value={year.id}>
-                    {year.label}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </div>
-            </div>
+                placeholder="Select year"
+                options={availableYears.map((year) => ({ label: year.label, value: year.id }))}
+                theme="green"
+              />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-[#282828]">
               Section <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <select
+            <CustomDropdown
                 value={sectionId}
-                onChange={(e) => setSectionId(e.target.value)}
+                onChange={(value) => setSectionId(String(value))}
                 disabled={!academicYearId || sectionsLoading}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-[#282828] bg-white focus:outline-none appearance-none cursor-pointer disabled:bg-gray-50"
-              >
-                <option value="">Select section</option>
-                {sections.map((section) => (
-                  <option
-                    key={section.collegeSectionsId}
-                    value={section.collegeSectionsId}
-                  >
-                    {section.collegeSections}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </div>
-            </div>
+                placeholder={sectionsLoading ? "Loading..." : "Select section"}
+                options={sections.map((section) => ({ label: section.collegeSections, value: section.collegeSectionsId }))}
+                theme="green"
+              />
           </div>
         </div>
 

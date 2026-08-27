@@ -7,9 +7,7 @@ import { UserCircle, UsersThree, CaretLeft } from "@phosphor-icons/react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import AssignmentTable from "./components/assignmentTable";
-import CardComponent, {
-  CardProps,
-} from "@/app/(screens)/admin/assignments/[departmentId]/subject/[subjectId]/[assignmentId]/components/cardComponent";
+import CardComponent from "@/app/utils/card";
 import { supabase } from "@/lib/supabaseClient";
 
 function formatDate(value: number | string) {
@@ -71,37 +69,34 @@ export default function AdminAssignmentDetailPage() {
     }
   }
 
-  const cardData: CardProps[] = [
+  const cardData = [
     {
       value: assignment?.submissionDeadlineInt
         ? formatDate(assignment.submissionDeadlineInt)
         : "—",
       label: "Due Date",
       bgColor: "bg-[#E2DAFF]",
-      icon: <UsersThree />,
-      iconBgColor: "bg-[#714EF2]",
-      iconColor: "text-white",
+      icon: <UsersThree size={20} weight="fill" className="text-white" />,
+      iconBgColor: "#714EF2",
     },
     {
       value: assignment?.marks ? String(assignment.marks) : "—",
       label: "Total Marks",
       bgColor: "bg-[#FFEDDA]",
-      icon: <UsersThree />,
-      iconBgColor: "bg-[#FFBF79]",
-      iconColor: "text-white",
+      icon: <UsersThree size={20} weight="fill" className="text-white" />,
+      iconBgColor: "#FFBF79",
     },
     {
       value: assignment ? `${assignment.totalSubmitted}` : "—",
       label: "Total Submissions",
       bgColor: "bg-[#E6FBEA]",
-      icon: <UserCircle />,
-      iconBgColor: "bg-[#43C17A]",
-      iconColor: "text-white",
+      icon: <UserCircle size={20} weight="fill" className="text-white" />,
+      iconBgColor: "#43C17A",
     },
   ];
 
   return (
-    <main className="px-4 py-4 max-md:pb-20 min-h-screen bg-[#F3F6F9]">
+    <main className="px-4 py-4 max-md:pb-20 min-h-screen">
       <section className="mb-4 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-1">
@@ -123,8 +118,8 @@ export default function AdminAssignmentDetailPage() {
         </div>
       </section>
 
-      <section className="flex flex-col lg:flex-row items-stretch gap-4 w-full mb-3">
-        <div className="flex flex-col md:flex-row gap-4 flex-1 w-full">
+      <section className="flex flex-col lg:flex-row items-start gap-4 w-full mb-3">
+        <div className="flex flex-col md:flex-row gap-4 flex-[1.8] min-w-0 w-full md:h-32">
           {loading ? (
             <>
               {[1, 2, 3].map((i) => (
@@ -138,22 +133,31 @@ export default function AdminAssignmentDetailPage() {
             </>
           ) : (
             cardData.map((item, index) => (
-              <div key={index} className="flex-1 w-full">
-                <CardComponent {...item} />
+              <div key={index} className="flex-1 min-w-0">
+                <CardComponent
+                  icon={item.icon}
+                  value={item.value}
+                  label={item.label}
+                  iconBgColor={item.iconBgColor}
+                  style={`${item.bgColor} w-full`}
+                  textSize="whitespace-nowrap"
+                  iconStyle="rounded-lg"
+                />
               </div>
             ))
           )}
         </div>
-        <div className="hidden lg:block flex-[1.6]">
-          <WorkWeekCalendar style="h-full" />
+        <div className="hidden lg:block flex-[1.2] min-w-0 h-40">
+          <WorkWeekCalendar style="!h-40 w-full !max-w-none" />
         </div>
       </section>
 
-      <section className="w-full overflow-x-auto scrollbar-hide pb-2">
+      <section className="w-full pb-2">
         <AssignmentTable
           assignmentId={assignmentId as string}
           parentLoading={loading}
           assignmentExists={!!assignment}
+          totalMarks={Number(assignment?.marks) || 0}
         />
       </section>
     </main>

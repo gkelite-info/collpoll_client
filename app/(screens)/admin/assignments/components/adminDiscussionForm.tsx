@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { CaretLeftIcon, CloudArrowUp, FilePdf, Trash } from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
@@ -8,7 +8,9 @@ import { fetchDiscussionById, fetchExistingDiscussion, saveDiscussionForum } fro
 import { saveDiscussionSections, replaceDiscussionSections, fetchDiscussionSectionByDiscussionId } from "@/lib/helpers/discussionForum/discussionForumSectionsAPI";
 import { uploadDiscussionFiles } from "@/lib/helpers/discussionForum/discussionFileUploadStorageAPI";
 import { deactivateDiscussionFile, saveDiscussionFiles } from "@/lib/helpers/discussionForum/discussionFileUploadsAPI";
-import { FacultySectionRow, fetchFacultySections } from "@/lib/helpers/faculty/facultysectionsAPI";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
+import { useFacultyAssignmentsHierarchy } from "@/lib/helpers/faculty/assignment/useFacultyAssignmentsHierarchy";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export default function AdminDiscussionForm({ discussionId }: { discussionId?: number }) {
     const router = useRouter();
@@ -17,15 +19,11 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
     const { adminId } = useAdmin();
 
     const [initialLoading, setInitialLoading] = useState(!!discussionId);
-    const [sections, setSections] = useState<{ collegeSectionsId: number; collegeSections: string }[]>([]);
-    const [sectionsLoading, setSectionsLoading] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
     const [existingFiles, setExistingFiles] = useState<{ discussionFileUploadId: number; fileUrl: string }[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [loading, setLoading] = useState(false);
-    const [sectionOpen, setSectionOpen] = useState(false);
-    const sectionRef = useRef<HTMLDivElement>(null);
 
     const [form, setForm] = useState({
         title: "",
@@ -36,36 +34,65 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
     });
 
     const facultyId = searchParams.get("facultyId");
+    const numericFacultyId = facultyId ? Number(facultyId) : undefined;
+    const { data: hierarchyData = [], isLoading: hierarchyLoading } =
+        useFacultyAssignmentsHierarchy(numericFacultyId);
+    const [selectedEducationId, setSelectedEducationId] = useState<number | null>(null);
+    const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+    const [selectedYearId, setSelectedYearId] = useState<number | null>(null);
+    const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
+    const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+
+    const educations = useMemo(() => hierarchyData.map((item: any) => ({ value: item.collegeEducationId, label: item.educationType })), [hierarchyData]);
+    const educationNode = useMemo(() => hierarchyData.find((item: any) => item.collegeEducationId === selectedEducationId), [hierarchyData, selectedEducationId]);
+    const branches = useMemo(() => educationNode?.branches?.map((item: any) => ({ value: item.collegeBranchId, label: item.branchCode })) || [], [educationNode]);
+    const branchNode = useMemo(() => educationNode?.branches?.find((item: any) => item.collegeBranchId === selectedBranchId), [educationNode, selectedBranchId]);
+    const years = useMemo(() => branchNode?.years?.map((item: any) => ({ value: item.collegeAcademicYearId, label: item.yearName })) || [], [branchNode]);
+    const yearNode = useMemo(() => branchNode?.years?.find((item: any) => item.collegeAcademicYearId === selectedYearId), [branchNode, selectedYearId]);
+    const semesters = useMemo(() => yearNode?.semesters?.map((item: any) => ({ value: item.collegeSemesterId, label: item.semesterName })) || [], [yearNode]);
+    const semesterNode = useMemo(() => yearNode?.semesters?.find((item: any) => item.collegeSemesterId === selectedSemesterId), [yearNode, selectedSemesterId]);
+    const subjects = useMemo(() => semesterNode?.subjects?.map((item: any) => ({ value: item.collegeSubjectId, label: item.subjectName })) || [], [semesterNode]);
+    const subjectNode = useMemo(() => semesterNode?.subjects?.find((item: any) => item.collegeSubjectId === selectedSubjectId), [semesterNode, selectedSubjectId]);
+    const sectionOptions = useMemo(() => subjectNode?.sections?.map((item: any) => ({ value: String(item.collegeSectionsId), label: item.sectionName })) || [], [subjectNode]);
+    const isSchool = educationNode ? isSchoolEducation(educationNode.educationType) : false;
+    const isInter = educationNode?.educationType?.toUpperCase() === "INTER" || educationNode?.educationType?.toUpperCase() === "INTERMEDIATE";
 
     useEffect(() => {
-        const loadSections = async () => {
-            if (!facultyId || facultyId === "undefined" || facultyId === "null") return;
+        if (!discussionId && educations.length === 1 && !selectedEducationId) setSelectedEducationId(Number(educations[0].value));
+    }, [discussionId, educations, selectedEducationId]);
+    useEffect(() => {
+        if (!discussionId && branches.length === 1 && !selectedBranchId) setSelectedBranchId(Number(branches[0].value));
+    }, [discussionId, branches, selectedBranchId]);
+    useEffect(() => {
+        if (!discussionId && years.length === 1 && !selectedYearId) setSelectedYearId(Number(years[0].value));
+    }, [discussionId, years, selectedYearId]);
+    useEffect(() => {
+        if (!discussionId && semesters.length === 1 && !selectedSemesterId) setSelectedSemesterId(Number(semesters[0].value));
+    }, [discussionId, semesters, selectedSemesterId]);
+    useEffect(() => {
+        if (!discussionId && subjects.length === 1 && !selectedSubjectId) setSelectedSubjectId(Number(subjects[0].value));
+    }, [discussionId, subjects, selectedSubjectId]);
 
-            setSectionsLoading(true);
-            try {
-                const data: FacultySectionRow[] = await fetchFacultySections(Number(facultyId));
-
-                if (data && data.length > 0) {
-                    const formattedSections = data
-                        .map((item) => item.college_sections)
-                        .filter((section): section is { collegeSectionsId: number; collegeSections: string } =>
-                            section !== null
-                        );
-
-                    setSections(formattedSections);
-                } else {
-                    setSections([]);
+    useEffect(() => {
+        const requestedSubjectId = discussionId ? selectedSubjectId : Number(searchParams.get("subjectId"));
+        if (!requestedSubjectId || hierarchyData.length === 0) return;
+        for (const education of hierarchyData) {
+            for (const branch of education.branches || []) {
+                for (const year of branch.years || []) {
+                    for (const semester of year.semesters || []) {
+                        if (semester.subjects?.some((subject: any) => subject.collegeSubjectId === requestedSubjectId)) {
+                            setSelectedEducationId(education.collegeEducationId);
+                            setSelectedBranchId(branch.collegeBranchId);
+                            setSelectedYearId(year.collegeAcademicYearId);
+                            setSelectedSemesterId(semester.collegeSemesterId);
+                            setSelectedSubjectId(requestedSubjectId);
+                            return;
+                        }
+                    }
                 }
-            } catch (err) {
-                console.error("Failed to load sections using helper:", err);
-                toast.error("Failed to load sections");
-            } finally {
-                setSectionsLoading(false);
             }
-        };
-
-        loadSections();
-    }, [facultyId]);
+        }
+    }, [discussionId, hierarchyData, searchParams, selectedSubjectId]);
 
     useEffect(() => {
         const loadDiscussion = async () => {
@@ -83,6 +110,11 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                         (s: any) => String(s.collegeSectionsId)
                     ) || []
                 });
+                setSelectedEducationId(data.collegeEducationId ?? null);
+                setSelectedBranchId(data.collegeBranchId ?? null);
+                setSelectedYearId(data.collegeAcademicYearId ?? null);
+                setSelectedSemesterId(data.collegeSemesterId ?? null);
+                setSelectedSubjectId(data.collegeSubjectId ?? null);
 
                 setExistingFiles(data.discussion_file_uploads ?? []);
             } catch (err) {
@@ -94,16 +126,6 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
         loadDiscussion();
     }, [discussionId]);
 
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (sectionRef.current && !sectionRef.current.contains(e.target as Node)) {
-                setSectionOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
     const toggleSection = (sectionId: string) => {
         setForm(prev => ({
             ...prev,
@@ -111,6 +133,15 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                 ? prev.sections.filter((s: string) => s !== sectionId)
                 : [...prev.sections, sectionId]
         }));
+    };
+
+    const resetBelowEducation = () => {
+        setSelectedBranchId(null); setSelectedYearId(null); setSelectedSemesterId(null);
+        setSelectedSubjectId(null); setForm(prev => ({ ...prev, sections: [] }));
+    };
+    const resetBelowBranch = () => {
+        setSelectedYearId(null); setSelectedSemesterId(null); setSelectedSubjectId(null);
+        setForm(prev => ({ ...prev, sections: [] }));
     };
 
     const removeExistingFile = async (discussionFileUploadId: number) => {
@@ -135,6 +166,11 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
         if (!form.description) { toast.error("Description is required"); return; }
         if (!form.deadline) { toast.error("Deadline is required"); return; }
         if (!form.marks || Number(form.marks) <= 0) { toast.error("Please enter valid marks"); return; }
+        if (!selectedEducationId) { toast.error("Education is required"); return; }
+        if (!isSchool && !selectedBranchId) { toast.error(`${isInter ? "Group" : "Branch"} is required`); return; }
+        if (!selectedYearId) { toast.error("Academic year is required"); return; }
+        if (!isSchool && !isInter && !selectedSemesterId) { toast.error("Semester is required"); return; }
+        if (!selectedSubjectId) { toast.error("Subject is required"); return; }
         if (!form.sections || form.sections.length === 0) { toast.error("Please select at least one section"); return; }
 
         if (!discussionId) {
@@ -152,6 +188,11 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                 title: form.title,
                 description: form.description,
                 deadline: form.deadline,
+                collegeEducationId: selectedEducationId,
+                collegeBranchId: selectedBranchId,
+                collegeAcademicYearId: selectedYearId,
+                collegeSemesterId: selectedSemesterId,
+                collegeSubjectId: selectedSubjectId,
             },
                 {
                     adminId: adminId ?? undefined,
@@ -273,7 +314,7 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
     }
 
     return (
-        <div className="mx-auto flex flex-col h-full overflow-y-auto pb-10">
+        <div className="w-full mx-auto flex flex-col h-full overflow-y-auto pb-10">
             <div className="flex items-center gap-1 mb-4">
                 <button onClick={handleBack} className="cursor-pointer border-gray-100">
                     <CaretLeftIcon size={20} className="text-[#282828]" weight="bold" />
@@ -339,57 +380,80 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                         />
                     </div>
 
-                    <div className="flex flex-col gap-2" ref={sectionRef}>
-                        <label className="font-bold text-[#282828] text-sm">Section(s) <span className="text-red-500">*</span></label>
-                        <div className="relative">
-                            <button
-                                type="button"
-                                onClick={() => setSectionOpen(prev => !prev)}
-                                className="w-full border cursor-pointer border-gray-200 rounded-md px-4 py-2.5 text-sm outline-none focus:border-[#43C17A] text-gray-600 bg-white flex items-center justify-between"
-                            >
-                                <span className={form.sections.length === 0 ? "text-gray-400" : "text-gray-600"}>
-                                    {sectionsLoading
-                                        ? "Loading..."
-                                        : form.sections.length === 0
-                                            ? "Select Section(s)"
-                                            : form.sections.map((id: string) =>
-                                                sections.find(s => String(s.collegeSectionsId) === id)?.collegeSections ?? id
-                                            ).join(", ")}
-                                </span>
-                                <svg
-                                    className={`w-4 h-4 text-gray-400 transition-transform ${sectionOpen ? "rotate-180" : ""}`}
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
+                    <CustomDropdown
+                        label="Education *"
+                        value={selectedEducationId ?? ""}
+                        options={educations}
+                        onChange={(value) => { setSelectedEducationId(Number(value)); resetBelowEducation(); }}
+                        placeholder={hierarchyLoading ? "Loading..." : "Select Education"}
+                        disabled={hierarchyLoading}
+                        theme="green"
+                    />
 
-                            {sectionOpen && (
-                                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-md max-h-48 overflow-y-auto">
-                                    {sectionsLoading ? (
-                                        <div className="px-4 py-3 text-sm text-gray-400">Loading sections...</div>
-                                    ) : sections.length > 0 ? (
-                                        sections.map(section => (
-                                            <label
-                                                key={section.collegeSectionsId}
-                                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-sm text-gray-600"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={form.sections.includes(String(section.collegeSectionsId))}
-                                                    onChange={() => toggleSection(String(section.collegeSectionsId))}
-                                                    className="accent-[#43C17A] w-4 h-4 cursor-pointer"
-                                                />
-                                                {section.collegeSections}
-                                            </label>
-                                        ))
-                                    ) : (
-                                        <div className="px-4 py-3 text-sm text-gray-400">No sections found</div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    {!isSchool && (
+                        <CustomDropdown
+                            label={`${isInter ? "Group" : "Branch"} *`}
+                            value={selectedBranchId ?? ""}
+                            options={branches}
+                            onChange={(value) => { setSelectedBranchId(Number(value)); resetBelowBranch(); }}
+                            placeholder={`Select ${isInter ? "Group" : "Branch"}`}
+                            disabled={!selectedEducationId}
+                            theme="green"
+                        />
+                    )}
+
+                    <CustomDropdown
+                        label="Academic Year *"
+                        value={selectedYearId ?? ""}
+                        options={years}
+                        onChange={(value) => {
+                            setSelectedYearId(Number(value)); setSelectedSemesterId(null);
+                            setSelectedSubjectId(null); setForm(prev => ({ ...prev, sections: [] }));
+                        }}
+                        placeholder="Select Year"
+                        disabled={!selectedEducationId || (!isSchool && !selectedBranchId)}
+                        theme="green"
+                    />
+
+                    {!isSchool && !isInter && (
+                        <CustomDropdown
+                            label="Semester *"
+                            value={selectedSemesterId ?? ""}
+                            options={semesters}
+                            onChange={(value) => {
+                                setSelectedSemesterId(Number(value)); setSelectedSubjectId(null);
+                                setForm(prev => ({ ...prev, sections: [] }));
+                            }}
+                            placeholder="Select Semester"
+                            disabled={!selectedYearId}
+                            theme="green"
+                        />
+                    )}
+
+                    <CustomDropdown
+                        label="Subject *"
+                        value={selectedSubjectId ?? ""}
+                        options={subjects}
+                        onChange={(value) => {
+                            setSelectedSubjectId(Number(value));
+                            setForm(prev => ({ ...prev, sections: [] }));
+                        }}
+                        placeholder="Select Subject"
+                        disabled={!selectedYearId || (!isSchool && !isInter && !selectedSemesterId)}
+                        theme="green"
+                    />
+
+                    <CustomDropdown
+                        label="Section *"
+                        value=""
+                        options={sectionOptions}
+                        onChange={(value) => toggleSection(String(value))}
+                        placeholder="Select Section(s)"
+                        disabled={!selectedSubjectId}
+                        theme="green"
+                        isMultiSelect
+                        selectedValues={form.sections}
+                    />
                 </div>
             </div>
 
