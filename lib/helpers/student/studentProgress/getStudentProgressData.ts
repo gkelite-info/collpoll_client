@@ -6,19 +6,6 @@ const ATTENDED_STATUSES = ["PRESENT", "LATE"] as const;
 const CONDUCTED_STATUSES = ["PRESENT", "ABSENT", "LATE", "LEAVE"] as const;
 const CANCELLED_STATUSES = ["CLASS_CANCEL", "CANCEL_CLASS"] as const;
 
-type AttendanceRecordRow = {
-  calendarEventId: number;
-  status: string;
-  calendar_event: {
-    calendarEventId: number;
-    subject: number | null;
-    facultyId: number | null;
-    type: string;
-    date: string;
-    is_deleted: boolean | null;
-  } | null;
-};
-
 type SubjectRow = {
   collegeSubjectId: number;
   subjectName: string;
@@ -37,6 +24,7 @@ type AssignmentRow = {
 
 type SubmissionRow = {
   assignmentId: number;
+  file: string | null;
   feedback: string | null;
   marksScored: number | null;
   status: string | null;
@@ -60,6 +48,7 @@ type FacultySectionRow = {
 
 type DiscussionForumRow = {
   discussionId: number;
+  collegeSubjectId: number | null;
   createdBy: number | null;
 };
 
@@ -227,8 +216,20 @@ export async function getStudentProgressData(userId: number) {
   let subjectsQuery = supabase
     .from("college_subjects")
     .select("collegeSubjectId, subjectName, subjectKey")
+    .eq("collegeId", studentContext.collegeId)
+    .eq("collegeEducationId", studentContext.collegeEducationId)
     .filter("collegeBranchId", studentContext.collegeBranchId === null ? "is" : "eq", studentContext.collegeBranchId)
+    .eq("isActive", true)
     .is("deletedAt", null);
+
+  if (studentContext.collegeAcademicYearId !== null) {
+    subjectsQuery = subjectsQuery.eq(
+      "collegeAcademicYearId",
+      studentContext.collegeAcademicYearId,
+    );
+  } else {
+    subjectsQuery = subjectsQuery.is("collegeAcademicYearId", null);
+  }
 
   if (studentContext.collegeSemesterId !== null) {
     subjectsQuery = subjectsQuery.or(`collegeSemesterId.eq.${studentContext.collegeSemesterId},collegeSemesterId.is.null`);
@@ -347,7 +348,7 @@ export async function getStudentProgressData(userId: number) {
     )
     .eq("studentId", studentContext.studentId)
     .is("deletedAt", null)
-    .lte("markedAt", today)
+    .lte("markedAt", new Date().toISOString())
     .returns<Array<{
       calendarEventId: number;
       bulkCalendarEventId: number;
@@ -393,8 +394,11 @@ export async function getStudentProgressData(userId: number) {
 
     return (
       !!event &&
+      event.type === "class" &&
+      event.is_deleted === false &&
       !!eventDate && eventDate <= today &&
       !!event.subject &&
+      semesterSubjectIds.includes(event.subject) &&
       !isCancelledStatus(record.status)
     );
   });
@@ -415,7 +419,7 @@ export async function getStudentProgressData(userId: number) {
     }
   }
 
-  const conductedCount = attendedCount + absentCount;
+  const conductedCount = attendedCount + absentCount + leaveCount;
 
   const subjectAttendanceMap = new Map<
     number,
@@ -537,7 +541,7 @@ export async function getStudentProgressData(userId: number) {
   const { data: submissions, error: submissionsError } = assignmentIds.length
     ? await supabase
         .from("student_assignments_submission")
-        .select("assignmentId, feedback, marksScored, status")
+        .select("assignmentId, file, feedback, marksScored, status")
         .eq("studentId", studentContext.studentId)
         .is("deletedAt", null)
         .in("assignmentId", assignmentIds)
@@ -547,7 +551,9 @@ export async function getStudentProgressData(userId: number) {
   if (submissionsError) throw submissionsError;
 
   const submissionMap = new Map(
-    (submissions ?? []).map((submission) => [submission.assignmentId, submission]),
+    (submissions ?? [])
+      .filter((submission) => Boolean(submission.file?.trim()))
+      .map((submission) => [submission.assignmentId, submission]),
   );
 
   const assignmentsSummary = (assignments ?? []).map((assignment) => {
@@ -610,7 +616,7 @@ export async function getStudentProgressData(userId: number) {
   const { data: discussions, error: discussionsError } = facultyIds.length
     ? await supabase
         .from("discussion_forum")
-        .select("discussionId, createdBy")
+        .select("discussionId, collegeSubjectId, createdBy")
         .in("createdBy", facultyIds)
         .eq("is_deleted", false)
         .is("deletedAt", null)
@@ -776,16 +782,19 @@ export async function getStudentProgressData(userId: number) {
     const section = discussionSectionById.get(discussion.discussionId);
     if (!section) continue;
 
+    const directSubjectId = discussion.collegeSubjectId;
     const mappedSubjectIds = (
       subjectIdsByFacultyId.get(discussion.createdBy ?? -1) ?? []
     ).filter((subjectId) => semesterSubjectIds.includes(subjectId));
 
     const effectiveSubjectIds =
-      mappedSubjectIds.length === 1
-        ? mappedSubjectIds
-        : semesterSubjectIds.length === 1
-          ? [semesterSubjectIds[0]]
-          : [];
+      directSubjectId && semesterSubjectIds.includes(directSubjectId)
+        ? [directSubjectId]
+        : mappedSubjectIds.length === 1
+          ? mappedSubjectIds
+          : semesterSubjectIds.length === 1
+            ? [semesterSubjectIds[0]]
+            : [];
 
     if (!effectiveSubjectIds.length) continue;
 
@@ -856,12 +865,45 @@ export async function getStudentProgressData(userId: number) {
         total: 0,
       };
 
+    const subjectWeights = buildProgressWeightsFromConfigs(
+      (weightageConfigs ?? []).filter(
+        (config) => config.collegeSubjectId === subject.collegeSubjectId,
+      ),
+    );
+    const configuredWeightTotal =
+      subjectWeights.attendance +
+      subjectWeights.assignments +
+      subjectWeights.quiz +
+      subjectWeights.discussion;
+
     const attendancePercentage =
       attendanceStats.total > 0
         ? Math.round((attendanceStats.attended / attendanceStats.total) * 100)
         : 0;
     const subjectLabel =
       subject.subjectKey?.trim() || subject.subjectName;
+    const assignmentPercentage =
+      assignmentStats.possible > 0
+        ? (assignmentStats.obtained / assignmentStats.possible) * 100
+        : 0;
+    const quizPercentage =
+      quizStats.possible > 0
+        ? (quizStats.obtained / quizStats.possible) * 100
+        : 0;
+    const discussionPercentage =
+      discussionStats.total > 0
+        ? (discussionStats.obtained / discussionStats.total) * 100
+        : 0;
+    const configuredProgress =
+      configuredWeightTotal > 0
+        ? Math.round(
+            (attendancePercentage * subjectWeights.attendance +
+              assignmentPercentage * subjectWeights.assignments +
+              quizPercentage * subjectWeights.quiz +
+              discussionPercentage * subjectWeights.discussion) /
+              configuredWeightTotal,
+          )
+        : null;
 
     // Find assigned faculty from facultySectionRows
     const assignedSection = (facultySectionRows ?? []).find(
@@ -896,6 +938,7 @@ export async function getStudentProgressData(userId: number) {
           ? `${discussionStats.obtained}/${discussionStats.total}`
           : "-",
       progressPercent:
+        configuredProgress ??
         adminAcademicPerformanceBySubject.get(subjectLabel) ??
         adminAcademicPerformanceBySubject.get(
           subjectLabelById.get(subject.collegeSubjectId) ?? subject.subjectName,

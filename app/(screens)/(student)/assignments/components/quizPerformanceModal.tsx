@@ -43,8 +43,8 @@ export default function QuizPerformanceModal({ quiz }: { quiz: any }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
-          <div className="pointer-events-none mb-6">
-            <AttemptedQuizCard data={quiz} />
+          <div className="mb-6">
+            <AttemptedQuizCard data={quiz} interactive={false} />
           </div>
 
           <div className="flex flex-col items-center relative">

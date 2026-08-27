@@ -261,7 +261,7 @@ export default function AssignmentsRight() {
 
   return (
     <>
-      <div className="w-[32%] p-2 flex flex-col max-md:hidden">
+      <div className="w-[32%] self-stretch p-2 flex flex-col max-md:hidden">
         <CourseScheduleCard />
         <WorkWeekCalendar activeDate={selectedDate} onDateSelect={handleDateSelect} />
         <TaskPanel
@@ -278,7 +278,7 @@ export default function AssignmentsRight() {
         />
         <AnnouncementsCard
           announceCard={announcements}
-          height="60vh"
+          className="mt-5 flex-1 min-h-[345px]"
           onViewChange={(v) => setView(v)}
           refreshAnnouncements={fetchAnnouncements}
           readOnly={true}

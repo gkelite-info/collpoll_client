@@ -319,7 +319,13 @@ export default function QuizCard({ data }: { data: any }) {
   );
 }
 
-export function AttemptedQuizCard({ data }: { data: any }) {
+export function AttemptedQuizCard({
+  data,
+  interactive = true,
+}: {
+  data: any;
+  interactive?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -337,8 +343,8 @@ export function AttemptedQuizCard({ data }: { data: any }) {
     <>
       {/* 🖥️ DESKTOP VIEW */}
       <div
-        onClick={handleOpenModal}
-        className="hidden md:flex items-stretch cursor-pointer justify-between p-3.5 bg-[#E7E7E7] hover:bg-[#dfdfdf] transition-colors rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100 overflow-hidden"
+        onClick={interactive ? handleOpenModal : undefined}
+        className={`hidden md:flex items-stretch justify-between p-3.5 bg-[#E7E7E7] transition-colors rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100 overflow-hidden ${interactive ? "cursor-pointer hover:bg-[#dfdfdf]" : ""}`}
       >
         <div className="flex items-stretch gap-5 h-full w-full min-w-0">
           <div
@@ -430,8 +436,8 @@ export function AttemptedQuizCard({ data }: { data: any }) {
 
       {/* 📱 MOBILE VIEW */}
       <div
-        onClick={handleOpenModal}
-        className="md:hidden flex flex-col p-4 cursor-pointer bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 w-full"
+        onClick={interactive ? handleOpenModal : undefined}
+        className={`md:hidden flex flex-col p-4 bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 w-full ${interactive ? "cursor-pointer" : ""}`}
       >
         <div className="flex gap-3">
           <div

@@ -1,12 +1,15 @@
 "use client";
 import { SubjectDetailsCard } from "./subjectDetails";
 import { useCallback, useState, useMemo } from "react";
-import { FaChevronDown } from "react-icons/fa6";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/app/utils/Avatar";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+
+const SUBJECTS_PER_PAGE = 4;
 
 export type UnitTopic = {
   topicId: number;
@@ -59,6 +62,13 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
     normalizedEducationType !== "intermediate";
 
   const [selectedSubject, setSelectedSubject] = useState<string>("All");
+  const [selectedSemester, setSelectedSemester] = useState<string>(
+    subjectProps[0]?.semester != null ? String(subjectProps[0].semester) : "",
+  );
+  const [selectedYear, setSelectedYear] = useState<string>(
+    subjectProps[0]?.academicYear ?? "",
+  );
+  const [currentPage, setCurrentPage] = useState(1);
   const ballSize = "10px";
 
   const activeSubjectTitle = searchParams.get("subject");
@@ -84,14 +94,52 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
   };
 
   const filteredSubjects = useMemo(() => {
-    if (selectedSubject === "All") return subjectProps;
-    return subjectProps.filter((s) => s.subjectTitle === selectedSubject);
-  }, [subjectProps, selectedSubject]);
+    return subjectProps.filter(
+      (subject) =>
+        (selectedSubject === "All" || subject.subjectTitle === selectedSubject) &&
+        (!selectedSemester || String(subject.semester ?? "") === selectedSemester) &&
+        (!selectedYear || subject.academicYear === selectedYear),
+    );
+  }, [subjectProps, selectedSubject, selectedSemester, selectedYear]);
 
   const uniqueSubjects = useMemo(() => {
     const titles = new Set(subjectProps.map((s) => s.subjectTitle));
     return Array.from(titles);
   }, [subjectProps]);
+
+  const uniqueSemesters = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          subjectProps
+            .map((subject) => subject.semester)
+            .filter((semester): semester is number => semester != null),
+        ),
+      ),
+    [subjectProps],
+  );
+
+  const uniqueYears = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          subjectProps
+            .map((subject) => subject.academicYear)
+            .filter((year): year is string => Boolean(year)),
+        ),
+      ),
+    [subjectProps],
+  );
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredSubjects.length / SUBJECTS_PER_PAGE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedSubjects = filteredSubjects.slice(
+    (safeCurrentPage - 1) * SUBJECTS_PER_PAGE,
+    safeCurrentPage * SUBJECTS_PER_PAGE,
+  );
 
   if (activeSubjectData) {
     return (
@@ -113,22 +161,20 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
             <p className="text-[#525252] text-[12px] md:text-sm whitespace-nowrap">
               {t("Subject :")}
             </p>
-            <div className="relative flex items-center">
-              <select
+            <div className="w-[150px] md:w-[220px]">
+              <CustomDropdown
                 value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-                className="px-2 md:px-4 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-[11px] md:text-sm font-medium appearance-none pr-6 md:pr-8 cursor-pointer focus:outline-none max-w-[100px] md:max-w-[200px] truncate"
-              >
-                <option value="All">{t("All")}</option>
-                {uniqueSubjects.map((title) => (
-                  <option key={title} value={title}>
-                    {title}
-                  </option>
-                ))}
-              </select>
-              <span className="absolute right-2 md:right-3 pointer-events-none text-[#43C17A] text-[10px] md:text-xs">
-                <FaChevronDown />
-              </span>
+                onChange={(value) => {
+                  setSelectedSubject(String(value));
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: "All", label: t("All") },
+                  ...uniqueSubjects.map((title) => ({ value: title, label: title })),
+                ]}
+                theme="always-green"
+                className="rounded-full py-1"
+              />
             </div>
           </div>
 
@@ -137,10 +183,22 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
               <p className="text-[#525252] text-[12px] md:text-sm whitespace-nowrap">
                 {t("Semester :")}
               </p>
-              <div className="relative flex items-center">
-                <p className="px-2 md:px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-[11px] md:text-sm font-medium whitespace-nowrap">
-                  {subjectProps[0]?.semester || "N/A"}
-                </p>
+              <div className="w-[100px]">
+                <CustomDropdown
+                  value={selectedSemester}
+                  onChange={(value) => {
+                    setSelectedSemester(String(value));
+                    setCurrentPage(1);
+                  }}
+                  options={uniqueSemesters.map((semester) => ({
+                    value: String(semester),
+                    label: String(semester),
+                  }))}
+                  placeholder="N/A"
+                  disabled={uniqueSemesters.length === 0}
+                  theme="always-green"
+                  className="rounded-full py-1"
+                />
               </div>
             </div>
           )}
@@ -149,10 +207,19 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
             <p className="text-[#525252] text-[12px] md:text-sm whitespace-nowrap">
               {t("Year :")}
             </p>
-            <div className="relative flex items-center">
-              <p className="px-2 md:px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-[11px] md:text-sm font-medium whitespace-nowrap">
-                {subjectProps[0]?.academicYear || "N/A"}
-              </p>
+            <div className="w-[130px]">
+              <CustomDropdown
+                value={selectedYear}
+                onChange={(value) => {
+                  setSelectedYear(String(value));
+                  setCurrentPage(1);
+                }}
+                options={uniqueYears.map((year) => ({ value: year, label: year }))}
+                placeholder="N/A"
+                disabled={uniqueYears.length === 0}
+                theme="always-green"
+                className="rounded-full py-1"
+              />
             </div>
           </div>
         </div>
@@ -160,7 +227,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3">
         {filteredSubjects.length > 0 ? (
-          filteredSubjects.map((item, index) => {
+          paginatedSubjects.map((item, index) => {
             const percentage = item.percentage ?? 0;
 
             return (
@@ -277,6 +344,18 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
           </div>
         )}
       </div>
+
+      {filteredSubjects.length > 0 && (
+        <div className="mt-5 overflow-hidden rounded-xl border border-gray-100">
+          <Pagination
+            currentPage={safeCurrentPage}
+            totalItems={filteredSubjects.length}
+            itemsPerPage={SUBJECTS_PER_PAGE}
+            onPageChange={setCurrentPage}
+            alwaysShow
+          />
+        </div>
+      )}
     </>
   );
 }

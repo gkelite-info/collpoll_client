@@ -59,14 +59,33 @@ async function getAuthorizedStudent() {
 async function getTopicInCollege(topicId: number, collegeId: number) {
   const { data: topic, error } = await supabaseAdmin
     .from("college_subject_unit_topics")
-    .select("collegeSubjectUnitTopicId, collegeId")
+    .select(`
+      collegeSubjectUnitTopicId,
+      collegeId,
+      collegeSubjectId,
+      college_subjects:collegeSubjectId (
+        collegeId
+      )
+    `)
     .eq("collegeSubjectUnitTopicId", topicId)
-    .eq("collegeId", collegeId)
     .eq("isActive", true)
-    .is("deletedAt", null)
     .maybeSingle();
 
-  if (error || !topic) {
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!topic) {
+    throw new Error("Topic not found");
+  }
+
+  const subjectJoin = Array.isArray(topic.college_subjects)
+    ? topic.college_subjects[0]
+    : topic.college_subjects;
+  const belongsToStudentCollege =
+    topic.collegeId === collegeId || subjectJoin?.collegeId === collegeId;
+
+  if (!belongsToStudentCollege) {
     throw new Error("Topic not found");
   }
 
@@ -155,18 +174,22 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({ resources: data ?? [] });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Failed to load resources";
     const status =
-      error?.message === "Unauthorized"
+      message === "Unauthorized"
         ? 401
-        : error?.message === "Forbidden"
+        : message === "Forbidden"
           ? 403
-          : error?.message === "topicId is required"
+          : message === "topicId is required"
             ? 400
+            : message === "Topic not found" || message === "Resource not found"
+              ? 404
             : 500;
 
     return NextResponse.json(
-      { error: error?.message || "Failed to load resources" },
+      { error: message },
       { status },
     );
   }

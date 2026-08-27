@@ -18,6 +18,16 @@ import {
   saveStudentDiscussionUpload,
   uploadStudentDiscussionFiles,
 } from "@/lib/helpers/student/assignments/discussionForum/student_discussion_uploadsAPI";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+
+const MAX_DISCUSSION_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_DISCUSSION_FILES = 10;
+const DISCUSSION_FILES_PER_PAGE = 4;
+
+type ExistingDiscussionUpload = {
+  studentDiscussionUploadId: number;
+  fileUrl: string;
+};
 
 function useLockPageScroll() {
   useEffect(() => {
@@ -53,7 +63,30 @@ export function StudentDiscussionUploadModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { studentId } = useStudent();
   const [loading, setLoading] = useState(false);
-  const existingUploads = discussion.studentUploads ?? [];
+  const [currentPage, setCurrentPage] = useState(1);
+  const existingUploads: ExistingDiscussionUpload[] =
+    discussion.studentUploads ?? [];
+
+  const uploadItems = [
+    ...existingUploads.map((file) => ({
+      kind: "existing" as const,
+      file,
+    })),
+    ...files.map((file, index) => ({
+      kind: "new" as const,
+      file,
+      originalIndex: index,
+    })),
+  ];
+  const totalFilePages = Math.max(
+    1,
+    Math.ceil(uploadItems.length / DISCUSSION_FILES_PER_PAGE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalFilePages);
+  const paginatedUploadItems = uploadItems.slice(
+    (safeCurrentPage - 1) * DISCUSSION_FILES_PER_PAGE,
+    safeCurrentPage * DISCUSSION_FILES_PER_PAGE,
+  );
 
 
   const handleClose = () => {
@@ -71,6 +104,16 @@ export function StudentDiscussionUploadModal({
 
     if (!studentId) {
       toast.error("Student not found");
+      return;
+    }
+
+    if (files.some((file) => file.size > MAX_DISCUSSION_FILE_SIZE)) {
+      toast.error("Each file must not exceed 10 MB");
+      return;
+    }
+
+    if (existingUploads.length + files.length > MAX_DISCUSSION_FILES) {
+      toast.error("A discussion can have a maximum of 10 files");
       return;
     }
 
@@ -119,16 +162,43 @@ export function StudentDiscussionUploadModal({
     }
   };
 
+  const addValidatedFiles = useCallback((selectedFiles: File[]) => {
+    const sizeValidatedFiles = selectedFiles.filter(
+      (file) => file.size <= MAX_DISCUSSION_FILE_SIZE,
+    );
+
+    if (sizeValidatedFiles.length !== selectedFiles.length) {
+      toast.error("Each file must not exceed 10 MB");
+    }
+
+    const availableSlots = Math.max(
+      0,
+      MAX_DISCUSSION_FILES - existingUploads.length - files.length,
+    );
+    const filesToAdd = sizeValidatedFiles.slice(0, availableSlots);
+
+    if (filesToAdd.length !== sizeValidatedFiles.length) {
+      toast.error("A discussion can have a maximum of 10 files");
+    }
+
+    if (filesToAdd.length > 0) {
+      setFiles((prev) => [...prev, ...filesToAdd]);
+    }
+  }, [existingUploads.length, files.length]);
+
   const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.length)
-      setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+    if (e.target.files?.length) {
+      addValidatedFiles(Array.from(e.target.files));
+    }
+    e.target.value = "";
   };
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files?.length)
-      setFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files!)]);
-  }, []);
+    if (e.dataTransfer.files?.length) {
+      addValidatedFiles(Array.from(e.dataTransfer.files));
+    }
+  }, [addValidatedFiles]);
 
 
   return (
@@ -150,7 +220,7 @@ export function StudentDiscussionUploadModal({
           </button>
         </div>
 
-        <div className="flex flex-col gap-4 flex-1 min-h-0 overflow-hidden">
+        <div className="flex flex-col gap-4 flex-1 min-h-0 overflow-y-auto pr-2 custom-scrollbar">
           <input
             type="file"
             multiple
@@ -177,43 +247,30 @@ export function StudentDiscussionUploadModal({
             </p>
             <button
               onClick={() => fileInputRef.current?.click()}
+              type="button"
               className="bg-white border cursor-pointer border-gray-200 text-[#282828] px-5 py-2 rounded-md text-sm font-bold shadow-sm hover:bg-gray-50 transition-colors"
             >
               Browse Files
             </button>
+            <p className="text-xs text-gray-500">
+              Maximum file size: 10 MB per file
+            </p>
+            <p className="text-xs text-gray-500">
+              Maximum files per discussion: 10
+            </p>
           </div>
 
           {(existingUploads.length > 0 || files.length > 0) && (
-            <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-scroll pr-2 custom-scrollbar">
-              {existingUploads.map((file: any) => (
-                <a
-                  key={`existing-${file.studentDiscussionUploadId}`}
-                  href={file.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 border border-green-100 rounded-md p-3 bg-white shrink-0"
-                >
-                  <FilePdf
-                    size={24}
-                    weight="fill"
-                    className="text-red-500 flex-shrink-0"
-                  />
-                  <div className="flex flex-col overflow-hidden">
-                    <span className="text-sm font-medium text-[#282828] truncate">
-                      {file.fileUrl?.split("/").pop() ?? "Uploaded file"}
-                    </span>
-                    <span className="text-xs text-[#43C17A]">
-                      Uploaded
-                    </span>
-                  </div>
-                </a>
-              ))}
-              {files.map((file, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between border border-green-100 rounded-md p-3 bg-white"
-                >
-                  <div className="flex items-center gap-3 overflow-hidden">
+            <div className="flex flex-col gap-3">
+              {paginatedUploadItems.map((item) =>
+                item.kind === "existing" ? (
+                  <a
+                    key={`existing-${item.file.studentDiscussionUploadId}`}
+                    href={item.file.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 border border-green-100 rounded-md p-3 bg-white shrink-0"
+                  >
                     <FilePdf
                       size={24}
                       weight="fill"
@@ -221,23 +278,57 @@ export function StudentDiscussionUploadModal({
                     />
                     <div className="flex flex-col overflow-hidden">
                       <span className="text-sm font-medium text-[#282828] truncate">
-                        {file.name}
+                        {item.file.fileUrl?.split("/").pop() ?? "Uploaded file"}
                       </span>
-                      <span className="text-xs text-gray-400">
-                        {(file.size / 1024).toFixed(2)} KB
+                      <span className="text-xs text-[#43C17A]">
+                        Uploaded
                       </span>
                     </div>
-                  </div>
-                  <button
-                    onClick={() =>
-                      setFiles((prev) => prev.filter((_, i) => i !== idx))
-                    }
-                    className="p-1.5 text-red-500 bg-red-100 rounded transition-colors flex-shrink-0 cursor-pointer"
+                  </a>
+                ) : (
+                  <div
+                    key={`new-${item.file.name}-${item.file.lastModified}-${item.originalIndex}`}
+                    className="flex items-center justify-between border border-green-100 rounded-md p-3 bg-white"
                   >
-                    <Trash size={18} />
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <FilePdf
+                        size={24}
+                        weight="fill"
+                        className="text-red-500 flex-shrink-0"
+                      />
+                      <div className="flex flex-col overflow-hidden">
+                        <span className="text-sm font-medium text-[#282828] truncate">
+                          {item.file.name}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {(item.file.size / 1024).toFixed(2)} KB
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() =>
+                        setFiles((prev) =>
+                          prev.filter((_, i) => i !== item.originalIndex),
+                        )
+                      }
+                      className="p-1.5 text-red-500 bg-red-100 rounded transition-colors flex-shrink-0 cursor-pointer"
+                    >
+                      <Trash size={18} />
+                    </button>
+                  </div>
+                ),
+              )}
+
+              <div className="overflow-hidden rounded-xl border border-gray-100">
+                <Pagination
+                  currentPage={safeCurrentPage}
+                  totalItems={uploadItems.length}
+                  itemsPerPage={DISCUSSION_FILES_PER_PAGE}
+                  onPageChange={setCurrentPage}
+                  alwaysShow
+                  bgClassName="bg-white border-0"
+                />
+              </div>
             </div>
           )}
         </div>
