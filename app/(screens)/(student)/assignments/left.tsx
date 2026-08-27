@@ -976,7 +976,7 @@ function AssignmentsLeftContent() {
           {activeTab === "quiz" && (
             <>
               {quizView === "ongoing" && (
-                <div className="flex flex-col h-full">
+                <div className="flex flex-col">
                   {quizzesLoading ||
                   quizSubTabLoading ||
                   loadedQuizQueryKey !== quizQueryKey ||
@@ -1020,7 +1020,7 @@ function AssignmentsLeftContent() {
               )}
 
               {quizView === "attempted" && (
-                <div className="flex flex-col h-full">
+                <div className="flex flex-col">
                   {quizzesLoading ||
                   quizSubTabLoading ||
                   loadedQuizQueryKey !== quizQueryKey ||
@@ -1242,7 +1242,7 @@ export default function AssignmentsLeft() {
 
 export function Assignments() {
   return (
-    <div className="flex items-start justify-between">
+    <div className="flex items-stretch justify-between">
       <AssignmentsLeft />
       <div className="hidden lg:block w-[30%]">
         <AssignmentsRight />

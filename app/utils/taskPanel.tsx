@@ -78,6 +78,8 @@ export default function TaskPanel({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [taskToDeleteId, setTaskToDeleteId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const taskListRef = useRef<HTMLDivElement>(null);
+  const [hasTaskOverflow, setHasTaskOverflow] = useState(false);
   const t = useTranslations("Dashboard.student");
   const queryClient = useQueryClient();
 
@@ -346,6 +348,25 @@ export default function TaskPanel({
         ? (selectedDate ? calendarStudentTasks : studentTasks)
         : dbFacultyTasks;
 
+  useEffect(() => {
+    const taskList = taskListRef.current;
+    if (!taskList) return;
+
+    const updateOverflow = () => {
+      setHasTaskOverflow(taskList.scrollHeight > taskList.clientHeight);
+    };
+
+    updateOverflow();
+    const observer = new ResizeObserver(updateOverflow);
+    observer.observe(taskList);
+    window.addEventListener("resize", updateOverflow);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateOverflow);
+    };
+  }, [tasksToShow, loading, isCalendarLoading, isDbFacultyLoading]);
+
   const formatDateToDMY = (dateStr: string) => {
     if (!dateStr) return "";
     const parts = dateStr.split("-");
@@ -481,7 +502,10 @@ export default function TaskPanel({
             </button>
           </div>
         )}
-        <div className="max-h-[240px] overflow-y-auto pr-1 custom-scrollbar">
+        <div
+          ref={taskListRef}
+          className={`h-[240px] overflow-y-auto pr-1 ${hasTaskOverflow ? "custom-scrollbar" : ""}`}
+        >
           {(loading || isCalendarLoading || isDbFacultyLoading || (enableInfiniteScroll && role === "faculty" && isInfiniteFacultyPending)) && tasksToShow.length === 0 ? (
             <>
               <TaskCardShimmer />

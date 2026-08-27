@@ -28,6 +28,9 @@ import {
 } from "@phosphor-icons/react";
 import { AttemptedQuizCard } from "./quizCard";
 import { useTranslations } from "next-intl";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+
+const QUESTIONS_PER_PAGE = 5;
 
 function QuizExitWarningModal({
   countdown,
@@ -210,6 +213,8 @@ function QuizAttemptScreenContent({
   const [attemptCount, setAttemptCount] = useState(0);
   const [alreadyAttempted, setAlreadyAttempted] = useState(false);
   const [showRefreshModal, setShowRefreshModal] = useState(false);
+  const [questionPage, setQuestionPage] = useState(1);
+  const questionListRef = useRef<HTMLDivElement>(null);
 
   const [showExitWarningModal, setShowExitWarningModal] = useState(false);
   const [warningCountdown, setWarningCountdown] = useState(10);
@@ -302,7 +307,7 @@ function QuizAttemptScreenContent({
 
     if (isSubmittingRef.current) return;
 
-    toast(t("Checking connection..."), { icon: "⏳", id: "submitting" });
+    toast(t("Checking connection"), { icon: "⏳", id: "submitting" });
     const isOnline = await waitForNetwork(10000);
     toast.dismiss("submitting");
 
@@ -438,6 +443,7 @@ function QuizAttemptScreenContent({
         setQuizMeta(quizData);
         quizMetaRef.current = quizData;
         setQuestions(questionsData);
+        setQuestionPage(1);
         questionsRef.current = questionsData;
         setAttemptCount(count);
         attemptCountRef.current = count;
@@ -720,6 +726,10 @@ function QuizAttemptScreenContent({
   const progressCount = Object.keys(answers).length;
   const progressPercentage =
     questions.length > 0 ? (progressCount / questions.length) * 100 : 0;
+  const paginatedQuestions = questions.slice(
+    (questionPage - 1) * QUESTIONS_PER_PAGE,
+    questionPage * QUESTIONS_PER_PAGE,
+  );
 
   if (showRefreshModal) {
     return (
@@ -830,8 +840,11 @@ function QuizAttemptScreenContent({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto max-h-[60vh] pb-5 space-y-4 focus:outline-none">
-        {questions.map((q) => (
+      <div
+        ref={questionListRef}
+        className="flex-1 overflow-y-auto max-h-[60vh] pb-5 space-y-4 focus:outline-none"
+      >
+        {paginatedQuestions.map((q) => (
           <div
             key={q.questionId}
             className="bg-white p-5 rounded-xl shadow-sm border border-gray-100"
@@ -902,6 +915,21 @@ function QuizAttemptScreenContent({
           </div>
         ))}
       </div>
+
+      {questions.length > 0 && (
+        <Pagination
+          currentPage={questionPage}
+          totalItems={questions.length}
+          itemsPerPage={QUESTIONS_PER_PAGE}
+          onPageChange={(page) => {
+            setQuestionPage(page);
+            questionListRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          disabled={isSubmitting}
+          alwaysShow
+          bgClassName="bg-transparent border-0"
+        />
+      )}
 
       <div className="pt-4 flex justify-end">
         <button

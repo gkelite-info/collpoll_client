@@ -1,6 +1,5 @@
 "use client";
 
-import { CaretDownIcon } from "@phosphor-icons/react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
@@ -63,13 +62,9 @@ export function AssignmentsSummaryTable({
         </h2>
         {showSemester &&
           <div className="flex justify-end">
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded-lg bg-[#43C17A] px-4 py-2 text-sm font-medium text-white max-md:px-3 max-md:py-1.5 max-md:text-xs max-md:rounded-md shadow-sm"
-            >
+            <div className="flex items-center rounded-lg bg-[#43C17A] px-4 py-2 text-sm font-medium text-white max-md:px-3 max-md:py-1.5 max-md:text-xs max-md:rounded-md shadow-sm">
               {semesterLabel}
-              <CaretDownIcon size={16} weight="bold" />
-            </button>
+            </div>
           </div>
         }
       </div>

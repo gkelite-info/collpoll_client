@@ -15,6 +15,9 @@ import {
   type StudentTopicResource,
 } from "@/lib/helpers/student/academics/topicResources";
 import { useTranslations } from "next-intl";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+
+const RESOURCES_PER_PAGE = 4;
 
 type TopicPdfViewModalProps = {
   isOpen: boolean;
@@ -74,6 +77,7 @@ export function TopicPdfViewModal({
   const [loadingResources, setLoadingResources] = useState(false);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (!isOpen || !topicId) return;
@@ -85,13 +89,16 @@ export function TopicPdfViewModal({
         const data = await getStudentTopicResources(topicId);
         if (!cancelled) {
           setResources(data);
+          setCurrentPage(1);
           setSelectedResourceIds(
             data.length > 0 ? [data[0].collegeSubjectUnitTopicResourceId] : [],
           );
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!cancelled) {
-          toast.error(err?.message ?? t("Failed to load PDFs"));
+          toast.error(
+            err instanceof Error ? err.message : t("Failed to load PDFs"),
+          );
         }
       } finally {
         if (!cancelled) {
@@ -105,15 +112,7 @@ export function TopicPdfViewModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, topicId]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setResources([]);
-      setDownloadingId(null);
-      setSelectedResourceIds([]);
-    }
-  }, [isOpen]);
+  }, [isOpen, topicId, t]);
 
   const toggleSelectedResource = (resourceId: number) => {
     setSelectedResourceIds((prev) =>
@@ -147,8 +146,10 @@ export function TopicPdfViewModal({
       link.click();
       link.remove();
       URL.revokeObjectURL(objectUrl);
-    } catch (error: any) {
-      toast.error(error?.message || t("Failed to download file"));
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : t("Failed to download file"),
+      );
     } finally {
       setDownloadingId(null);
     }
@@ -159,13 +160,22 @@ export function TopicPdfViewModal({
   const selectedResources = resources.filter((resource) =>
     selectedResourceIds.includes(resource.collegeSubjectUnitTopicResourceId),
   );
+  const totalPages = Math.max(
+    1,
+    Math.ceil(resources.length / RESOURCES_PER_PAGE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedResources = resources.slice(
+    (safeCurrentPage - 1) * RESOURCES_PER_PAGE,
+    safeCurrentPage * RESOURCES_PER_PAGE,
+  );
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 flex flex-col max-h-[90vh]">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 h-[720px] max-h-[90vh] overflow-hidden flex flex-col">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition z-10 cursor-pointer"
@@ -177,7 +187,7 @@ export function TopicPdfViewModal({
           <ModalShimmer />
         ) : (
           <>
-            <div className="flex flex-col gap-5 p-6 overflow-y-auto flex-1 min-h-0">
+            <div className="flex flex-col gap-5 p-6 overflow-y-auto flex-1 min-h-0 custom-scrollbar">
               <h2 className="text-base font-semibold text-gray-800 flex flex-wrap items-center gap-1 pr-6">
                 <span className="text-[#7E5DFF]">{unitLabel}</span>
                 <span className="text-gray-400">→</span>
@@ -192,8 +202,8 @@ export function TopicPdfViewModal({
                 </p>
 
                 {resources.length > 0 ? (
-                  <ul className="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
-                    {resources.map((resource) => {
+                  <ul className="flex flex-col gap-2 pr-1">
+                    {paginatedResources.map((resource) => {
                       const isDownloading =
                         downloadingId ===
                         resource.collegeSubjectUnitTopicResourceId;
@@ -253,6 +263,19 @@ export function TopicPdfViewModal({
                 ) : (
                   <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-8 text-center text-sm text-gray-400">
                     {t("No PDFs uploaded for this topic yet")}
+                  </div>
+                )}
+
+                {resources.length > 0 && (
+                  <div className="mt-2 overflow-hidden rounded-xl border border-gray-100">
+                    <Pagination
+                      currentPage={safeCurrentPage}
+                      totalItems={resources.length}
+                      itemsPerPage={RESOURCES_PER_PAGE}
+                      onPageChange={setCurrentPage}
+                      alwaysShow
+                      bgClassName="bg-white border-0"
+                    />
                   </div>
                 )}
               </div>

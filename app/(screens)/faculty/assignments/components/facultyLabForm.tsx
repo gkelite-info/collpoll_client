@@ -156,15 +156,34 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
     const availableEducationTypes = useMemo(() => {
         const typesMap = new Map();
         assignedData.forEach((s) => {
-            if (s.collegeEducationId && s.faculty_edu_type) {
-                typesMap.set(s.collegeEducationId, {
-                    id: String(s.collegeEducationId),
-                    name: s.faculty_edu_type.collegeEducationType,
+            const id = s.collegeEducationId ?? faculty.collegeEducationId;
+            const fallbackName = faculty.faculty_edu_type?.includes(",")
+                ? null
+                : faculty.faculty_edu_type;
+            const name = s.faculty_edu_type?.collegeEducationType ?? fallbackName;
+
+            if (id && name) {
+                typesMap.set(id, {
+                    id: String(id),
+                    name,
                 });
             }
         });
+
+        if (
+            typesMap.size === 0 &&
+            faculty.collegeEducationId &&
+            faculty.faculty_edu_type &&
+            !faculty.faculty_edu_type.includes(",")
+        ) {
+            typesMap.set(faculty.collegeEducationId, {
+                id: String(faculty.collegeEducationId),
+                name: faculty.faculty_edu_type,
+            });
+        }
+
         return Array.from(typesMap.values());
-    }, [assignedData]);
+    }, [assignedData, faculty.collegeEducationId, faculty.faculty_edu_type]);
 
     const isSchool = useMemo(() => {
         if (!educationTypeId) {
@@ -189,15 +208,35 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
         if (!educationTypeId) return [];
         const branchesMap = new Map();
         assignedData.forEach((s) => {
-            if (String(s.collegeEducationId) === educationTypeId && s.collegeBranchId && s.college_branch) {
-                branchesMap.set(s.collegeBranchId, {
-                    id: String(s.collegeBranchId),
-                    name: s.college_branch.collegeBranchCode,
+            const assignedEducationId = s.collegeEducationId ?? faculty.collegeEducationId;
+            const assignedBranchId = s.collegeBranchId ?? faculty.collegeBranchId;
+            const fallbackBranchName = faculty.college_branch?.includes(",")
+                ? null
+                : faculty.college_branch;
+            const branchName = s.college_branch?.collegeBranchCode ?? fallbackBranchName;
+
+            if (String(assignedEducationId) === educationTypeId && assignedBranchId && branchName) {
+                branchesMap.set(assignedBranchId, {
+                    id: String(assignedBranchId),
+                    name: branchName,
                 });
             }
         });
+
+        if (
+            branchesMap.size === 0 &&
+            faculty.collegeBranchId &&
+            faculty.college_branch &&
+            !faculty.college_branch.includes(",")
+        ) {
+            branchesMap.set(faculty.collegeBranchId, {
+                id: String(faculty.collegeBranchId),
+                name: faculty.college_branch,
+            });
+        }
+
         return Array.from(branchesMap.values());
-    }, [educationTypeId, isSchool, assignedData]);
+    }, [educationTypeId, isSchool, assignedData, faculty.collegeEducationId, faculty.collegeBranchId, faculty.college_branch]);
 
     const availableYears = useMemo(() => {
         const targetEduId = educationTypeId || (availableEducationTypes.length === 1 ? String(availableEducationTypes[0].id) : "");
@@ -205,9 +244,11 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
         
         const yearsMap = new Map();
         assignedData.forEach((s) => {
+            const assignedEducationId = s.collegeEducationId ?? faculty.collegeEducationId;
+            const assignedBranchId = s.collegeBranchId ?? faculty.collegeBranchId;
             if (
-                (!targetEduId || String(s.collegeEducationId) === targetEduId) &&
-                (isSchool || !branchId || String(s.collegeBranchId) === branchId)
+                (!targetEduId || String(assignedEducationId) === targetEduId) &&
+                (isSchool || !branchId || String(assignedBranchId) === branchId)
             ) {
                 const yearObj = faculty.collegeAcademicYears?.find(y => y.collegeAcademicYearId === s.collegeAcademicYearId);
                 yearsMap.set(s.collegeAcademicYearId, {
@@ -217,7 +258,7 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
             }
         });
         return Array.from(yearsMap.values());
-    }, [educationTypeId, branchId, isSchool, availableEducationTypes, assignedData, faculty.collegeAcademicYears]);
+    }, [educationTypeId, branchId, isSchool, availableEducationTypes, assignedData, faculty.collegeAcademicYears, faculty.collegeEducationId, faculty.collegeBranchId]);
 
     const availableSubjects = useMemo(() => {
         if (!academicYearId) return [];
@@ -225,9 +266,11 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
         
         const subjectsMap = new Map();
         assignedData.forEach((s) => {
+            const assignedEducationId = s.collegeEducationId ?? faculty.collegeEducationId;
+            const assignedBranchId = s.collegeBranchId ?? faculty.collegeBranchId;
             if (
-                (!targetEduId || String(s.collegeEducationId) === targetEduId) &&
-                (isSchool || !branchId || String(s.collegeBranchId) === branchId) &&
+                (!targetEduId || String(assignedEducationId) === targetEduId) &&
+                (isSchool || !branchId || String(assignedBranchId) === branchId) &&
                 String(s.collegeAcademicYearId) === academicYearId &&
                 s.collegeSubjectId && s.faculty_subject
             ) {
@@ -238,7 +281,7 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
             }
         });
         return Array.from(subjectsMap.values());
-    }, [educationTypeId, branchId, academicYearId, isSchool, availableEducationTypes, assignedData]);
+    }, [educationTypeId, branchId, academicYearId, isSchool, availableEducationTypes, assignedData, faculty.collegeEducationId, faculty.collegeBranchId]);
 
     const availableSections = useMemo(() => {
         if (!subjectId) return [];
@@ -246,9 +289,11 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
         
         const sectionsMap = new Map();
         assignedData.forEach((s) => {
+            const assignedEducationId = s.collegeEducationId ?? faculty.collegeEducationId;
+            const assignedBranchId = s.collegeBranchId ?? faculty.collegeBranchId;
             if (
-                (!targetEduId || String(s.collegeEducationId) === targetEduId) &&
-                (isSchool || !branchId || String(s.collegeBranchId) === branchId) &&
+                (!targetEduId || String(assignedEducationId) === targetEduId) &&
+                (isSchool || !branchId || String(assignedBranchId) === branchId) &&
                 String(s.collegeAcademicYearId) === academicYearId &&
                 String(s.collegeSubjectId) === subjectId &&
                 s.collegeSectionsId
@@ -260,7 +305,7 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
             }
         });
         return Array.from(sectionsMap.values());
-    }, [educationTypeId, branchId, academicYearId, subjectId, isSchool, availableEducationTypes, assignedData]);
+    }, [educationTypeId, branchId, academicYearId, subjectId, isSchool, availableEducationTypes, assignedData, faculty.collegeEducationId, faculty.collegeBranchId]);
 
     const handleBack = () => {
         const params = new URLSearchParams(searchParams.toString());
@@ -438,7 +483,7 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
                             onChange={(value) => handleEducationTypeChange(String(value))}
                             options={availableEducationTypes.map(edu => ({ value: edu.id, label: edu.name }))}
                             placeholder={isLoadingSubjects || isLoadingSections ? "Loading..." : "Select type"}
-                            disabled={isLoadingSubjects || isLoadingSections || availableEducationTypes.length <= 1}
+                            disabled={isLoadingSubjects || isLoadingSections || availableEducationTypes.length === 0}
                             theme="green"
                             className="rounded-lg py-2.5"
                         />
