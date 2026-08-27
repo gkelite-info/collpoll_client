@@ -14,11 +14,25 @@ import ConfirmDeleteModal from "../../../calendar/components/ConfirmDeleteModal"
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { Suspense } from "react";
+
 type Tab = "logo" | "banner";
 
-export default function CollegeMediaStructure() {
-  const [activeTab, setActiveTab] = useState<Tab>("logo");
-  const [isFetching, setIsFetching] = useState(true);
+function CollegeMediaStructureContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const activeTab = (searchParams.get("mediaTab") as Tab) || "logo";
+
+  const setActiveTab = (tab: Tab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("mediaTab", tab);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
   const [isSaving, setIsSaving] = useState(false);
 
   const [mediaId, setMediaId] = useState<number | undefined>(undefined);
@@ -41,30 +55,36 @@ export default function CollegeMediaStructure() {
     { id: "banner", label: "Banner" },
   ];
 
-  useEffect(() => {
-    fetchMediaData();
-  }, [userId]);
-
-  const fetchMediaData = async () => {
-    if (!userId) return;
-    try {
-      setIsFetching(true);
+  const {
+    data: mediaData,
+    isLoading: isFetching,
+    refetch: refetchMedia,
+  } = useQuery({
+    queryKey: ["collegeMedia", userId],
+    queryFn: async () => {
+      if (!userId) return null;
       const { collegeId } = await fetchAdminContext(userId);
       const res = await getCollegeMedia(collegeId);
+      return res;
+    },
+    enabled: !!userId,
+  });
 
-      if (res.success && res.data) {
-        setMediaId(res.data.collegeMediaId);
-        setLogoUrl(res.data.logoUrl || null);
-        setBannerUrl(res.data.bannerUrl || null);
-        setOriginalLogo(res.data.logoUrl || null);
-        setOriginalBanner(res.data.bannerUrl || null);
+  useEffect(() => {
+    if (mediaData?.success && mediaData.data) {
+      setMediaId(mediaData.data.collegeMediaId);
+      // Only set these if the user hasn't made local changes (or if we want to reset)
+      // If we just saved, we want to update everything.
+      if (!logoFile) {
+        setLogoUrl(mediaData.data.logoUrl || null);
       }
-    } catch (error) {
-      toast.error(`Failed to load ${isSchool ? "school" : "college"} media`, { id: "media-load-err" });
-    } finally {
-      setIsFetching(false);
+      if (!bannerFile) {
+        setBannerUrl(mediaData.data.bannerUrl || null);
+      }
+      setOriginalLogo(mediaData.data.logoUrl || null);
+      setOriginalBanner(mediaData.data.bannerUrl || null);
     }
-  };
+  }, [mediaData, logoFile, bannerFile]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -162,6 +182,7 @@ export default function CollegeMediaStructure() {
           setLogoUrl(null);
           setOriginalLogo(null);
           if (res.data?.collegeMediaId) setMediaId(res.data.collegeMediaId);
+          refetchMedia();
           toast.dismiss(toastId);
           toast.success("Logo removed successfully", { id: `logo-rm-db-success-${Date.now()}` });
         } else {
@@ -185,6 +206,7 @@ export default function CollegeMediaStructure() {
           setBannerUrl(null);
           setOriginalBanner(null);
           if (res.data?.collegeMediaId) setMediaId(res.data.collegeMediaId);
+          refetchMedia();
           toast.dismiss(toastId);
           toast.success("Banner removed successfully", { id: `banner-rm-db-success-${Date.now()}` });
         } else {
@@ -248,6 +270,7 @@ export default function CollegeMediaStructure() {
 
       toast.dismiss(toastId);
       toast.success(`${isSchool ? "School" : "College"} media saved successfully`, { id: `media-save-success-${Date.now()}` });
+      refetchMedia();
 
       if (res.data) {
         setMediaId(res.data.collegeMediaId);
@@ -308,7 +331,7 @@ export default function CollegeMediaStructure() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto flex flex-col items-center gap-8">
+      <div className="max-w-3xl mx-auto flex flex-col items-center gap-8 min-h-[350px]">
         {!currentUrl && (
           <div className="w-full max-w-md">
             <input
@@ -401,5 +424,13 @@ export default function CollegeMediaStructure() {
         actionType="remove"
       />
     </div>
+  );
+}
+
+export default function CollegeMediaStructure() {
+  return (
+    <Suspense fallback={<div className="min-h-[500px] flex items-center justify-center"><Loader2 className="w-8 h-8 text-[#43C17A] animate-spin" /></div>}>
+      <CollegeMediaStructureContent />
+    </Suspense>
   );
 }

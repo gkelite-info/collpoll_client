@@ -4,8 +4,10 @@ import { PencilSimpleIcon } from "@phosphor-icons/react";
 import ClubsListShimmer from "../shimmers/ClubsListShimmer";
 import toast from "react-hot-toast";
 import { getAllClubsAPI } from "@/lib/helpers/clubActivity/adminClubsAPI";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/app/utils/context/UserContext";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { Pagination } from "../../academic-setup/components/pagination";
 import { Avatar } from "@/app/utils/Avatar";
 
@@ -15,34 +17,29 @@ interface ClubsListProps {
 }
 
 export default function ClubsList({ onEdit, onView }: ClubsListProps) {
-    const { collegeId } = useUser();
-    const [clubs, setClubs] = useState<any[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const { collegeId, loading: userLoading } = useUser();
+    const { loading: adminLoading } = useAdmin();
     const [currentPage, setCurrentPage] = useState(1);
-    const [totalItems, setTotalItems] = useState(0);
     const ITEMS_PER_PAGE = 15;
 
-    useEffect(() => {
-        if (!collegeId) return;
+    const { data, isLoading, isError } = useQuery({
+        queryKey: ['admin-clubs', collegeId, currentPage, ITEMS_PER_PAGE],
+        queryFn: async () => {
+            if (!collegeId) throw new Error("No college ID");
+            return await getAllClubsAPI(parseInt(collegeId.toString(), 10), currentPage, ITEMS_PER_PAGE);
+        },
+        enabled: !!collegeId,
+    });
 
-        const fetchClubs = async () => {
-            try {
-                setIsLoading(true);
-                const response = await getAllClubsAPI(parseInt(collegeId.toString(), 10), currentPage, ITEMS_PER_PAGE);
-                setClubs(response.data);
-                setTotalItems(response.total);
-            } catch (error) {
-                toast.error("Failed to load clubs.");
-            } finally {
-                setIsLoading(false);
-            }
-        };
+    const clubs = data?.data || [];
+    const totalItems = data?.total || 0;
 
-        fetchClubs();
-    }, [collegeId, currentPage]);
-
-    if (isLoading) {
+    if (isLoading || userLoading || adminLoading) {
         return <ClubsListShimmer />;
+    }
+
+    if (isError) {
+        toast.error("Failed to load clubs.");
     }
 
     if (clubs.length === 0) {
@@ -94,16 +91,15 @@ export default function ClubsList({ onEdit, onView }: ClubsListProps) {
                     </div>
                 })}
             </div>
-            {totalItems > 0 && (
-                <div className="w-full mt-auto">
-                    <Pagination
-                        currentPage={currentPage}
-                        totalItems={totalItems}
-                        itemsPerPage={ITEMS_PER_PAGE}
-                        onPageChange={(page) => setCurrentPage(page)}
-                    />
-                </div>
-            )}
+            <div className="w-full mt-auto">
+                <Pagination
+                    currentPage={currentPage}
+                    totalItems={totalItems}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    onPageChange={(page) => setCurrentPage(page)}
+                    alwaysShow={true}
+                />
+            </div>
         </div>
     );
 }

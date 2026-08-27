@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import ConfirmDeleteModal from "../../calendar/components/ConfirmDeleteModal";
 import { Trash } from "@phosphor-icons/react";
 import { SearchableUserDropdown } from "./CustomDropdown";
@@ -24,8 +25,8 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isImageDeleteModalOpen, setIsImageDeleteModalOpen] = useState(false);
     const [isRemovingImage, setIsRemovingImage] = useState(false);
-    const [isFetching, setIsFetching] = useState(!!editId);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const queryClient = useQueryClient();
 
     const [formData, setFormData] = useState({
         title: "",
@@ -85,6 +86,43 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
         }
     };
 
+    const createMutation = useMutation({
+        mutationFn: (payload: any) => createClub(payload, selectedFile || undefined),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-clubs'] });
+            toast.success("Club created successfully!");
+            setFormData({
+                title: "",
+                president: null,
+                vicePresident: null,
+                mentors: [],
+                faculty: null,
+            });
+            setLogoPreview(null);
+            setOriginalLogoUrl(null);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+            router.push("/admin/clubs?tab=view");
+        },
+        onError: () => {
+            toast.error("Failed to save club");
+        }
+    });
+
+    const updateMutation = useMutation({
+        mutationFn: (payload: any) => updateClub(parseInt(rawEditId!, 10), payload, selectedFile || undefined, selectedFile ? null : logoPreview, originalLogoUrl),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-clubs'] });
+            queryClient.invalidateQueries({ queryKey: ['admin-club', rawEditId] });
+            toast.success("Club updated successfully!");
+            router.push("/admin/clubs?tab=view");
+        },
+        onError: () => {
+            toast.error("Failed to update club");
+        }
+    });
+
     const handleSubmit = async () => {
         if (!logoPreview) { toast.error("Please upload club logo."); return; }
         if (!formData.title?.trim()) { toast.error("Please enter club title."); return; }
@@ -92,50 +130,21 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
         if (!formData.vicePresident) { toast.error("Please select Vice President."); return; }
         if (formData.mentors.length === 0) { toast.error("Please select at least one Mentor."); return; }
         if (!formData.faculty) { toast.error("Please select Responsible Faculty."); return; }
-        setIsSubmitting(true);
-        try {
-            // const isNewFile = fileInputRef.current?.files?.[0];
-            const isNewFile = selectedFile || undefined
-            const retainedUrl = isNewFile ? null : logoPreview;
-            const payload = {
-                title: formData.title.trim(),
-                presidentStudentId: parseInt(formData.president!.roleId, 10),
-                vicePresidentStudentId: parseInt(formData.vicePresident!.roleId, 10),
-                responsibleFacultyId: parseInt(formData.faculty!.roleId, 10),
-                mentorFacultyIds: formData.mentors.map(m => parseInt(m.roleId, 10)),
-                collegeId: parseInt(collegeId!.toString(), 10),
-                createdBy: parseInt(adminId!.toString(), 10)
-            };
 
-            if (rawEditId) {
-                await updateClub(parseInt(rawEditId, 10),
-                    payload,
-                    isNewFile,
-                    retainedUrl,
-                    originalLogoUrl);
-                toast.success("Club updated successfully!");
-            } else {
-                await createClub(payload, isNewFile);
-                toast.success("Club created successfully!");
-                setFormData({
-                    title: "",
-                    president: null,
-                    vicePresident: null,
-                    mentors: [],
-                    faculty: null,
-                });
-                setLogoPreview(null);
-                setOriginalLogoUrl(null);
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = "";
-                }
-            }
+        const payload = {
+            title: formData.title.trim(),
+            presidentStudentId: parseInt(formData.president!.roleId, 10),
+            vicePresidentStudentId: parseInt(formData.vicePresident!.roleId, 10),
+            responsibleFacultyId: parseInt(formData.faculty!.roleId, 10),
+            mentorFacultyIds: formData.mentors.map(m => parseInt(m.roleId, 10)),
+            collegeId: parseInt(collegeId!.toString(), 10),
+            createdBy: parseInt(adminId!.toString(), 10)
+        };
 
-            router.push("/admin/clubs?tab=view");
-        } catch (error: any) {
-            toast.error("Failed to save club");
-        } finally {
-            setIsSubmitting(false);
+        if (rawEditId) {
+            updateMutation.mutate(payload);
+        } else {
+            createMutation.mutate(payload);
         }
     };
 
@@ -148,6 +157,12 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
         }
     };
 
+    const { data: clubData, isLoading: isFetchingClub } = useQuery({
+        queryKey: ['admin-club', rawEditId],
+        queryFn: () => getClubByIdAPI(rawEditId!),
+        enabled: !!rawEditId,
+    });
+
     useEffect(() => {
         if (editId && !rawEditId) {
             toast.error("Invalid Club URL.");
@@ -158,32 +173,25 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
             setFormData({ title: "", president: null, vicePresident: null, mentors: [], faculty: null });
             setLogoPreview(null);
             setOriginalLogoUrl(null);
-            setIsFetching(false);
             return;
         }
-
-        const fetchEditData = async () => {
-            setIsFetching(true);
-            try {
-                const clubData = await getClubByIdAPI(rawEditId);
-                setFormData({
-                    title: clubData.title,
-                    president: clubData.president,
-                    vicePresident: clubData.vicePresident,
-                    mentors: clubData.mentors,
-                    faculty: clubData.faculty
-                });
-                setLogoPreview(clubData.logoUrl);
-                setOriginalLogoUrl(clubData.logoUrl);
-            } catch (error) {
-                toast.error("Failed to fetch club data.");
-            } finally {
-                setIsFetching(false);
-            }
-        };
-
-        fetchEditData();
     }, [editId, rawEditId, router]);
+
+    useEffect(() => {
+        if (clubData) {
+            setFormData({
+                title: clubData.title,
+                president: clubData.president,
+                vicePresident: clubData.vicePresident,
+                mentors: clubData.mentors,
+                faculty: clubData.faculty
+            });
+            setLogoPreview(clubData.logoUrl);
+            setOriginalLogoUrl(clubData.logoUrl);
+        }
+    }, [clubData]);
+
+    const isFetching = !!rawEditId && isFetchingClub;
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -203,19 +211,22 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
         };
     }, [logoPreview]);
 
-    const handleDeleteConfirm = async () => {
-        if (!rawEditId) return;
-        setIsDeleting(true);
-        try {
-            await deleteClubAPI(parseInt(rawEditId, 10));
+    const deleteMutation = useMutation({
+        mutationFn: () => deleteClubAPI(parseInt(rawEditId!, 10)),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-clubs'] });
             toast.success("Club deleted successfully.");
             setDeleteModalOpen(false);
             router.push("/admin/clubs?tab=view");
-        } catch (error) {
+        },
+        onError: () => {
             toast.error("Failed to delete club.");
-        } finally {
-            setIsDeleting(false);
         }
+    });
+
+    const handleDeleteConfirm = () => {
+        if (!rawEditId) return;
+        deleteMutation.mutate();
     };
 
     const handleConfirmRemoveImage = async () => {
@@ -306,7 +317,7 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
                         placeholder="Enter club title"
                         value={formData.title}
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        className="w-full h-[45px] border border-[#CCCCCC] rounded-lg px-4 text-sm font-medium text-gray-800 focus:outline-none focus:border-[#43C17A] focus:ring-1 focus:ring-[#43C17A] transition-colors"
+                        className="w-full h-[45px] border border-[#CCCCCC] rounded-lg px-4 text-sm font-medium text-gray-800 focus:outline-none focus:border-[#43C17A] focus:ring-1 focus:ring-[#43C17A] transition-colors placeholder-[#6F6F6F]"
                     />
                 </div>
 
@@ -376,9 +387,9 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
                 <div className="flex justify-center mt-6 pt-4">
                     <button
                         onClick={handleSubmit}
-                        disabled={isSubmitting}
+                        disabled={createMutation.isPending || updateMutation.isPending}
                         className="bg-[#1a2b4c] disabled:cursor-not-allowed text-white cursor-pointer rounded-lg px-8 py-3.5 text-[15px] font-semibold hover:bg-[#121e36] transition-colors w-[300px] shadow-sm">
-                        {isSubmitting
+                        {(createMutation.isPending || updateMutation.isPending)
                             ? (editId ? "Updating..." : "Creating...")
                             : (editId ? "Update Club" : "Create Club")}
                     </button>
@@ -389,7 +400,7 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
                 open={isDeleteModalOpen}
                 onCancel={() => setDeleteModalOpen(false)}
                 onConfirm={handleDeleteConfirm}
-                isDeleting={isDeleting}
+                isDeleting={deleteMutation.isPending}
                 name="club"
                 itemName={formData.title || "Club"}
                 customDescription={

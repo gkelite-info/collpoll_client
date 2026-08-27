@@ -5,6 +5,7 @@ import { ArrowLeft, MagnifyingGlass } from "@phosphor-icons/react";
 import { Avatar } from "@/app/utils/Avatar";
 import { decryptId } from "@/app/utils/encryption";
 import { useMemo, useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import TableComponent from "@/app/utils/table/table";
 import { motion } from "framer-motion";
 import { FilterDropdown } from "./FilterDropdown";
@@ -37,12 +38,8 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
     const status = searchParams.get("status") || "active";
     const group = searchParams.get("group") || "members";
 
-    const [members, setMembers] = useState<any[]>([]);
-    const [totalItems, setTotalItems] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
-    const [clubName, setClubName] = useState<string>("Loading...");
+    const queryClient = useQueryClient();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [searchInput, setSearchInput] = useState("");
@@ -62,7 +59,6 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
 
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [modalConfig, setModalConfig] = useState<{ open: boolean; target: "single" | "multiple"; item: any | null }>({ open: false, target: "single", item: null });
-    const [isActionLoading, setIsActionLoading] = useState(false);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -106,41 +102,32 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
         fetchAcademicYears(parseInt(collegeId.toString(), 10), selectedEduId, selectedBranchId).then(setYearOptions).catch(console.error);
     }, [collegeId, selectedEduId, selectedBranchId]);
 
-    const loadMembers = async () => {
-        if (!rawClubId || !collegeId) return;
-        try {
-            setIsLoading(true);
-            const clubIdNum = parseInt(rawClubId, 10);
+    const { data: titleData } = useQuery({
+        queryKey: ['admin-club-title', rawClubId],
+        queryFn: () => getAdminClubTitleAPI(parseInt(rawClubId!, 10)),
+        enabled: !!rawClubId,
+        staleTime: Infinity
+    });
 
-            const membersPromise = getAdminClubMembersAPI(
-                clubIdNum,
-                status,
-                currentPage,
-                ITEMS_PER_PAGE,
-                searchQuery,
-                { eduId: selectedEduId || undefined, branchId: selectedBranchId || undefined, yearId: selectedYearId || undefined }
-            );
+    const { data: membersData, isFetching: isFetchingMembers, isLoading: isInitialLoadQuery } = useQuery({
+        queryKey: ['admin-club-members', rawClubId, status, currentPage, ITEMS_PER_PAGE, searchQuery, selectedEduId, selectedBranchId, selectedYearId],
+        queryFn: () => getAdminClubMembersAPI(
+            parseInt(rawClubId!, 10),
+            status,
+            currentPage,
+            ITEMS_PER_PAGE,
+            searchQuery,
+            { eduId: selectedEduId || undefined, branchId: selectedBranchId || undefined, yearId: selectedYearId || undefined }
+        ),
+        enabled: !!rawClubId && !!collegeId,
+        placeholderData: keepPreviousData,
+    });
 
-            const titlePromise = clubName === "Loading..."
-                ? getAdminClubTitleAPI(clubIdNum)
-                : Promise.resolve(clubName);
-
-            const [response, fetchedTitle] = await Promise.all([membersPromise, titlePromise]);
-
-            setMembers(response.members);
-            setTotalItems(response.totalCount);
-            setClubName(fetchedTitle);
-        } catch (error) {
-            toast.error("Failed to load members.", { id: "admin-fetch-members-error" });
-        } finally {
-            setIsLoading(false);
-            setIsInitialLoad(false);
-        }
-    };
-
-    useEffect(() => {
-        loadMembers();
-    }, [rawClubId, collegeId, status, currentPage, searchQuery, selectedEduId, selectedBranchId, selectedYearId]);
+    const members = membersData?.members || [];
+    const totalItems = membersData?.totalCount || 0;
+    const clubName = titleData || "Loading...";
+    const isLoading = isFetchingMembers;
+    const isInitialLoad = isInitialLoadQuery;
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -176,32 +163,33 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
         setModalConfig({ open: false, target: "single", item: null });
     };
 
-    const handleExecuteRemove = async () => {
-        if (!adminId || !rawClubId) return toast.error("Admin authentication missing. Please log in.", { id: "admin-auth-err" });
-
-        setIsActionLoading(true);
-        try {
-            const processingIds = modalConfig.target === "single" ? [modalConfig.item.id] : selectedIds;
-            const processingItems = modalConfig.target === "single" ? [modalConfig.item] : members.filter(req => selectedIds.includes(req.id));
-
-            const studentsData = processingItems.map(req => ({
-                clubId: parseInt(rawClubId, 10),
-                studentId: req.studentId
-            }));
-
-            await removeAdminClubMembersAPI(studentsData, adminId);
-
+    const removeMutation = useMutation({
+        mutationFn: (studentsData: any[]) => removeAdminClubMembersAPI(studentsData, adminId!),
+        onSuccess: () => {
             toast.success(`Successfully removed!`);
             setSelectedIds([]);
             closeActionModal();
-            loadMembers();
-
-        } catch (error: any) {
+            queryClient.invalidateQueries({ queryKey: ['admin-club-members', rawClubId] });
+            queryClient.invalidateQueries({ queryKey: ['admin-clubs'] });
+        },
+        onError: () => {
             toast.error("Failed to remove members. Please try again later.", { id: "admin-remove-error" });
-        } finally {
-            setIsActionLoading(false);
         }
+    });
+
+    const handleExecuteRemove = () => {
+        if (!adminId || !rawClubId) return toast.error("Admin authentication missing. Please log in.", { id: "admin-auth-err" });
+
+        const processingItems = modalConfig.target === "single" ? [modalConfig.item] : members.filter(req => selectedIds.includes(req.id));
+        const studentsData = processingItems.map(req => ({
+            clubId: parseInt(rawClubId, 10),
+            studentId: req.studentId
+        }));
+
+        removeMutation.mutate(studentsData);
     };
+
+    const isActionLoading = removeMutation.isPending;
 
     const isInactive = status === "inactive";
     const isMentors = group === "mentors";
@@ -395,16 +383,15 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
                     isLoading={isLoading}
                 />
 
-                {totalItems > 0 && (
-                    <div className="w-full mt-auto pt-6">
-                        <Pagination
-                            currentPage={currentPage}
-                            totalItems={totalItems}
-                            itemsPerPage={ITEMS_PER_PAGE}
-                            onPageChange={(page) => setCurrentPage(page)}
-                        />
-                    </div>
-                )}
+                <div className="w-full mt-auto pt-6">
+                    <Pagination
+                        currentPage={currentPage}
+                        totalItems={totalItems}
+                        itemsPerPage={ITEMS_PER_PAGE}
+                        onPageChange={(page) => setCurrentPage(page)}
+                        alwaysShow={true}
+                    />
+                </div>
             </div>
 
             <ConfirmDeleteModal

@@ -43,13 +43,13 @@ export function Pagination({
 
   // Keep an always-visible paginator on a valid first page even when the
   // current filters return no records.
-  const totalPages = Math.max(1, Math.ceil(safeTotalItems / safeItemsPerPage));
-  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-  const startIndex = (safeCurrentPage - 1) * safeItemsPerPage;
-  const endIndex = Math.min(startIndex + safeItemsPerPage, safeTotalItems);
+  const totalPages = Math.ceil((totalItems || 0) / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems || 0);
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
+    if (totalPages <= 0) return pages;
     if (totalPages <= 5) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
@@ -135,9 +135,9 @@ export function Pagination({
             </div>
           )}
           <p className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">
-            Showing <span className="font-medium">{safeTotalItems === 0 ? 0 : startIndex + 1}</span> to{" "}
+            Showing <span className="font-medium">{!totalItems ? 0 : startIndex + 1}</span> to{" "}
             <span className="font-medium">{endIndex}</span> of{" "}
-            <span className="font-medium">{safeTotalItems}</span> results
+            <span className="font-medium">{totalItems || 0}</span> results
           </p>
         </div>
         <div className="flex justify-center w-full md:w-auto overflow-x-auto max-w-full pb-1 lg:pb-0">
@@ -148,7 +148,7 @@ export function Pagination({
             {/* First Page */}
             <button
               onClick={() => onPageChange(1)}
-              disabled={disabled || currentPage === 1}
+              disabled={disabled || currentPage <= 1 || !totalItems}
               className="relative inline-flex items-center rounded-l-md px-1.5 sm:px-3 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <span className="sr-only">First</span>
@@ -160,7 +160,7 @@ export function Pagination({
             {/* Previous Page */}
             <button
               onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
-              disabled={disabled || currentPage === 1}
+              disabled={disabled || currentPage <= 1 || !totalItems}
               className="relative inline-flex items-center px-1.5 sm:px-3 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <span className="sr-only">Previous</span>
@@ -203,7 +203,7 @@ export function Pagination({
             {/* Next Page */}
             <button
               onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
-              disabled={disabled || currentPage === totalPages}
+              disabled={disabled || currentPage >= totalPages || !totalItems}
               className="relative inline-flex items-center px-1.5 sm:px-3 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <span className="sr-only">Next</span>
@@ -215,7 +215,7 @@ export function Pagination({
             {/* Last Page */}
             <button
               onClick={() => onPageChange(totalPages)}
-              disabled={disabled || currentPage === totalPages}
+              disabled={disabled || currentPage >= totalPages || !totalItems}
               className="relative inline-flex items-center rounded-r-md px-1.5 sm:px-3 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <span className="sr-only">Last</span>

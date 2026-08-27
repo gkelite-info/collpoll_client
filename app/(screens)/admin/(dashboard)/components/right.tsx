@@ -36,8 +36,8 @@ export default function AdminDashRight() {
   const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
   const [isAddPolicyModalOpen, setIsAddPolicyModalOpen] = useState(false);
   const { collegeId, userId, role } = useUser();
-  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("others");
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const isAutomationsPage = searchParams.get("view") === "automations";
   const isPolicyPage = searchParams.get("view") === "policy-setup";
@@ -59,49 +59,6 @@ export default function AdminDashRight() {
       <span className="text-sm text-wrap">{label}</span>
     </button>
   );
-
-  const fetchData = async () => {
-    try {
-      if (!collegeId || !userId || !role) return;
-
-      const res = await fetchCollegeAnnouncements({
-        collegeId,
-        userId,
-        role,
-        view,
-        page: 1,
-        limit: 20,
-      });
-
-      const formatted = res.data.map((item: any) => ({
-        collegeAnnouncementId: item.collegeAnnouncementId,
-        title: item.title,
-        date: item.date,
-        createdAt: item.createdAt,
-        type: item.type,
-        targetRoles: item.targetRoles,
-
-        image: typeIcons[item.type] || "/clip.png",
-        imgHeight: "h-10",
-        cardBg: "#E8F8EF",
-        imageBg: "#D3F1E0",
-
-        professor:
-          view === "my"
-            ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
-            : `By ${formatRole(item.createdByRole)}`,
-      }));
-
-      setAnnouncements(formatted);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    if (!collegeId || !userId || !role) return;
-    fetchData();
-  }, [collegeId, userId, role, view]);
 
   return (
     <>
@@ -135,13 +92,22 @@ export default function AdminDashRight() {
           {/* <CourseScheduleCard isVisibile={false} fullWidth={true} /> */}
         </div>
 
-        <WorkWeekCalendar />
+        <WorkWeekCalendar
+          activeDate={selectedDate ? new Date(selectedDate) : undefined}
+          onDateSelect={(d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            setSelectedDate(`${year}-${month}-${day}`);
+          }}
+        />
         <AnnouncementsCard
-          announceCard={announcements}
           height="80vh"
           currentView={view}
           onViewChange={(v) => setView(v)}
-          refreshAnnouncements={fetchData}
+          enableInfiniteScroll={true}
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
         />
       </div>
 
