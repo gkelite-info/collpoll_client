@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { updateAdminAssignment } from "@/lib/helpers/admin/assignments/updateAdminAssignment";
 import { useRouter } from "next/navigation";
 import { CaretLeftIcon } from "@phosphor-icons/react";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 
 function toHtmlDate(dateStr: string | number | undefined) {
   if (!dateStr) return "";
@@ -85,15 +86,16 @@ export default function AssignmentForm({ initialData, onSave, onCancel }: any) {
             <label className="mb-1 block text-sm font-medium text-gray-700">
               Status
             </label>
-            <select
+            <CustomDropdown
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full rounded-md cursor-pointer border border-[#CCCCCC] focus:outline-none px-3 py-2 text-sm"
-            >
-              <option value="Active">Active</option>
-              <option value="Cancelled">Cancelled</option>
-              <option value="Expired">Expired</option>
-            </select>
+              onChange={(value) => setStatus(String(value))}
+              options={[
+                { label: "Active", value: "Active" },
+                { label: "Cancelled", value: "Cancelled" },
+                { label: "Expired", value: "Expired" },
+              ]}
+              theme="green"
+            />
           </div>
         </div>
 

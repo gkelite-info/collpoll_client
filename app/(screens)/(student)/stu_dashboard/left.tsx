@@ -25,6 +25,7 @@ import { fetchStudentFeePlan } from "@/lib/helpers/student/payments/fetchStudent
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
+import { getStudentExamEnrollmentCount } from "@/lib/helpers/student/exams/getStudentExamEnrollmentCount";
 
 const formatTimeToAMPM = (time24: string) => {
   const [h, m] = time24.split(":");
@@ -61,7 +62,7 @@ interface DashboardCardItem {
   style: string;
   icon: React.ReactNode;
   value: React.ReactNode;
-  label: string;
+  label: React.ReactNode;
   to?: string;
   onClick?: () => void;
 }
@@ -97,6 +98,8 @@ export default function StuDashLeft() {
   const [feeLoading, setFeeLoading] = useState(true);
   const [subjects, setSubjects] = useState<SubjectProgress[]>([]);
   const [subjectsLoading, setSubjectsLoading] = useState(true);
+  const [examEnrollmentCount, setExamEnrollmentCount] = useState(0);
+  const [examsLoading, setExamsLoading] = useState(true);
   const { studentId } = useStudent();
 
   const t = useTranslations("Dashboard.student");
@@ -109,6 +112,27 @@ export default function StuDashLeft() {
     loadSubjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!studentId) {
+      return;
+    }
+
+    const loadExamEnrollmentCount = async () => {
+      try {
+        setExamsLoading(true);
+        const count = await getStudentExamEnrollmentCount(studentId);
+        setExamEnrollmentCount(count);
+      } catch (err) {
+        console.error("Failed to load exam enrollment count", err);
+        setExamEnrollmentCount(0);
+      } finally {
+        setExamsLoading(false);
+      }
+    };
+
+    loadExamEnrollmentCount();
+  }, [studentId, view]);
 
   const loadSubjects = async () => {
     try {
@@ -441,7 +465,11 @@ export default function StuDashLeft() {
       style: "bg-[#E6FBEA] h-[126.35px] w-[182px]",
       icon: <BookOpen size={32} weight="fill" color="#74FF8F" />,
       value: t("Exams"),
-      label: t("N/A"),
+      label: examsLoading ? (
+        <ValueShimmer />
+      ) : (
+        t("{count} Enrolled", { count: examEnrollmentCount })
+      ),
       onClick: () => setView("exams"),
     },
     {

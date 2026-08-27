@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CaretLeft, CheckCircle } from "@phosphor-icons/react";
 import TabNavigation from "./tabNavigation";
@@ -40,6 +40,10 @@ import {
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
 import { useUser } from "@/app/utils/context/UserContext";
 import toast from "react-hot-toast";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+
+const ITEMS_PER_PAGE = 6;
+const emptySubscribe = () => () => {};
 
 interface props {
   facultyId?: number;
@@ -83,6 +87,11 @@ export default function DiscussionForumBasic({
   facultyId: propFacultyId,
   collegeSubjectId,
 }: props) {
+  const isHydrated = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
   const searchParams = useSearchParams();
   const router = useRouter();
   const dept = searchParams.get("dept");
@@ -132,6 +141,8 @@ export default function DiscussionForumBasic({
   const { collegeId, role } = useUser();
   const [view, setView] = useState<"my" | "others">("others");
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [departmentPage, setDepartmentPage] = useState(1);
+  const [coursePage, setCoursePage] = useState(1);
 
   useEffect(() => {
     if (collegeId) {
@@ -440,6 +451,15 @@ export default function DiscussionForumBasic({
     });
   }, [allBranchYears, branchFilter, yearFilter]);
 
+  const paginatedCards = filteredCards.slice(
+    (departmentPage - 1) * ITEMS_PER_PAGE,
+    departmentPage * ITEMS_PER_PAGE,
+  );
+  const paginatedCourses = courseList.slice(
+    (coursePage - 1) * ITEMS_PER_PAGE,
+    coursePage * ITEMS_PER_PAGE,
+  );
+
   useEffect(() => {
     const getCounts = async () => {
       if (!currentEducationId || filteredCards.length === 0) return;
@@ -487,9 +507,17 @@ export default function DiscussionForumBasic({
     return () => clearTimeout(timer);
   }, [filteredCards, currentEducationId]);
 
+  if (!isHydrated) {
+    return (
+      <div className="flex min-h-[calc(100vh-100px)] w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#43C17A] border-t-transparent" />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col m-4 w-full mx-auto p-2">
-      <TabNavigation />
+    <div className="flex flex-col w-full min-h-[calc(100vh-100px)] px-6 py-4">
+      {(!isInnerScreen || (!!subjectId && !action)) && <TabNavigation />}
 
       {!isInnerScreen ? (
         !dept ? (
@@ -508,6 +536,7 @@ export default function DiscussionForumBasic({
                     selectEducation(edu);
                     setBranchFilter("All");
                     setYearFilter("All");
+                    setDepartmentPage(1);
                   }
                 }}
                 theme="green"
@@ -525,6 +554,7 @@ export default function DiscussionForumBasic({
                 ]}
                 onChange={(val) => {
                   setBranchFilter(String(val));
+                  setDepartmentPage(1);
                   if (val === "All") {
                     setYearFilter("All");
                   }
@@ -550,19 +580,22 @@ export default function DiscussionForumBasic({
                 theme="green"
                 widthClassName="w-[160px]"
                 onChange={(val) => {
-                  if (val !== "loading") setYearFilter(String(val));
+                  if (val !== "loading") {
+                    setYearFilter(String(val));
+                    setDepartmentPage(1);
+                  }
                 }}
               />
             </div>
 
-            <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col ">
+            <div className="bg-transparent rounded-xl flex flex-col">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto ">
                 {branchLoading || yearLoading
                   ? Array.from({ length: 6 }).map((_, i) => (
                     <DiscussionDeptCardSkeleton key={i} />
                   ))
                   : filteredCards.length > 0
-                    ? filteredCards.map((card, idx) => {
+                    ? paginatedCards.map((card, idx) => {
                       const branchTheme = getBranchTheme(card.name);
 
                       const cardData = countsData.find(
@@ -597,11 +630,21 @@ export default function DiscussionForumBasic({
                       <DiscussionDeptCardSkeleton key={i} />
                     ))}
               </div>
+              {!branchLoading && !yearLoading && filteredCards.length > 0 && (
+                <Pagination
+                  currentPage={departmentPage}
+                  totalItems={filteredCards.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setDepartmentPage}
+                  alwaysShow
+                  bgClassName="bg-transparent border-t border-gray-200"
+                />
+              )}
             </div>
           </>
         ) : (
           <>
-            <div className="min-h-[calc(100vh-200px)] rounded-xl flex flex-col">
+            <div className="rounded-xl flex flex-col">
               <div className="flex items-center mb-6">
                 <button
                   onClick={handleBackToDepartments}
@@ -627,7 +670,7 @@ export default function DiscussionForumBasic({
                   </div>
                 ) : courseList.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto">
-                    {courseList.map((course) => (
+                    {paginatedCourses.map((course) => (
                       <DiscussionCourseCard
                         key={`${course.id}-${course.facultyId}`}
                         {...course}
@@ -646,6 +689,16 @@ export default function DiscussionForumBasic({
                   </div>
                 )}
               </div>
+              {!courseLoading && courseList.length > 0 && (
+                <Pagination
+                  currentPage={coursePage}
+                  totalItems={courseList.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setCoursePage}
+                  alwaysShow
+                  bgClassName="bg-transparent border-t border-gray-200"
+                />
+              )}
             </div>
           </>
         )

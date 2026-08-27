@@ -8,6 +8,9 @@ import SubmissionShimmer from "./shimmers/submissionShimmer";
 import { formatFileName } from "@/app/utils/formatFileName";
 import { fetchDiscussionById } from "@/lib/helpers/admin/facultyCountAPI";
 import { Avatar } from "@/app/utils/Avatar";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+
+const ITEMS_PER_PAGE = 10;
 
 interface Props {
   discussionId: string | null;
@@ -28,12 +31,17 @@ export default function AdminDiscussionSubmissions({
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [discussion, setDiscussion] = useState<{
     title: string;
     description: string;
   } | null>(null);
 
   const discussionId = propDiscussionId || searchParams.get("discussionId");
+  const paginatedSubmissions = submissions.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
+  );
 
   useEffect(() => {
     if (!discussionId) return;
@@ -147,7 +155,7 @@ export default function AdminDiscussionSubmissions({
         </div>
       ) : (
         <div className="flex flex-col gap-4 overflow-y-auto max-h-[70vh] scrollbar-hide">
-          {submissions.map((submission, index) => (
+          {paginatedSubmissions.map((submission, index) => (
             <div
               key={`${submission.studentId}-${index}`}
               className="bg-white overflow-x-auto rounded-xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex gap-3"
@@ -247,6 +255,17 @@ export default function AdminDiscussionSubmissions({
             </div>
           ))}
         </div>
+      )}
+
+      {!loading && !error && submissions.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={submissions.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+          alwaysShow
+          bgClassName="bg-transparent border-t border-gray-200"
+        />
       )}
 
       {isModalOpen && (

@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { saveQuizQuestion } from "@/lib/helpers/quiz/quizQuestionAPI";
 import { saveBulkOptions } from "@/lib/helpers/quiz/quizQuestionOptionAPI";
 import { fetchQuizById, updateQuizStatus } from "@/lib/helpers/quiz/quizAPI";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 
 interface Option {
   id: number;
@@ -307,19 +308,21 @@ export default function AdminAddQuestions({
                 placeholder="Untitled Question"
                 className="flex-1 border-b border-gray-300 pb-1 text-sm font-semibold text-[#282828] outline-none focus:border-[#43C17A] bg-transparent"
               />
-              <select
+              <CustomDropdown
                 value={question.type}
-                onChange={(e) =>
+                onChange={(value) =>
                   updateQuestionType(
                     question.id,
-                    e.target.value as Question["type"],
+                    String(value) as Question["type"],
                   )
                 }
-                className="border border-gray-200 rounded-md px-3 py-1.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] bg-white cursor-pointer"
-              >
-                <option value="Multiple Choice">Multiple Choice</option>
-                <option value="Fill in the Blanks">Fill in the Blanks</option>
-              </select>
+                options={[
+                  { label: "Multiple Choice", value: "Multiple Choice" },
+                  { label: "Fill in the Blanks", value: "Fill in the Blanks" },
+                ]}
+                theme="green"
+                widthClassName="w-[190px]"
+              />
             </div>
 
             <div className="flex flex-col gap-2 mb-3">
