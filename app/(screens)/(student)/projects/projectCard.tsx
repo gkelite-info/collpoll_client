@@ -14,6 +14,9 @@ import { useTranslations } from "next-intl";
 import { getSecureAttachmentUrl } from "@/lib/helpers/projects/projectFiles";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
+const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_UPLOAD_SIZE_LABEL = "10 MB";
+
 type ProjectCardListProps = {
   data: ProjectCardProps[];
   onViewDetails: (project: ProjectCardProps) => void;
@@ -241,6 +244,15 @@ export const ProjectDetailsModal = ({
     e.stopPropagation();
   };
 
+  const selectFile = (file: File) => {
+    if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+      toast.error(`File size must not exceed ${MAX_UPLOAD_SIZE_LABEL}`);
+      return;
+    }
+
+    setSelectedFiles([file]);
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -250,7 +262,7 @@ export const ProjectDetailsModal = ({
       return;
     }
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setSelectedFiles([e.dataTransfer.files[0]]);
+      selectFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -261,7 +273,7 @@ export const ProjectDetailsModal = ({
       return;
     }
     if (e.target.files && e.target.files.length > 0) {
-      setSelectedFiles([e.target.files[0]]);
+      selectFile(e.target.files[0]);
       e.target.value = "";
     }
   };
@@ -272,6 +284,10 @@ export const ProjectDetailsModal = ({
 
   const handleFinalSubmit = async () => {
     if (selectedFiles.length === 0) return;
+    if (selectedFiles[0].size > MAX_UPLOAD_SIZE_BYTES) {
+      toast.error(`File size must not exceed ${MAX_UPLOAD_SIZE_LABEL}`);
+      return;
+    }
     if (!studentId) {
       alert(t("Error: Student ID not found Please log in again"));
       return;
@@ -397,20 +413,18 @@ export const ProjectDetailsModal = ({
 
         <section className="mb-6 max-md:mb-5">
           <div className="flex flex-wrap gap-10 max-md:flex-col max-md:gap-5">
-            <div>
+            <div className="min-w-[180px]">
               <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-2 max-md:text-[15px] max-md:mb-1.5">
                 {t("Team Members")}
               </h2>
-              <div className="flex">
+              <div className="flex max-h-[156px] flex-wrap gap-2 overflow-y-auto pr-2 custom-scrollbar">
                 {project.teamMembers.length > 0 ? (
-                  project.teamMembers
-                    .slice(0, 5)
-                    .map((member, i) => (
+                  project.teamMembers.map((member, i) => (
                       <MemberAvatar
                         key={i}
                         image={member.image}
                         name={member.name}
-                        index={i}
+                        index={0}
                       />
                     ))
                 ) : (
@@ -421,11 +435,11 @@ export const ProjectDetailsModal = ({
               </div>
             </div>
 
-            <div>
+            <div className="min-w-[220px]">
               <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-2 max-md:text-[15px] max-md:mb-1.5">
                 {t("Mentors")}
               </h2>
-              <div className="flex flex-col gap-3 ">
+              <div className="flex max-h-[156px] flex-col gap-3 overflow-y-auto pr-2 custom-scrollbar">
                 {project.mentors.length > 0 ? (
                   project.mentors.map((mentor, i) => (
                     <div key={i} className="flex items-center gap-3">
@@ -508,6 +522,9 @@ export const ProjectDetailsModal = ({
             <label className="block text-sm font-semibold mb-2 text-[#282828] max-md:text-[15px]">
               {t("Upload Your Project")}
             </label>
+            <p className="mb-3 text-xs text-gray-500 max-md:text-[13px]">
+              PDF, JPG, PNG or ZIP files only. Maximum file size: {MAX_UPLOAD_SIZE_LABEL}.
+            </p>
 
             <input
               type="file"

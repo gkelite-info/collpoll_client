@@ -19,6 +19,9 @@ import CustomSelect from "@/app/utils/CustomSelect";
 import Field from "@/app/utils/Field";
 import { useRouter } from "next/navigation";
 
+const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_ATTACHMENT_SIZE_LABEL = "10 MB";
+
 type IssueFormProps = {
   editingIssue?: StudentWellbeingIssueListItem | null;
   onCancelEdit?: () => void;
@@ -166,19 +169,35 @@ export default function IssueForm({
     e.stopPropagation();
   };
 
+  const addFiles = (newFiles: File[]) => {
+    const oversizedFile = newFiles.find(
+      (file) => file.size > MAX_ATTACHMENT_SIZE_BYTES,
+    );
+
+    if (oversizedFile) {
+      toast.error(
+        `${oversizedFile.name} exceeds the ${MAX_ATTACHMENT_SIZE_LABEL} file size limit.`,
+      );
+      return;
+    }
+
+    setFiles((prev) => [...prev, ...newFiles]);
+  };
+
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const droppedFiles = Array.from(e.dataTransfer.files);
-      setFiles((prev) => [...prev, ...droppedFiles]);
+      addFiles(droppedFiles);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const selectedFiles = Array.from(e.target.files);
-      setFiles((prev) => [...prev, ...selectedFiles]);
+      addFiles(selectedFiles);
+      e.target.value = "";
     }
   };
 
@@ -214,6 +233,10 @@ export default function IssueForm({
 
   const handleSubmit = async () => {
     if (submitting) return;
+    if (files.some((file) => file.size > MAX_ATTACHMENT_SIZE_BYTES)) {
+      toast.error(`Each attachment must not exceed ${MAX_ATTACHMENT_SIZE_LABEL}.`);
+      return;
+    }
     if (!fullName?.trim()) {
       toast.error("Full name is required.");
       return;
@@ -461,6 +484,9 @@ export default function IssueForm({
 
           <div className="col-span-1 sm:col-span-2">
             <Field label={isEditing ? "Add Attachments" : "Attachments"} htmlFor="file-attachments">
+              <p className="mb-2 text-xs text-[#6B7280]">
+                Maximum file size: {MAX_ATTACHMENT_SIZE_LABEL} per attachment.
+              </p>
               <div className={`flex gap-3 sm:gap-4 w-full ${files.length > 0 ? 'flex-col sm:flex-row sm:h-44 items-stretch' : 'flex-col'}`}>
                 <div
                   onDragOver={handleDragOver}

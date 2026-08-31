@@ -811,7 +811,11 @@ export async function fetchStudentFinanceMeetings(params: {
     meetingLink: row.meetingLink ?? "",
   }));
 
-  return { data: formattedData, totalPages: Math.ceil((count ?? 0) / limit) };
+  return {
+    data: formattedData,
+    totalItems: count ?? 0,
+    totalPages: Math.ceil((count ?? 0) / limit),
+  };
 }
 
 export async function fetchAdminFinanceMeetings(params: {

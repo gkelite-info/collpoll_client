@@ -401,6 +401,9 @@ import { useTranslations } from "next-intl";
 import { Avatar } from "@/app/utils/Avatar";
 import toast from "react-hot-toast";
 
+const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_ATTACHMENT_SIZE_LABEL = "10 MB";
+
 interface RequestLeaveModalProps {
   isOpen: boolean;
   studentId: number | null;
@@ -479,6 +482,18 @@ export default function RequestLeaveModal({
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
 
+      const oversizedFile = newFiles.find(
+        (file) => file.size > MAX_ATTACHMENT_SIZE_BYTES,
+      );
+
+      if (oversizedFile) {
+        toast.error(
+          `${oversizedFile.name} exceeds the ${MAX_ATTACHMENT_SIZE_LABEL} file size limit.`,
+        );
+        e.target.value = "";
+        return;
+      }
+
       const containsApk = newFiles.some(file =>
         file.name.toLowerCase().endsWith(".apk") ||
         file.type === "application/vnd.android.package-archive"
@@ -486,14 +501,17 @@ export default function RequestLeaveModal({
 
       if (containsApk) {
         toast.error("APK files are not allowed.");
+        e.target.value = "";
         return;
       }
 
       if (files.length + newFiles.length > 5) {
         toast.error(t("You can only upload a maximum of 5 files"));
+        e.target.value = "";
         return;
       }
       setFiles((prev) => [...prev, ...newFiles]);
+      e.target.value = "";
     }
   };
 
@@ -503,6 +521,10 @@ export default function RequestLeaveModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (files.some((file) => file.size > MAX_ATTACHMENT_SIZE_BYTES)) {
+      toast.error(`Each attachment must not exceed ${MAX_ATTACHMENT_SIZE_LABEL}.`);
+      return;
+    }
     if (!formData.leaveType) {
       toast.error(t("Select Leave Type"));
       return;
@@ -784,6 +806,9 @@ export default function RequestLeaveModal({
                   {t("Optional (Max 5)")}
                 </span>
               </label>
+              <p className="text-xs text-gray-500">
+                Maximum file size: {MAX_ATTACHMENT_SIZE_LABEL} per attachment.
+              </p>
 
               <div className="relative border-2 border-dashed border-[#E0E0E0] rounded-md p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors cursor-pointer bg-[#F8F9FA]">
                 <input
