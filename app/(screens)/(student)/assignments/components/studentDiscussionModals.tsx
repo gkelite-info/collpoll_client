@@ -11,6 +11,15 @@ import {
   CalendarDotsIcon,
 } from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+
+const getSecureUrl = (url: string) => {
+  if (!url) return url;
+  const marker = "/storage/v1/object/public/";
+  const idx = url.indexOf(marker);
+  if (idx !== -1) return `/api/files/${url.slice(idx + marker.length)}`;
+  return url;
+};
+
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import toast from "react-hot-toast";
 import {
@@ -452,7 +461,7 @@ export function StudentDiscussionDetailsModal({
                   if (discussion.attachments?.length > 0) {
                     discussion.attachments.forEach((file: any) => {
                       if (file.fileUrl) {
-                        window.open(file.fileUrl, "_blank");
+                        window.open(getSecureUrl(file.fileUrl), "_blank");
                       }
                     });
                   } else {

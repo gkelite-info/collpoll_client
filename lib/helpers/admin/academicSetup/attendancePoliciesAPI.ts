@@ -75,6 +75,8 @@ type PolicyQueryRow = {
 
 export const fetchAttendancePolicies = async (
   collegeEducationIds: number[],
+  page: number = 1,
+  limit: number = 10,
 ) => {
   try {
     if (collegeEducationIds.length === 0) {
@@ -121,12 +123,17 @@ export const fetchAttendancePolicies = async (
       semester: String(row.collegeSemester?.collegeSemester ?? "-"),
     }));
 
-    return { success: true, data: rows };
+    const total = rows.length;
+    const start = (page - 1) * limit;
+    const paginatedRows = rows.slice(start, start + limit);
+
+    return { success: true, data: paginatedRows, total };
   } catch (error: unknown) {
     console.error("fetchAttendancePolicies error:", error);
     return {
       success: false,
       data: [] as AttendancePolicyRow[],
+      total: 0,
       error: getErrorMessage(error) || "Failed to fetch attendance policies",
     };
   }

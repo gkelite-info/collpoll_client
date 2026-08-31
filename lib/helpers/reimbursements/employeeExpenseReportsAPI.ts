@@ -364,7 +364,12 @@ export async function getExpenseAttachmentSignedUrl(filePath: string, downloadFi
   return data.signedUrl;
 }
 
-function normalizeExpenseAttachmentPath(filePath: string) {
+export function getExpenseAttachmentProxyUrl(filePath: string) {
+  const normalizedPath = normalizeExpenseAttachmentPath(filePath);
+  return `/api/files/${EMPLOYEE_EXPENSE_ATTACHMENTS_BUCKET}/${normalizedPath}`;
+}
+
+export function normalizeExpenseAttachmentPath(filePath: string) {
   const trimmedPath = filePath.trim();
   const bucketSegment = `/${EMPLOYEE_EXPENSE_ATTACHMENTS_BUCKET}/`;
 

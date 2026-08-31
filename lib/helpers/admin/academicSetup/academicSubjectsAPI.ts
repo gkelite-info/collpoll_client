@@ -154,9 +154,14 @@ export const resolveSubjectIds = async ({
 
 export const getAcademicSubjects = async (
   collegeId: number,
-  collegeEducationId: number | number[],
+  page: number = 1,
+  limit: number = 10,
+  educationFilter?: string,
+  branchFilter?: string,
+  yearFilter?: string,
+  subjectFilter?: string
 ) => {
-  let query = supabase
+  const query = supabase
     .from("college_subjects")
     .select(
       `
@@ -171,20 +176,44 @@ export const getAcademicSubjects = async (
     .is("deletedAt", null)
     .order("createdAt", { ascending: false });
 
-  if (Array.isArray(collegeEducationId)) {
-    if (collegeEducationId.length > 0) {
-      query = query.in("collegeEducationId", collegeEducationId);
-    } else {
-      return { success: true, data: [] };
-    }
-  } else if (collegeEducationId) {
-    query = query.eq("collegeEducationId", collegeEducationId);
-  }
-
   const { data, error } = await query;
 
-  if (error) return { success: false, data: [], error: error.message };
-  return { success: true, data: data ?? [] };
+  if (error) return { success: false, data: [], total: 0, error: error.message };
+  
+  let filtered = data || [];
+  
+  if (educationFilter && educationFilter !== "All") {
+    filtered = filtered.filter((s: any) => s.collegeEducation?.collegeEducationType === educationFilter);
+  }
+  if (branchFilter && branchFilter !== "All") {
+    filtered = filtered.filter((s: any) => s.collegeBranch?.collegeBranchCode === branchFilter);
+  }
+  if (yearFilter && yearFilter !== "All") {
+    filtered = filtered.filter((s: any) => s.collegeAcademicYear?.collegeAcademicYear === yearFilter);
+  }
+  if (subjectFilter && subjectFilter !== "All") {
+    filtered = filtered.filter((s: any) => s.subjectName === subjectFilter);
+  }
+
+  const total = filtered.length;
+  const paginated = filtered.slice((page - 1) * limit, page * limit);
+
+  return { success: true, data: paginated, total };
+};
+
+export const fetchSubjectFilters = async (collegeId: number) => {
+  try {
+    const { data } = await supabase
+      .from("college_subjects")
+      .select("subjectName, collegeEducationId, collegeBranchId, collegeAcademicYearId")
+      .eq("collegeId", collegeId)
+      .is("deletedAt", null);
+      
+    return data || [];
+  } catch (err) {
+    console.error("Error fetching subject filters:", err);
+    return [];
+  }
 };
 
 export const getAcademicSubjectById = async (collegeSubjectId: number) => {

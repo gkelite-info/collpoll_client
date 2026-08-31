@@ -65,7 +65,7 @@ export default function CollegeTimingsStructure() {
       </div>
 
       <div className="w-full">
-        {activeTab === "view" && <ViewCollegeTimings />}
+        {activeTab === "view" && <ViewCollegeTimings onEdit={() => setActiveTab("add")} />}
         {activeTab === "add" && <AddCollegeTimings />}
       </div>
     </div>

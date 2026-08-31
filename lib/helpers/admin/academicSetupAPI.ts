@@ -17,7 +17,14 @@ type DegreeGroup = {
   sections: Record<string, Set<string>>;
 };
 
-export async function fetchAdminBranchesWithDetails(adminId: number, page: number = 1, limit: number = 10) {
+export async function fetchAdminBranchesWithDetails(
+  adminId: number, 
+  page: number = 1, 
+  limit: number = 10,
+  educationFilter?: string,
+  branchFilter?: string,
+  yearFilter?: string
+) {
   try {
     const { data: adminCtx } = await supabase
       .from("admins")
@@ -35,10 +42,12 @@ export async function fetchAdminBranchesWithDetails(adminId: number, page: numbe
     const validEduIds = adminEdus ? adminEdus.map((e) => e.collegeEducationId) : [];
 
 
+    if (!adminCtx?.collegeId) return { data: [], total: 0 };
+
     const { data: educations, error: eduErr } = await supabase
       .from("college_education")
       .select("collegeEducationId, collegeEducationType, updatedAt")
-      .in("collegeEducationId", validEduIds)
+      .eq("collegeId", adminCtx.collegeId)
       .eq("isActive", true)
       .is("deletedAt", null);
 
@@ -54,17 +63,16 @@ export async function fetchAdminBranchesWithDetails(adminId: number, page: numbe
         collegeEducationId,
         updatedAt
       `)
-      .eq("collegeId", adminCtx?.collegeId)
-      .in("collegeEducationId", validEduIds)
+      .eq("collegeId", adminCtx.collegeId)
       .eq("isActive", true)
       .is("deletedAt", null);
 
     if (branchErr) throw branchErr;
 
     const [yearsRes, sectionsRes, batchesRes] = await Promise.all([
-      supabase.from("college_academic_year").select("collegeAcademicYearId, collegeAcademicYear, collegeBranchId, collegeEducationId, updatedAt").in("collegeEducationId", validEduIds).eq("isActive", true).is("deletedAt", null),
-      supabase.from("college_sections").select("collegeSectionsId, collegeSections, collegeBranchId, collegeAcademicYearId, collegeEducationId").in("collegeEducationId", validEduIds).eq("isActive", true).is("deletedAt", null),
-      supabase.from("college_batches").select("collegeBatchId, collegeBatchName, collegeBranchId, collegeAcademicYearId, collegeEducationId").in("collegeEducationId", validEduIds).eq("isActive", true).is("deletedAt", null)
+      supabase.from("college_academic_year").select("collegeAcademicYearId, collegeAcademicYear, collegeBranchId, collegeEducationId, updatedAt").eq("collegeId", adminCtx.collegeId).eq("isActive", true).is("deletedAt", null),
+      supabase.from("college_sections").select("collegeSectionsId, collegeSections, collegeBranchId, collegeAcademicYearId, collegeEducationId").eq("collegeId", adminCtx.collegeId).eq("isActive", true).is("deletedAt", null),
+      supabase.from("college_batches").select("collegeBatchId, collegeBatchName, collegeBranchId, collegeAcademicYearId, collegeEducationId").eq("collegeId", adminCtx.collegeId).eq("isActive", true).is("deletedAt", null)
     ]);
 
     const years = yearsRes.data || [];
@@ -159,11 +167,23 @@ export async function fetchAdminBranchesWithDetails(adminId: number, page: numbe
       }
     });
 
-    flatYearlyData.sort((a, b) => b.timestamp - a.timestamp);
+    let filteredData = flatYearlyData;
 
-    const total = flatYearlyData.length;
+    if (educationFilter && educationFilter !== "All") {
+      filteredData = filteredData.filter(d => d.degree === educationFilter);
+    }
+    if (branchFilter && branchFilter !== "All") {
+      filteredData = filteredData.filter(d => d.dept === branchFilter);
+    }
+    if (yearFilter && yearFilter !== "All") {
+      filteredData = filteredData.filter(d => d.year === yearFilter);
+    }
+
+    filteredData.sort((a, b) => b.timestamp - a.timestamp);
+
+    const total = filteredData.length;
     const start = (page - 1) * limit;
-    const paginatedData = flatYearlyData.slice(start, start + limit);
+    const paginatedData = filteredData.slice(start, start + limit);
 
     return { data: paginatedData, total };
   } catch (err) {
@@ -193,6 +213,50 @@ export async function fetchAvailableBatchesByCollege(collegeId: number) {
   } catch (err) {
     console.error("Error fetching available batches:", err);
     return [];
+  }
+}
+
+export async function fetchAdminAcademicFilters(adminId: number) {
+  try {
+    const { data: adminCtx } = await supabase
+      .from("admins")
+      .select("collegeId")
+      .eq("adminId", adminId)
+      .maybeSingle();
+
+    if (!adminCtx?.collegeId) {
+      return { educations: [], branches: [], years: [] };
+    }
+
+    const { data: educations } = await supabase
+      .from("college_education")
+      .select("collegeEducationId, collegeEducationType")
+      .eq("collegeId", adminCtx.collegeId)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    const { data: branches } = await supabase
+      .from("college_branch")
+      .select("collegeBranchId, collegeBranchType, collegeBranchCode, collegeEducationId")
+      .eq("collegeId", adminCtx.collegeId)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    const { data: years } = await supabase
+      .from("college_academic_year")
+      .select("collegeAcademicYearId, collegeAcademicYear, collegeBranchId, collegeEducationId")
+      .eq("collegeId", adminCtx.collegeId)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    return {
+      educations: educations || [],
+      branches: branches || [],
+      years: years || []
+    };
+  } catch (err) {
+    console.error("Error fetching academic filters:", err);
+    return { educations: [], branches: [], years: [] };
   }
 }
 

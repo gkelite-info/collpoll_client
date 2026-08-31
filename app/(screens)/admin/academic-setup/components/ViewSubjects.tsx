@@ -6,12 +6,14 @@ import { useUser } from "@/app/utils/context/UserContext";
 import {
   getAcademicSubjects,
   deleteAcademicSubject,
+  fetchSubjectFilters
 } from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
-import { fetchAdminAssignedEducationsList } from "@/lib/helpers/admin/academicSetupAPI";
+import { fetchAdminAcademicFilters } from "@/lib/helpers/admin/academicSetupAPI";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Pagination } from "./pagination";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import ConfirmDeleteModal from "../../calendar/components/ConfirmDeleteModal";
 
@@ -56,6 +58,42 @@ const getSubjectInitials = (subjectName: string) => {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 };
 
+const TableShimmer = ({ isSchool, isInter }: { isSchool: boolean, isInter: boolean }) => {
+  const columnCount = isSchool ? 5 : (isInter ? 8 : 9);
+  return (
+    <>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <tr key={i} className="border-b border-gray-50 last:border-b-0 animate-pulse">
+          <td className="p-3"><div className="h-10 w-10 bg-gray-200 rounded-lg"></div></td>
+          <td className="p-3"><div className="h-4 bg-gray-200 rounded w-3/4"></div></td>
+          <td className="p-3"><div className="h-4 bg-gray-200 rounded w-1/2"></div></td>
+          <td className="p-3"><div className="h-4 bg-gray-200 rounded w-1/2"></div></td>
+          {!isSchool && <td className="p-3"><div className="h-4 bg-gray-200 rounded w-1/4"></div></td>}
+          <td className="p-3"><div className="h-4 bg-gray-200 rounded w-1/2"></div></td>
+          {!isSchool && <td className="p-3"><div className="h-4 bg-gray-200 rounded w-1/2"></div></td>}
+          <td className="p-3"><div className="h-4 bg-gray-200 rounded w-1/3"></div></td>
+          {!isSchool && !isInter && <td className="p-3"><div className="h-4 bg-gray-200 rounded w-1/4"></div></td>}
+          <td className="p-3">
+             <div className="flex items-center gap-3">
+                <div className="h-4 bg-gray-200 rounded w-10"></div>
+                <div className="h-4 bg-gray-200 rounded w-12"></div>
+             </div>
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+};
+
+const DropdownShimmer = () => (
+  <div className="flex gap-4 mb-4 animate-pulse">
+    <div className="h-10 bg-gray-200 rounded-md w-48"></div>
+    <div className="h-10 bg-gray-200 rounded-md w-48"></div>
+    <div className="h-10 bg-gray-200 rounded-md w-48"></div>
+    <div className="h-10 bg-gray-200 rounded-md w-48"></div>
+  </div>
+);
+
 export default function ViewSubjects({
   onEdit,
 }: {
@@ -65,11 +103,40 @@ export default function ViewSubjects({
   const [subjects, setSubjects] = useState<SubjectViewData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const { collegeEducationType } = useAdmin();
+  const { collegeEducationType, adminId } = useAdmin();
   const isSchool = isSchoolEducation(collegeEducationType);
+  const isInter = collegeEducationType === "Inter";
   const [isDeleting, setIsDeleting] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // Filters State
+  const [educationFilter, setEducationFilter] = useState<string>("All");
+  const [branchFilter, setBranchFilter] = useState<string>("All");
+  const [yearFilter, setYearFilter] = useState<string>("All");
+  const [subjectFilter, setSubjectFilter] = useState<string>("All");
+  
+  const [filterOptions, setFilterOptions] = useState<{ educations: any[], branches: any[], years: any[], subjects: any[] }>({
+    educations: [],
+    branches: [],
+    years: [],
+    subjects: []
+  });
+  const [isFetchingFilters, setIsFetchingFilters] = useState(true);
+
+  useEffect(() => {
+    const fetchFilters = async () => {
+      if (!adminId) return;
+      setIsFetchingFilters(true);
+      const { collegeId } = await fetchAdminContext(userId!);
+      const res = await fetchAdminAcademicFilters(adminId);
+      const subjects = await fetchSubjectFilters(collegeId);
+      setFilterOptions({ ...res, subjects });
+      setIsFetchingFilters(false);
+    };
+    fetchFilters();
+  }, [adminId, userId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -82,10 +149,16 @@ export default function ViewSubjects({
       setIsLoading(true);
 
       const { collegeId } = await fetchAdminContext(userId);
-      const adminEdus = await fetchAdminAssignedEducationsList(userId);
-      const validEduIds = adminEdus.map(e => e.collegeEducationId);
 
-      const res = await getAcademicSubjects(collegeId, validEduIds);
+      const res = await getAcademicSubjects(
+        collegeId, 
+        currentPage, 
+        ITEMS_PER_PAGE, 
+        educationFilter, 
+        branchFilter, 
+        yearFilter, 
+        subjectFilter
+      );
 
       if (!res.success) {
         toast.error(res.error || "Unable to load subjects. Please try again.");
@@ -107,7 +180,7 @@ export default function ViewSubjects({
       }));
 
       setSubjects(mapped);
-      setCurrentPage(1);
+      setTotalItems(res.total || 0);
     } catch (error: unknown) {
       toast.error(
         getErrorMessage("Something went wrong while loading subjects.")
@@ -117,6 +190,10 @@ export default function ViewSubjects({
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (userId) loadSubjects();
+  }, [currentPage, educationFilter, branchFilter, yearFilter, subjectFilter]);
 
   const handleDelete = (subjectId: number) => {
     setSelectedSubjectId(subjectId);
@@ -145,45 +222,164 @@ export default function ViewSubjects({
   };
 
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const currentSubjects = subjects.slice(
-    startIndex,
-    startIndex + ITEMS_PER_PAGE,
-  );
+  const currentSubjects = subjects;
   
-  const tableColumnCount = isSchool ? 5 : (collegeEducationType === "Inter" ? 8 : 9);
+  const tableColumnCount = isSchool ? 5 : (isInter ? 8 : 9);
 
   return (
     <div className="w-[95%] mx-auto bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
-      <div className="flex-1 overflow-x-auto min-h-[40vh]">
+      {/* Filters Section */}
+      <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+        {isFetchingFilters ? (
+          <DropdownShimmer />
+        ) : (
+          <div className="flex flex-wrap items-center gap-4">
+            <CustomDropdown
+              label="Education Type"
+              value={educationFilter}
+              options={[{ value: "All", label: "All" }, ...Array.from(new Set(filterOptions.educations.map(e => e.collegeEducationType))).filter(Boolean).map(e => ({ value: e, label: e }))]}
+              onChange={(val) => { 
+                setEducationFilter(val as string); 
+                setBranchFilter("All");
+                setYearFilter("All");
+                setSubjectFilter("All");
+                setCurrentPage(1); 
+              }}
+              placeholder="Education Type"
+              widthClassName="w-48"
+            />
+            
+            {!isSchool && (
+              <CustomDropdown
+                label={educationFilter === "Inter" ? "Group" : "Branch"}
+                value={branchFilter}
+                options={[
+                  { value: "All", label: "All" },
+                  ...Array.from(
+                    new Set(
+                      filterOptions.branches
+                        .filter(b => {
+                          if (educationFilter === "All") return true;
+                          const edu = filterOptions.educations.find(e => e.collegeEducationType === educationFilter);
+                          return edu && b.collegeEducationId === edu.collegeEducationId;
+                        })
+                        .map(b => b.collegeBranchCode)
+                    )
+                  ).filter(Boolean).map(b => ({ value: b, label: b }))
+                ]}
+                onChange={(val) => { 
+                  setBranchFilter(val as string); 
+                  setYearFilter("All");
+                  setSubjectFilter("All");
+                  setCurrentPage(1); 
+                }}
+                disabled={educationFilter === "All"}
+                placeholder={educationFilter === "Inter" ? "Group" : "Branch"}
+                widthClassName="w-48"
+              />
+            )}
+            
+            <CustomDropdown
+              label="Year"
+              value={yearFilter}
+              options={[
+                { value: "All", label: "All" },
+                ...Array.from(
+                  new Set(
+                    filterOptions.years
+                      .filter(y => {
+                        const edu = filterOptions.educations.find(e => e.collegeEducationType === educationFilter);
+                        if (!edu && educationFilter !== "All") return false;
+                        
+                        if (educationFilter !== "All" && y.collegeEducationId !== edu?.collegeEducationId) return false;
+                        
+                        if (!isSchool && branchFilter !== "All") {
+                          const branch = filterOptions.branches.find(b => b.collegeBranchCode === branchFilter && b.collegeEducationId === edu?.collegeEducationId);
+                          if (!branch || y.collegeBranchId !== branch.collegeBranchId) return false;
+                        }
+                        
+                        return true;
+                      })
+                      .map(y => y.collegeAcademicYear)
+                  )
+                ).filter(Boolean).map(y => ({ value: y, label: y }))
+              ]}
+              onChange={(val) => { 
+                setYearFilter(val as string); 
+                setSubjectFilter("All");
+                setCurrentPage(1); 
+              }}
+              disabled={isSchool ? educationFilter === "All" : branchFilter === "All"}
+              placeholder="Year"
+              widthClassName="w-48"
+            />
+            
+            <CustomDropdown
+              label="Subject"
+              value={subjectFilter}
+              options={[
+                { value: "All", label: "All" },
+                ...Array.from(
+                  new Set(
+                    filterOptions.subjects
+                      .filter(s => {
+                        const edu = filterOptions.educations.find(e => e.collegeEducationType === educationFilter);
+                        if (!edu && educationFilter !== "All") return false;
+                        
+                        if (educationFilter !== "All" && s.collegeEducationId !== edu?.collegeEducationId) return false;
+                        
+                        if (!isSchool && branchFilter !== "All") {
+                          const branch = filterOptions.branches.find(b => b.collegeBranchCode === branchFilter && b.collegeEducationId === edu?.collegeEducationId);
+                          if (!branch || s.collegeBranchId !== branch.collegeBranchId) return false;
+                        }
+                        
+                        if (yearFilter !== "All") {
+                           const branch = filterOptions.branches.find(b => b.collegeBranchCode === branchFilter && b.collegeEducationId === edu?.collegeEducationId);
+                           const year = filterOptions.years.find(y => y.collegeAcademicYear === yearFilter && y.collegeEducationId === edu?.collegeEducationId && (!isSchool ? y.collegeBranchId === branch?.collegeBranchId : true));
+                           if (!year || s.collegeAcademicYearId !== year.collegeAcademicYearId) return false;
+                        }
+                        
+                        return true;
+                      })
+                      .map(s => s.subjectName)
+                  )
+                ).filter(Boolean).map(s => ({ value: s, label: s }))
+              ]}
+              onChange={(val) => { setSubjectFilter(val as string); setCurrentPage(1); }}
+              disabled={yearFilter === "All"}
+              placeholder="Subject Name"
+              widthClassName="w-48"
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-x-auto custom-scrollbar min-h-[40vh]">
         <table className="w-full text-sm text-[#2D3748]">
           <thead className="bg-gray-100">
             <tr>
-              <th className="p-3 text-left text-[#2D3748]">Subject Image</th>
-              <th className="p-3 text-left text-[#2D3748]">Subject</th>
-              <th className="p-3 text-left text-[#2D3748]">Subject Code</th>
-              <th className="p-3 text-left text-[#2D3748]">Subject Key</th>
-              {!isSchool && <th className="p-3 text-left text-[#2D3748]">Credits</th>}
-              <th className="p-3 text-left text-[#2D3748]">Education</th>
+              <th className="p-3 text-left text-[#2D3748] whitespace-nowrap">Subject Image</th>
+              <th className="p-3 text-left text-[#2D3748] whitespace-nowrap">Subject</th>
+              <th className="p-3 text-left text-[#2D3748] whitespace-nowrap">Subject Code</th>
+              <th className="p-3 text-left text-[#2D3748] whitespace-nowrap">Subject Key</th>
+              {!isSchool && <th className="p-3 text-left text-[#2D3748] whitespace-nowrap">Credits</th>}
+              <th className="p-3 text-left text-[#2D3748] whitespace-nowrap">Education</th>
               {!isSchool && (
-                <th className="p-3 text-left text-[#2D3748]">
-                  {collegeEducationType === "Inter" ? "Group" : "Branch"}
+                <th className="p-3 text-left text-[#2D3748] whitespace-nowrap">
+                  {educationFilter === "Inter" ? "Group" : "Branch"}
                 </th>
               )}
-              <th className="p-3 text-left text-[#2D3748]">Year</th>
-              {!isSchool && !(collegeEducationType === "Inter") && (
-                <th className="p-3 text-left text-[#2D3748]">Sem</th>
+              <th className="p-3 text-left text-[#2D3748] whitespace-nowrap">Year</th>
+              {!isSchool && !isInter && (
+                <th className="p-3 text-left text-[#2D3748] whitespace-nowrap">Sem</th>
               )}
-              <th className="p-3 text-left text-[#2D3748]">Action</th>
+              <th className="p-3 text-left text-[#2D3748] whitespace-nowrap">Action</th>
             </tr>
           </thead>
 
           <tbody>
             {isLoading ? (
-              <tr>
-                <td colSpan={tableColumnCount} className="text-center p-3 h-[30vh]">
-                  <Loader />
-                </td>
-              </tr>
+              <TableShimmer isSchool={isSchool} isInter={isInter} />
             ) : currentSubjects.length > 0 ? (
               currentSubjects.map((row) => (
                 <tr
@@ -249,14 +445,13 @@ export default function ViewSubjects({
         </table>
       </div>
 
-      {!isLoading && (
-        <Pagination
-          currentPage={currentPage}
-          totalItems={subjects.length}
-          itemsPerPage={ITEMS_PER_PAGE}
-          onPageChange={setCurrentPage}
-        />
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalItems={totalItems}
+        itemsPerPage={ITEMS_PER_PAGE}
+        onPageChange={setCurrentPage}
+        alwaysShow={true}
+      />
 
       <ConfirmDeleteModal
         open={openDeleteModal}

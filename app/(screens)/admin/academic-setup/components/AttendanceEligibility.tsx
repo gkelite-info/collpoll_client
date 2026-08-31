@@ -21,6 +21,7 @@ import {
   type AttendancePolicyRow,
 } from "@/lib/helpers/admin/academicSetup/attendancePoliciesAPI";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { Pagination } from "./pagination";
 
 type EducationOption = {
   collegeEducationId: number;
@@ -71,6 +72,8 @@ export default function AttendanceEligibility() {
   const [minAttendance, setMinAttendance] = useState("");
   const [editingPolicyId, setEditingPolicyId] = useState<number | null>(null);
   const [policies, setPolicies] = useState<AttendancePolicyRow[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
 
   const [isLoadingEducations, setIsLoadingEducations] = useState(false);
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
@@ -107,18 +110,20 @@ export default function AttendanceEligibility() {
     [pathname, router, searchParams],
   );
 
-  const loadPolicies = useCallback(async (educationIds: number[]) => {
+  const loadPolicies = useCallback(async (educationIds: number[], page: number = 1) => {
     try {
       setIsLoadingPolicies(true);
-      const res = await fetchAttendancePolicies(educationIds);
+      const res = await fetchAttendancePolicies(educationIds, page, 10);
 
       if (!res.success) {
         toast.error(res.error || "Failed to load attendance policies", { id: "attendance-policy-load-err" });
         setPolicies([]);
+        setTotalItems(0);
         return;
       }
 
       setPolicies(res.data);
+      setTotalItems(res.total || 0);
     } finally {
       setIsLoadingPolicies(false);
     }
@@ -141,7 +146,9 @@ export default function AttendanceEligibility() {
         setEducations(adminEducations);
         await loadPolicies(
           adminEducations.map((education: any) => education.collegeEducationId),
+          1
         );
+        setCurrentPage(1);
 
         const defaultEducation = adminEducations[0];
         setSelectedEducationId(
@@ -335,8 +342,10 @@ export default function AttendanceEligibility() {
         { id: `attendance-save-success-${Date.now()}` },
       );
       resetForm();
+      setCurrentPage(1);
       await loadPolicies(
         educations.map((education) => education.collegeEducationId),
+        1
       );
     } catch (error) {
       console.error("Error saving attendance policy:", error);
@@ -455,8 +464,10 @@ export default function AttendanceEligibility() {
       toast.success("Attendance criteria deleted successfully", {
         id: "attendance-policy-delete",
       });
+      setCurrentPage(1);
       await loadPolicies(
         educations.map((education) => education.collegeEducationId),
+        1
       );
     } finally {
       setDeletingPolicyId(null);
@@ -742,6 +753,20 @@ export default function AttendanceEligibility() {
               )}
             </tbody>
           </table>
+        </div>
+        
+        {/* Pagination Section */}
+        <div className="border-t border-gray-100 mt-auto">
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            itemsPerPage={10}
+            onPageChange={(page) => {
+              setCurrentPage(page);
+              loadPolicies(educations.map(e => e.collegeEducationId), page);
+            }}
+            alwaysShow={true}
+          />
         </div>
       </div>
       <ConfirmDeleteModal

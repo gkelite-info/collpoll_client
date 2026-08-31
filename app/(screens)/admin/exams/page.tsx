@@ -281,7 +281,6 @@ export default function ExamsPage() {
       .then((eduList) => {
         setEducations(eduList);
         if (eduList.length > 0) {
-          setEducationSelect(eduList[0].collegeEducationId);
           setPrevSchedulesEduSelect(eduList[0].collegeEducationId);
         }
       })
@@ -570,8 +569,8 @@ export default function ExamsPage() {
       setYearSelect("");
       setSemesterSelect(null);
       setSectionSelect([]);
+      setEducationSelect(null);
       if (educations.length > 0) {
-        setEducationSelect(educations[0].collegeEducationId);
         setPrevSchedulesEduSelect(educations[0].collegeEducationId);
       }
       if (collegeId) {

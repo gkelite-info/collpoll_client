@@ -30,7 +30,10 @@ export async function GET(
     if (
         bucket === "progress_chat_attachments" ||
         bucket === "leave_request_chats_attachments" ||
-        bucket === "employee_leave_request_chat_attachments"
+        bucket === "employee_leave_request_chat_attachments" ||
+        bucket === "employee-expense-attachments" ||
+        bucket === "student_submissions" ||
+        bucket === "faculty_lab_manuals"
     ) {
         // Securely generate a temporary signed URL server-side to fetch the private file
         const { data, error } = await authClient.storage.from(bucket).createSignedUrl(filePath, 60);
