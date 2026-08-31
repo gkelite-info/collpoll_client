@@ -17,6 +17,14 @@ import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 
+const getSecureUrl = (url: string) => {
+  if (!url) return url;
+  const marker = "/storage/v1/object/public/";
+  const idx = url.indexOf(marker);
+  if (idx !== -1) return `/api/files/${url.slice(idx + marker.length)}`;
+  return url;
+};
+
 async function downloadFile(filePath: string) {
   try {
     const { data, error } = await supabase.storage
@@ -438,7 +446,7 @@ export default function AssignmentCard({
                             if (uploadedFiles[index]) {
                               downloadFile(uploadedFiles[index]);
                             } else if (item.videoLink) {
-                              window.open(item.videoLink, "_blank");
+                              window.open(getSecureUrl(item.videoLink), "_blank");
                             }
                           }}
                           className="truncate text-emerald-600 underline cursor-pointer"

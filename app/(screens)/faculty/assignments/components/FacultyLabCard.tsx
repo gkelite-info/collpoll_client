@@ -4,6 +4,14 @@ import { TrashIcon, PencilSimpleLine } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { getLabManualPublicUrl } from "@/lib/helpers/faculty/facultyLabManualHelper";
 
+const getSecureUrl = (url: string) => {
+  if (!url) return url;
+  const marker = "/storage/v1/object/public/";
+  const idx = url.indexOf(marker);
+  if (idx !== -1) return `/api/files/${url.slice(idx + marker.length)}`;
+  return url;
+};
+
 export interface LabManual {
   labId: number;
   labTitle: string;
@@ -47,7 +55,7 @@ export default function FacultyLabCard({
 }: FacultyLabCardProps) {
   const handleView = async () => {
     if (!data.pdfUrl) {
-      if (data.fileUrl) window.open(data.fileUrl, "_blank", "noopener,noreferrer");
+      if (data.fileUrl) window.open(getSecureUrl(data.fileUrl), "_blank", "noopener,noreferrer");
       return;
     }
 

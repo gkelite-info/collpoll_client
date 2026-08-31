@@ -62,32 +62,28 @@ const StudentPerformancePageSkeleton = () => (
     </section>
 
     <div className="mb-5 w-full max-w-5xl rounded-xl">
-      <div className="mb-4 flex flex-wrap gap-2 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+      <div className="mb-4 grid grid-cols-1 gap-x-4 gap-y-3 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm md:grid-cols-2 xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="flex min-w-30 flex-col gap-2">
+          <div key={index} className="flex flex-col gap-2">
             <div className="h-3 w-16 animate-pulse rounded bg-gray-100" />
-            <div className="h-10 w-[180px] animate-pulse rounded-md bg-gray-100" />
-          </div>
-        ))}
-      </div>
-
-      <div className="flex gap-3">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <div className="h-4 w-16 animate-pulse rounded bg-gray-100" />
-            <div className="h-8 w-20 animate-pulse rounded-full bg-[#E8F6E2]" />
+            <div className="h-10 w-full animate-pulse rounded-md bg-gray-100" />
           </div>
         ))}
       </div>
     </div>
 
-    <article className="mb-4 grid items-center justify-center gap-4 lg:grid-cols-4">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div
-          key={index}
-          className="h-[170px] w-full animate-pulse rounded-[20px] bg-white shadow-sm"
-        />
-      ))}
+    <article className="mb-4 grid items-start gap-2 lg:grid-cols-[68%_32%]">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div
+            key={index}
+            className="h-[170px] w-full animate-pulse rounded-[20px] bg-white shadow-sm"
+          />
+        ))}
+      </div>
+      <div className="-mt-5">
+        <WorkWeekCalendar />
+      </div>
     </article>
 
     <section>
@@ -156,13 +152,15 @@ const StudentPerformancePageSkeleton = () => (
 
 const StudentProgressDataSkeleton = () => (
   <div aria-label="Loading student progress data" className="animate-pulse">
-    <article className="mb-4 grid gap-3 lg:grid-cols-[68%_32%]">
+    <article className="mb-4 grid items-start gap-2 lg:grid-cols-[68%_32%]">
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="h-[170px] rounded-[20px] bg-gray-200" />
+          <div key={index} className="h-[170px] rounded-[20px] bg-white shadow-sm" />
         ))}
       </div>
-      <div className="h-[250px] rounded-[20px] bg-gray-100" />
+      <div className="-mt-5">
+        <WorkWeekCalendar />
+      </div>
     </article>
     <div className="overflow-hidden rounded-[20px] bg-white shadow-sm">
       <div className="flex gap-5 border-b border-gray-100 px-6 py-6">
@@ -179,8 +177,33 @@ const StudentProgressDataSkeleton = () => (
       ))}
     </div>
     <div className="mt-5 grid gap-4 pb-4 lg:grid-cols-[360px_minmax(0,1fr)]">
-      <div className="h-[300px] rounded-[20px] bg-gray-100" />
-      <div className="h-[300px] rounded-[20px] bg-gray-100" />
+      <div className="rounded-[20px] bg-white p-6 shadow-sm">
+        <div className="mb-6 h-8 w-44 animate-pulse rounded bg-gray-200" />
+        <div className="space-y-6">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="flex items-center gap-4">
+              <div className="h-14 w-14 animate-pulse rounded-full bg-gray-200" />
+              <div className="h-5 flex-1 animate-pulse rounded bg-gray-100" />
+              <div className="h-5 w-12 animate-pulse rounded bg-gray-100" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-[20px] bg-white p-6 shadow-sm">
+        <div className="mb-6 h-8 w-52 animate-pulse rounded bg-gray-200" />
+        <div className="flex h-[300px] items-end justify-between gap-4">
+          {Array.from({ length: 12 }).map((_, index) => (
+            <div key={index} className="flex flex-1 flex-col items-center gap-3">
+              <div
+                className="w-full animate-pulse rounded-[18px] bg-[#E8F6E2]"
+                style={{ height: `${160 + ((index % 4) + 1) * 18}px` }}
+              />
+              <div className="h-4 w-8 animate-pulse rounded bg-gray-100" />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   </div>
 );
@@ -476,7 +499,7 @@ export default function Page() {
       value: summaryLoading ? <ValueShimmer /> : String(summary.totalStudents),
       label: "Total Students",
       style: "bg-[#FFEDDA] w-full h-[170px]",
-      icon: <UsersThree size={20} weight="fill" />,
+      icon: <UsersThree size={32} weight="fill" />,
       iconBgColor: "#FFBB70",
       iconColor: "#FFFFFF",
     },
@@ -484,7 +507,7 @@ export default function Page() {
       value: summaryLoading ? <ValueShimmer /> : String(summary.presentToday),
       label: "Present Today",
       style: "bg-[#E6FBEA] w-full h-[170px]",
-      icon: <UserCircle size={20} weight="fill" />,
+      icon: <UserCircle size={32} weight="fill" />,
       iconBgColor: "#43C17A",
       iconColor: "#FFFFFF",
     },
@@ -492,7 +515,7 @@ export default function Page() {
       value: summaryLoading ? <ValueShimmer /> : String(summary.lowAttendance),
       label: "Low Attendance",
       style: "bg-[#FFE0E0] w-full h-[170px]",
-      icon: <ChartLineDown size={20} weight="fill" />,
+      icon: <ChartLineDown size={32} weight="fill" />,
       iconBgColor: "#FF2020",
       iconColor: "#FFFFFF",
     },
@@ -937,6 +960,8 @@ export default function Page() {
                 style={item.style}
                 iconBgColor={item.iconBgColor}
                 iconColor={item.iconColor}
+                iconStyle="w-14 h-14 rounded-lg"
+                textSize="text-3xl font-extrabold"
               />
             </div>
           ))}

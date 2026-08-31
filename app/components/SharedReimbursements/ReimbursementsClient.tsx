@@ -38,6 +38,7 @@ export default function ReimbursementsClient() {
   const {
     data: reportsData,
     isLoading: isFetchingReports,
+    isFetching: isFetchingReportsBackground,
     error: queryError,
   } = useQuery({
     queryKey: ["employeeExpenseReports", userId, collegeId, currentPage, itemsPerPage, sortOrder],
@@ -80,8 +81,15 @@ export default function ReimbursementsClient() {
     }
   };
 
+  const handleExport = async () => {
+    if (!userId || !collegeId) throw new Error("Employee context is unavailable.");
+    const limit = Math.max(totalCount, 1);
+    const data = await fetchEmployeeExpenseReports(userId, collegeId, 1, limit, sortOrder);
+    return data.reports;
+  };
+
   return <>
-    <ReimbursementsList reports={reports} totalCount={totalCount} stats={statsData} loading={loading} error={error} currentPage={currentPage} itemsPerPage={itemsPerPage} sortOrder={sortOrder} onPageChange={setCurrentPage} onItemsPerPageChange={setItemsPerPage} onSortChange={setSortOrder} onCreate={() => { setEditingReport(null); setMode("form"); }} onViewDetails={setSelectedReport} onEdit={(report) => { setEditingReport(report); setMode("form"); }} onDelete={setDeletingReport}/>
+    <ReimbursementsList reports={reports} totalCount={totalCount} stats={statsData} loading={loading} tableLoading={isFetchingReportsBackground} error={error} currentPage={currentPage} itemsPerPage={itemsPerPage} sortOrder={sortOrder} onPageChange={setCurrentPage} onItemsPerPageChange={setItemsPerPage} onSortChange={setSortOrder} onCreate={() => { setEditingReport(null); setMode("form"); }} onViewDetails={setSelectedReport} onEdit={(report) => { setEditingReport(report); setMode("form"); }} onDelete={setDeletingReport} onExport={handleExport}/>
     {selectedReport && (
       <ReimbursementDetailsModal
         report={selectedReport}

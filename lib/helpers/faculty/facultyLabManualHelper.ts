@@ -301,15 +301,7 @@ export async function deleteLabManual(labManualId: number) {
 
 
 export async function getLabManualPublicUrl(path: string) {
-    const { data, error } = await supabase.storage
-        .from("faculty_lab_manuals")
-        .createSignedUrl(path, 30);
-
-    if (error) {
-        console.error("Error generating signed URL:", error);
-        return null;
-    }
-    return data.signedUrl;
+    return `/api/files/faculty_lab_manuals/${path}`;
 }
 
 export async function deleteLabManualFile(path: string) {

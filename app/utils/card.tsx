@@ -178,13 +178,13 @@ export default function CardComponent({
     <div
       onClick={handleClick}
       style={{ ...inlineStyle }}
-      className={`relative rounded-lg p-3 h-fit md:h-32 lg:h-32 ${style} flex flex-col justify-between shadow-sm max-md:w-full max-md:h-auto max-md:p-2.5 max-md:justify-center
+      className={`relative rounded-lg p-3 ${style} flex flex-col justify-between shadow-sm max-md:w-full max-md:h-auto max-md:p-2.5 max-md:justify-center
         ${to || onClick ? "cursor-pointer hover:scale-[1.02] transition-all" : ""}`}
     >
       {/* DESKTOP VIEW */}
       <div className="hidden md:flex lg:flex items-center justify-between gap-3 mb-2">
         <div
-          className="w-9 h-8 rounded-sm flex items-center justify-center"
+          className={`${iconStyle || "w-9 h-8 rounded-sm"} flex items-center justify-center shrink-0`}
           style={{ backgroundColor: iconBgColor, color: iconColor }}
         >
           {icon}
@@ -203,13 +203,13 @@ export default function CardComponent({
       </div>
 
       <div
-        className={`hidden md:block lg:block ${isActive ? "text-[#ffffff]" : "text-[#282828]"} ${textSize} text-lg font-semibold`}
+        className={`hidden md:block lg:block ${isActive ? "text-[#ffffff]" : "text-[#282828]"} ${textSize || "text-lg"} font-semibold`}
       >
         {value}
       </div>
 
       <span
-        className={`hidden md:block lg:block ${isActive ? "text-[#ffffff]" : "text-[#282828]"} ${textSize}`}
+        className={`hidden md:block lg:block ${isActive ? "text-[#ffffff]" : "text-[#515151]"}`}
       >
         {label}
       </span>
@@ -217,7 +217,7 @@ export default function CardComponent({
       {/* MOBILE VIEW */}
       <div className="flex md:hidden lg:hidden items-center justify-start gap-3">
         <div
-          className="w-10 h-10 rounded-md flex items-center justify-center shrink-0"
+          className={`${iconStyle || "w-10 h-10 rounded-md"} flex items-center justify-center shrink-0`}
           style={{ backgroundColor: iconBgColor, color: iconColor }}
         >
           {icon}

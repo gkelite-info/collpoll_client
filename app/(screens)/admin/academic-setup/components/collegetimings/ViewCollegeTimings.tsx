@@ -6,8 +6,13 @@ import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { getCollegeTimings } from "@/lib/helpers/collegeTimings/collegeTimingsAPI";
 import CollegeTimingsTable from "./CollegeTimingsTable";
+import { PencilSimple } from "@phosphor-icons/react";
 
-export default function ViewCollegeTimings() {
+interface ViewCollegeTimingsProps {
+  onEdit?: () => void;
+}
+
+export default function ViewCollegeTimings({ onEdit }: ViewCollegeTimingsProps) {
   const { collegeId } = useUser();
   const { collegeEducationType } = useAdmin();
   const isSchool = isSchoolEducation(collegeEducationType);
@@ -32,6 +37,15 @@ export default function ViewCollegeTimings() {
     <div className="w-full animate-in fade-in zoom-in-95 duration-200">
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-5">
         <h2 className="text-xl font-bold text-[#16284F]">{isSchool ? "School Timings" : "College Timings"}</h2>
+        {onEdit && !isLoading && tableData.length > 0 && (
+          <button
+            onClick={onEdit}
+            className="flex items-center justify-center gap-2 bg-[#43C17A] text-white px-5 py-2 rounded-lg font-semibold hover:bg-[#3ab06e] transition-colors cursor-pointer shadow-sm text-sm whitespace-nowrap"
+          >
+            <PencilSimple size={18} weight="bold" />
+            <span>Edit Timings</span>
+          </button>
+        )}
       </div>
 
       <CollegeTimingsTable timings={tableData} isLoading={isLoading} isSchool={isSchool} />
