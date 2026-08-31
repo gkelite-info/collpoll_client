@@ -28,6 +28,7 @@ import {
   StudentPlacementListShimmer,
   StudentPlacementRightShimmer,
 } from "./shimmer/StudentPlacementShimmer";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 type TabType = "opportunities" | "applications";
 
@@ -336,6 +337,8 @@ export default function Page() {
     useState<PlacementFilterBarProps["eligibility"]>("All");
   const [sortBy, setSortBy] =
     useState<PlacementFilterBarProps["sortBy"]>("Recently Uploaded");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   useEffect(() => {
     if (studentLoading) return;
@@ -415,6 +418,7 @@ export default function Page() {
 
   const handleCycleChange = (value: string) => {
     setCycle(value);
+    setCurrentPage(1);
     void loadFilterOptions("cycle");
   };
 
@@ -422,11 +426,13 @@ export default function Page() {
     value: PlacementFilterBarProps["eligibility"],
   ) => {
     setEligibility(value);
+    setCurrentPage(1);
     void loadFilterOptions("eligibility");
   };
 
   const handleSortChange = (value: PlacementFilterBarProps["sortBy"]) => {
     setSortBy(value);
+    setCurrentPage(1);
     void loadFilterOptions("sort");
   };
 
@@ -532,6 +538,7 @@ export default function Page() {
       });
       setPlacementToApply(null);
       setActiveTab("applications");
+      setCurrentPage(1);
     } catch (error) {
       console.error("Failed to apply for placement", error);
     } finally {
@@ -624,11 +631,21 @@ export default function Page() {
     return list;
   }, [activeTab, appliedByPlacementId, cycle, eligibility, placements, sortBy, selectedDate]);
 
+  const totalPages = Math.max(
+    1,
+    Math.ceil(visiblePlacements.length / itemsPerPage),
+  );
+  const displayedPage = Math.min(currentPage, totalPages);
+  const paginatedPlacements = visiblePlacements.slice(
+    (displayedPage - 1) * itemsPerPage,
+    displayedPage * itemsPerPage,
+  );
+
   const pageLoading = studentLoading || isLoading;
   const filterRefreshing = filterLoadingKey !== null;
 
   return (
-    <main className="flex h-screen flex-col overflow-hidden p-2 bg-red-00 max-md:p-0 max-md:bg-[#F4F5F6]">
+    <main className="flex min-h-full flex-col p-2 bg-red-00 max-md:p-0 max-md:bg-[#F4F5F6]">
       {pageLoading ? (
         <StudentPlacementHeaderShimmer />
       ) : (
@@ -648,8 +665,8 @@ export default function Page() {
         </section>
       )}
 
-      <section className="bg-blue-00 flex min-h-0 flex-1 justify-between gap-4 overflow-hidden">
-        <section className="bg-yellow-00 relative flex min-w-0 flex-1 flex-col overflow-hidden max-md:px-4">
+      <section className="bg-blue-00 flex flex-1 items-start justify-between gap-4">
+        <section className="bg-yellow-00 relative flex min-w-0 flex-1 flex-col max-md:px-4">
           <div className="shrink-0">
             {pageLoading ? (
               <StudentPlacementControlsShimmer />
@@ -671,7 +688,10 @@ export default function Page() {
                 <div className="mt-2 md:mt-3 flex items-center gap-1 text-sm md:text-[18px]">
                   <button
                     type="button"
-                    onClick={() => setActiveTab("opportunities")}
+                    onClick={() => {
+                      setActiveTab("opportunities");
+                      setCurrentPage(1);
+                    }}
                     className={
                       activeTab === "opportunities"
                         ? "text-[#43C17A] font-semibold"
@@ -682,7 +702,10 @@ export default function Page() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setActiveTab("applications")}
+                    onClick={() => {
+                      setActiveTab("applications");
+                      setCurrentPage(1);
+                    }}
                     className={
                       activeTab === "applications"
                         ? "text-[#43C17A] font-semibold"
@@ -696,7 +719,7 @@ export default function Page() {
             )}
           </div>
 
-          <section className="mt-4 flex flex-col min-h-0 flex-1 gap-4 overflow-y-auto pr-1 pb-4 bg-blue-00">
+          <section className="mt-4 flex flex-col flex-1 gap-4 pr-1 pb-4 bg-blue-00">
             {isLoading || filterRefreshing ? (
               <StudentPlacementListShimmer />
             ) : visiblePlacements.length === 0 ? (
@@ -706,7 +729,7 @@ export default function Page() {
                   : t("No placement drives found for {cycle}", { cycle })}
               </p>
             ) : (
-              visiblePlacements.map((placement) => {
+              paginatedPlacements.map((placement) => {
                 const appliedOn = appliedByPlacementId.get(placement.id);
                 const isApplied = Boolean(appliedOn);
 
@@ -735,6 +758,23 @@ export default function Page() {
                   />
                 );
               })
+            )}
+
+            {!isLoading && !filterRefreshing && visiblePlacements.length > 0 && (
+              <div className="overflow-hidden rounded-xl">
+                <Pagination
+                  currentPage={displayedPage}
+                  totalItems={visiblePlacements.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                  itemsPerPageOptions={[5, 10, 20]}
+                  onItemsPerPageChange={(value) => {
+                    setItemsPerPage(value);
+                    setCurrentPage(1);
+                  }}
+                  alwaysShow
+                />
+              </div>
             )}
           </section>
         </section>

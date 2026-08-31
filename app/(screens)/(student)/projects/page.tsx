@@ -8,8 +8,8 @@ import { ProjectCardProps } from "@/lib/projectTypes/project";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { useTranslations } from "next-intl";
-import { FaChevronDown } from "react-icons/fa6";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 
 const ProjectCardShimmer = () => (
   <div className="bg-white rounded-[26px] shadow-sm border border-gray-100 px-5 py-6 md:px-7 md:py-7 animate-pulse">
@@ -114,7 +114,18 @@ const Page = () => {
     return matchesSubject && matchesStatus;
   });
 
-  const statuses = [t("All"), t("Active"), t("Completed")];
+  const subjectOptions = [
+    { value: "All", label: t("All") },
+    ...studentSubjects.map((subject) => ({
+      value: subject.collegeSubjectId,
+      label: subject.subjectName,
+    })),
+  ];
+  const statusOptions = [
+    { value: "All", label: t("All") },
+    { value: "Active", label: t("Active") },
+    { value: "Completed", label: t("Completed") },
+  ];
   const totalPages = Math.max(
     1,
     Math.ceil(filteredProjects.length / itemsPerPage),
@@ -146,26 +157,18 @@ const Page = () => {
           <label className="text-[12px] md:text-sm font-medium text-[#525252] whitespace-nowrap">
             {t("Subject:")}
           </label>
-          <div className="relative flex items-center">
-            <select
-              className="appearance-none bg-[#DCEAE2] text-[#43C17A] rounded-full px-3 md:px-4 py-1 md:py-1.5 text-[12px] md:text-sm font-semibold outline-none cursor-pointer pr-8 md:pr-10 max-w-[130px] md:max-w-none transition-colors hover:bg-[#cfe2d7]"
+          <div className="w-[180px] md:w-[280px]">
+            <CustomDropdown
               value={subjectFilter}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSubjectFilter(val === "All" ? "All" : Number(val));
+              options={subjectOptions}
+              onChange={(value) => {
+                setSubjectFilter(value === "All" ? "All" : Number(value));
                 setCurrentPage(1);
               }}
-            >
-              <option value="All">{t("All")}</option>
-              {studentSubjects.map((s) => (
-                <option key={s.collegeSubjectId} value={s.collegeSubjectId}>
-                  {s.subjectName}
-                </option>
-              ))}
-            </select>
-            <span className="absolute right-3 pointer-events-none text-[#43C17A] text-[10px] md:text-xs">
-              <FaChevronDown />
-            </span>
+              theme="always-green"
+              hideCheckmark
+              className="!rounded-full !border-transparent !px-3 md:!px-4 !py-1 md:!py-1.5 !pr-8 md:!pr-10 !text-[12px] md:!text-sm"
+            />
           </div>
         </div>
 
@@ -173,24 +176,18 @@ const Page = () => {
           <label className="text-[12px] md:text-sm font-medium text-[#525252] whitespace-nowrap">
             {t("Status:")}
           </label>
-          <div className="relative flex items-center">
-            <select
-              className="appearance-none bg-[#DCEAE2] text-[#43C17A] rounded-full px-3 md:px-4 py-1 md:py-1.5 text-[12px] md:text-sm font-semibold outline-none cursor-pointer pr-8 md:pr-10 transition-colors hover:bg-[#cfe2d7]"
+          <div className="w-[120px] md:w-[150px]">
+            <CustomDropdown
               value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
+              options={statusOptions}
+              onChange={(value) => {
+                setStatusFilter(String(value));
                 setCurrentPage(1);
               }}
-            >
-              {statuses.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            <span className="absolute right-3 pointer-events-none text-[#43C17A] text-[10px] md:text-xs">
-              <FaChevronDown />
-            </span>
+              theme="always-green"
+              hideCheckmark
+              className="!rounded-full !border-transparent !px-3 md:!px-4 !py-1 md:!py-1.5 !pr-8 md:!pr-10 !text-[12px] md:!text-sm"
+            />
           </div>
         </div>
       </div>

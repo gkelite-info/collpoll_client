@@ -35,7 +35,7 @@ export default function IssueList({ onEditIssue }: IssueListProps) {
     : "raised";
   const currentPageStr = searchParams.get("page") || "1";
   const currentPage = parseInt(currentPageStr, 10) || 1;
-  const itemsPerPage = 3; 
+  const [itemsPerPage, setItemsPerPage] = useState(3);
 
   const [loading, setLoading] = useState(false);
   const [issues, setIssues] = useState<StudentWellbeingIssueListItem[]>([]);
@@ -64,7 +64,7 @@ export default function IssueList({ onEditIssue }: IssueListProps) {
     } finally {
       setLoading(false);
     }
-  }, [collegeId, currentPage, currentTab, userId]);
+  }, [collegeId, currentPage, currentTab, itemsPerPage, userId]);
 
   useEffect(() => {
     loadIssues();
@@ -78,6 +78,13 @@ export default function IssueList({ onEditIssue }: IssueListProps) {
   const handlePageChange = (newPage: number) => {
     const params = new URLSearchParams(searchParams);
     params.set("page", newPage.toString());
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleItemsPerPageChange = (value: number) => {
+    setItemsPerPage(value);
+    const params = new URLSearchParams(searchParams);
+    params.set("page", "1");
     router.push(`?${params.toString()}`);
   };
 
@@ -163,7 +170,10 @@ export default function IssueList({ onEditIssue }: IssueListProps) {
               totalItems={totalItems}
               itemsPerPage={itemsPerPage}
               onPageChange={handlePageChange}
-              // roundedBottom="rounded-xl"
+              itemsPerPageOptions={[3, 5, 10]}
+              onItemsPerPageChange={handleItemsPerPageChange}
+              alwaysShow
+              roundedBottom="rounded-xl"
             />
           </div>
         </>

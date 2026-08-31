@@ -157,7 +157,7 @@ export default function AssignmentsRight() {
 
   return (
     <>
-      <div className="w-[32%] shrink-0 p-1 pt-0 pr-0 hidden lg:flex flex-col">
+      <div className="w-[32%] self-stretch shrink-0 p-1 pt-0 pr-0 hidden lg:flex flex-col">
         <WorkWeekCalendar />
         <TaskPanel
           role="student"
@@ -173,7 +173,7 @@ export default function AssignmentsRight() {
         />
         <AnnouncementsCard
           announceCard={announcements}
-          height="60vh"
+          className="mt-5 min-h-[500px] flex-1"
           onViewChange={(v) => setView(v)}
           refreshAnnouncements={fetchAnnouncements}
           readOnly={true}

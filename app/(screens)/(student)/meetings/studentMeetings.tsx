@@ -7,12 +7,11 @@ import { motion } from "framer-motion";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { Loader } from "../calendar/right/timetable";
 import MeetingCard from "../../finance/meetings/components/MeetingCard";
-import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import MeetingCardShimmer from "@/app/utils/shimmers/MeetingCardShimmer";
 import { useTranslations } from "next-intl";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 
 type MeetingType = "upcoming" | "previous";
 type MeetingCategory = "Student";
@@ -40,12 +39,13 @@ export interface Meeting {
 export default function StudentMeetingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const t = useTranslations("Meetings.student");
 
-  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const currentType = (searchParams.get("type") as MeetingType) || "upcoming";
   const currentCategory = "Student";
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -84,7 +84,7 @@ export default function StudentMeetingsPage() {
     }
 
     loadMeetings();
-  }, [currentType, page, studentId, collegeBranchCode, collegeSectionsId]);
+  }, [currentType, page, itemsPerPage, studentId, collegeBranchCode, collegeSectionsId]);
 
   const loadMeetings = async () => {
     try {
@@ -97,7 +97,7 @@ export default function StudentMeetingsPage() {
         collegeSectionsId: Number(collegeSectionsId),
         type: currentType,
         page,
-        limit: 10,
+        limit: itemsPerPage,
       });
 
       const finalMeetings: Meeting[] = res.data.map((meeting: any) => ({
@@ -107,7 +107,7 @@ export default function StudentMeetingsPage() {
       }));
 
       setMeetings(finalMeetings);
-      setTotalPages(res.totalPages || 1);
+      setTotalItems(res.totalItems);
     } catch (err) {
       toast.error(t("Failed to fetch type meetings", { type: t(currentType) }));
     } finally {
@@ -190,49 +190,20 @@ export default function StudentMeetingsPage() {
               )}
             </div>
           </div>
-          {totalPages > 1 && (
-            <div className="flex justify-center pb-4 max-md:pb-6">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className={`p-2 rounded-md ${
-                    page === 1
-                      ? "bg-gray-100 text-gray-400"
-                      : "bg-gray-200 hover:bg-gray-300"
-                  }`}
-                >
-                  <CaretLeft size={16} weight="bold" />
-                </button>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPage(p)}
-                      className={`px-3 py-1 rounded-md text-sm font-medium ${
-                        page === p
-                          ? "bg-[#16284F] text-white"
-                          : "bg-gray-200 hover:bg-gray-300"
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ),
-                )}
-
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className={`p-2 rounded-md ${
-                    page === totalPages
-                      ? "bg-gray-100 text-gray-400"
-                      : "bg-gray-200 hover:bg-gray-300"
-                  }`}
-                >
-                  <CaretRight size={16} weight="bold" />
-                </button>
-              </div>
+          {!isLoading && totalItems > 0 && (
+            <div className="overflow-hidden rounded-xl pb-4 max-md:pb-6">
+              <Pagination
+                currentPage={page}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setPage}
+                itemsPerPageOptions={[10, 20, 50]}
+                onItemsPerPageChange={(value) => {
+                  setItemsPerPage(value);
+                  setPage(1);
+                }}
+                alwaysShow
+              />
             </div>
           )}
         </div>
