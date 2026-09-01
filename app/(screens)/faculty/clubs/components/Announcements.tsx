@@ -70,6 +70,8 @@ export default function Announcements({ userRole, clubId, collegeId, facultyId, 
     const scrollRef = useRef<HTMLDivElement>(null);
     const isFetchingRef = useRef(false);
 
+    const canPost = userRole?.toLowerCase().replace(/\s/g, "") === "mentor" || userRole?.toLowerCase().replace(/\s/g, "") === "responsiblefaculty";
+
     const channelRef = useRef<any>(null);
     const onDateChangeRef = useRef(onDateChange);
     const processedIds = useRef<Set<number>>(new Set());
@@ -407,18 +409,17 @@ export default function Announcements({ userRole, clubId, collegeId, facultyId, 
                 onScroll={handleScroll}
                 className="flex-1 overflow-y-auto pr-2 custom-scrollbar"
             >
-                {messages.length === 0 && !loading && (
+                {messages.length === 0 && !loading ? (
                     <div className="flex h-full flex-col items-center justify-center text-center opacity-80 animate-in fade-in duration-500">
                         <div className="bg-[#16284F]/10 p-6 h-24 w-24 flex items-center justify-center rounded-full mb-4">
                             <span className="text-4xl">📢</span>
                         </div>
                         <p className="text-lg font-bold text-[#16284F] mb-1">No Announcements Yet</p>
                         <p className="text-sm font-medium text-gray-500 max-w-xs">
-                            Be the first to share an update or important information with the club members!
+                            {canPost ? "Be the first to share an update or important information with the club members!" : "When club leaders post updates, they will appear here"}
                         </p>
                     </div>
-                )}
-
+                ) : (
                 <div className="flex flex-col gap-4 pb-2 min-h-full justify-end">
                     {hasMore && messages.length > 0 && (
                         <div className="flex justify-center py-2 animate-in fade-in">
@@ -491,8 +492,10 @@ export default function Announcements({ userRole, clubId, collegeId, facultyId, 
                         );
                     })}
                 </div>
+                )}
             </div>
 
+            {canPost && (
             <form onSubmit={handleSend} className="mt-2 pb-2 px-1">
                 <div className="flex items-center gap-4">
                     <motion.div initial={false} animate={{ scale: inputValue.trim() && !isPosting ? 1.01 : 1 }} className="relative flex-1">
@@ -538,6 +541,7 @@ export default function Announcements({ userRole, clubId, collegeId, facultyId, 
                     </span>
                 </div>
             </form>
+            )}
 
             <ConfirmDeleteModal
                 open={deleteModalOpen}

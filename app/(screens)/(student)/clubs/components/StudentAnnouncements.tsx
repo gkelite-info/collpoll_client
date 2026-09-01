@@ -997,7 +997,7 @@ export default function StudentAnnouncements({
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto pr-2 custom-scrollbar"
       >
-        {messages.length === 0 && !loading && (
+        {messages.length === 0 && !loading ? (
           <div className="flex h-full flex-col items-center justify-center text-center opacity-80 animate-in fade-in duration-500">
             <div className="bg-[#16284F]/10 p-6 h-24 w-24 flex items-center justify-center rounded-full mb-4">
               <span className="text-4xl">📢</span>
@@ -1013,10 +1013,9 @@ export default function StudentAnnouncements({
                 : t("When club leaders post updates, they will appear here")}
             </p>
           </div>
-        )}
-
-        <div className="flex flex-col gap-4 pb-2 min-h-full justify-end">
-          {hasMore && messages.length > 0 && (
+        ) : (
+          <div className="flex flex-col gap-4 pb-2 min-h-full justify-end">
+            {hasMore && messages.length > 0 && (
             <div className="flex justify-center py-2 animate-in fade-in">
               <button
                 onClick={fetchOlderMessages}
@@ -1110,6 +1109,7 @@ export default function StudentAnnouncements({
             );
           })}
         </div>
+        )}
       </div>
 
       {canPost && (

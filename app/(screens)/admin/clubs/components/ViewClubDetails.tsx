@@ -8,7 +8,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import TableComponent from "@/app/utils/table/table";
 import { motion } from "framer-motion";
-import { FilterDropdown } from "./FilterDropdown";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 import ConfirmDeleteModal from "../../calendar/components/ConfirmDeleteModal";
 import { useUser } from "@/app/utils/context/UserContext";
 import toast from "react-hot-toast";
@@ -31,12 +31,11 @@ const ITEMS_PER_PAGE = 10;
 export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
     const searchParams = useSearchParams();
     const router = useRouter();
-    const { collegeId, adminId } = useUser();
+    const { collegeId, adminId, loading: userLoading } = useUser();
 
     const rawClubId = useMemo(() => decryptId(clubId), [clubId]);
 
     const status = searchParams.get("status") || "active";
-    const group = searchParams.get("group") || "members";
 
     const [currentPage, setCurrentPage] = useState(1);
     const queryClient = useQueryClient();
@@ -75,7 +74,7 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
         setSelectedIds([]);
         setSearchInput("");
         setSearchQuery("");
-    }, [status, group]);
+    }, [status]);
 
     useEffect(() => {
         if (!collegeId) return;
@@ -124,7 +123,8 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
     });
 
     const members = membersData?.members || [];
-    const totalItems = membersData?.totalCount || 0;
+    const totalItems = membersData?.totalCount || 0; // Filtered count for pagination
+    const overallTotalCount = membersData?.overallCount || 0; // Constant count for header
     const clubName = titleData || "Loading...";
     const isLoading = isFetchingMembers;
     const isInitialLoad = isInitialLoadQuery;
@@ -139,15 +139,16 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const updateFilters = (newStatus: string, newGroup: string) => {
-        router.push(`/admin/clubs?tab=view&viewClubId=${clubId}&status=${newStatus}&group=${newGroup}`);
+    const updateFilters = (newStatus: string) => {
+        router.push(`/admin/clubs?tab=view&viewClubId=${clubId}&status=${newStatus}`);
     };
 
     const toggleSelectAll = () => {
-        if (selectedIds.length === members.length && members.length > 0) {
+        const selectableMembers = members.filter(m => !m.isOfficial);
+        if (selectedIds.length === selectableMembers.length && selectableMembers.length > 0) {
             setSelectedIds([]);
         } else {
-            setSelectedIds(members.map(m => m.id));
+            setSelectedIds(selectableMembers.map(m => m.id));
         }
     };
 
@@ -192,17 +193,32 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
     const isActionLoading = removeMutation.isPending;
 
     const isInactive = status === "inactive";
-    const isMentors = group === "mentors";
     const themeColor = isInactive ? "text-red-500" : "text-[#43C17A]";
-    const headerStatusText = `${isInactive ? "Inactive" : "Active"} ${isMentors ? "Mentors" : "Members"}`;
-    const totalText = `Total ${isInactive ? "Inactive" : "Active"} ${isMentors ? "Mentors" : "Members"} :`;
+    const headerStatusText = `${isInactive ? "Inactive" : "Active"} Members`;
+    const totalText = `Total ${isInactive ? "Inactive" : "Active"} Members :`;
+
+    const getRoleBadge = (role: string) => {
+        switch (role) {
+            case "President":
+                return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">President 👑</span>;
+            case "Vice President":
+                return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">Vice President</span>;
+            case "Responsible Faculty":
+                return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">Responsible Faculty</span>;
+            case "Mentor":
+                return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">Mentor</span>;
+            default:
+                return null;
+        }
+    };
 
     const columns = [
-        { title: isMentors ? "Mentor Name" : "Student Name", key: "name" },
-        { title: "Student ID", key: "pinNumber" },
+        { title: "User Name", key: "name" },
+        { title: "User ID", key: "pinNumber" },
+        { title: "Role", key: "role" },
         { title: "Education Type", key: "edu" },
         { title: "Branch", key: "branch" },
-        ...(!isMentors ? [{ title: "Year", key: "year" }] : []),
+        { title: "Year", key: "year" },
         { title: "Joined Date", key: "date" },
         { title: "Action", key: "action" },
     ];
@@ -210,23 +226,33 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
     const tableData = members.map((row) => ({
         name: (
             <div className="flex items-center gap-3">
-                <input
-                    type="checkbox"
-                    checked={selectedIds.includes(row.id)}
-                    onChange={() => toggleSelect(row.id)}
-                    disabled={isActionLoading}
-                    className="h-4 w-4 cursor-pointer rounded border-gray-300 text-[#16284F] focus:ring-[#16284F] disabled:opacity-50"
-                />
+                {!row.isOfficial && (
+                    <input
+                        type="checkbox"
+                        checked={selectedIds.includes(row.id)}
+                        onChange={() => toggleSelect(row.id)}
+                        disabled={isActionLoading}
+                        className="h-4 w-4 cursor-pointer rounded border-gray-300 text-[#16284F] focus:ring-[#16284F] disabled:opacity-50"
+                    />
+                )}
                 <Avatar src={row.avatar} alt={row.name} size={36} />
                 <span className="font-medium text-gray-800">{row.name}</span>
             </div>
         ),
         pinNumber: <span className="font-semibold text-gray-600">{row.pinNumber}</span>,
+        role: (
+            <div className="flex items-center justify-center gap-2">
+                <span className="text-sm font-medium text-gray-600 capitalize">{row.baseRole?.toLowerCase()}</span>
+                {row.isOfficial && getRoleBadge(row.role)}
+            </div>
+        ),
         edu: row.edu,
         branch: row.branch,
-        ...(!isMentors && { year: row.year }),
+        year: row.year,
         date: row.date,
-        action: (
+        action: row.isOfficial ? (
+            <span className="text-xs text-gray-400 font-medium italic">Official</span>
+        ) : (
             <button
                 onClick={() => openActionModal("single", row)}
                 disabled={isActionLoading}
@@ -236,7 +262,7 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
         )
     }));
 
-    if (isInitialLoad) return <ViewClubDetailsShimmer />;
+    if (userLoading || isInitialLoad) return <ViewClubDetailsShimmer />;
 
     return (
         <div className="w-full flex flex-col items-center relative">
@@ -258,7 +284,7 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
                     return (
                         <button
                             key={s}
-                            onClick={() => updateFilters(s, group)}
+                            onClick={() => updateFilters(s)}
                             className={`relative cursor-pointer w-36 py-2 rounded-full text-sm font-medium transition-colors ${isActive ? "text-white" : "text-[#282828]"}`}
                         >
                             <span className="relative z-20">
@@ -296,18 +322,18 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
                             </button>
                         )}
                         <div className="text-lg font-bold text-[#16284F]">
-                            {totalText} <span className={themeColor}>({totalItems})</span>
+                            {totalText} <span className={themeColor}>({overallTotalCount})</span>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-6 mb-6">
-                    <div className="relative w-[380px]">
+                <div className="flex flex-col xl:flex-row items-start xl:items-end gap-4 xl:gap-6 mb-6 w-full">
+                    <div className="relative w-full xl:w-[380px] shrink-0">
                         <input
                             type="text"
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
-                            placeholder={`Search ${isMentors ? "Mentor Name" : "Club Member"}.....`}
+                            placeholder="Search Club Member....."
                             className="w-full bg-[#EAEAEA] border border-transparent rounded-full py-3 pl-6 pr-12 text-[15px] text-[#282828] focus:outline-none focus:border-[#43C17A]"
                         />
                         <button className="absolute right-5 top-1/2 -translate-y-1/2 text-[#43C17A]">
@@ -315,51 +341,62 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
                         </button>
                     </div>
 
-                    <div className="flex items-center gap-5 filter-dropdown">
-                        <FilterDropdown
+                    <div className="flex flex-wrap items-center gap-4 filter-dropdown w-full xl:w-auto">
+                        <CustomDropdown
                             id="edu"
                             label="Education Type"
-                            options={eduOptions.map((e: any) => e.collegeEducationType)}
-                            value={selectedEduLabel}
-                            isOpen={openDropdown === "edu"}
-                            onToggle={setOpenDropdown}
+                            options={eduOptions.map((e: any) => ({ value: e.collegeEducationType, label: e.collegeEducationType }))}
+                            value={selectedEduLabel || "All"}
+                            widthClassName="w-40"
                             onChange={(val) => {
                                 const match = eduOptions.find((e: any) => e.collegeEducationType === val);
-                                setSelectedEduLabel(val);
+                                setSelectedEduLabel(val === "All" ? null : String(val));
                                 setSelectedEduId(match?.collegeEducationId || null);
+                                // Cascade reset
+                                setSelectedBranchLabel(null);
+                                setSelectedBranchId(null);
+                                setSelectedYearLabel(null);
+                                setSelectedYearId(null);
                                 setCurrentPage(1);
                             }}
+                            theme="always-green"
+                            includeAll={true}
                         />
-                        <FilterDropdown
+                        <CustomDropdown
                             id="branch"
                             label="Branch"
-                            options={branchOptions.map((b: any) => b.collegeBranchCode)}
-                            value={selectedBranchLabel}
-                            isOpen={openDropdown === "branch"}
-                            onToggle={setOpenDropdown}
+                            options={branchOptions.map((b: any) => ({ value: b.collegeBranchCode, label: b.collegeBranchCode }))}
+                            value={selectedBranchLabel || "All"}
+                            widthClassName="w-40"
                             onChange={(val) => {
                                 const match = branchOptions.find((b: any) => b.collegeBranchCode === val);
-                                setSelectedBranchLabel(val);
+                                setSelectedBranchLabel(val === "All" ? null : String(val));
                                 setSelectedBranchId(match?.collegeBranchId || null);
+                                // Cascade reset
+                                setSelectedYearLabel(null);
+                                setSelectedYearId(null);
                                 setCurrentPage(1);
                             }}
+                            disabled={!selectedEduLabel || selectedEduLabel === "All"}
+                            theme="always-green"
+                            includeAll={true}
                         />
-                        {!isMentors && (
-                            <FilterDropdown
-                                id="year"
-                                label="Year"
-                                options={yearOptions.map((y: any) => y.collegeAcademicYear)}
-                                value={selectedYearLabel}
-                                isOpen={openDropdown === "year"}
-                                onToggle={setOpenDropdown}
-                                onChange={(val) => {
-                                    const match = yearOptions.find((y: any) => y.collegeAcademicYear === val);
-                                    setSelectedYearLabel(val);
-                                    setSelectedYearId(match?.collegeAcademicYearId || null);
-                                    setCurrentPage(1);
-                                }}
-                            />
-                        )}
+                        <CustomDropdown
+                            id="year"
+                            label="Year"
+                            options={yearOptions.map((y: any) => ({ value: y.collegeAcademicYear, label: y.collegeAcademicYear }))}
+                            value={selectedYearLabel || "All"}
+                            widthClassName="w-40"
+                            onChange={(val) => {
+                                const match = yearOptions.find((y: any) => y.collegeAcademicYear === val);
+                                setSelectedYearLabel(val === "All" ? null : String(val));
+                                setSelectedYearId(match?.collegeAcademicYearId || null);
+                                setCurrentPage(1);
+                            }}
+                            disabled={!selectedBranchLabel || selectedBranchLabel === "All"}
+                            theme="always-green"
+                            includeAll={true}
+                        />
                     </div>
                 </div>
 
@@ -367,7 +404,7 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
                     <div className="mb-3 flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-lg w-fit">
                         <input
                             type="checkbox"
-                            checked={selectedIds.length === members.length && members.length > 0}
+                            checked={selectedIds.length === members.filter(m => !m.isOfficial).length && members.filter(m => !m.isOfficial).length > 0}
                             onChange={toggleSelectAll}
                             disabled={isActionLoading}
                             className="h-4 w-4 cursor-pointer rounded border-gray-300 text-[#16284F] focus:ring-[#16284F] disabled:opacity-50"
@@ -379,7 +416,7 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
                 <TableComponent
                     columns={columns}
                     tableData={tableData}
-                    height="55vh"
+                    height="65vh"
                     isLoading={isLoading}
                 />
 

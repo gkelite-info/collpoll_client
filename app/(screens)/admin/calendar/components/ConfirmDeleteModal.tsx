@@ -36,7 +36,7 @@ export default function ConfirmDeleteModal({
   const isWarning = actionType === "warning";
   const isDefault = !isAccept && !isRemove && !isReject && !isWarning;
 
-  const IconComponent = isAccept ? CheckCircle : isRemove ? Trash : isReject ? XCircle : WarningCircle;
+  const IconComponent = isAccept ? CheckCircle : (isRemove || isReject) ? Trash : WarningCircle;
 
   // Modern Top-Banner Theming for ALL actions
   const theme = isAccept
@@ -46,20 +46,13 @@ export default function ConfirmDeleteModal({
         btn: "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/25",
         lightGlow: "bg-emerald-400/20",
       }
-    : isRemove
+    : (isRemove || isReject)
       ? {
           banner: "bg-gradient-to-br from-rose-400 via-red-500 to-rose-600",
           icon: "text-rose-500",
           btn: "bg-rose-500 hover:bg-rose-600 shadow-rose-500/25",
           lightGlow: "bg-rose-400/20",
         }
-      : isReject
-        ? {
-            banner: "bg-gradient-to-br from-indigo-400 via-violet-500 to-indigo-600",
-            icon: "text-indigo-500",
-            btn: "bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/25",
-            lightGlow: "bg-indigo-400/20",
-          }
         : isWarning
           ? {
               banner: "bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600",
