@@ -15,9 +15,9 @@ import {
   type StudentTopicResource,
 } from "@/lib/helpers/student/academics/topicResources";
 import { useTranslations } from "next-intl";
-import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { useInView } from "react-intersection-observer";
 
-const RESOURCES_PER_PAGE = 4;
+const RESOURCES_PER_PAGE = 3;
 
 type TopicPdfViewModalProps = {
   isOpen: boolean;
@@ -77,7 +77,8 @@ export function TopicPdfViewModal({
   const [loadingResources, setLoadingResources] = useState(false);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [visibleResourceCount, setVisibleResourceCount] = useState(RESOURCES_PER_PAGE);
+  const { ref: loadMoreRef, inView } = useInView({ rootMargin: "80px" });
 
   useEffect(() => {
     if (!isOpen || !topicId) return;
@@ -89,7 +90,7 @@ export function TopicPdfViewModal({
         const data = await getStudentTopicResources(topicId);
         if (!cancelled) {
           setResources(data);
-          setCurrentPage(1);
+          setVisibleResourceCount(RESOURCES_PER_PAGE);
           setSelectedResourceIds(
             data.length > 0 ? [data[0].collegeSubjectUnitTopicResourceId] : [],
           );
@@ -113,6 +114,16 @@ export function TopicPdfViewModal({
       cancelled = true;
     };
   }, [isOpen, topicId, t]);
+
+  useEffect(() => {
+    if (inView && visibleResourceCount < resources.length) {
+      setVisibleResourceCount((count) =>
+        Math.min(count + RESOURCES_PER_PAGE, resources.length),
+      );
+    }
+    // Reveal one resource page each time the sentinel enters the modal viewport.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inView, resources.length]);
 
   const toggleSelectedResource = (resourceId: number) => {
     setSelectedResourceIds((prev) =>
@@ -160,15 +171,7 @@ export function TopicPdfViewModal({
   const selectedResources = resources.filter((resource) =>
     selectedResourceIds.includes(resource.collegeSubjectUnitTopicResourceId),
   );
-  const totalPages = Math.max(
-    1,
-    Math.ceil(resources.length / RESOURCES_PER_PAGE),
-  );
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedResources = resources.slice(
-    (safeCurrentPage - 1) * RESOURCES_PER_PAGE,
-    safeCurrentPage * RESOURCES_PER_PAGE,
-  );
+  const visibleResources = resources.slice(0, visibleResourceCount);
 
   return (
     <div
@@ -187,7 +190,7 @@ export function TopicPdfViewModal({
           <ModalShimmer />
         ) : (
           <>
-            <div className="flex flex-col gap-5 p-6 overflow-y-auto flex-1 min-h-0 custom-scrollbar">
+            <div className="flex flex-col gap-5 p-6 overflow-hidden flex-1 min-h-0">
               <h2 className="text-base font-semibold text-gray-800 flex flex-wrap items-center gap-1 pr-6">
                 <span className="text-[#7E5DFF]">{unitLabel}</span>
                 <span className="text-gray-400">→</span>
@@ -202,8 +205,12 @@ export function TopicPdfViewModal({
                 </p>
 
                 {resources.length > 0 ? (
-                  <ul className="flex flex-col gap-2 pr-1">
-                    {paginatedResources.map((resource) => {
+                  <div
+                    className="custom-scrollbar h-[280px] overflow-y-scroll pr-2 [scrollbar-gutter:stable]"
+                    style={{ scrollbarWidth: "thin", scrollbarColor: "#43C17A #E5E7EB" }}
+                  >
+                  <ul className="flex flex-col gap-2">
+                    {visibleResources.map((resource) => {
                       const isDownloading =
                         downloadingId ===
                         resource.collegeSubjectUnitTopicResourceId;
@@ -260,24 +267,26 @@ export function TopicPdfViewModal({
                       );
                     })}
                   </ul>
+                  {visibleResourceCount < resources.length && (
+                    <div ref={loadMoreRef} className="animate-pulse space-y-2 pt-2">
+                      {[1, 2, 3].map((row) => (
+                        <div
+                          key={row}
+                          className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3"
+                        >
+                          <div className="h-9 w-9 shrink-0 rounded-lg bg-gray-200" />
+                          <div className="h-3 flex-1 rounded bg-gray-200" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  </div>
                 ) : (
                   <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-8 text-center text-sm text-gray-400">
                     {t("No PDFs uploaded for this topic yet")}
                   </div>
                 )}
 
-                {resources.length > 0 && (
-                  <div className="mt-2 overflow-hidden rounded-xl border border-gray-100">
-                    <Pagination
-                      currentPage={safeCurrentPage}
-                      totalItems={resources.length}
-                      itemsPerPage={RESOURCES_PER_PAGE}
-                      onPageChange={setCurrentPage}
-                      alwaysShow
-                      bgClassName="bg-white border-0"
-                    />
-                  </div>
-                )}
               </div>
             </div>
 

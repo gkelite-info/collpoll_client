@@ -176,6 +176,7 @@ export async function getAdminSubjectsList(
       let nextLessonName: string | null = null;
       let hasFoundNext = false;
       let hasAnyTopics = false;
+      const unitPercentages: number[] = [];
 
       // Process topics inside units
       units.forEach((u: any) => {
@@ -202,6 +203,15 @@ export async function getAdminSubjectsList(
 
         if (activeTopics.length > 0) hasAnyTopics = true;
 
+        const completedInUnit = activeTopics.filter(
+          (topic: any) => topic.isCompleted,
+        ).length;
+        unitPercentages.push(
+          activeTopics.length === 0
+            ? 0
+            : Math.round((completedInUnit / activeTopics.length) * 100),
+        );
+
         activeTopics.forEach((t: any) => {
           subjectTotalTopics++;
           if (t.isCompleted) {
@@ -214,13 +224,10 @@ export async function getAdminSubjectsList(
       });
 
       const percentage =
-        units.length > 0
+        unitPercentages.length > 0
           ? Math.round(
-              units.reduce(
-                (sum: number, unit: { completionPercentage?: number | null }) =>
-                  sum + (unit.completionPercentage ?? 0),
-                0,
-              ) / units.length,
+              unitPercentages.reduce((sum, value) => sum + value, 0) /
+                unitPercentages.length,
             )
           : 0;
 
@@ -236,6 +243,9 @@ export async function getAdminSubjectsList(
         facultyProfile: activeProfile?.profileUrl || "",
         subjectTitle: subject.subjectName,
         year: branchId ? `${branchName} - ${sectionName}` : `Section - ${sectionName}`,
+        semester: Array.isArray(subject.college_semester)
+          ? subject.college_semester[0]?.collegeSemester ?? null
+          : subject.college_semester?.collegeSemester ?? null,
         units: units.length,
         topicsCovered: subjectCompletedTopics,
         topicsTotal: subjectTotalTopics,

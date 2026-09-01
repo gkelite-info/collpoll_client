@@ -7,11 +7,13 @@ import {
   CaretDown,
   Clock,
 } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CardProps, UnitTopic } from "./subjectCard";
 import { TopicPdfViewModal } from "./TopicPdfViewModal";
 import { useTranslations } from "next-intl";
+import { useInView } from "react-intersection-observer";
+import { UnitCardSkeleton } from "@/app/(screens)/faculty/academics/components/subjectDetailsSkeleton";
 
 const colorMap = {
   purple: {
@@ -74,6 +76,15 @@ function FilterBanner({
             </p>
           </div>
         )}
+
+        <div className="flex items-center gap-2 max-md:gap-1">
+          <p className="text-[#525252] text-sm whitespace-nowrap max-md:text-[13px]">
+            {t("Credits:")}
+          </p>
+          <p className="px-3 py-1 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium whitespace-nowrap max-md:px-3 max-md:py-0.5 max-md:text-[12px]">
+            {filterBannerDetails.subjectCredits ?? "N/A"}
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -95,6 +106,44 @@ function UnitCard({ unit, onOpenTopicPdf }: UnitCardProps) {
   const percentage = unit.percentage ?? 0;
 
   const [isExpanded, setIsExpanded] = useState(false);
+  const topicsPerPage = 10;
+  const [visibleTopicCount, setVisibleTopicCount] = useState(topicsPerPage);
+  const { ref: desktopTopicRef, inView: desktopTopicInView } = useInView({
+    rootMargin: "80px",
+  });
+  const { ref: mobileTopicRef, inView: mobileTopicInView } = useInView({
+    rootMargin: "80px",
+  });
+
+  useEffect(() => {
+    setVisibleTopicCount(topicsPerPage);
+  }, [unit.id]);
+
+  useEffect(() => {
+    if (
+      (desktopTopicInView || mobileTopicInView) &&
+      visibleTopicCount < unit.topics.length
+    ) {
+      setVisibleTopicCount((count) =>
+        Math.min(count + topicsPerPage, unit.topics.length),
+      );
+    }
+    // Reveal one page whenever either topic sentinel enters its scroll viewport.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desktopTopicInView, mobileTopicInView, unit.topics.length]);
+
+  const visibleTopics = unit.topics.slice(0, visibleTopicCount);
+  const topicShimmer = (
+    <div className="space-y-2 py-1">
+      {[1, 2, 3].map((row) => (
+        <div key={row} className="flex animate-pulse items-center gap-2">
+          <div className="h-4 w-4 shrink-0 rounded-full bg-gray-200" />
+          <div className="h-3 flex-1 rounded bg-gray-200" />
+          <div className="h-6 w-6 shrink-0 rounded-full bg-gray-200" />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div
@@ -167,7 +216,7 @@ function UnitCard({ unit, onOpenTopicPdf }: UnitCardProps) {
             }}
           >
             {unit.topics.length > 0 ? (
-              unit.topics.map((topic: UnitTopic) => (
+              visibleTopics.map((topic: UnitTopic) => (
                 <li
                   key={topic.topicId}
                   className="flex items-start justify-between gap-2"
@@ -209,6 +258,9 @@ function UnitCard({ unit, onOpenTopicPdf }: UnitCardProps) {
             ) : (
               <li className="text-gray-400 italic">{t("No topics found")}</li>
             )}
+            {visibleTopicCount < unit.topics.length && (
+              <li ref={desktopTopicRef}>{topicShimmer}</li>
+            )}
           </ul>
 
           <AnimatePresence initial={false}>
@@ -229,7 +281,7 @@ function UnitCard({ unit, onOpenTopicPdf }: UnitCardProps) {
                 }}
               >
                 {unit.topics.length > 0 ? (
-                  unit.topics.map((topic: UnitTopic) => (
+                  visibleTopics.map((topic: UnitTopic) => (
                     <li
                       key={topic.topicId}
                       className="flex items-start justify-between gap-2"
@@ -275,6 +327,9 @@ function UnitCard({ unit, onOpenTopicPdf }: UnitCardProps) {
                     {t("No topics found")}
                   </li>
                 )}
+                {visibleTopicCount < unit.topics.length && (
+                  <li ref={mobileTopicRef}>{topicShimmer}</li>
+                )}
               </motion.ul>
             )}
           </AnimatePresence>
@@ -294,12 +349,32 @@ export function SubjectDetailsCard({
 }) {
   const t = useTranslations("Academics.student");
   const dynamicUnits = details.unitsData || [];
+  const UNITS_PER_PAGE = 3;
+  const [visibleUnitCount, setVisibleUnitCount] = useState(UNITS_PER_PAGE);
+  const { ref: loadMoreRef, inView } = useInView({ rootMargin: "200px" });
   const [selectedTopicPdf, setSelectedTopicPdf] = useState<{
     unitLabel: string;
     unitTitle: string;
     topicId: number;
     topicTitle: string;
   } | null>(null);
+
+  useEffect(() => {
+    setVisibleUnitCount(UNITS_PER_PAGE);
+  }, [details.subjectTitle]);
+
+  useEffect(() => {
+    if (inView && visibleUnitCount < dynamicUnits.length) {
+      setVisibleUnitCount((count) =>
+        Math.min(count + UNITS_PER_PAGE, dynamicUnits.length),
+      );
+    }
+    // Load one page for each time the end sentinel enters the scroll viewport.
+    // Excluding visibleUnitCount prevents all remaining pages loading at once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inView, dynamicUnits.length]);
+
+  const visibleUnits = dynamicUnits.slice(0, visibleUnitCount);
 
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-6  max-md:py-0 max-md:pb-7 max-md:px-0 bg-[#F5F5F7] min-h-screen flex flex-col">
@@ -354,20 +429,26 @@ export function SubjectDetailsCard({
         </div>
       </div>
 
-      <div className="w-full overflow-x-auto pb-4 max-md:overflow-x-visible max-md:pb-0">
-        <div className="flex gap-6 w-max px-1 max-md:w-full max-md:flex-col max-md:gap-4 max-md:px-0">
-          {dynamicUnits.map((unit) => (
-            <div
-              key={unit.id}
-              className="w-[320px] h-[450px] shrink-0 max-md:w-full max-md:h-auto"
-            >
-              <UnitCard unit={unit} onOpenTopicPdf={setSelectedTopicPdf} />
-            </div>
-          ))}
-          {dynamicUnits.length === 0 && (
-            <p className="text-gray-500 italic p-4">{t("No units found")}</p>
-          )}
-        </div>
+      <div className="flex gap-6 overflow-x-auto custom-scrollbar pb-4 snap-x mt-8 max-md:flex-col max-md:overflow-x-visible max-md:pb-0">
+        {visibleUnits.map((unit) => (
+          <div
+            key={unit.id}
+            className="min-w-[85vw] w-[85vw] md:min-w-[320px] md:w-[350px] shrink-0 snap-start h-[450px] max-md:min-w-0 max-md:w-full max-md:h-auto"
+          >
+            <UnitCard unit={unit} onOpenTopicPdf={setSelectedTopicPdf} />
+          </div>
+        ))}
+        {dynamicUnits.length === 0 && (
+          <p className="text-gray-500 italic p-4">{t("No units found")}</p>
+        )}
+        {visibleUnitCount < dynamicUnits.length && (
+          <div
+            ref={loadMoreRef}
+            className="min-w-[85vw] w-[85vw] md:min-w-[320px] md:w-[350px] shrink-0 snap-start max-md:min-w-0 max-md:w-full"
+          >
+            <UnitCardSkeleton />
+          </div>
+        )}
       </div>
 
       <TopicPdfViewModal

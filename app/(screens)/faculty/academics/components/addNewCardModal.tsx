@@ -234,6 +234,8 @@ export default function AddNewCardModal({
     },
     enabled: !!formData.subjectName && !!debouncedUnitName && debouncedUnitName.replace(/[^a-zA-Z\s]/g, "").trim().replace(/\s+/g, "").length >= 3,
     staleTime: Infinity,
+    retry: 2,
+    retryDelay: attempt => Math.min(750 * 2 ** attempt, 3000),
   });
 
   useEffect(() => {

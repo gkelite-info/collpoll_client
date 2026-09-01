@@ -1,6 +1,11 @@
 import React from "react";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 
+const VALIDATION_MESSAGES = new Set([
+  "The unit name does not match the selected subject.",
+  "The entered topic does not match the selected subject and unit.",
+]);
+
 type AiTopicSelectorProps = {
   formData: any;
   setFormData: React.Dispatch<React.SetStateAction<any>>;
@@ -18,6 +23,7 @@ type AiTopicSelectorProps = {
   searchState: { type: "empty" | "selected" | "available" | "new" };
   filteredAvailableTopics: string[];
   isInvalidUnit: boolean;
+  suggestionsFirst?: boolean;
 };
 
 export function AiTopicSelector({
@@ -37,6 +43,7 @@ export function AiTopicSelector({
   searchState,
   filteredAvailableTopics,
   isInvalidUnit,
+  suggestionsFirst = false,
 }: AiTopicSelectorProps) {
   if (!formData.unitName) {
     return null;
@@ -61,7 +68,7 @@ export function AiTopicSelector({
 
                   if (checked) {
                     const validAvailable = availableTopics.filter(
-                      (t) => t !== "The unit name does not match the selected subject."
+                      topic => !VALIDATION_MESSAGES.has(topic),
                     );
                     setSelectedTopics((prev) => [
                       ...new Set([...prev, ...validAvailable]),
@@ -102,7 +109,7 @@ export function AiTopicSelector({
       {!isLoadingTopics && topicsError && (
         <div className="flex items-start gap-2 mt-1 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
           <span className="shrink-0">💡</span>
-          <span>AI couldn't suggest topics for this unit. You can type and add topics manually using the search box above.</span>
+          <span>{topicsError}</span>
         </div>
       )}
 
@@ -132,6 +139,44 @@ export function AiTopicSelector({
         </button>
       )}
 
+      {suggestionsFirst && filteredAvailableTopics.length > 0 && (
+        <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-[#43C17A]">
+          New AI suggestions
+        </p>
+      )}
+
+      {suggestionsFirst && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {filteredAvailableTopics.map((topic) => {
+            const isInvalidMessage = VALIDATION_MESSAGES.has(topic);
+            return (
+              <div
+                key={topic}
+                className={`flex items-center gap-2 border rounded-full px-3 py-1 text-xs ${
+                  isInvalidMessage
+                    ? "bg-yellow-50 border-yellow-300 text-yellow-700"
+                    : "bg-white border-[#D1FAE5] text-[#065F46]"
+                }`}
+              >
+                <span>{topic}</span>
+                {!isInvalidMessage && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTopics((prev) => [...prev, topic]);
+                      setSelectAll(false);
+                    }}
+                    className="text-[#43C17A] font-bold cursor-pointer"
+                  >
+                    +
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {selectedTopics.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-3">
           {selectedTopics.map((topic) => (
@@ -157,9 +202,9 @@ export function AiTopicSelector({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 mt-3">
+      {!suggestionsFirst && <div className="flex flex-wrap gap-2 mt-3">
         {filteredAvailableTopics.map((topic) => {
-          const isInvalidMessage = topic === "The unit name does not match the selected subject.";
+          const isInvalidMessage = VALIDATION_MESSAGES.has(topic);
           return (
             <div
               key={topic}
@@ -185,7 +230,7 @@ export function AiTopicSelector({
             </div>
           );
         })}
-      </div>
+      </div>}
     </div>
   );
 }

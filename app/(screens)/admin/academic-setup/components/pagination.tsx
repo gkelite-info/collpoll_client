@@ -14,6 +14,7 @@ interface PaginationProps {
   disabled?: boolean;
   alwaysShow?: boolean;
   bgClassName?: string;
+  compact?: boolean;
 }
 
 export function Pagination({
@@ -26,7 +27,8 @@ export function Pagination({
   onItemsPerPageChange,
   disabled,
   alwaysShow,
-  bgClassName = "bg-white border-t border-gray-200"
+  bgClassName = "bg-white border-t border-gray-200",
+  compact = false,
 }: PaginationProps) {
   const [dropdownPosition, setDropdownPosition] = useState<"top" | "bottom">("bottom");
   const safeTotalItems = Number.isFinite(totalItems) ? Math.max(0, totalItems) : 0;
@@ -69,9 +71,9 @@ export function Pagination({
   const visiblePages = getPageNumbers();
 
   return (
-    <div className={`flex items-center justify-between px-2 py-4 sm:px-4 ${bgClassName} mt-auto w-full ${roundedBottom || ""} ${disabled ? "opacity-50 pointer-events-none" : "transition-opacity duration-200"}`}>
-      <div className="flex flex-col gap-4 w-full md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 md:gap-6 w-full md:w-auto shrink-0">
+    <div className={`flex items-center justify-between ${compact ? "px-0 py-2" : "px-2 py-4 sm:px-4"} ${bgClassName} mt-auto w-full ${roundedBottom || ""} ${disabled ? "opacity-50 pointer-events-none" : "transition-opacity duration-200"}`}>
+      <div className={`flex w-full ${compact ? "justify-center" : "flex-col gap-4 md:flex-row md:items-center md:justify-between"}`}>
+        <div className={`${compact ? "hidden" : "flex"} flex-col sm:flex-row items-center justify-center md:justify-start gap-4 md:gap-6 w-full md:w-auto shrink-0`}>
           {itemsPerPageOptions && onItemsPerPageChange && (
             <div className="flex items-center gap-2 relative z-10">
               <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Items per page:</span>
@@ -140,7 +142,7 @@ export function Pagination({
             <span className="font-medium">{totalItems || 0}</span> results
           </p>
         </div>
-        <div className="flex justify-center w-full md:w-auto overflow-x-auto max-w-full pb-1 lg:pb-0">
+        <div className={`flex justify-center overflow-x-auto max-w-full ${compact ? "w-auto" : "w-full md:w-auto pb-1 lg:pb-0"}`}>
           <nav
             className="isolate inline-flex -space-x-px rounded-md shadow-sm min-w-max"
             aria-label="Pagination"
