@@ -300,7 +300,7 @@ export default function AttendanceTable({
   const handleSaveRow = async (
     item: AttendanceStaffRow,
     isStatusOnly = false,
-  ): Promise<boolean> => {
+  ): Promise<"created" | "updated" | false> => {
     const edit = getEdit(item);
 
     const errs = validateRow(item, edit, isStatusOnly);
