@@ -1,4 +1,8 @@
-export type ReimbursementStatus = "Paid" | "Pending" | "Rejected";
+export type ReimbursementStatus =
+  | "Paid"
+  | "Awaiting Payment"
+  | "Pending"
+  | "Rejected";
 
 export type RequestRow = {
   id: string;

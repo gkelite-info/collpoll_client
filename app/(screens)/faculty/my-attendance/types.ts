@@ -14,7 +14,7 @@ export interface AttendanceStats {
   todayStatus: string | null;
   totalWorkingDays: number;
   leavesTaken: number;
-  remainingLeaves: number;
+  remainingLeaves: number | string;
   lopDays?: number;
   presentDays?: number;
   expectedWorkingDays?: number;

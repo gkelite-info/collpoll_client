@@ -238,7 +238,7 @@ export async function fetchEmployeeExpenseReportStats(
 
   if (error) throw error;
   if (!reports || !reports.length) {
-    return { total: 0, pending: 0, paid: 0, rejected: 0 };
+    return { total: 0, pending: 0, awaitingPayment: 0, paid: 0, rejected: 0 };
   }
 
   const reportIds = reports.map((r) => r.employeeExpenseReportId);
@@ -256,6 +256,7 @@ export async function fetchEmployeeExpenseReportStats(
   );
 
   let pending = 0;
+  let awaitingPayment = 0;
   let paid = 0;
   let rejected = 0;
 
@@ -268,14 +269,16 @@ export async function fetchEmployeeExpenseReportStats(
     const normalizedStatus = finalStatus?.toLowerCase();
     if (normalizedStatus === "rejected" || normalizedStatus === "payment_rejected") {
       rejected++;
-    } else if (["paid", "approved", "completed"].includes(normalizedStatus ?? "")) {
+    } else if (["paid", "completed"].includes(normalizedStatus ?? "")) {
       paid++;
+    } else if (normalizedStatus === "approved") {
+      awaitingPayment++;
     } else {
       pending++;
     }
   }
 
-  return { total: reports.length, pending, paid, rejected };
+  return { total: reports.length, pending, awaitingPayment, paid, rejected };
 }
 
 export async function fetchEmployeeExpenseReports(

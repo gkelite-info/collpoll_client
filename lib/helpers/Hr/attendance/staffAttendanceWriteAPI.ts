@@ -8,7 +8,7 @@ import {
 
 export async function saveAttendance(
   params: SaveAttendanceParams,
-): Promise<void> {
+): Promise<"created" | "updated"> {
   const today = params.date || todayDate();
   const now = new Date().toISOString();
 
@@ -137,7 +137,7 @@ export async function saveAttendance(
       console.error("Attendance Adjustment Insert Error:", adjError);
       throw new Error("Failed to log attendance adjustment. Please try again.");
     }
-    return;
+    return "created";
   }
 
   const editPayload: Record<string, unknown> = {
@@ -213,6 +213,7 @@ export async function saveAttendance(
       throw new Error("Failed to create attendance adjustment log. Please try again.");
     }
   }
+  return "updated";
 }
 
 export async function saveStatusOnly(params: {
@@ -221,7 +222,7 @@ export async function saveStatusOnly(params: {
   status: string;
   collegeHrId: number;
   date?: string;
-}): Promise<void> {
+}): Promise<"created" | "updated"> {
   const today = params.date || todayDate();
   const now = new Date().toISOString();
   const normalizedStatus = params.status.toUpperCase();
@@ -254,7 +255,17 @@ export async function saveStatusOnly(params: {
       .eq("attendanceDailyId", params.attendanceDailyId);
 
     if (error) throw new Error(error.message);
+    return "updated";
   } else {
+    const { data: existingAttendance, error: existingError } = await supabase
+      .from("attendance_daily")
+      .select("attendanceDailyId")
+      .eq("userId", params.userId)
+      .eq("attendanceDate", today)
+      .maybeSingle();
+
+    if (existingError) throw new Error(existingError.message);
+
     const { error } = await supabase.from("attendance_daily").upsert(
       {
         userId: params.userId,
@@ -272,6 +283,7 @@ export async function saveStatusOnly(params: {
     );
 
     if (error) throw new Error(error.message);
+    return existingAttendance?.attendanceDailyId ? "updated" : "created";
   }
 }
 

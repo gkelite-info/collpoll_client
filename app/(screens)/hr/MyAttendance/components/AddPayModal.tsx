@@ -5,6 +5,7 @@ import { saveEmployeePayDetails } from "@/lib/helpers/Hr/myAttendance/saveEmploy
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { Avatar } from "@/app/utils/Avatar";
+import { X } from "@phosphor-icons/react";
 
 export interface EmployeePayData {
   userId: number;
@@ -480,12 +481,24 @@ export default function AddPayModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-[10px] w-full max-w-[850px] max-h-[92vh] overflow-y-auto p-5 shadow-2xl flex flex-col custom-scrollbar">
-        <h2 className="text-[18px] font-bold text-[#333] mb-3">
-          {payData ? "Edit Pay Details" : "Add Pay Details"}
-        </h2>
+      <div className="bg-white rounded-[10px] w-full max-w-[850px] max-h-[92vh] overflow-hidden shadow-2xl flex flex-col">
+        <div className="shrink-0 bg-white px-5 pt-5 z-10">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[18px] font-bold text-[#333]">
+              {payData ? "Edit Pay Details" : "Add Pay Details"}
+            </h2>
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isSaving}
+              aria-label="Close pay details"
+              className="rounded-full p-1.5 text-[#333] hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+            >
+              <X size={20} weight="bold" />
+            </button>
+          </div>
 
-        <div className="border border-gray-200 rounded-lg p-3.5 flex items-start gap-5 mb-5 bg-[#fafafa]">
+          <div className="border border-gray-200 rounded-lg p-3.5 flex items-start gap-5 mb-5 bg-[#fafafa]">
           <Avatar src={employee.image || null} alt={employee.name} size={80} />
           <div className="flex-1">
             <h3 className="text-[16px] font-bold text-[#333] mb-2">
@@ -526,9 +539,11 @@ export default function AddPayModal({
               </div>
             </div>
           </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-5 pb-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="flex flex-col gap-4">
             <div>
               <h4 className="font-bold text-[#333] text-[14px] mb-2">
@@ -990,7 +1005,7 @@ export default function AddPayModal({
           </div>
         </div>
 
-        <div className="flex gap-4 mt-6 pt-4 border-t border-gray-100">
+          <div className="flex gap-4 mt-6 pt-4 border-t border-gray-100">
           <button
             onClick={handleClose}
             disabled={isSaving}
@@ -1031,6 +1046,7 @@ export default function AddPayModal({
               "Save"
             )}
           </button>
+          </div>
         </div>
       </div>
     </div>

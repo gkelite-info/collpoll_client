@@ -14,6 +14,17 @@ interface AddEmployeeModalProps {
   onSuccess: () => void;
 }
 
+const ReadOnlyInput = ({ value }: { value: string }) => (
+  <input
+    type="text"
+    readOnly
+    value={value}
+    className="bg-gray-50 border border-gray-200 text-gray-500 rounded px-2.5 py-1.5 flex-1 cursor-not-allowed outline-none font-medium"
+  />
+);
+
+const RequiredMark = () => <span className="text-red-500"> *</span>;
+
 export default function AddEmployeeModal({
   isOpen,
   onClose,
@@ -85,11 +96,16 @@ export default function AddEmployeeModal({
 
   // STRICT REAL-TIME INPUT GATEKEEPER
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let { name, value } = e.target;
+    const { name } = e.target;
+    let { value } = e.target;
 
     // Auto-capitalize specific official codes
     if (name === "panNumber" || name === "ifscCode") {
       value = value.toUpperCase();
+    }
+
+    if (name === "ifscCode") {
+      value = value.replace(/[^A-Z0-9]/g, "").slice(0, 11);
     }
 
     let isValid = true;
@@ -110,6 +126,12 @@ export default function AddEmployeeModal({
         isValid = /^\d*$/.test(value);
         break;
       case "ifscCode":
+        // Progressive IFSC format: four letters, mandatory zero, then six
+        // alphanumeric branch characters (for example SBIN0001234).
+        isValid =
+          /^[A-Z]{0,4}$/.test(value) ||
+          /^[A-Z]{4}0[A-Z0-9]{0,6}$/.test(value);
+        break;
       case "panNumber":
         // Only allows uppercase letters and numbers
         isValid = /^[A-Z0-9]*$/.test(value);
@@ -205,6 +227,18 @@ export default function AddEmployeeModal({
       toast.error("Please provide both Dates of Birth.");
       return;
     }
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    const aadhaarDob = new Date(`${formData.aadhaarDob}T00:00:00`);
+    const panDob = new Date(`${formData.panDob}T00:00:00`);
+    if (aadhaarDob > today || panDob > today) {
+      toast.error("Date of Birth cannot be in the future.");
+      return;
+    }
+    if (formData.aadhaarDob !== formData.panDob) {
+      toast.error("Date of Birth must match on Aadhaar and PAN.");
+      return;
+    }
     if (formData.nameOnAadhaar.trim().length < 2) {
       toast.error("Name on Aadhaar is required.");
       return;
@@ -251,15 +285,6 @@ export default function AddEmployeeModal({
       setIsSaving(false);
     }
   };
-
-  const ReadOnlyInput = ({ value }: { value: string }) => (
-    <input
-      type="text"
-      readOnly
-      value={value}
-      className="bg-gray-50 border border-gray-200 text-gray-500 rounded px-2.5 py-1.5 flex-1 cursor-not-allowed outline-none font-medium"
-    />
-  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -332,7 +357,7 @@ export default function AddEmployeeModal({
 
               <div className="flex items-center justify-between">
                 <label className="font-bold text-[#333] w-[140px]">
-                  Bank Name
+                  Bank Name<RequiredMark />
                 </label>
                 <input
                   type="text"
@@ -346,7 +371,7 @@ export default function AddEmployeeModal({
               </div>
               <div className="flex items-center justify-between">
                 <label className="font-bold text-[#333] w-[140px]">
-                  Account Number
+                  Account Number<RequiredMark />
                 </label>
                 <input
                   type="text"
@@ -360,7 +385,7 @@ export default function AddEmployeeModal({
               </div>
               <div className="flex items-center justify-between">
                 <label className="font-bold text-[#333] w-[140px]">
-                  IFSC Code
+                  IFSC Code<RequiredMark />
                 </label>
                 <input
                   type="text"
@@ -369,12 +394,14 @@ export default function AddEmployeeModal({
                   onChange={handleChange}
                   placeholder="Enter IFSC Code"
                   maxLength={11}
+                  autoCapitalize="characters"
+                  spellCheck={false}
                   className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
                 />
               </div>
               <div className="flex items-center justify-between">
                 <label className="font-bold text-[#333] w-[140px]">
-                  Name on the Account
+                  Name on the Account<RequiredMark />
                 </label>
                 <input
                   type="text"
@@ -388,7 +415,7 @@ export default function AddEmployeeModal({
               </div>
               <div className="flex items-center justify-between">
                 <label className="font-bold text-[#333] w-[140px]">
-                  Branch
+                  Branch<RequiredMark />
                 </label>
                 <input
                   type="text"
@@ -419,7 +446,7 @@ export default function AddEmployeeModal({
             {/* Row 1 */}
             <div className="flex items-center justify-between">
               <label className="font-bold text-[#333] w-[130px]">
-                Aadhaar Number
+                Aadhaar Number<RequiredMark />
               </label>
               <input
                 type="text"
@@ -464,7 +491,7 @@ export default function AddEmployeeModal({
             {/* Row 2 */}
             <div className="flex items-center justify-between">
               <label className="font-bold text-[#333] w-[130px]">
-                Date of Birth
+                Date of Birth<RequiredMark />
               </label>
               <input
                 type="date"
@@ -476,7 +503,7 @@ export default function AddEmployeeModal({
             </div>
             <div className="flex items-center justify-between">
               <label className="font-bold text-[#333] w-[130px]">
-                Permanent Account Number
+                Permanent Account Number<RequiredMark />
               </label>
               <input
                 type="text"
@@ -503,7 +530,7 @@ export default function AddEmployeeModal({
             </div>
             <div className="flex items-center justify-between">
               <label className="font-bold text-[#333] w-[130px]">
-                Date of Birth :
+                Date of Birth<RequiredMark /> :
               </label>
               <input
                 type="date"
@@ -530,7 +557,7 @@ export default function AddEmployeeModal({
               />
             </div>
             <div className="flex items-center justify-between">
-              <label className="font-bold text-[#333] w-[130px]">Name :</label>
+              <label className="font-bold text-[#333] w-[130px]">Name<RequiredMark /> :</label>
               <input
                 type="text"
                 name="nameOnPan"
@@ -544,7 +571,7 @@ export default function AddEmployeeModal({
 
             {/* Row 5 */}
             <div className="flex items-center justify-between">
-              <label className="font-bold text-[#333] w-[130px]">Name</label>
+              <label className="font-bold text-[#333] w-[130px]">Name<RequiredMark /></label>
               <input
                 type="text"
                 name="nameOnAadhaar"
@@ -557,7 +584,7 @@ export default function AddEmployeeModal({
             </div>
             <div className="flex items-center justify-between">
               <label className="font-bold text-[#333] w-[130px]">
-                Father's Name :
+                Father&apos;s Name<RequiredMark /> :
               </label>
               <input
                 type="text"

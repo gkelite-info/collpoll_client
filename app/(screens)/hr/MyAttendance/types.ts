@@ -14,7 +14,7 @@ export interface AttendanceStats {
   todayStatus: "Present" | "Absent" | "Half Day" | "Not Marked";
   totalWorkingDays: number;
   leavesTaken: number;
-  remainingLeaves: number;
+  remainingLeaves: number | string;
   lopDays?: number;
 }
 

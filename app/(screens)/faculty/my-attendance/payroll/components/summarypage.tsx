@@ -88,8 +88,12 @@ export default function SummaryPage() {
     });
   };
 
-  const isInter = ["Inter"].includes(role);
-  const isSchool = isSchoolEducation(faculty_edu_type);
+  const effectiveEducationType = collegeEducationType || faculty_edu_type;
+  const normalizedEducationType = effectiveEducationType?.trim().toUpperCase();
+  const isInter =
+    normalizedEducationType === "INTER" ||
+    normalizedEducationType === "INTERMEDIATE";
+  const isSchool = isSchoolEducation(effectiveEducationType);
   const systemId = identifierId ? `ID-${identifierId}` : `ID-${userId}`;
 
   return (

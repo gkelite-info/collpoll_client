@@ -354,7 +354,10 @@ export async function getPayrollEntryDetails(entryId: number) {
         staff_bank_details ( pfNumber, esiNumber, bankName, accountNumber ),
         staff_pan_details ( panNumber ),
         employee_pay_profiles (
-          employee_payroll_compliance_values ( amount, payroll_compliance_types ( title ) )
+          monthlySalary,
+          employee_payroll_compliance_values ( amount, payroll_compliance_types ( title ) ),
+          employee_salary_component_values ( amount, salary_component_types ( title ) ),
+          employee_pay_addons ( title, amount, payNature )
         )
       )
     `)

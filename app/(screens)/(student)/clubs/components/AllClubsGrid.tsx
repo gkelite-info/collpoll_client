@@ -179,6 +179,7 @@ import { Avatar } from "@/app/utils/Avatar";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { CircleNotch } from "@phosphor-icons/react";
 
 export default function AllClubsGrid() {
   const { collegeId, studentId } = useUser();
@@ -300,7 +301,9 @@ export default function AllClubsGrid() {
 
           let buttonClass =
             "bg-[#16284F] text-white hover:bg-[#0f1b35] active:scale-95 cursor-pointer";
-          if (isThisClubTheActiveOne && isPendingForAClub) {
+          if (isCurrentlyJoining) {
+            buttonClass = "bg-[#16284F] text-white cursor-wait";
+          } else if (isThisClubTheActiveOne && isPendingForAClub) {
             buttonClass = "bg-[#FB8000] text-white cursor-not-allowed";
           } else if (isThisClubTheActiveOne && isAlreadyInAClub) {
             buttonClass =
@@ -340,8 +343,17 @@ export default function AllClubsGrid() {
                   }
                 }}
                 disabled={isButtonDisabled}
-                className={`w-full py-3 rounded-xl text-base font-bold transition-all shadow-lg ${buttonClass}`}
+                aria-busy={isCurrentlyJoining}
+                className={`w-full py-3 rounded-xl text-base font-bold transition-all shadow-lg flex items-center justify-center gap-2 ${buttonClass}`}
               >
+                {isCurrentlyJoining && (
+                  <CircleNotch
+                    size={20}
+                    weight="bold"
+                    className="animate-spin"
+                    aria-hidden="true"
+                  />
+                )}
                 {buttonText}
               </button>
             </div>
