@@ -14,6 +14,7 @@ type StudentProfile = {
   collegeBranchId: number;
   collegeEducationId: number;
   collegeId: number;
+  collegeSectionsId: number | null;
 };
 
 type FetchResult = {
@@ -54,6 +55,7 @@ const fetchStudentAcademicData = async (userId: number): Promise<FetchResult> =>
       .select(`
         collegeAcademicYearId,
         collegeSemesterId,
+        collegeSectionsId,
         college_academic_year ( collegeAcademicYear ),
         college_semester ( collegeSemester )
       `)
@@ -102,6 +104,7 @@ const fetchStudentAcademicData = async (userId: number): Promise<FetchResult> =>
       collegeBranchId: studentData.collegeBranchId,
       collegeEducationId: studentData.collegeEducationId,
       collegeId: studentData.collegeId,
+      collegeSectionsId: historyData?.collegeSectionsId ?? null,
     };
 
     if (!currentYearId) return { profile, subjects: [] };
@@ -172,7 +175,24 @@ const fetchStudentAcademicData = async (userId: number): Promise<FetchResult> =>
     }
 
     const mappedSubjects: CardProps[] = subjectsArray.map((subject: any) => {
-      const units = subject.college_subject_units || [];
+      const currentSectionId = historyData?.collegeSectionsId ?? null;
+      const rawUnits = (subject.college_subject_units || []).filter(
+        (unit: any) =>
+          unit.isActive !== false &&
+          (unit.collegeSectionsId == null ||
+            unit.collegeSectionsId === currentSectionId),
+      );
+      const unitsByNumber = new Map<number, any>();
+      rawUnits.forEach((unit: any) => {
+        const existing = unitsByNumber.get(unit.unitNumber);
+        if (
+          !existing ||
+          (existing.collegeSectionsId == null && unit.collegeSectionsId != null)
+        ) {
+          unitsByNumber.set(unit.unitNumber, unit);
+        }
+      });
+      const units = Array.from(unitsByNumber.values());
 
       units.sort((a: any, b: any) => (a.unitNumber || 0) - (b.unitNumber || 0));
 
@@ -185,16 +205,7 @@ const fetchStudentAcademicData = async (userId: number): Promise<FetchResult> =>
       let hasFoundNext = false;
       let hasAnyTopics = false;
 
-      const avgPercentage =
-        totalUnits > 0
-          ? Math.round(
-            units.reduce(
-              (acc: number, curr: any) =>
-                acc + (curr.completionPercentage || 0),
-              0
-            ) / totalUnits
-          )
-          : 0;
+      let unitPercentageTotal = 0;
 
       const formatDate = (date: Date) => {
         const mm = String(date.getMonth() + 1).padStart(2, "0");
@@ -220,15 +231,38 @@ const fetchStudentAcademicData = async (userId: number): Promise<FetchResult> =>
         : "TBD";
 
       const unitsData = units.map((u: any) => {
-        const rawTopics = u.college_subject_unit_topics || [];
-
-        const activeTopics = rawTopics.filter((t: any) => t.isActive !== false);
+        const rawTopics = (u.college_subject_unit_topics || []).filter(
+          (topic: any) =>
+            topic.isActive !== false &&
+            (topic.collegeSectionsId == null ||
+              topic.collegeSectionsId === currentSectionId),
+        );
+        const topicsByTitle = new Map<string, any>();
+        rawTopics.forEach((topic: any) => {
+          const key = topic.topicTitle?.trim().toLowerCase();
+          const existing = topicsByTitle.get(key);
+          if (
+            key &&
+            (!existing ||
+              (existing.collegeSectionsId == null && topic.collegeSectionsId != null))
+          ) {
+            topicsByTitle.set(key, topic);
+          }
+        });
+        const activeTopics = Array.from(topicsByTitle.values());
 
         activeTopics.sort(
           (a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0)
         );
 
         if (activeTopics.length > 0) hasAnyTopics = true;
+        const completedInUnit = activeTopics.filter(
+          (topic: any) => topic.isCompleted,
+        ).length;
+        const unitPercentage = activeTopics.length
+          ? Math.round((completedInUnit / activeTopics.length) * 100)
+          : 0;
+        unitPercentageTotal += unitPercentage;
 
         const formattedTopics = activeTopics.map((t: any) => {
           subjectTotalTopics++;
@@ -247,18 +281,20 @@ const fetchStudentAcademicData = async (userId: number): Promise<FetchResult> =>
           };
         });
 
+        const color: "blue" | "orange" | "purple" =
+          u.unitNumber % 3 === 0
+            ? "blue"
+            : u.unitNumber % 2 === 0
+              ? "orange"
+              : "purple";
+
         return {
           id: u.collegeSubjectUnitId,
           unitLabel: `Unit - ${u.unitNumber}`,
           title: u.unitTitle,
-          color:
-            u.unitNumber % 3 === 0
-              ? "blue"
-              : u.unitNumber % 2 === 0
-                ? "orange"
-                : "purple",
+          color,
           dateRange: `${fromDate} - ${toDate}`,
-          percentage: u.completionPercentage,
+          percentage: unitPercentage,
           topics: formattedTopics,
         };
       });
@@ -268,6 +304,9 @@ const fetchStudentAcademicData = async (userId: number): Promise<FetchResult> =>
         : hasAnyTopics
           ? "Completed"
           : "No Classes";
+      const avgPercentage = totalUnits
+        ? Math.round(unitPercentageTotal / totalUnits)
+        : 0;
 
       const firstUnit = units[0];
       const lecturerInfo = firstUnit ? facultyMap[firstUnit.createdBy] : null;

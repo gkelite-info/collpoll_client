@@ -1,6 +1,6 @@
 "use client";
 
-import AcademicPerformance from "@/app/utils/AcademicPerformance";
+import AcademicPerformance from "@/app/(screens)/admin/student-progress/[roll-no]/components/academicPerformanceChart";
 import { AttendanceSummaryCard } from "./attendanceSummaryCard";
 import { ProfileCard } from "./profileCard";
 import { AssignmentsSummaryTable } from "./assignmentsSummaryTable";
@@ -580,7 +580,6 @@ const StudentProgressPage = () => {
 
                 <section className="bg-white rounded-2xl lg:col-span-6">
                   <AcademicPerformance
-                    studentId={studentId}
                     data={academicPerformanceData}
                   />
                 </section>

@@ -104,7 +104,7 @@ export default function AcademicPerformance({
         {/* ─── Scrollable bars + X-axis labels ─── */}
         <div
           ref={scrollRef}
-          className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar"
+          className="min-w-0 flex-1 overflow-x-scroll overflow-y-hidden custom-scrollbar [scrollbar-gutter:stable]"
         >
           <div
             className="h-full"

@@ -28,6 +28,12 @@ type EditUnitModalProps = {
     collegeSectionId?: number;
     subjectTitle: string;
   };
+  actorContext?: {
+    facultyId: number;
+    educationId?: number;
+    branchId?: number | null;
+    educationType?: string | null;
+  };
 };
 
 export default function EditUnitModal({
@@ -37,6 +43,7 @@ export default function EditUnitModal({
   onGeneratingEnd,
   unit,
   details,
+  actorContext,
 }: EditUnitModalProps) {
   const [formData, setFormData] = useState({
     subjectId: details.collegeSubjectId,
@@ -52,13 +59,20 @@ export default function EditUnitModal({
 
   const { userId, collegeId, loading } = useUser();
   const [facultyId, setFacultyId] = useState<number | null>(null);
-  const { faculty_edu_type } = useFaculty();
+  const { faculty_edu_type: facultyEducationType } = useFaculty();
+  const faculty_edu_type = actorContext?.educationType ?? facultyEducationType;
+  const actorFacultyId = actorContext?.facultyId;
+  const actorEducationId = actorContext?.educationId;
+  const actorBranchId = actorContext?.branchId;
 
   const [availableTopics, setAvailableTopics] = useState<string[]>([]);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
-  const [initialTopicTitles, setInitialTopicTitles] = useState<string[]>([]);
+  const [initialTopicTitles, setInitialTopicTitles] = useState<string[]>(
+    () => unit?.topics?.map(topic => topic.title) ?? [],
+  );
   
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectAll, setSelectAll] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [isLoadingTopics, setIsLoadingTopics] = useState(false);
@@ -68,6 +82,17 @@ export default function EditUnitModal({
   const router = useRouter();
 
   useEffect(() => {
+    if (actorFacultyId !== undefined) {
+      setFacultyId(actorFacultyId);
+      setFormData(prev => ({
+        ...prev,
+        educationId: actorEducationId,
+        branchId: actorBranchId ?? undefined,
+      }));
+      setInitialLoadDone(true);
+      return;
+    }
+
     if (!userId || loading) return;
     fetchFacultyContext(userId).then((ctx) => {
       setFacultyId(ctx.facultyId);
@@ -80,7 +105,7 @@ export default function EditUnitModal({
     }).catch(() => {
       toast.error("Faculty profile not found");
     });
-  }, [userId, loading]);
+  }, [userId, loading, actorFacultyId, actorEducationId, actorBranchId]);
 
   // Sync unit data when modal opens
   useEffect(() => {
@@ -96,8 +121,18 @@ export default function EditUnitModal({
       setSelectedTopics(topicsList);
       setInitialTopicTitles(topicsList);
       setAvailableTopics([]);
+      setSearchQuery("");
+      setDebouncedSearchQuery("");
+      setTopicsError(null);
+      setSelectAll(false);
+      setShowSearch(false);
+    } else if (!isOpen) {
+      setSearchQuery("");
+      setDebouncedSearchQuery("");
+      setTopicsError(null);
+      setAvailableTopics([]);
     }
-  }, [isOpen, unit]);
+  }, [isOpen, unit?.id]);
 
   const { data: existingUnits = [] } = useQuery({
     queryKey: ['existingUnits', collegeId, details.collegeSubjectId],
@@ -133,38 +168,108 @@ export default function EditUnitModal({
     return () => clearTimeout(handler);
   }, [formData.unitName]);
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 700);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  const existingTopicsForAi = unit?.topics?.map(topic => topic.title) ?? [];
+  const existingTopicsCacheKey = [...existingTopicsForAi]
+    .map(topic => topic.trim().toLowerCase())
+    .sort()
+    .join('|');
+
   const { data: generatedTopics, isFetching: isFetchingTopics, isError } = useQuery({
-    queryKey: ['aiTopics', formData.subjectName, debouncedUnitName, faculty_edu_type],
+    queryKey: ['aiTopics', 'edit', formData.subjectName, debouncedUnitName, faculty_edu_type, existingTopicsCacheKey],
     queryFn: async () => {
       const trimmed = debouncedUnitName.replace(/[^a-zA-Z\s]/g, "").trim();
       if (trimmed.length < 3 || !formData.subjectName) return [];
-      const topics = await suggestTopicsAction(formData.subjectName, debouncedUnitName, faculty_edu_type ?? undefined, "");
+      const topics = await suggestTopicsAction(
+        formData.subjectName,
+        debouncedUnitName,
+        faculty_edu_type ?? undefined,
+        "",
+        existingTopicsForAi,
+      );
       if (!Array.isArray(topics) || topics.length === 0) throw new Error("Failed");
       return topics;
     },
     enabled: !!formData.subjectName && !!debouncedUnitName && debouncedUnitName.length >= 3,
     staleTime: Infinity,
+    retry: 1,
+    retryDelay: attempt => Math.min(750 * 2 ** attempt, 3000),
+  });
+
+  const { data: focusedTopics, isFetching: isFetchingFocusedTopics, isError: isFocusedTopicsError } = useQuery({
+    queryKey: [
+      'aiTopics',
+      'edit-search-v2',
+      formData.subjectName,
+      debouncedUnitName,
+      faculty_edu_type,
+      existingTopicsCacheKey,
+      debouncedSearchQuery.toLowerCase(),
+    ],
+    queryFn: async () => {
+      const excludedTopics = [...new Set([...existingTopicsForAi, ...(generatedTopics ?? [])])];
+      const topics = await suggestTopicsAction(
+        formData.subjectName,
+        debouncedUnitName,
+        faculty_edu_type ?? undefined,
+        "",
+        excludedTopics,
+        debouncedSearchQuery,
+      );
+      if (!Array.isArray(topics) || topics.length === 0) throw new Error("Failed");
+      return topics;
+    },
+    enabled:
+      !!formData.subjectName &&
+      debouncedUnitName.length >= 3 &&
+      debouncedSearchQuery.replace(/[^a-zA-Z\s]/g, "").replace(/\s+/g, "").length >= 3,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    retryDelay: attempt => Math.min(750 * 2 ** attempt, 3000),
   });
 
   useEffect(() => {
-    setIsLoadingTopics(isFetchingTopics);
-  }, [isFetchingTopics]);
+    setIsLoadingTopics(isFetchingTopics || isFetchingFocusedTopics);
+  }, [isFetchingTopics, isFetchingFocusedTopics]);
 
   useEffect(() => {
-    if (generatedTopics && generatedTopics.length > 0) {
-       setAvailableTopics(generatedTopics.filter(t => !selectedTopics.includes(t)));
+    const combinedTopics = [...new Set([...(focusedTopics ?? []), ...(generatedTopics ?? [])])];
+    if (combinedTopics.length > 0) {
+       setAvailableTopics(combinedTopics.filter(t => !selectedTopics.includes(t)));
        setTopicsError(null);
-    } else if (isError) {
-       setTopicsError("Failed to generate topics");
+    } else if (debouncedSearchQuery.length >= 3) {
+       setTopicsError(
+         isFocusedTopicsError && !isFetchingFocusedTopics
+           ? "AI suggestions are temporarily unavailable for this topic. Please try again."
+           : null,
+       );
        setAvailableTopics([]);
+    } else if (isError && !isFetchingTopics && selectedTopics.length === 0) {
+       setTopicsError("AI suggestions are temporarily unavailable. Please try again.");
+       setAvailableTopics([]);
+    } else {
+       setTopicsError(null);
     }
-  }, [generatedTopics, isError, selectedTopics]);
+  }, [generatedTopics, focusedTopics, isError, isFocusedTopicsError, isFetchingTopics, isFetchingFocusedTopics, debouncedSearchQuery, selectedTopics]);
 
   useEffect(() => {
-    setSelectAll(availableTopics.length === 0 && selectedTopics.length > 0);
+    if (availableTopics.length === 0) setSelectAll(false);
   }, [availableTopics, selectedTopics]);
 
-  const filteredAvailableTopics = availableTopics.filter((t) => t.toLowerCase().includes(searchQuery.trim().toLowerCase()));
+  const focusedTopicSet = new Set(focusedTopics ?? []);
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const filteredAvailableTopics = availableTopics.filter(
+    topic =>
+      !normalizedSearchQuery ||
+      topic.toLowerCase().includes(normalizedSearchQuery) ||
+      focusedTopicSet.has(topic),
+  );
 
   const getSearchState = (query: string) => {
     const q = query.trim().toLowerCase();
@@ -266,6 +371,7 @@ export default function EditUnitModal({
                 searchState={getSearchState(searchQuery)}
                 filteredAvailableTopics={filteredAvailableTopics}
                 isInvalidUnit={availableTopics.includes(INVALID_UNIT_MESSAGE)}
+                suggestionsFirst
               />
 
               <div className="flex gap-4 mt-6">

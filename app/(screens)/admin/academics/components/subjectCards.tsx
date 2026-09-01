@@ -9,6 +9,7 @@ export type CardProps = {
   facultyProfile?: string;
   subjectTitle: string;
   year: string | number;
+  semester?: string | number | null;
   units: number;
   topicsCovered: number;
   topicsTotal: number;
@@ -24,13 +25,15 @@ type SubjectCardProps = { subjectProps: CardProps[]; isSchool?: boolean };
 
 export default function SubjectCard({ subjectProps, isSchool }: SubjectCardProps) {
   return (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {subjectProps.map((item, index) => (
-          <IndividualCard key={index} item={item} isSchool={isSchool} />
+          <IndividualCard
+            key={item.subjectId ?? index}
+            item={item}
+            isSchool={isSchool}
+          />
         ))}
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -69,15 +72,24 @@ const IndividualCard = ({ item, isSchool }: { item: CardProps; isSchool?: boolea
   return (
     <div className="bg-white rounded-lg w-full lg:min-h-fit p-4 flex flex-col justify-between shadow-md">
       <div className="flex flex-col justify-start gap-1.5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
             <h5 className="text-[#282828] font-medium text-[17px] truncate">
               {item.subjectTitle}
             </h5>
             {!isSchool && (
-              <p className="flex-shrink-0 px-2 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
-                Credits: {item.credits ?? 4}
-              </p>
+              <div className="flex flex-shrink-0 items-center gap-2">
+                <p className="px-2 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
+                  {item.semester != null && String(item.semester).trim() !== ""
+                    ? /^sem(?:ester)?\s/i.test(String(item.semester))
+                      ? item.semester
+                      : `Sem ${item.semester}`
+                    : "Semester: N/A"}
+                </p>
+                <p className="px-2 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
+                  Credits: {item.credits ?? "N/A"}
+                </p>
+              </div>
             )}
           </div>
 

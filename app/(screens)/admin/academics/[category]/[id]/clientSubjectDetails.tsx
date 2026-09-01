@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   CaretLeft,
@@ -9,6 +9,7 @@ import {
   FloppyDisk,
   ArrowCounterClockwise,
   Trash,
+  PencilSimple,
 } from "@phosphor-icons/react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
@@ -22,7 +23,7 @@ import {
   SubjectContext,
 } from "@/lib/helpers/admin/academics/adminUnitActions";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import toast from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import { SubjectDetailsSkeleton } from "../../shimmer/subjectDetailsSkeleton";
 import AddNewClassModal from "../../modal/addNewClassModal";
 import AddWeightageModal from "@/app/(screens)/faculty/academics/components/weightageModal";
@@ -31,6 +32,10 @@ import { isSchoolOrInterSubject } from "@/lib/helpers/admin/academicSetup/school
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import { getUnitsPaginated } from "@/lib/helpers/faculty/getUnitsPaginated";
 import { getTopicsPaginated } from "@/lib/helpers/faculty/getTopicsPaginated";
+import { useInView } from "react-intersection-observer";
+import { UnitCardSkeleton } from "@/app/(screens)/faculty/academics/components/subjectDetailsSkeleton";
+import EditUnitModal from "@/app/(screens)/faculty/academics/modal/EditUnitModal";
+import type { Unit } from "@/app/(screens)/faculty/academics/components/unitCard";
 
 const colorMap = {
   purple: {
@@ -65,6 +70,7 @@ const colorMap = {
 type FilterBannerProps = {
   subjectName: string;
   semester: string;
+  credits?: number | null;
   year: string;
   onAddUnit: () => void;
   onAddWeightage: () => void;
@@ -75,6 +81,7 @@ type FilterBannerProps = {
 function FilterBanner({
   subjectName,
   semester,
+  credits,
   year,
   onAddUnit,
   onAddWeightage,
@@ -93,12 +100,21 @@ function FilterBanner({
           </div>
 
           {!isSchool && (
-            <div className="flex items-center gap-2">
-              <p className="text-[#525252] text-sm">Semester :</p>
-              <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
-                Sem {semester}
-              </p>
-            </div>
+            <>
+              <div className="flex items-center gap-2">
+                <p className="text-[#525252] text-sm">Semester :</p>
+                <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
+                  {/^(sem|semester)\s/i.test(semester) ? semester : `Sem ${semester}`}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <p className="text-[#525252] text-sm">Credits :</p>
+                <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
+                  {credits ?? "N/A"}
+                </p>
+              </div>
+            </>
           )}
 
           <div className="flex items-center gap-2">
@@ -136,12 +152,14 @@ function UnitCard({
   onSave,
   onDeleteUnit,
   onDeleteTopic,
+  onEditUnit,
   onOpenTopicPdf,
 }: {
   unit: UiUnit;
   onSave: any;
   onDeleteUnit: any;
   onDeleteTopic: any;
+  onEditUnit: (unit: UiUnit) => void;
   onOpenTopicPdf: (payload: {
     unitLabel: string;
     unitTitle: string;
@@ -151,6 +169,11 @@ function UnitCard({
 }) {
   const colors = colorMap[unit.color] || colorMap.purple;
   const [localTopics, setLocalTopics] = useState<UiTopic[]>(unit.topics);
+  const topicsPerPage = 10;
+  const [visibleTopicCount, setVisibleTopicCount] = useState(topicsPerPage);
+  const { ref: topicLoadMoreRef, inView: topicLoadMoreInView } = useInView({
+    rootMargin: "80px",
+  });
   const [isSaving, setIsSaving] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -160,7 +183,20 @@ function UnitCard({
 
   useEffect(() => {
     setLocalTopics(unit.topics);
+    setVisibleTopicCount(topicsPerPage);
   }, [unit.topics]);
+
+  useEffect(() => {
+    if (topicLoadMoreInView && visibleTopicCount < localTopics.length) {
+      setVisibleTopicCount((count) =>
+        Math.min(count + topicsPerPage, localTopics.length),
+      );
+    }
+    // One topic page is revealed each time the sentinel enters the list viewport.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topicLoadMoreInView, localTopics.length]);
+
+  const visibleTopics = localTopics.slice(0, visibleTopicCount);
 
   const hasChanges = useMemo(() => {
     return JSON.stringify(localTopics) !== JSON.stringify(unit.topics);
@@ -202,7 +238,7 @@ function UnitCard({
   return (
     <>
       <div
-        className={`rounded-xl px-4 py-3 ${colors.cardBg} w-full h-full flex flex-col`}
+        className={`rounded-xl px-4 py-3 ${colors.cardBg} w-full h-[560px] flex flex-col overflow-hidden`}
       >
         {/* Header */}
         <div className="flex items-center justify-between w-full mb-2">
@@ -218,16 +254,26 @@ function UnitCard({
             </div>
           </div>
 
-          <button
-            onClick={() => setDeleteTarget({ type: "unit" })}
-            className="text-red-500 hover:text-red-600 hover:bg-white/60 transition-all p-1.5 rounded-md cursor-pointer"
-            title="Delete Unit"
-          >
-            <Trash size={20} weight="regular" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => onEditUnit({ ...unit, topics: localTopics })}
+              className={`${colors.accent} hover:bg-white/60 transition-all p-1.5 rounded-md cursor-pointer`}
+              title="Edit Unit"
+            >
+              <PencilSimple size={20} />
+            </button>
+            <button
+              onClick={() => setDeleteTarget({ type: "unit" })}
+              className="text-red-500 hover:text-red-600 hover:bg-white/60 transition-all p-1.5 rounded-md cursor-pointer"
+              title="Delete Unit"
+            >
+              <Trash size={20} weight="regular" />
+            </button>
+          </div>
         </div>
 
-        <div className="bg-[#F4F4F5] rounded-lg p-4 h-full flex flex-col min-h-[300px] relative">
+        <div className="bg-[#F4F4F5] rounded-lg p-4 flex-1 min-h-0 flex flex-col relative overflow-hidden">
           <h3
             className={`text-base md:text-lg font-semibold mb-5 ${colors.title} line-clamp-2`}
           >
@@ -251,14 +297,14 @@ function UnitCard({
           </div>
 
           <ul
-            className="custom-scrollbar h-[280px] space-y-1 overflow-y-auto pr-2 pb-12 text-xs text-[#3F3F3F] md:text-sm"
+            className="custom-scrollbar min-h-0 flex-1 space-y-1 overflow-y-auto pr-2 text-xs text-[#3F3F3F] md:text-sm"
             style={{
               scrollbarWidth: "thin",
               scrollbarColor: `${colors.solidEnd} #f1f5f9`,
             }}
           >
             {localTopics.length > 0 ? (
-              localTopics.map((topic) => (
+              visibleTopics.map((topic) => (
                 <li
                   key={topic.id}
                   className="flex items-start justify-between gap-2 group/topic py-1 -my-1 rounded-md hover:bg-gray-50 transition-colors px-1"
@@ -322,6 +368,17 @@ function UnitCard({
             ) : (
               <li className="text-gray-400 italic text-center py-4">
                 No topics found.
+              </li>
+            )}
+            {visibleTopicCount < localTopics.length && (
+              <li ref={topicLoadMoreRef} className="space-y-2 py-1">
+                {[1, 2, 3].map((row) => (
+                  <div key={row} className="flex animate-pulse items-center gap-2">
+                    <div className="h-4 w-4 shrink-0 rounded-full bg-gray-200" />
+                    <div className="h-3 flex-1 rounded bg-gray-200" />
+                    <div className="h-6 w-6 shrink-0 rounded-full bg-gray-200" />
+                  </div>
+                ))}
               </li>
             )}
           </ul>
@@ -388,7 +445,7 @@ export default function ClientSubjectDetails({
   const { category } = useParams();
   const sectionId = parseInt(category as string, 10);
   const subjectSectionKey = `${subjectId}:${sectionId}`;
-  const { userId, role } = useUser();
+  const { userId } = useUser();
 
   const [loading, setLoading] = useState(true);
   const [units, setUnits] = useState<UiUnit[]>([]);
@@ -399,14 +456,42 @@ export default function ClientSubjectDetails({
   const [isWeightageOpen, setIsWeightageOpen] = useState(false);
   const [facultyCtx, setFacultyCtx] = useState<any>(null);
   const [isWeightageModalOpen, setIsWeightageModalOpen] = useState(false);
-  const [preselectedSubject, setPreselectedSubject] = useState<any>(null);
-  const [cardFaculties, setCardFaculties] = useState<any[]>([]);
   const [selectedTopicPdf, setSelectedTopicPdf] = useState<{
     unitLabel: string;
     unitTitle: string;
     topicId: number;
     topicTitle: string;
   } | null>(null);
+  const [editingUnit, setEditingUnit] = useState<UiUnit | null>(null);
+  const [nextUnitsPage, setNextUnitsPage] = useState<number | undefined>();
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+  const { ref: loadMoreRef, inView } = useInView({ rootMargin: "200px" });
+
+  const fetchUnitsPage = async (collegeId: number, page: number) => {
+    const unitsResult = await getUnitsPaginated({
+      collegeId,
+      collegeSubjectId: subjectId,
+      collegeSectionsId: sectionId,
+      page,
+      limit: 3,
+    });
+
+    const pageUnits = await Promise.all(
+      unitsResult.units.map(async (unit) => {
+        const topicsResult = await getTopicsPaginated({
+          collegeId,
+          collegeSubjectUnitId: unit.id,
+          collegeSectionsId: sectionId,
+          page: 1,
+          limit: 100,
+        });
+        return { ...unit, topics: topicsResult.topics } as UiUnit;
+      }),
+    );
+
+    return { units: pageUnits, nextCursor: unitsResult.nextCursor };
+  };
 
   const init = async () => {
     if (!userId || !subjectId) return;
@@ -425,31 +510,9 @@ export default function ClientSubjectDetails({
 
       if (data) {
         // Use the same section/global resolution used by Faculty Academics.
-        const unitsResult = await getUnitsPaginated({
-          collegeId: ctx.collegeId,
-          collegeSubjectId: subjectId,
-          collegeSectionsId: sectionId,
-          page: 1,
-          limit: 100,
-        });
-        const facultyStyleUnits = await Promise.all(
-          unitsResult.units.map(async (unit) => {
-            const topicsResult = await getTopicsPaginated({
-              collegeId: ctx.collegeId,
-              collegeSubjectUnitId: unit.id,
-              collegeSectionsId: sectionId,
-              page: 1,
-              limit: 100,
-            });
-
-            return {
-              ...unit,
-              topics: topicsResult.topics,
-            } as UiUnit;
-          }),
-        );
-
-        setUnits(facultyStyleUnits);
+        const firstPage = await fetchUnitsPage(ctx.collegeId, 1);
+        setUnits(firstPage.units);
+        setNextUnitsPage(firstPage.nextCursor);
         setHeaderInfo(data.details);
         setContext(data.context);
       }
@@ -465,18 +528,42 @@ export default function ClientSubjectDetails({
   }, [userId, subjectSectionKey]);
 
   useEffect(() => {
-    const storedSubject = sessionStorage.getItem("selectedSubject");
-    const storedFaculties = sessionStorage.getItem("cardFaculties");
+    if (
+      !inView ||
+      !nextUnitsPage ||
+      !facultyCtx?.collegeId ||
+      loadingMoreRef.current
+    ) return;
 
-    if (storedSubject) setPreselectedSubject(JSON.parse(storedSubject));
-    if (storedFaculties) setCardFaculties(JSON.parse(storedFaculties));
-  }, []);
+    const loadNextPage = async () => {
+      try {
+        loadingMoreRef.current = true;
+        setIsLoadingMore(true);
+        const nextPage = await fetchUnitsPage(facultyCtx.collegeId, nextUnitsPage);
+        setUnits((current) => {
+          const existingIds = new Set(current.map((unit) => unit.id));
+          return [...current, ...nextPage.units.filter((unit) => !existingIds.has(unit.id))];
+        });
+        setNextUnitsPage(nextPage.nextCursor);
+      } catch {
+        toast.error("Failed to load more units");
+      } finally {
+        loadingMoreRef.current = false;
+        setIsLoadingMore(false);
+      }
+    };
+    loadNextPage();
+  }, [inView, nextUnitsPage, facultyCtx?.collegeId, isLoadingMore]);
 
   const handleSaveUnit = async (
     unitId: number,
     changedTopics: { topicId: number; isCompleted: boolean }[],
   ) => {
-    if (!adminId) return;
+    if (!adminId) {
+      toast.error("Admin session is unavailable. Please sign in again.");
+      return;
+    }
+    const savingToastId = toast.loading("Saving progress...");
     try {
       const result = await updateUnitProgress(unitId, changedTopics, adminId);
       if (result.success) {
@@ -496,29 +583,37 @@ export default function ClientSubjectDetails({
             return unit;
           }),
         );
-        toast.success("Progress Saved!");
+        toast.success("Progress saved successfully", { id: savingToastId });
       }
     } catch (error) {
-      toast.error("Failed to save progress");
+      toast.error("Failed to save progress", { id: savingToastId });
     }
   };
 
   const handleDeleteUnit = async (unitId: number) => {
-    if (!adminId) return;
+    if (!adminId) {
+      toast.error("Admin session is unavailable. Please sign in again.");
+      return;
+    }
+    const toastId = toast.loading("Deleting unit...");
     const res = await deleteUnit(unitId, adminId);
     if (res.success) {
-      toast.success("Unit deleted successfully");
+      toast.success("Unit deleted successfully", { id: toastId });
       setUnits((prev) => prev.filter((u) => u.id !== unitId));
     } else {
-      toast.error(res.error || "Failed to delete unit");
+      toast.error(res.error || "Failed to delete unit", { id: toastId });
     }
   };
 
   const handleDeleteTopic = async (unitId: number, topicId: number) => {
-    if (!adminId) return;
+    if (!adminId) {
+      toast.error("Admin session is unavailable. Please sign in again.");
+      return;
+    }
+    const toastId = toast.loading("Deleting topic...");
     const res = await deleteTopic(unitId, topicId, adminId);
     if (res.success) {
-      toast.success("Topic deleted successfully");
+      toast.success("Topic deleted successfully", { id: toastId });
       setUnits((prevUnits) =>
         prevUnits.map((unit) => {
           if (unit.id === unitId) {
@@ -532,7 +627,7 @@ export default function ClientSubjectDetails({
         }),
       );
     } else {
-      toast.error(res.error || "Failed to delete topic");
+      toast.error(res.error || "Failed to delete topic", { id: toastId });
     }
   };
 
@@ -549,6 +644,8 @@ export default function ClientSubjectDetails({
     return <div className="p-10 text-center">Subject not found</div>;
 
   return (
+    <>
+    <Toaster position="top-right" containerStyle={{ zIndex: 100000 }} />
     <div className="w-full px-4 bg-[#F5F5F7] min-h-screen pt-4 pb-10">
       <div className="flex justify-between items-center mb-5 w-full">
         <div className="flex flex-col w-[50%]">
@@ -560,11 +657,6 @@ export default function ClientSubjectDetails({
               {headerInfo.subjectName}
             </h1>
           </div>
-          {!isSchoolOrInter && (
-            <p className="text-[#525252] text-sm ml-5">
-              Credits: {headerInfo.credits || "N/A"}
-            </p>
-          )}
         </div>
         <div className="flex justify-end w-[32%] items-center gap-4">
           <CourseScheduleCard style="w-[320px]" isVisibile={false} />
@@ -572,25 +664,27 @@ export default function ClientSubjectDetails({
       </div>
       <FilterBanner
         subjectName={headerInfo.subjectName}
-        semester={headerInfo.semester}
+        semester={headerInfo.semester ?? "N/A"}
+        credits={headerInfo.credits}
         year={headerInfo.year}
         isSchool={isSchoolOrInter}
         onAddUnit={() => setIsModalOpen(true)}
         onManageWeightage={() => setIsWeightageModalOpen(true)}
         onAddWeightage={() => setIsWeightageModalOpen(true)}
       />
-      <div className="flex gap-6 overflow-x-auto pb-4 snap-x mt-8">
+      <div className="flex gap-6 overflow-x-auto custom-scrollbar pb-4 snap-x mt-8 max-md:flex-col max-md:overflow-x-visible max-md:pb-0">
         {units.length > 0 ? (
           units.map((unit) => (
             <div
               key={unit.id}
-              className="min-w-[320px] w-[350px] shrink-0 snap-start h-full"
+              className="min-w-[320px] w-[350px] shrink-0 snap-start h-[560px]"
             >
               <UnitCard
                 unit={unit}
                 onSave={handleSaveUnit}
                 onDeleteUnit={handleDeleteUnit}
                 onDeleteTopic={handleDeleteTopic}
+                onEditUnit={setEditingUnit}
                 onOpenTopicPdf={setSelectedTopicPdf}
               />
             </div>
@@ -598,6 +692,14 @@ export default function ClientSubjectDetails({
         ) : (
           <div className="w-full text-center py-10 text-gray-400">
             No syllabus units available. Click "Add Unit" to start.
+          </div>
+        )}
+        {nextUnitsPage && (
+          <div
+            ref={loadMoreRef}
+            className="min-w-[320px] w-[350px] shrink-0 snap-start"
+          >
+            <UnitCardSkeleton />
           </div>
         )}
       </div>
@@ -617,6 +719,7 @@ export default function ClientSubjectDetails({
           onClose={() => setIsWeightageModalOpen(false)}
           facultyCtx={{
             ...facultyCtx,
+            facultyId: context?.facultyId,
             faculty_edu_type: context?.educationType,
             collegeEducationId: context?.educationId,
             collegeBranchId: context?.branchId ?? null,
@@ -625,11 +728,9 @@ export default function ClientSubjectDetails({
             sectionIds: [sectionId],
             sectionName: context?.sectionName
           }}
-          role={role}
+          role="Faculty"
           initialSubjectId={subjectId}
           initialSectionId={sectionId}
-          preselectedSubject={preselectedSubject}
-          cardFaculties={cardFaculties}
         />
       )}
 
@@ -641,6 +742,29 @@ export default function ClientSubjectDetails({
         topicTitle={selectedTopicPdf?.topicTitle ?? ""}
         topicId={selectedTopicPdf?.topicId ?? 0}
       />
+      {context && editingUnit && (
+        <EditUnitModal
+          isOpen={!!editingUnit}
+          unit={editingUnit as Unit}
+          details={{
+            collegeId: context.collegeId,
+            collegeSubjectId: subjectId,
+            collegeSectionId: sectionId,
+            subjectTitle: headerInfo.subjectName,
+          }}
+          actorContext={{
+            facultyId: context.facultyId,
+            educationId: context.educationId,
+            branchId: context.branchId,
+            educationType: context.educationType,
+          }}
+          onClose={() => {
+            setEditingUnit(null);
+            init();
+          }}
+        />
+      )}
     </div>
+    </>
   );
 }

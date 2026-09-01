@@ -100,6 +100,7 @@ export async function getAdminSubjectDetails(
       `,
       )
       .eq("collegeSubjectId", subjectId)
+      .eq("collegeId", collegeId)
       .single();
 
     if (subError) throw subError;
