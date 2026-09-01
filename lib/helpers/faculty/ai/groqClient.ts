@@ -10,15 +10,18 @@ const INVALID_FOCUS_MESSAGE =
   "The entered topic does not match the selected subject and unit.";
 
 const GROQ_MODELS = [
-  "llama-3.3-70b-versatile",
-  "llama-3.1-8b-instant",
+  // Keep this list aligned with the models available to the configured Groq
+  // account. Retired model IDs return 404 and previously caused every topic
+  // request to surface as a 500 server-action response.
   "groq/compound",
   "groq/compound-mini",
-  "qwen/qwen3-32b",
 ];
 
+// Topic generation can take longer than five seconds, especially when Groq is
+// warming a model. Give each model enough time and keep one additional fallback
+// before reporting the feature as unavailable.
 const TOPIC_SUGGESTION_MODEL_LIMIT = 2;
-const MODEL_TIMEOUT_MS = 5000;
+const MODEL_TIMEOUT_MS = 20000;
 
 type RawGroqParams = {
   prompt: string;
@@ -129,7 +132,9 @@ EXAMPLE INVALID FOCUS OUTPUT:
       const raw = await generateRawWithModel(model, {
         prompt,
         systemPrompt,
-        maxTokens: 600,
+        // Eight short topic names fit comfortably within this limit. Keeping it
+        // small also avoids unnecessary token-per-minute rate-limit failures.
+        maxTokens: 300,
         temperature: 0,
       });
 

@@ -20,7 +20,7 @@ interface AttendanceStats {
   todayStatus: "Present" | "Absent" | "Half Day";
   totalWorkingDays: number;
   leavesTaken: number;
-  remainingLeaves: number;
+  remainingLeaves: number | string;
 }
 
 interface AttendanceRecord {

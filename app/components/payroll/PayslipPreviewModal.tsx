@@ -129,36 +129,60 @@ export default function PayslipPreviewModal({ entryId, onClose }: PayslipPreview
   const monthName = data ? monthNames[data.payroll_runs.payrollMonth - 1] : "";
   const year = data ? data.payroll_runs.payrollYear : "";
 
-  // Safe compliance mapping
-  const compliances = data?.user?.employee_pay_profiles?.[0]?.employee_payroll_compliance_values || [];
+  const payProfile = Array.isArray(data?.user?.employee_pay_profiles)
+    ? data.user.employee_pay_profiles[0]
+    : data?.user?.employee_pay_profiles;
+  const compliances = payProfile?.employee_payroll_compliance_values || [];
+  const salaryComponents = payProfile?.employee_salary_component_values || [];
+  const payAddons = payProfile?.employee_pay_addons || [];
+
+  const configuredEarnings = [
+    ...salaryComponents
+      .filter((component: any) => Number(component.amount || 0) > 0)
+      .map((component: any) => ({
+        label: component.salary_component_types?.title || "Other Allowance",
+        amount: Number(component.amount || 0),
+      })),
+    ...payAddons
+      .filter((addon: any) => Number(addon.amount || 0) > 0)
+      .map((addon: any) => ({
+        label: addon.title || "Other Add-on",
+        amount: Number(addon.amount || 0),
+      })),
+  ];
+  const configuredEarningsTotal = configuredEarnings.reduce(
+    (sum: number, item: { amount: number }) => sum + item.amount,
+    0,
+  );
+  const grossEarnings = Number(data?.grossEarnings || 0);
   const earnings = [
-    { label: "Basic Pay / Gross Salary", amount: Number(data?.grossEarnings || 0) }
+    {
+      label: "Basic Pay",
+      amount: Math.max(0, grossEarnings - configuredEarningsTotal),
+    },
+    ...configuredEarnings,
   ];
 
-  let totalDeductionsCalc = 0;
-  const deductionsList: Record<string, string | number> = {
-    PT: "-",
-    TDS: "-",
-    PF: "-",
-    Advance: "-",
-    Other: "-",
-    ESI: "-"
-  };
+  const deductions = compliances.map((compliance: any) => ({
+    label: compliance.payroll_compliance_types?.title || "Other Deduction",
+    amount: Math.abs(Number(compliance.amount || 0)),
+  }));
 
-  compliances.forEach((c: any) => {
-    const title = c.payroll_compliance_types?.title?.toUpperCase() || "";
-    const amount = Number(c.amount || 0);
-    totalDeductionsCalc += amount;
-    if (title === "PF" || title.includes("PROVIDENT FUND")) deductionsList.PF = amount;
-    else if (title === "EF" || title === "ESI" || title.includes("EMPLOYEE FUND")) deductionsList.ESI = amount;
-    else if (title === "PT" || title === "TDS" || title.includes("TAX")) deductionsList.PT = amount; // Map TAX to PT or TDS, mostly PT if general
-  });
+  salaryComponents
+    .filter((component: any) => Number(component.amount || 0) < 0)
+    .forEach((component: any) => {
+      deductions.push({
+        label: component.salary_component_types?.title || "Other Deduction",
+        amount: Math.abs(Number(component.amount || 0)),
+      });
+    });
 
   const lopAmount = (Number(data?.lopDays || 0) * Number(data?.perDayRate || 0)) + (Number(data?.halfDays || 0) * Number(data?.perDayRate || 0) * 0.5);
   if (lopAmount > 0) {
-    deductionsList.Other = lopAmount;
-    totalDeductionsCalc += lopAmount;
+    deductions.push({ label: "Loss of Pay", amount: lopAmount });
   }
+
+  const salaryRowCount = Math.max(earnings.length, deductions.length, 1);
 
   const logoUrl = data?.collegeMedia?.logoUrl;
   const bucketUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/college-media/` : "";
@@ -287,47 +311,23 @@ export default function PayslipPreviewModal({ entryId, onClose }: PayslipPreview
                         </tr>
                       </thead>
                       <tbody>
-                        <tr>
-                          <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}>Basic</td>
-                          <td className="py-[6px] px-[12px] text-right" style={{ borderRight: '2px solid black' }}>{formatExactNumber(data.grossEarnings) || "-"}</td>
-                          <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}>Professional Tax</td>
-                          <td className="py-[6px] px-[12px] text-right">{deductionsList.PT !== "-" ? formatExactNumber(Number(deductionsList.PT)) : "-"}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}>HRA</td>
-                          <td className="py-[6px] px-[12px] text-right" style={{ borderRight: '2px solid black' }}>-</td>
-                          <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}>Tax Deducted at Source</td>
-                          <td className="py-[6px] px-[12px] text-right">{deductionsList.TDS !== "-" ? formatExactNumber(Number(deductionsList.TDS)) : "-"}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}>Travelling and Medical Allowance</td>
-                          <td className="py-[6px] px-[12px] text-right" style={{ borderRight: '2px solid black' }}>-</td>
-                          <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}>Provident Fund</td>
-                          <td className="py-[6px] px-[12px] text-right">{deductionsList.PF !== "-" ? formatExactNumber(Number(deductionsList.PF)) : "-"}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}>Special Allowances</td>
-                          <td className="py-[6px] px-[12px] text-right" style={{ borderRight: '2px solid black' }}>-</td>
-                          <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}>Salary Advance</td>
-                          <td className="py-[6px] px-[12px] text-right">{deductionsList.Advance !== "-" ? formatExactNumber(Number(deductionsList.Advance)) : "-"}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}></td>
-                          <td className="py-[6px] px-[12px] text-right" style={{ borderRight: '2px solid black' }}></td>
-                          <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}>Other Deductions</td>
-                          <td className="py-[6px] px-[12px] text-right">{deductionsList.Other !== "-" ? formatExactNumber(Number(deductionsList.Other)) : "-"}</td>
-                        </tr>
-                        <tr>
-                          <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}></td>
-                          <td className="py-[6px] px-[12px] text-right" style={{ borderRight: '2px solid black' }}></td>
-                          <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}>ESI</td>
-                          <td className="py-[6px] px-[12px] text-right">{deductionsList.ESI !== "-" ? formatExactNumber(Number(deductionsList.ESI)) : "-"}</td>
-                        </tr>
+                        {Array.from({ length: salaryRowCount }).map((_, index) => {
+                          const earning = earnings[index];
+                          const deduction = deductions[index];
+                          return (
+                            <tr key={`${earning?.label || "earning"}-${deduction?.label || "deduction"}-${index}`}>
+                              <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}>{earning?.label || ""}</td>
+                              <td className="py-[6px] px-[12px] text-right" style={{ borderRight: '2px solid black' }}>{earning ? formatExactNumber(earning.amount) : ""}</td>
+                              <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}>{deduction?.label || ""}</td>
+                              <td className="py-[6px] px-[12px] text-right">{deduction ? formatExactNumber(deduction.amount) : ""}</td>
+                            </tr>
+                          );
+                        })}
                         <tr className="font-bold" style={{ borderTop: '2px solid black' }}>
                           <td className="py-[6px] px-[12px] italic" style={{ borderRight: '2px solid black' }}>Total Salary</td>
                           <td className="py-[6px] px-[12px] text-right" style={{ borderRight: '2px solid black' }}>{formatExactNumber(data.grossEarnings) || "0"}</td>
                           <td className="py-[6px] px-[12px] italic" style={{ borderRight: '2px solid black' }}>Total Deduction</td>
-                          <td className="py-[6px] px-[12px] text-right">{formatExactNumber(totalDeductionsCalc) || "0"}</td>
+                          <td className="py-[6px] px-[12px] text-right">{formatExactNumber(Number(data.totalDeductions || 0)) || "0"}</td>
                         </tr>
                         <tr className="font-bold" style={{ borderTop: '2px solid black' }}>
                           <td className="py-[6px] px-[12px]" style={{ borderRight: '2px solid black' }}>Net Salary</td>

@@ -123,7 +123,7 @@ const AttendanceAnalyticsPage = ({ userId, profile }: Props) => {
         <AttendancePerformanceChart data={chartData} />
       </div>
 
-      <div className="flex-1 min-h-[350px]">
+      <div className="flex-1 min-h-[350px] pb-6">
         {initialLoad ? (
           <AttendanceTableShimmer />
         ) : (

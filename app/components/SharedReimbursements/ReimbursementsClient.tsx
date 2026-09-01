@@ -24,7 +24,7 @@ export default function ReimbursementsClient() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const {
-    data: statsData = { total: 0, pending: 0, paid: 0, rejected: 0 },
+    data: statsData = { total: 0, pending: 0, awaitingPayment: 0, paid: 0, rejected: 0 },
     isLoading: isFetchingStats,
   } = useQuery({
     queryKey: ["employeeExpenseReportStats", userId, collegeId],

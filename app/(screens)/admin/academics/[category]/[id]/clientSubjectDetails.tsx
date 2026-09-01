@@ -756,6 +756,7 @@ export default function ClientSubjectDetails({
             facultyId: context.facultyId,
             educationId: context.educationId,
             branchId: context.branchId,
+            branchCode: context.branchCode,
             educationType: context.educationType,
           }}
           onClose={() => {

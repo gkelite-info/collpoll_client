@@ -81,6 +81,9 @@ STRICT RULES:
     return filtered.slice(0, 8);
   } catch (err) {
     console.error("[suggestTopicsAction] Failed:", err);
-    throw new Error("AI topic generation failed. Please try again.");
+    // Server actions serialize thrown errors as HTTP 500 responses. Returning
+    // an empty result lets the query layer handle retries and show its normal
+    // inline unavailable state without breaking the request itself.
+    return [];
   }
 }

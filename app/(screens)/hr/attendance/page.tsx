@@ -29,7 +29,7 @@ import {
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import AttendanceFilters from "./components/AttendanceFilteres";
 import { useHrAttendanceRealtime } from "@/lib/helpers/Hr/attendance/liveHrAttendanceAPI";
-import toast, { Toaster } from "react-hot-toast";
+import { Toaster } from "react-hot-toast";
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -319,8 +319,6 @@ function FacultyAttendanceDashboard() {
           };
         }),
       );
-
-      toast.success("Attendance updated successfully", { id: "hr-realtime-toast" });
 
       // A biometric scan can emit both a database change and a broadcast. Merge
       // that burst into one background refresh instead of running duplicate queries.

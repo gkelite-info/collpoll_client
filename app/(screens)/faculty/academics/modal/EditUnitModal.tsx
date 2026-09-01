@@ -32,6 +32,7 @@ type EditUnitModalProps = {
     facultyId: number;
     educationId?: number;
     branchId?: number | null;
+    branchCode?: string | null;
     educationType?: string | null;
   };
 };
@@ -59,8 +60,12 @@ export default function EditUnitModal({
 
   const { userId, collegeId, loading } = useUser();
   const [facultyId, setFacultyId] = useState<number | null>(null);
-  const { faculty_edu_type: facultyEducationType } = useFaculty();
+  const {
+    faculty_edu_type: facultyEducationType,
+    college_branch: facultyBranchCode,
+  } = useFaculty();
   const faculty_edu_type = actorContext?.educationType ?? facultyEducationType;
+  const branchCode = actorContext?.branchCode ?? facultyBranchCode ?? undefined;
   const actorFacultyId = actorContext?.facultyId;
   const actorEducationId = actorContext?.educationId;
   const actorBranchId = actorContext?.branchId;
@@ -182,7 +187,7 @@ export default function EditUnitModal({
     .join('|');
 
   const { data: generatedTopics, isFetching: isFetchingTopics, isError } = useQuery({
-    queryKey: ['aiTopics', 'edit', formData.subjectName, debouncedUnitName, faculty_edu_type, existingTopicsCacheKey],
+    queryKey: ['aiTopics', 'edit', formData.subjectName, debouncedUnitName, faculty_edu_type, branchCode, existingTopicsCacheKey],
     queryFn: async () => {
       const trimmed = debouncedUnitName.replace(/[^a-zA-Z\s]/g, "").trim();
       if (trimmed.length < 3 || !formData.subjectName) return [];
@@ -190,7 +195,7 @@ export default function EditUnitModal({
         formData.subjectName,
         debouncedUnitName,
         faculty_edu_type ?? undefined,
-        "",
+        branchCode,
         existingTopicsForAi,
       );
       if (!Array.isArray(topics) || topics.length === 0) throw new Error("Failed");
@@ -209,6 +214,7 @@ export default function EditUnitModal({
       formData.subjectName,
       debouncedUnitName,
       faculty_edu_type,
+      branchCode,
       existingTopicsCacheKey,
       debouncedSearchQuery.toLowerCase(),
     ],
@@ -218,7 +224,7 @@ export default function EditUnitModal({
         formData.subjectName,
         debouncedUnitName,
         faculty_edu_type ?? undefined,
-        "",
+        branchCode,
         excludedTopics,
         debouncedSearchQuery,
       );
@@ -230,7 +236,7 @@ export default function EditUnitModal({
       debouncedUnitName.length >= 3 &&
       debouncedSearchQuery.replace(/[^a-zA-Z\s]/g, "").replace(/\s+/g, "").length >= 3,
     staleTime: 5 * 60 * 1000,
-    retry: false,
+    retry: 2,
     retryDelay: attempt => Math.min(750 * 2 ** attempt, 3000),
   });
 

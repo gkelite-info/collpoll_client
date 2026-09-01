@@ -53,6 +53,76 @@ export const fetchStaffForOnboarding = async (
     if (error) throw error;
     if (!users) return { data: [], totalCount: 0 };
 
+    const { data: educationRows, error: educationError } = await supabase
+      .from("college_education")
+      .select("collegeEducationType")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .is("deletedAt", null)
+      .order("collegeEducationType", { ascending: true });
+
+    if (educationError) throw educationError;
+
+    const collegeEducationTypes = [
+      ...new Set(
+        (educationRows ?? [])
+          .map((education) => education.collegeEducationType?.trim())
+          .filter((education): education is string => Boolean(education)),
+      ),
+    ].join(", ");
+
+    const userIds = users.map((user) => user.userId);
+    const { data: adminRows } = userIds.length
+      ? await supabase
+          .from("admins")
+          .select(
+            "adminId, userId, college_education:collegeEducationId ( collegeEducationType )",
+          )
+          .in("userId", userIds)
+          .is("deletedAt", null)
+      : { data: [] };
+
+    const adminIds = (adminRows ?? []).map((admin) => admin.adminId);
+    const { data: adminEducationRows } = adminIds.length
+      ? await supabase
+          .from("admin_education_types")
+          .select(
+            "adminId, college_education:collegeEducationId ( collegeEducationType )",
+          )
+          .in("adminId", adminIds)
+          .eq("isActive", true)
+          .eq("is_deleted", false)
+          .is("deletedAt", null)
+      : { data: [] };
+
+    const adminUserIdByAdminId = new Map(
+      (adminRows ?? []).map((admin) => [admin.adminId, admin.userId]),
+    );
+    const educationTypesByUserId = new Map<number, Set<string>>();
+    const addEducationType = (userId: number | undefined, value: string | undefined) => {
+      const educationType = value?.trim();
+      if (!userId || !educationType) return;
+      const assigned = educationTypesByUserId.get(userId) ?? new Set<string>();
+      assigned.add(educationType);
+      educationTypesByUserId.set(userId, assigned);
+    };
+
+    (adminRows ?? []).forEach((admin: any) => {
+      const education = Array.isArray(admin.college_education)
+        ? admin.college_education[0]
+        : admin.college_education;
+      addEducationType(admin.userId, education?.collegeEducationType);
+    });
+    (adminEducationRows ?? []).forEach((mapping: any) => {
+      const education = Array.isArray(mapping.college_education)
+        ? mapping.college_education[0]
+        : mapping.college_education;
+      addEducationType(
+        adminUserIdByAdminId.get(mapping.adminId),
+        education?.collegeEducationType,
+      );
+    });
+
     const formattedData = users.map((u: any) => {
       // Extract the actual full objects from the database arrays
       const bankDetails = Array.isArray(u.staff_bank_details)
@@ -83,7 +153,10 @@ export const fetchStaffForOnboarding = async (
         id: `ID-${u.userId.toString().padStart(6, "0")}`,
         role: u.role || "Staff",
         email: u.email || "N/A",
-        educationType: u.collegeEducationType || "N/A",
+        educationType:
+          [...(educationTypesByUserId.get(u.userId) ?? [])].join(", ") ||
+          collegeEducationTypes ||
+          "Not Assigned",
         joiningDate: u.dateOfJoining
           ? new Date(u.dateOfJoining).toLocaleDateString("en-GB")
           : "N/A",

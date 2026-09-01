@@ -300,7 +300,7 @@ export default function AttendanceTable({
   const handleSaveRow = async (
     item: AttendanceStaffRow,
     isStatusOnly = false,
-  ): Promise<boolean> => {
+  ): Promise<"created" | "updated" | false> => {
     const edit = getEdit(item);
 
     const errs = validateRow(item, edit, isStatusOnly);
@@ -318,14 +318,13 @@ export default function AttendanceTable({
 
     try {
       if (isStatusOnly) {
-        await saveStatusOnly({
+        return await saveStatusOnly({
           attendanceDailyId: item.attendanceDailyId!,
           userId: item.userId,
           status: item.status,
           collegeHrId,
           date: filterDate ?? undefined,
         });
-        return true;
       }
 
       const status = (item.status ?? "").toLowerCase();
@@ -349,7 +348,7 @@ export default function AttendanceTable({
             ? (item.rawCheckOut ?? "")
             : "";
 
-      await saveAttendance({
+      const operation = await saveAttendance({
         attendanceDailyId: item.attendanceDailyId,
         userId: item.userId,
         checkIn: isNoShow ? "" : newCheckIn,
@@ -368,7 +367,7 @@ export default function AttendanceTable({
         delete n[item.userId];
         return n;
       });
-      return true;
+      return operation;
     } catch (err: any) {
       setSaveErrors((p) => ({
         ...p,
@@ -561,8 +560,15 @@ export default function AttendanceTable({
           );
           setIsSavingAll(false);
 
-          if (results.every(Boolean)) {
-            toast.success("Attendance saved successfully!");
+          if (results.every((result) => result !== false)) {
+            const operations = new Set(results);
+            const message =
+              operations.size > 1
+                ? "Attendance saved and updated successfully!"
+                : operations.has("updated")
+                  ? "Attendance updated successfully!"
+                  : "Attendance saved successfully!";
+            toast.success(message, { id: "hr-attendance-save-result" });
             resetAll();
             onSave();
             onRefresh();

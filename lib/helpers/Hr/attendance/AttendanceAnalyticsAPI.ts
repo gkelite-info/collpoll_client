@@ -314,7 +314,10 @@ export async function fetchFullAttendanceDashboardData(
     }
   }
 
-  if (fullDays === 0 && halfDays === 0) lopDays = evaluatedDays - paidLeaves;
+  // Do not replace the day-by-day result with every evaluated day as LOP.
+  // In particular, today's NOT_MARKED state is still pending and must not be
+  // charged as loss of pay. Past unmarked working days and explicit ABSENT
+  // records have already been counted in the loop above.
   
   let ytdLeavesTaken = 0;
   Array.from(attendanceByDate.values()).forEach(a => {
@@ -324,13 +327,15 @@ export async function fetchFullAttendanceDashboardData(
     }
   });
 
-  const alloc = { total: Number(allocData?.totalLeaves) || 0 };
-  if (alloc.total === 0) alloc.total = 24;
+  const hasLeaveAllocation = allocData?.totalLeaves !== null && allocData?.totalLeaves !== undefined;
+  const allocatedLeaves = hasLeaveAllocation ? Number(allocData.totalLeaves) || 0 : 0;
 
   const stats = {
     totalWorkingDays: Math.max(0, evaluatedDays - lopDays),
     leavesTaken: ytdLeavesTaken,
-    remainingLeaves: Math.max(0, alloc.total - ytdLeavesTaken),
+    remainingLeaves: hasLeaveAllocation
+      ? Math.max(0, allocatedLeaves - ytdLeavesTaken)
+      : "Not Assigned",
     lopDays: Math.max(0, lopDays),
     presentDays: fullDays + halfDays,
     expectedWorkingDays: evaluatedDays

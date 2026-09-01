@@ -127,27 +127,13 @@ export async function getAdminStudentTasks(params: GetAdminTasksParams) {
   let subjectsQuery = supabase
     .from("college_subjects")
     .select("collegeSubjectId, subjectName, subjectKey")
+    .eq("collegeId", scope.collegeId)
     .eq("collegeEducationId", scope.collegeEducationId)
-    .eq("isActive", true)
     .is("deletedAt", null);
 
   if (scope.subjectIds.length) {
     subjectsQuery = subjectsQuery.in("collegeSubjectId", scope.subjectIds);
   }
-  if (studentRow.collegeBranchId) {
-    subjectsQuery = subjectsQuery.eq("collegeBranchId", studentRow.collegeBranchId);
-  }
-  if (historyRow.collegeAcademicYearId === null) {
-    subjectsQuery = subjectsQuery.is("collegeAcademicYearId", null);
-  } else {
-    subjectsQuery = subjectsQuery.eq("collegeAcademicYearId", historyRow.collegeAcademicYearId);
-  }
-  if (historyRow.collegeSemesterId === null) {
-    subjectsQuery = subjectsQuery.is("collegeSemesterId", null);
-  } else {
-    subjectsQuery = subjectsQuery.eq("collegeSemesterId", historyRow.collegeSemesterId);
-  }
-
   const { data: subjectsData } = await subjectsQuery;
   const subjectNameById = new Map(
     (subjectsData ?? []).map((subject: any) => [
@@ -168,8 +154,30 @@ export async function getAdminStudentTasks(params: GetAdminTasksParams) {
   }
 
   function formatIntDate(dateInt: number) {
-    const d = new Date(dateInt);
-    return `${d.getDate().toString().padStart(2, "0")} ${d.toLocaleString("default", { month: "short" })} ${d.getFullYear()}`;
+    if (!dateInt) return "N/A";
+
+    const raw = String(dateInt);
+    if (raw.length !== 8) return "N/A";
+
+    const year = Number(raw.slice(0, 4));
+    const month = Number(raw.slice(4, 6));
+    const day = Number(raw.slice(6, 8));
+    const d = new Date(year, month - 1, day);
+
+    if (
+      Number.isNaN(d.getTime()) ||
+      d.getFullYear() !== year ||
+      d.getMonth() !== month - 1 ||
+      d.getDate() !== day
+    ) {
+      return "N/A";
+    }
+
+    return d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   }
   
   function formatIsoDate(isoString?: string | null) {

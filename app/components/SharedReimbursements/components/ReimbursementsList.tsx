@@ -2,7 +2,7 @@
 
 import { Money, FunnelSimple } from "@phosphor-icons/react";
 import { CheckCircle2, ClipboardClock, Download, ListTodo, Pencil, Trash2, XCircle, Loader2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { downloadExcel } from "@/app/utils/downloadCSV";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import type { EmployeeExpenseReport } from "@/lib/helpers/reimbursements/employeeExpenseReportsAPI";
@@ -14,7 +14,7 @@ import ReimbursementsShimmer from "./ReimbursementsShimmer";
 type Props = {
   reports: EmployeeExpenseReport[];
   totalCount: number;
-  stats: { total: number; pending: number; paid: number; rejected: number };
+  stats: { total: number; pending: number; awaitingPayment: number; paid: number; rejected: number };
   loading: boolean;
   tableLoading?: boolean;
   error: string | null;
@@ -42,7 +42,8 @@ const formatDateDDMMYYYY = (dateString: string) => {
 export function displayStatus(status: string | null): ReimbursementStatus {
   const value = status?.toLowerCase();
   if (value === "rejected" || value === "payment_rejected") return "Rejected";
-  if (["paid", "approved", "completed"].includes(value ?? "")) return "Paid";
+  if (["paid", "completed"].includes(value ?? "")) return "Paid";
+  if (value === "approved") return "Awaiting Payment";
   return "Pending";
 }
 
@@ -58,6 +59,7 @@ export default function ReimbursementsList({
   const statCards = [
     { label: "Total Requests", value: String(stats.total), color: "border-t-[#16284F]", valueClass: "text-[#14213A]", icon: ListTodo, iconClass: "bg-[#EAF0FF] text-[#16284F]" },
     { label: "Pending Approval", value: String(stats.pending), color: "border-t-[#0B7CFF]", valueClass: "text-[#0065C8]", icon: ClipboardClock, iconClass: "bg-[#E8F2FF] text-[#0B7CFF]" },
+    { label: "Awaiting Payment", value: String(stats.awaitingPayment), color: "border-t-[#D99A00]", valueClass: "text-[#9A6700]", icon: ClipboardClock, iconClass: "bg-[#FFF4D6] text-[#9A6700]" },
     { label: "Paid", value: String(stats.paid), color: "border-t-[#007A3D]", valueClass: "text-[#007A3D]", icon: CheckCircle2, iconClass: "bg-[#E6F8EE] text-[#007A3D]" },
     { label: "Rejected", value: String(stats.rejected), color: "border-t-[#D51E1E]", valueClass: "text-[#C51D1D]", icon: XCircle, iconClass: "bg-[#FFE8E8] text-[#D51E1E]" },
   ];
