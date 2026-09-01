@@ -227,7 +227,7 @@ export default function RequestsList({ clubId, currentFilter }: { clubId: any, c
             ) : requests.length > 0 ? (
                 <div className="flex flex-col gap-4">
                     {requests.map((req, index) => (
-                        <div key={req.id} className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm transition-shadow hover:shadow-md border border-gray-50">
+                        <div key={req.id} className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm border border-gray-50">
                             <div className="flex items-center gap-4">
                                 {currentFilter !== "all" && (
                                     <input

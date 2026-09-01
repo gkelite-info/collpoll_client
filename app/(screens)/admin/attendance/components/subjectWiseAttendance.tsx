@@ -33,6 +33,7 @@ import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelpe
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import StuTableShimmer from "./stuTableShimmer";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 
 interface SubjectWiseAttendanceProps {
   onBack: () => void;
@@ -385,44 +386,30 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
       <div className="flex-1">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div className="flex items-center gap-3 justify-between">
-            <div className="relative">
-              <select
+            <div className="min-w-[100px]">
+              <CustomDropdown
                 value={calendarType}
-                onChange={(e) => {
-                  handleFilterChange("calendarType", e.target.value);
-                }}
-                className="appearance-none rounded-full bg-[#43C17A1C] pl-4 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm min-w-[100px]"
-              >
-                <option value="Single">Single</option>
-                <option value="Bulk">Bulk</option>
-              </select>
-              <CaretDown
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
-                size={12}
-                weight="bold"
+                onChange={(value) => handleFilterChange("calendarType", String(value))}
+                options={[
+                  { value: "Single", label: "Single" },
+                  { value: "Bulk", label: "Bulk" }
+                ]}
+                theme="always-green"
+                className="!rounded-full !py-1.5 !border-none !shadow-none"
+                widthClassName="w-full"
               />
             </div>
 
-            <div className="relative">
-              <select
+            <div className="min-w-[180px]">
+              <CustomDropdown
                 value={selectedClassId}
-                onChange={(e) => handleFilterChange("class", e.target.value)}
-                className="appearance-none rounded-full bg-[#43C17A1C] pl-4 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm min-w-[180px]"
-              >
-                {classOptions.length > 0 ? (
-                  classOptions.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">No classes found</option>
-                )}
-              </select>
-              <CaretDown
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
-                size={12}
-                weight="bold"
+                onChange={(value) => handleFilterChange("class", String(value))}
+                options={classOptions.length > 0 
+                  ? classOptions.map((c: any) => ({ value: c.id, label: c.label })) 
+                  : [{ value: "", label: "No classes found" }]}
+                theme="always-green"
+                className="!rounded-full !py-1.5 !border-none !shadow-none"
+                widthClassName="w-full"
               />
             </div>
 

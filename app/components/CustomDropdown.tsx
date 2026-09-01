@@ -11,6 +11,7 @@ export type DropdownOption = {
 };
 
 interface CustomDropdownProps {
+  id?: string;
   label?: string;
   value: string | number;
   options: DropdownOption[];
@@ -29,6 +30,7 @@ interface CustomDropdownProps {
 }
 
 export const CustomDropdown = ({
+  id,
   label,
   value,
   options,
@@ -188,6 +190,7 @@ export const CustomDropdown = ({
 
       <div className="relative" ref={dropdownRef}>
         <button
+          id={id}
           type="button"
           disabled={disabled}
           onClick={(e) => {

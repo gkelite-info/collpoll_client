@@ -29,8 +29,8 @@ function ClubsClientContent() {
     };
 
     const handleViewClub = (clubId: string) => {
-        const encryptedId = encryptId(clubId);
-        router.push(`/admin/clubs?tab=view&viewClubId=${encryptedId}&status=active&group=members`);
+        const encryptedId = encryptId(clubId.toString());
+        router.push(`/admin/clubs?tab=view&viewClubId=${encryptedId}&status=active`);
     };
 
     // const isViewingList = activeTab === "view" && !editId;

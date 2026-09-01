@@ -15,8 +15,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getClassResultDetails } from "@/lib/helpers/faculty/results/getClassResultDetails";
 import {
-  isStrictlySchoolAssigned,
-  isStrictlySchoolOrInterAssigned,
+  isSchoolEducation,
+  isSchoolOrInterSubject,
 } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export default function ClassResultDetails() {
@@ -47,13 +47,19 @@ export default function ClassResultDetails() {
 
   const { collegeEducationType } = useUser();
 
-  const targetSubjectId = facultySections?.find(
+  const targetSection = facultySections?.find(
     (s) => s.faculty_subject?.subjectName === subject && s.collegeSectionsId === sectionId
-  )?.collegeSubjectId;
+  );
 
-  const isSchool = isStrictlySchoolAssigned(collegeEducationType);
-  const isSchoolOrInter = isStrictlySchoolOrInterAssigned(collegeEducationType);
-  const isInter = isSchoolOrInter && !isSchool; // Only Inter
+  const targetSubjectId = targetSection?.collegeSubjectId;
+
+  const sectionEduType = targetSection?.college_education?.collegeEducationType 
+                      || targetSection?.faculty_edu_type?.collegeEducationType 
+                      || collegeEducationType;
+
+  const isSchool = isSchoolEducation(sectionEduType);
+  const isSchoolOrInter = isSchoolOrInterSubject(sectionEduType);
+  const isInter = isSchoolOrInter && !isSchool;
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -167,7 +173,7 @@ export default function ClassResultDetails() {
 
         <div className="flex-1 space-y-4">
           <h2 className="text-lg font-bold text-gray-800">Class Information</h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-1">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 pt-1">
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Subject</p>
               <p className="text-sm font-bold text-gray-800 mt-1">{subject}</p>
@@ -186,6 +192,14 @@ export default function ClassResultDetails() {
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Year</p>
               <p className="text-sm font-bold text-gray-800 mt-1">{year}</p>
             </div>
+
+            {!isSchoolOrInter && (
+              <div>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Semester</p>
+                <p className="text-sm font-bold text-gray-800 mt-1">Semester {semesterId}</p>
+              </div>
+            )}
+            
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Section</p>
               <p className="text-sm font-bold text-gray-800 mt-1">{section}</p>
