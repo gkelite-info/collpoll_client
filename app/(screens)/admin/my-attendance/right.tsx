@@ -86,7 +86,7 @@ export default function MyAttendanceRight() {
 
         <AnnouncementsCard
           announceCard={announcements}
-          height="80vh"
+          className="mt-5 flex-1 min-h-0"
           currentView={view}
           onViewChange={(v) => setView(v)}
           refreshAnnouncements={fetchAnnouncements}

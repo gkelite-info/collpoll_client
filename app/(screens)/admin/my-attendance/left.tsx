@@ -74,7 +74,7 @@ const MyAttendanceLeft = () => {
   const showRightSidebar = !(activeMainTab === "payroll" && activePayrollTab === "reimbursements");
 
   return (
-    <div className="flex w-full items-start justify-between">
+    <div className="flex w-full items-stretch justify-between">
       <div className="w-full flex-1 min-w-0 font-sans min-h-150 pt-4 px-2.5">
         <div className="flex justify-center mb-8 w-full px-20">
           <div className="relative flex items-center bg-[#E5E5E5] p-1 rounded-full w-full max-w-[700px] justify-between">
