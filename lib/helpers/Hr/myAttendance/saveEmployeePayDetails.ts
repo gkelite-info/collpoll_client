@@ -168,6 +168,11 @@ export const saveEmployeePayDetails = async ({
     }
 
     const activeAllowances = formData.activeAllowances || [];
+    await supabase
+      .from("employee_salary_component_values")
+      .delete()
+      .eq("employeePayProfileId", profileId);
+
     if (activeAllowances.length > 0) {
       const { data: existingTypes } = await supabase
         .from("salary_component_types")
@@ -208,11 +213,6 @@ export const saveEmployeePayDetails = async ({
         });
       }
 
-      await supabase
-        .from("employee_salary_component_values")
-        .delete()
-        .eq("employeePayProfileId", profileId);
-
       const { error: allowanceErr } = await supabase
         .from("employee_salary_component_values")
         .insert(mappedAllowances);
@@ -221,6 +221,11 @@ export const saveEmployeePayDetails = async ({
     }
 
     const selectedCompliances = formData.compliances || [];
+    await supabase
+      .from("employee_payroll_compliance_values")
+      .delete()
+      .eq("employeePayProfileId", profileId);
+
     if (selectedCompliances.length > 0) {
       const { data: existingCompTypes } = await supabase
         .from("payroll_compliance_types")
@@ -260,11 +265,6 @@ export const saveEmployeePayDetails = async ({
           updatedAt: now,
         });
       }
-
-      await supabase
-        .from("employee_payroll_compliance_values")
-        .delete()
-        .eq("employeePayProfileId", profileId);
 
       const { error: complianceErr } = await supabase
         .from("employee_payroll_compliance_values")

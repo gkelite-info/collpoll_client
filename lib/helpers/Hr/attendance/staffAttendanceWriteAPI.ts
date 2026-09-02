@@ -141,26 +141,40 @@ export async function saveAttendance(
   }
 
   const editPayload: Record<string, unknown> = {
+    checkIn: checkInVal,
+    checkOut: checkOutVal,
     totalMinutes,
     lateByMinutes,
     earlyOutMinutes,
     classesTaken: params.classesTaken ?? 0,
+    isManual: true,
+    markedBy: params.collegeHrId,
+    markedReason: params.reason || null,
     updatedAt: now,
   };
 
   if (params.status) editPayload.status = params.status.toUpperCase();
-  if (checkInVal !== null) editPayload.checkIn = checkInVal;
-  if (checkOutVal !== null) editPayload.checkOut = checkOutVal;
 
-  const { error: updateError } = await supabase
+  const { data: updatedAttendance, error: updateError } = await supabase
     .from("attendance_daily")
     .update(editPayload)
-    .eq("attendanceDailyId", attendanceDailyId);
+    .eq("userId", params.userId)
+    .eq("attendanceDate", today)
+    .select("attendanceDailyId")
+    .maybeSingle();
 
   if (updateError) {
     console.error("Attendance Daily Update Error:", updateError);
     throw new Error("Failed to update attendance record. Please try again.");
   }
+
+  if (!updatedAttendance?.attendanceDailyId) {
+    throw new Error(
+      "Attendance record was not updated. Please refresh and try again.",
+    );
+  }
+
+  attendanceDailyId = updatedAttendance.attendanceDailyId;
 
   const { data: existingAdj, error: fetchAdjError } = await supabase
     .from("attendance_adjustments")
@@ -249,12 +263,25 @@ export async function saveStatusOnly(params: {
   }
 
   if (params.attendanceDailyId !== null && params.attendanceDailyId > 0) {
-    const { error } = await supabase
+    const { data: updatedAttendance, error } = await supabase
       .from("attendance_daily")
-      .update({ status: normalizedStatus, updatedAt: now })
-      .eq("attendanceDailyId", params.attendanceDailyId);
+      .update({
+        status: normalizedStatus,
+        isManual: true,
+        markedBy: params.collegeHrId,
+        updatedAt: now,
+      })
+      .eq("userId", params.userId)
+      .eq("attendanceDate", today)
+      .select("attendanceDailyId")
+      .maybeSingle();
 
     if (error) throw new Error(error.message);
+    if (!updatedAttendance?.attendanceDailyId) {
+      throw new Error(
+        "Attendance record was not updated. Please refresh and try again.",
+      );
+    }
     return "updated";
   } else {
     const { data: existingAttendance, error: existingError } = await supabase

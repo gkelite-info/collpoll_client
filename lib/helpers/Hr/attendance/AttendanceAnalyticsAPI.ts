@@ -69,6 +69,32 @@ export async function fetchFullAttendanceDashboardData(
 
   const [ { data: holidays }, { data: timings } ] = await Promise.all([holidaysPromise, timingsPromise]);
 
+  const attendanceDailyIds = (attendance ?? [])
+    .map((row: any) => row.attendanceDailyId)
+    .filter((id: unknown): id is number => typeof id === "number");
+  const adjustmentReasonByAttendanceId = new Map<number, string | null>();
+
+  if (attendanceDailyIds.length > 0) {
+    const { data: adjustments, error: adjustmentsError } = await adminSupabase
+      .from("attendance_adjustments")
+      .select("attendanceDailyId, reason, adjustmentId")
+      .in("attendanceDailyId", attendanceDailyIds)
+      .order("adjustmentId", { ascending: false });
+
+    if (adjustmentsError) {
+      console.error("Unable to fetch attendance adjustment reasons:", adjustmentsError);
+    } else {
+      (adjustments ?? []).forEach((adjustment: any) => {
+        if (!adjustmentReasonByAttendanceId.has(adjustment.attendanceDailyId)) {
+          adjustmentReasonByAttendanceId.set(
+            adjustment.attendanceDailyId,
+            adjustment.reason ?? null,
+          );
+        }
+      });
+    }
+  }
+
   const holidayDates = new Set<string>((holidays || []).map((h: any) => h.holidayDate));
   let isSaturdayOpen = true;
   if (timings && (!(timings as any).openAt || !(timings as any).closeAt)) isSaturdayOpen = false;
@@ -229,6 +255,7 @@ export async function fetchFullAttendanceDashboardData(
     const isHoliday = isSunday || isSaturdayClosed || holidayDates.has(dateStr);
 
     let rowStatus = "Absent";
+    let reason = "â€”";
     let checkIn = "—", checkOut = "—", totalHours = "Oh 00m", lateBy = "—", earlyOut = "—", classDetail = "—";
     const dynamicClasses = classesTakenByDate.get(dateStr);
     if (dynamicClasses !== undefined) {
@@ -269,6 +296,10 @@ export async function fetchFullAttendanceDashboardData(
       totalHours = formatMinutesToHours(attRecord.totalMinutes);
       lateBy = formatLateEarlyMinutes(attRecord.lateByMinutes);
       earlyOut = formatLateEarlyMinutes(attRecord.earlyOutMinutes);
+      reason =
+        attRecord.markedReason ??
+        adjustmentReasonByAttendanceId.get(attRecord.attendanceDailyId) ??
+        "â€”";
       if (dynamicClasses === undefined) {
         classDetail = attRecord.classesTaken ? String(attRecord.classesTaken).padStart(2, "0") : "—";
       }
@@ -288,7 +319,7 @@ export async function fetchFullAttendanceDashboardData(
     if (!isHoliday || attRecord) {
       records.push({
         date: displayDate,
-        checkIn, checkOut, totalHours, status: rowStatus, lateBy, earlyOut, classDetail,
+        checkIn, checkOut, totalHours, status: rowStatus, reason, lateBy, earlyOut, classDetail,
         sortDate: dateStr
       });
     }

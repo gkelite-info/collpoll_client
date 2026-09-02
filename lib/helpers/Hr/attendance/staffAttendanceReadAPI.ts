@@ -157,7 +157,7 @@ export async function getAttendanceStaff(
   const { data: dailyData, error: dailyError } = await supabase
     .from("attendance_daily")
     .select(
-      "attendanceDailyId, userId, checkIn, checkOut, status, totalMinutes, lateByMinutes, earlyOutMinutes, classesTaken, isManual",
+      "attendanceDailyId, userId, checkIn, checkOut, status, totalMinutes, lateByMinutes, earlyOutMinutes, classesTaken, isManual, markedReason",
     )
     .in("userId", userIds)
     .eq("attendanceDate", today);
@@ -200,14 +200,24 @@ export async function getAttendanceStaff(
     .map((r: any) => r.attendanceDailyId)
     .filter(Boolean);
   let adjSet = new Set<number>();
+  const adjustmentReasonMap = new Map<number, string | null>();
 
   if (attDailyIds.length > 0) {
     const { data: adjData } = await supabase
       .from("attendance_adjustments")
-      .select("attendanceDailyId")
-      .in("attendanceDailyId", attDailyIds);
+      .select("attendanceDailyId, reason, adjustmentId")
+      .in("attendanceDailyId", attDailyIds)
+      .order("adjustmentId", { ascending: false });
     if (adjData) {
-      adjData.forEach((a: any) => adjSet.add(a.attendanceDailyId));
+      adjData.forEach((adjustment: any) => {
+        adjSet.add(adjustment.attendanceDailyId);
+        if (!adjustmentReasonMap.has(adjustment.attendanceDailyId)) {
+          adjustmentReasonMap.set(
+            adjustment.attendanceDailyId,
+            adjustment.reason ?? null,
+          );
+        }
+      });
     }
   }
 
@@ -247,7 +257,10 @@ export async function getAttendanceStaff(
       earlyOutMinutes: r?.earlyOutMinutes || 0,
       classesTaken: r?.classesTaken || null,
       hasAdjustment: r?.isManual || adjSet.has(r?.attendanceDailyId) || false,
-      reason: null,
+      reason:
+        r?.markedReason ??
+        adjustmentReasonMap.get(r?.attendanceDailyId) ??
+        null,
     };
   });
 

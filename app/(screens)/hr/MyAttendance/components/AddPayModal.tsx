@@ -13,7 +13,7 @@ export interface EmployeePayData {
   id: string;
   employeeId: string;
   joiningDate: string;
-  department: string;
+  educationType: string;
   role: string;
   image: string;
 }
@@ -313,6 +313,11 @@ export default function AddPayModal({
   };
 
   const saveCustomAllowance = () => {
+    if (!customAllowanceName.trim()) {
+      toast.error("Allowance or deduction name is required.");
+      return;
+    }
+
     if (customAllowanceName.trim()) {
       setAvailableAllowances([
         ...availableAllowances,
@@ -345,6 +350,11 @@ export default function AddPayModal({
   };
 
   const saveCustomCompliance = () => {
+    if (!customComplianceName.trim()) {
+      toast.error("Compliance name is required.");
+      return;
+    }
+
     if (customComplianceName.trim()) {
       setCompliances([
         ...compliances,
@@ -388,8 +398,17 @@ export default function AddPayModal({
     ]);
 
   const handleSave = async () => {
-    if (!formData.totalCTC || !formData.fixedPay || !basicSalary) {
-      toast.error("Please fill in Total CTC, Fixed Pay, and Basic Salary.");
+    const requiredSalaryFields = [
+      { label: "Total CTC", value: formData.totalCTC },
+      { label: "Fixed Pay", value: formData.fixedPay },
+      { label: "Variable Pay", value: formData.variablePay },
+      { label: "Basic Salary", value: basicSalary },
+    ];
+    const missingSalaryField = requiredSalaryFields.find(
+      (field) => !field.value.trim(),
+    );
+    if (missingSalaryField) {
+      toast.error(`${missingSalaryField.label} is required.`);
       return;
     }
 
@@ -400,6 +419,22 @@ export default function AddPayModal({
       10,
     );
 
+    if (
+      ctc <= 0 ||
+      fixed <= 0 ||
+      Number(basicSalary.replace(/,/g, "")) <= 0
+    ) {
+      toast.error(
+        "Total CTC, Fixed Pay, and Basic Salary must be greater than zero.",
+      );
+      return;
+    }
+
+    if (variable < 0) {
+      toast.error("Variable Pay cannot be negative.");
+      return;
+    }
+
     if (ctc !== fixed + variable) {
       toast.error(
         "Total CTC must be exactly equal to Fixed Pay + Variable Pay.",
@@ -407,15 +442,22 @@ export default function AddPayModal({
       return;
     }
 
-    if (
-      !formData.totalLeaves ||
-      !formData.sickLeave ||
-      !formData.casualLeave ||
-      !formData.paidLeave
-    ) {
-      toast.error(
-        "Please fill in all Leave Allocation fields (cannot be empty).",
-      );
+    if (!formData.jobType) {
+      toast.error("Job Type is required.");
+      return;
+    }
+
+    const requiredLeaveFields = [
+      { label: "Total Leaves Per Year", value: formData.totalLeaves },
+      { label: "Sick Leave", value: formData.sickLeave },
+      { label: "Casual Leave", value: formData.casualLeave },
+      { label: "Paid Leave", value: formData.paidLeave },
+    ];
+    const missingLeaveField = requiredLeaveFields.find(
+      (field) => !field.value.trim(),
+    );
+    if (missingLeaveField) {
+      toast.error(`${missingLeaveField.label} is required.`);
       return;
     }
 
@@ -431,6 +473,42 @@ export default function AddPayModal({
       return;
     }
 
+    const allowanceWithoutAmount = activeAllowances.find(
+      (allowance) => !allowance.amount || allowance.amount === "-",
+    );
+    if (allowanceWithoutAmount) {
+      toast.error(`${allowanceWithoutAmount.name} amount is required.`);
+      return;
+    }
+
+    const selectedCompliances = compliances.filter(
+      (compliance) => compliance.selected,
+    );
+    const selectedComplianceWithoutAmount = selectedCompliances.find(
+      (compliance) => compliance.selected && !compliance.amount,
+    );
+    if (selectedComplianceWithoutAmount) {
+      toast.error(
+        `${selectedComplianceWithoutAmount.name} amount is required.`,
+      );
+      return;
+    }
+
+    const incompleteAddon = addons.find(
+      (addon) =>
+        !addon.typeName.trim() || !addon.amount || !addon.payoutType.trim(),
+    );
+    if (incompleteAddon) {
+      toast.error(
+        !incompleteAddon.typeName.trim()
+          ? "Add-on Type Name is required."
+          : !incompleteAddon.amount
+            ? `${incompleteAddon.typeName} amount is required.`
+            : `${incompleteAddon.typeName} payout type is required.`,
+      );
+      return;
+    }
+
     if (contextLoading || !collegeId || !collegeHrId) {
       toast.error("HR Context loading. Please try again.");
       return;
@@ -439,29 +517,34 @@ export default function AddPayModal({
     setIsSaving(true);
     const toastId = toast.loading("Saving pay details...");
 
-    const payload = {
-      ...formData,
-      basicSalary,
-      activeAllowances,
-      compliances: compliances.filter((c) => c.selected),
-    };
+    try {
+      const payload = {
+        ...formData,
+        basicSalary,
+        activeAllowances,
+        compliances: compliances.filter((c) => c.selected),
+      };
 
-    const result = await saveEmployeePayDetails({
-      userId: employee.userId,
-      collegeId,
-      collegeHrId,
-      formData: payload,
-      addons,
-    });
+      const result = await saveEmployeePayDetails({
+        userId: employee.userId,
+        collegeId,
+        collegeHrId,
+        formData: payload,
+        addons,
+      });
 
-    setIsSaving(false);
-
-    if (result.success) {
-      toast.success("Pay details saved successfully!", { id: toastId });
-      onSuccess();
-      setTimeout(() => handleClose(), 1000);
-    } else {
-      toast.error(`Failed to save: ${result.error}`, { id: toastId });
+      if (result.success) {
+        toast.success("Pay details saved successfully!", { id: toastId });
+        onSuccess();
+        handleClose();
+      } else {
+        toast.error(`Failed to save: ${result.error}`, { id: toastId });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to save pay details: ${message}`, { id: toastId });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -523,10 +606,10 @@ export default function AddPayModal({
               </div>
               <div>
                 <span className="font-semibold text-[#555] w-[100px] inline-block">
-                  Department :
+                  Education Type :
                 </span>{" "}
                 <span className="text-[#282828] font-medium">
-                  {employee.department}
+                  {employee.educationType || "Not Provided"}
                 </span>
               </div>
               <div>
@@ -551,7 +634,7 @@ export default function AddPayModal({
               </h4>
               <div className="border border-gray-200 rounded-lg p-3 flex flex-col gap-2.5 text-[13px]">
                 <div className="flex justify-between items-center">
-                  <span className="font-bold text-[#555]">Total CTC:</span>
+                  <span className="font-bold text-[#555]">Total CTC <span className="text-red-500">*</span> :</span>
                   <input
                     type="text"
                     name="totalCTC"
@@ -560,11 +643,12 @@ export default function AddPayModal({
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                     placeholder="e.g. 12,00,000"
+                    required
                     className="border border-gray-300 rounded px-2.5 py-1 w-[170px] font-semibold text-[#282828] placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-[#43C17A]"
                   />
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="font-bold text-[#555]">Fixed Pay :</span>
+                  <span className="font-bold text-[#555]">Fixed Pay <span className="text-red-500">*</span> :</span>
                   <input
                     type="text"
                     name="fixedPay"
@@ -573,11 +657,12 @@ export default function AddPayModal({
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                     placeholder="e.g. 10,00,000"
+                    required
                     className="border border-gray-300 rounded px-2.5 py-1 w-[170px] font-semibold text-[#282828] placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-[#43C17A]"
                   />
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="font-bold text-[#555]">Variable Pay :</span>
+                  <span className="font-bold text-[#555]">Variable Pay <span className="text-red-500">*</span> :</span>
                   <input
                     type="text"
                     name="variablePay"
@@ -586,6 +671,7 @@ export default function AddPayModal({
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                     placeholder="e.g. 2,00,000"
+                    required
                     className="border border-gray-300 rounded px-2.5 py-1 w-[170px] font-semibold text-[#282828] placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-[#43C17A]"
                   />
                 </div>
@@ -594,7 +680,7 @@ export default function AddPayModal({
 
             <div>
               <h4 className="font-bold text-[#333] text-[14px] mb-2">
-                Job Type
+                Job Type <span className="text-red-500">*</span>
               </h4>
               <div className="border border-gray-200 rounded-lg p-2.5 flex justify-between items-center text-[13px]">
                 {["Intern", "Contract", "Permanent"].map((type) => (
@@ -608,6 +694,7 @@ export default function AddPayModal({
                       value={type}
                       checked={formData.jobType === type}
                       onChange={handleTextOrRadioChange}
+                      required
                       className="accent-[#43C17A] cursor-pointer w-3.5 h-3.5"
                     />{" "}
                     {type}
@@ -618,7 +705,7 @@ export default function AddPayModal({
 
             <div>
               <h4 className="font-bold text-[#333] text-[14px] mb-2">
-                Leave Allocation
+                Leave Allocation <span className="text-red-500">*</span>
               </h4>
               <div className="grid grid-cols-2 gap-3">
                 {[
@@ -629,7 +716,7 @@ export default function AddPayModal({
                 ].map((field) => (
                   <div key={field.name} className="flex flex-col gap-1">
                     <label className="font-bold text-[12px] text-[#555]">
-                      {field.label} :
+                      {field.label} <span className="text-red-500">*</span> :
                     </label>
                     <input
                       type="text"
@@ -639,6 +726,7 @@ export default function AddPayModal({
                       onFocus={handleFocus}
                       onBlur={handleBlur}
                       placeholder="0"
+                      required
                       className="border border-gray-300 rounded px-2 py-1.5 text-[14px] font-bold text-[#282828] text-center placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-[#43C17A]"
                     />
                   </div>
@@ -651,7 +739,7 @@ export default function AddPayModal({
             <div className="border border-gray-200 rounded-lg p-4 flex flex-col gap-3 bg-white">
               <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                 <span className="font-bold text-[#333] text-[13px]">
-                  Basic Salary :
+                  Basic Salary <span className="text-red-500">*</span> :
                 </span>
                 <div className="flex items-center gap-2">
                   <input
@@ -663,6 +751,7 @@ export default function AddPayModal({
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                     placeholder="0"
+                    required
                     className="border border-gray-300 bg-white text-[#282828] font-bold text-[13px] text-center w-[100px] rounded px-2 py-1 outline-none placeholder:font-normal placeholder:text-gray-400 focus:border-[#43C17A]"
                   />
                 </div>
@@ -676,7 +765,7 @@ export default function AddPayModal({
                   <span
                     className={`font-bold ${allowance.isDeduction ? "text-red-500" : "text-[#333]"}`}
                   >
-                    {allowance.name} :
+                    {allowance.name} <span className="text-red-500">*</span> :
                   </span>
                   <input
                     type="text"
@@ -691,6 +780,7 @@ export default function AddPayModal({
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                     placeholder="0"
+                    required
                     className={`border border-gray-200 rounded px-2 py-0.5 w-[80px] text-right font-bold outline-none text-[#282828] ${allowance.isDeduction ? "focus:border-red-500" : "focus:border-[#43C17A]"}`}
                   />
                 </div>
@@ -740,6 +830,7 @@ export default function AddPayModal({
                         onFocus={handleFocus}
                         onBlur={handleBlur}
                         placeholder="Name"
+                        required
                         autoFocus
                         className="border text-[#282828] border-gray-300 rounded px-2 py-0.5 text-[12px] outline-none focus:border-[#43C17A] flex-1"
                       />
@@ -791,6 +882,9 @@ export default function AddPayModal({
                       className="font-bold text-[#2A3958] flex-1 cursor-pointer"
                     >
                       {comp.name}
+                      {comp.selected && (
+                        <span className="text-red-500"> *</span>
+                      )}
                     </label>
                     <input
                       type="text"
@@ -801,6 +895,7 @@ export default function AddPayModal({
                       onFocus={handleFocus}
                       onBlur={handleBlur}
                       placeholder="0"
+                      required={comp.selected}
                       className="border border-gray-200 rounded px-1 py-0.5 w-[60px] text-center text-[#282828] font-semibold outline-none focus:border-[#43C17A]"
                     />
                   </div>
@@ -816,6 +911,7 @@ export default function AddPayModal({
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                     placeholder="Compliance Name"
+                    required
                     autoFocus
                     className="border text-[#282828] border-gray-300 rounded px-2 py-0.5 text-[12px] outline-none focus:border-[#43C17A] flex-1"
                   />
@@ -874,6 +970,7 @@ export default function AddPayModal({
                             className={`font-bold text-[13px] ${addon.typeName ? "text-[#333]" : "text-gray-400 italic"}`}
                           >
                             {addon.typeName || "Unnamed Add-on"}
+                            <span className="text-red-500"> *</span>
                           </span>
                         )}
                         {!addon.isOpen && addon.amount && (
@@ -921,11 +1018,12 @@ export default function AddPayModal({
                       <div className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-3">
                         <div className="flex items-center justify-between">
                           <label className="text-[12px] font-semibold text-[#555]">
-                            Type Name :
+                            Type Name <span className="text-red-500">*</span> :
                           </label>
                           <input
                             type="text"
                             placeholder="e.g. Performance Bonus"
+                            required
                             value={addon.typeName}
                             onChange={(e) =>
                               handleAddonChange(
@@ -941,11 +1039,12 @@ export default function AddPayModal({
                         </div>
                         <div className="flex items-center justify-between">
                           <label className="text-[12px] font-semibold text-[#555]">
-                            Amount :
+                            Amount <span className="text-red-500">*</span> :
                           </label>
                           <input
                             type="text"
                             placeholder="0"
+                            required
                             value={addon.amount}
                             onChange={(e) =>
                               handleAddonAmountChange(addon.id, e.target.value)
@@ -956,6 +1055,9 @@ export default function AddPayModal({
                           />
                         </div>
                         <div className="flex justify-end gap-5 mt-1 pr-2">
+                          <span className="text-[12px] font-semibold text-[#555]">
+                            Payout Type <span className="text-red-500">*</span> :
+                          </span>
                           {["Fixed", "Variable"].map((type) => (
                             <label
                               key={type}
