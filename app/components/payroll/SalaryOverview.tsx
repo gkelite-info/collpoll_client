@@ -21,10 +21,55 @@ export function SalaryOverview({ payData, isFetchingPay, isHrView, employeeProfi
   const monthlySalary = payData?.monthlySalary || payData?.employee_pay_profiles?.monthlySalary || (totalCTC ? Math.round(totalCTC / 12) : 0);
   const allowancesArray = payData?.allowances || payData?.employee_salary_component_values || [];
   const compliancesArray = payData?.compliances || payData?.employee_payroll_compliance_values || [];
+  const addonsArray = payData?.rawAddons || payData?.employee_pay_addons || [];
 
-  const totalAllowances = allowancesArray.reduce((acc: number, curr: any) => acc + (Number(curr.amount) || 0), 0);
-  const totalCompliances = compliancesArray.reduce((acc: number, curr: any) => acc + (Number(curr.amount) || 0), 0);
-  const takeHomePay = monthlySalary + totalAllowances - totalCompliances;
+  const salaryComponents = allowancesArray.map((component: any) => ({
+    name:
+      component.name ||
+      component.salary_component_types?.title ||
+      "Other Component",
+    amount: Number(component.amount) || 0,
+  }));
+  const allowanceItems = salaryComponents.filter(
+    (component: { amount: number }) => component.amount > 0,
+  );
+  const componentDeductions = salaryComponents
+    .filter((component: { amount: number }) => component.amount < 0)
+    .map((component: { name: string; amount: number }) => ({
+      ...component,
+      amount: Math.abs(component.amount),
+    }));
+  const addonItems = addonsArray
+    .map((addon: any) => ({
+      name: addon.title || addon.typeName || addon.addonType || "Other Add-on",
+      amount: Number(addon.amount) || 0,
+    }))
+    .filter((addon: { amount: number }) => addon.amount > 0);
+  const complianceItems = compliancesArray
+    .map((compliance: any) => ({
+      name:
+        compliance.name ||
+        compliance.payroll_compliance_types?.title ||
+        "Other Deduction",
+      amount: Math.abs(Number(compliance.amount) || 0),
+    }))
+    .filter((compliance: { amount: number }) => compliance.amount > 0);
+
+  const totalAllowances = allowanceItems.reduce(
+    (sum: number, item: { amount: number }) => sum + item.amount,
+    0,
+  );
+  const totalAddons = addonItems.reduce(
+    (sum: number, item: { amount: number }) => sum + item.amount,
+    0,
+  );
+  const deductionItems = [...componentDeductions, ...complianceItems];
+  const totalDeductions = deductionItems.reduce(
+    (sum: number, item: { amount: number }) => sum + item.amount,
+    0,
+  );
+  const grossEarnings = monthlySalary + totalAllowances + totalAddons;
+  const takeHomePay = Math.max(0, grossEarnings - totalDeductions);
   
   const formatINR = (val: number | undefined) => {
     return new Intl.NumberFormat("en-IN", {
@@ -65,7 +110,7 @@ export function SalaryOverview({ payData, isFetchingPay, isHrView, employeeProfi
             id: employeeProfile?.id || "",
             employeeId: employeeProfile?.employeeId || "",
             joiningDate: employeeProfile?.joiningDate || "",
-            department: employeeProfile?.department || "",
+            educationType: employeeProfile?.educationType || "",
             role: employeeProfile?.role || "",
             image: employeeProfile?.image || "",
           }}
@@ -115,9 +160,9 @@ export function SalaryOverview({ payData, isFetchingPay, isHrView, employeeProfi
         <div className="col-span-1 md:col-span-2 bg-white rounded-xl p-5 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50 flex flex-col justify-between relative overflow-hidden">
           {isFetchingPay && <ShimmerBlock />}
           <div className={`flex flex-col h-full ${isFetchingPay ? "invisible" : ""}`}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div className="flex items-center text-[#333333] text-[15px]">
-                <span>Monthly :</span>
+                <span>Basic Salary :</span>
                 <span className="font-bold ml-2">{formatINR(monthlySalary)}</span>
               </div>
               <span className="bg-[#43C17A]/10 text-[#43C17A] text-[10px] px-2 py-0.5 rounded-[4px] font-bold tracking-wide">
@@ -125,32 +170,68 @@ export function SalaryOverview({ payData, isFetchingPay, isHrView, employeeProfi
               </span>
             </div>
 
-            <div className="flex flex-wrap gap-3 mt-4">
-              {compliancesArray.length > 0 ? (
-                compliancesArray.map((comp: any, idx: number) => {
-                  const compName = comp.name || comp.payroll_compliance_types?.title || "Unknown";
-                  return (
-                    <div key={idx} className="bg-[#EAE8F9] rounded-lg py-3 px-3 min-w-[75px] flex-1 text-center flex flex-col justify-center items-center">
-                      <span className="text-[#555] text-[12px] font-semibold mb-0.5">{compName}</span>
-                      <span className="text-[#5B3EE8] font-bold text-[15px]">{formatINR(Number(comp.amount))}</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+              <div className="rounded-lg border border-[#43C17A]/20 bg-[#43C17A]/5 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[#333] text-[12px] font-bold">Earnings</span>
+                  <span className="text-[#43C17A] text-[12px] font-bold">
+                    {formatINR(grossEarnings)}
+                  </span>
+                </div>
+                <div className="space-y-1.5 text-[11px]">
+                  <div className="flex justify-between gap-2">
+                    <span className="text-[#666]">Basic Salary</span>
+                    <span className="font-semibold">{formatINR(monthlySalary)}</span>
+                  </div>
+                  {[...allowanceItems, ...addonItems].map((item, index) => (
+                    <div key={`${item.name}-${index}`} className="flex justify-between gap-2">
+                      <span className="text-[#666] truncate" title={item.name}>{item.name}</span>
+                      <span className="font-semibold text-[#43C17A]">+{formatINR(item.amount)}</span>
                     </div>
-                  );
-                })
-              ) : (
-                <>
-                  <div className="bg-[#EAE8F9] rounded-lg py-3 px-3 min-w-[75px] flex-1 text-center flex flex-col justify-center items-center">
-                    <span className="text-[#555] text-[12px] font-semibold mb-0.5">PF</span>
-                    <span className="text-[#5B3EE8] font-bold text-[15px]">0</span>
-                  </div>
-                  <div className="bg-[#EAE8F9] rounded-lg py-3 px-3 min-w-[75px] flex-1 text-center flex flex-col justify-center items-center">
-                    <span className="text-[#555] text-[12px] font-semibold mb-0.5">EF</span>
-                    <span className="text-[#5B3EE8] font-bold text-[15px]">0</span>
-                  </div>
-                </>
-              )}
+                  ))}
+                  {allowanceItems.length === 0 && addonItems.length === 0 && (
+                    <div className="text-[#999]">No allowances or add-ons</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-red-200 bg-red-50/50 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[#333] text-[12px] font-bold">Deductions</span>
+                  <span className="text-red-500 text-[12px] font-bold">
+                    {formatINR(totalDeductions)}
+                  </span>
+                </div>
+                <div className="space-y-1.5 text-[11px]">
+                  {deductionItems.map((item, index) => (
+                    <div key={`${item.name}-${index}`} className="flex justify-between gap-2">
+                      <span className="text-[#666] truncate" title={item.name}>{item.name}</span>
+                      <span className="font-semibold text-red-500">-{formatINR(item.amount)}</span>
+                    </div>
+                  ))}
+                  {deductionItems.length === 0 && (
+                    <div className="text-[#999]">No deductions configured</div>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="mt-5 flex justify-center items-center text-[15px] border-t border-gray-100 pt-4">
+            <div className="mt-4 grid grid-cols-3 gap-2 border-t border-gray-100 pt-3 text-center">
+              <div>
+                <div className="text-[10px] text-[#777]">Allowances</div>
+                <div className="text-[12px] font-bold text-[#43C17A]">+{formatINR(totalAllowances)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-[#777]">Add-ons</div>
+                <div className="text-[12px] font-bold text-[#43C17A]">+{formatINR(totalAddons)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] text-[#777]">Deductions</div>
+                <div className="text-[12px] font-bold text-red-500">-{formatINR(totalDeductions)}</div>
+              </div>
+            </div>
+
+            <div className="mt-3 flex justify-center items-center text-[15px] border-t border-gray-100 pt-3">
               <span className="text-[#43C17A] font-bold">Take Home :</span>
               <span className="text-[#333333] font-bold ml-2">{formatINR(takeHomePay)}</span>
             </div>

@@ -10,7 +10,7 @@ export default function Page({ profile }: { profile?: any }) {
     id: String(profile.userId || profile.id || ""),
     employeeId: profile.identifierId || "-",
     joiningDate: profile.joiningDate || "-",
-    department: profile.department || "-",
+    educationType: profile.educationType || "-",
     role: profile.role || "-",
     image: profile.image || "/assets/images/defaultUser.png"
   } : undefined;

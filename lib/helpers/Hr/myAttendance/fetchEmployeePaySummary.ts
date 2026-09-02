@@ -259,8 +259,9 @@ export const fetchEmployeePaySummary = async (
     let otherAddons = 0;
 
     addons.forEach((a: any) => {
-      if (a.addonType === "BONUS") bonus += a.amount;
-      else otherAddons += a.amount;
+      const amount = Number(a.amount) || 0;
+      if (a.addonType === "BONUS") bonus += amount;
+      else otherAddons += amount;
     });
 
     const fixed = structure?.fixedPay || 0;
@@ -269,12 +270,12 @@ export const fetchEmployeePaySummary = async (
 
     const allowances = rawAllowances.map((a: any) => ({
       name: a.salary_component_types?.title || "Unknown",
-      amount: a.amount || 0,
+      amount: Number(a.amount) || 0,
     }));
 
     const compliances = rawCompliances.map((c: any) => ({
       name: c.payroll_compliance_types?.title || "Unknown",
-      amount: c.amount || 0,
+      amount: Math.abs(Number(c.amount) || 0),
     }));
 
     return {

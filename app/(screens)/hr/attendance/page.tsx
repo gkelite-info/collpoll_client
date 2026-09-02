@@ -316,6 +316,10 @@ function FacultyAttendanceDashboard() {
               updatedAttendance.lateByMinutes ?? staff.lateByMinutes,
             earlyOutMinutes:
               updatedAttendance.earlyOutMinutes ?? staff.earlyOutMinutes,
+            reason:
+              updatedAttendance.markedReason !== undefined
+                ? updatedAttendance.markedReason
+                : staff.reason,
           };
         }),
       );
