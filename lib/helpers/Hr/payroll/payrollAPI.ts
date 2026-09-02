@@ -255,6 +255,26 @@ export async function getMyPayslips(
     (payments || []).forEach((payment: any) => paymentByRun.set(Number(payment.payrollRunId), payment));
   }
 
+  const { data: userCollege } = await supabase
+    .from("users")
+    .select("collegeId")
+    .eq("userId", userId)
+    .single();
+
+  let fallbackAccountantName = "Accountant";
+  if (userCollege?.collegeId) {
+    const { data: accountant } = await supabase
+      .from("users")
+      .select("fullName")
+      .eq("collegeId", userCollege.collegeId)
+      .eq("role", "Accountant")
+      .limit(1)
+      .maybeSingle();
+    if (accountant?.fullName) {
+      fallbackAccountantName = accountant.fullName;
+    }
+  }
+
   const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   
   // Merge and sort
@@ -285,7 +305,7 @@ export async function getMyPayslips(
         finalizedAt: run?.processedAt || ((run?.status === "finalized" || run?.status === "paid") ? run.updatedAt : null) || (entry.status === "finalized" ? entry.createdAt : null),
         paidAt: payment?.paymentDate || payment?.createdAt || run?.paidAt || null,
         processedBy: processor?.fullName || "HR Manager",
-        paidBy: creator?.fullName || "Accountant",
+        paidBy: creator?.fullName || fallbackAccountantName,
       },
       _createdAt: run?.createdAt ? new Date(run.createdAt).getTime() : fallbackDate.getTime()
     };
@@ -429,6 +449,18 @@ export async function getPayrollEntryDetails(entryId: number) {
     ? salaryPayment.creator[0]
     : salaryPayment?.creator;
 
+  let fallbackAccountantName = "Accountant";
+  const { data: accountant } = await supabase
+    .from("users")
+    .select("fullName")
+    .eq("collegeId", collegeId)
+    .eq("role", "Accountant")
+    .limit(1)
+    .maybeSingle();
+  if (accountant?.fullName) {
+    fallbackAccountantName = accountant.fullName;
+  }
+
   return {
     ...data,
     leavesTaken: leavesRes.data || [],
@@ -444,7 +476,7 @@ export async function getPayrollEntryDetails(entryId: number) {
           : null),
       paidAt: salaryPayment?.paymentDate || salaryPayment?.createdAt || data.payroll_runs.paidAt || null,
       processedBy: processor?.fullName || "HR Manager",
-      paidBy: paymentCreator?.fullName || "Accountant",
+      paidBy: paymentCreator?.fullName || fallbackAccountantName,
       isFinalized: data.payroll_runs.status === "finalized"
         || data.payroll_runs.status === "paid"
         || data.status === "finalized"

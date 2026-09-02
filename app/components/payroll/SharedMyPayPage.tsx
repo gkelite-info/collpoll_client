@@ -30,7 +30,8 @@ export function SharedMyPayPage({ overrideUserId, isHrView: propIsHrView, employ
     identifierId,
     dateOfJoining,
     profilePhoto,
-    collegeBranchCode
+    collegeBranchCode,
+    loading: userContextLoading
   } = useUser();
 
   const safeParseInt = (val: any): number | undefined => {
@@ -116,9 +117,9 @@ export function SharedMyPayPage({ overrideUserId, isHrView: propIsHrView, employ
 
       {activeTab === "salary" ? (
         <div className="w-full flex flex-col gap-6">
-          <SalaryOverview payData={payData} isFetchingPay={isFetchingPay} isHrView={finalIsHrView} employeeProfile={effectiveProfile} effectiveUserId={effectiveUserId} onRefresh={loadPaySummary} />
-          {effectiveUserId && (
-            <PayslipsSection userId={effectiveUserId} />
+          <SalaryOverview payData={payData} isFetchingPay={isFetchingPay || userContextLoading} isHrView={finalIsHrView} employeeProfile={effectiveProfile} effectiveUserId={effectiveUserId} onRefresh={loadPaySummary} />
+          {(effectiveUserId || userContextLoading) && (
+            <PayslipsSection userId={effectiveUserId || 0} isLoadingUser={userContextLoading} />
           )}
         </div>
       ) : (

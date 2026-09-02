@@ -10,9 +10,10 @@ import PayslipPreviewModal from "./PayslipPreviewModal";
 
 interface PayslipsSectionProps {
   userId: number;
+  isLoadingUser?: boolean;
 }
 
-export function PayslipsSection({ userId }: PayslipsSectionProps) {
+export function PayslipsSection({ userId, isLoadingUser }: PayslipsSectionProps) {
   const [previewEntryId, setPreviewEntryId] = useState<number | null>(null);
 
   // Pagination & Filtering State
@@ -30,7 +31,7 @@ export function PayslipsSection({ userId }: PayslipsSectionProps) {
   const yearFilterOptions = [allOption, ...yearOptions];
   const [selectedYear, setSelectedYear] = useState<number | string>(allOption);
 
-  const { data: payslipsData, isFetching: isFetchingSlips } = useQuery({
+  const { data: payslipsData, isFetching: isFetchingSlipsQuery } = useQuery({
     queryKey: ["myPayslips", userId, currentPage, selectedYear],
     queryFn: async () => {
       try {
@@ -49,6 +50,8 @@ export function PayslipsSection({ userId }: PayslipsSectionProps) {
     placeholderData: (previousData) => previousData, // keepPreviousData logic
   });
 
+  const isFetchingSlips = isFetchingSlipsQuery || isLoadingUser;
+
   const paySlips = payslipsData?.slips || [];
   const totalPayslips = payslipsData?.total || 0;
 
@@ -64,12 +67,12 @@ export function PayslipsSection({ userId }: PayslipsSectionProps) {
     }).format(val || 0);
   };
 
-  const formatTrackingDate = (value?: string | null) => {
-    if (!value) return "Pending";
+  const formatTrackingDate = (value?: string | null, fallback = "Pending") => {
+    if (!value) return fallback;
     const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
       ? new Date(`${value}T00:00:00Z`)
       : new Date(value);
-    if (Number.isNaN(date.getTime())) return "Pending";
+    if (Number.isNaN(date.getTime())) return fallback;
     return new Intl.DateTimeFormat("en-IN", {
       day: "2-digit",
       month: "short",
@@ -162,9 +165,6 @@ export function PayslipsSection({ userId }: PayslipsSectionProps) {
                     {slip.month}
                   </h3>
                   <div className="flex flex-wrap items-center gap-4 text-[13px] font-bold">
-                    <span className="text-[#333333]">
-                      Status - <span className={slip.status === 'Paid' ? "text-[#43C17A]" : "text-orange-500"}>{slip.status || "Pending"}</span>
-                    </span>
                     <button 
                       onClick={() => setPreviewEntryId(slip.id)}
                       className="flex items-center text-[#333333] hover:text-[#43C17A] transition-colors cursor-pointer group"
@@ -229,8 +229,8 @@ export function PayslipsSection({ userId }: PayslipsSectionProps) {
                       <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${step.completed ? "bg-[#43C17A] text-white" : "border-2 border-gray-300 bg-white text-transparent"}`}>✓</span>
                       <div className="min-w-0">
                         <p className={`text-[11px] font-bold ${step.completed ? "text-[#333333]" : "text-gray-500"}`}>{step.label}</p>
-                        <p className="mt-0.5 text-[10px] text-gray-500">{step.completed ? formatTrackingDate(step.date) : "Awaiting confirmation"}</p>
-                        <p className="mt-0.5 truncate text-[10px] text-gray-400">{step.person || (step.label.includes("Payment") ? "Accountant" : "HR Manager")}</p>
+                        <p className="mt-0.5 text-[10px] text-gray-500">{step.completed ? formatTrackingDate(step.date, "Completed") : "Awaiting confirmation"}</p>
+                        <p className="mt-0.5 text-[10px] text-gray-400 whitespace-normal break-words">{step.person || (step.label.includes("Payment") ? "Accountant" : "HR Manager")}</p>
                       </div>
                     </div>
                   ))}
