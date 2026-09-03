@@ -88,7 +88,7 @@ export default function MonthPicker({ isOpen, currentDate, onChangeDate, onClose
                             }}
                             className={`h-8 w-8 rounded-full text-xs font-semibold flex items-center justify-center transition-colors
                                 ${!d.isCurrentMonth ? 'text-gray-300 cursor-default' : 
-                                  isSelected ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-700 hover:bg-gray-100 cursor-pointer'}`}
+                                  isSelected ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-700 hover:bg-gray-100 cursor-pointer'}`}
                         >
                             {d.day}
                         </button>

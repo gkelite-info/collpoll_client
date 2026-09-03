@@ -138,8 +138,52 @@ const schoolMeetings: Meeting[] = [
         organizer: "Facilities Manager",
         type: "Internal",
         agenda: "Reviewing the quarterly safety and maintenance audit reports.",
-        attendees: ["Facilities Team", "Safety Officer"]
+        attendees: ["Facilities Team", "Safety Officer"],
+        userId: 592810
     }
 ];
 
 export const dummyMeetings: Meeting[] = [...collegeMeetings, ...schoolMeetings];
+
+// Helper dummy users for search testing
+export const dummyUsers = [
+    {
+        id: 1,
+        userId: 847291,
+        name: "Dr. Sarah Jenkins",
+        subLabel: "Dean of Engineering - Admin",
+        avatar: "https://i.pravatar.cc/150?u=847291"
+    },
+    {
+        id: 2,
+        userId: 592810,
+        name: "Michael Chang",
+        subLabel: "Facilities Manager - Admin",
+        avatar: "https://i.pravatar.cc/150?u=592810"
+    },
+    {
+        id: 3,
+        userId: 482910,
+        name: "Prof. Alan Turing",
+        subLabel: "Computer Science - Faculty",
+        avatar: "https://i.pravatar.cc/150?u=482910"
+    },
+    {
+        id: 4,
+        userId: 712093,
+        name: "Emma Watson",
+        subLabel: "Finance Head - Finance",
+        avatar: "https://i.pravatar.cc/150?u=712093"
+    }
+];
+
+export const getDummyMeetingsByUserId = (userId: number): Meeting[] => {
+    // For demo purposes, if userId is not in dummy meetings, 
+    // we'll randomly assign a few existing meetings to them
+    const userMeetings = dummyMeetings.filter(m => m.userId === userId);
+    if (userMeetings.length > 0) return userMeetings.map(m => ({ ...m, isEditable: false }));
+
+    // Fallback: assign 2 random meetings to the requested user
+    const shuffled = [...dummyMeetings].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 2).map(m => ({ ...m, userId, isEditable: false }));
+};
