@@ -9,6 +9,10 @@ export interface Meeting {
     agenda: string;
     attendees: string[];
     meetingLink?: string;
+    platform?: 'Google Meet' | 'Zoom Meeting' | 'Others';
+    zoomId?: string;
+    zoomPassword?: string;
     collegeId?: number; // Added for optional college-based filtering later
+    userId?: number; // Added for user-specific meetings filtering
     isEditable?: boolean;
 }

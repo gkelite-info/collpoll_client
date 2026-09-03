@@ -44,7 +44,7 @@ export default function CalendarTabsClient({ children }: CalendarTabsClientProps
     }, [activeMainTab, loadHolidays, holidayYear, collegeId]);
 
     return (
-        <main className="w-full h-full p-1.5 md:p-2.5 lg:p-4 flex flex-col min-h-[calc(100vh-80px)] bg-[#f3f4f6]">
+        <main className="w-full h-full p-2 flex flex-col min-h-[calc(100vh-80px)] bg-[#f3f4f6]">
             <section className="bg-indigo-00 flex justify-between items-center mb-4">
                 <div>
                     <h1 className="text-black text-xl font-semibold">

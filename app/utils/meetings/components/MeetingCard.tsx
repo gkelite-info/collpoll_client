@@ -74,7 +74,7 @@ export default function MeetingCard({ meeting, onClick, onDelete, onEdit }: Meet
                             <span>{formatTime12h(meeting.startTime)} - {formatTime12h(meeting.endTime)}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-700 text-[10px] border border-white shadow-sm">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-emerald-100 to-purple-100 flex items-center justify-center text-emerald-700 text-[10px] border border-white shadow-sm">
                                 {meeting.organizer.charAt(0)}
                             </div>
                             <span className="truncate max-w-[120px] sm:max-w-none">{meeting.organizer}</span>
