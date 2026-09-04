@@ -430,8 +430,16 @@ function FacultyAttendanceDashboard() {
   };
 
   const handleSelectAll = (checked: boolean) => {
+    const visibleStaffCount = activeRole
+      ? staffList.filter((staff) => staff.role === activeRole).length
+      : staffList.length;
+
     setSelectAll(checked);
-    setSelectedRows(checked ? new Set(staffList.map((_, i) => i)) : new Set());
+    setSelectedRows(
+      checked
+        ? new Set(Array.from({ length: visibleStaffCount }, (_, index) => index))
+        : new Set(),
+    );
   };
 
   const handleSelectRow = (
@@ -475,8 +483,6 @@ function FacultyAttendanceDashboard() {
     );
 
     setMarkedUserIds((prev) => new Set([...prev, ...selectedUserIds]));
-    setSelectAll(false);
-    setSelectedRows(new Set());
   };
 
   const handleSave = () => {

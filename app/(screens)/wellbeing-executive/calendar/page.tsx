@@ -14,6 +14,9 @@ import HolidayCalendar from "@/app/(screens)/hr/calendar/components/HolidayCalen
 import HolidayCalendarShimmer from "@/app/(screens)/hr/calendar/components/HolidayCalendarShimmer";
 import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/holidayAPI";
 import { Loader } from "../../(student)/calendar/right/timetable";
+import CalendarTabsClient from "@/app/(screens)/college-admin/calendar/CalendarTabsClient";
+import MeetingsClient from "@/app/utils/meetings/MeetingsClient";
+import { dummyMeetings } from "@/app/utils/meetings/meetingDummyData";
 
 const getWeekDays = (baseDate: Date): WeekDay[] => {
   const startOfWeek = new Date(baseDate);
@@ -184,7 +187,8 @@ function PageContent() {
   );
 }
 
-export default function CalendarPage() {
+// Legacy Wellbeing Executive calendar remains here intact for future reuse if needed.
+function LegacyWellbeingExecutiveCalendarPage() {
   return (
     <Suspense
       fallback={
@@ -195,5 +199,13 @@ export default function CalendarPage() {
     >
       <PageContent />
     </Suspense>
+  );
+}
+
+export default function CalendarPage() {
+  return (
+    <CalendarTabsClient basePath="/wellbeing-executive">
+      <MeetingsClient initialMeetings={dummyMeetings} />
+    </CalendarTabsClient>
   );
 }

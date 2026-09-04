@@ -25,6 +25,9 @@ import HolidayCalendar from "@/app/(screens)/hr/calendar/components/HolidayCalen
 import HolidayCalendarShimmer from "@/app/(screens)/hr/calendar/components/HolidayCalendarShimmer";
 import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/holidayAPI";
 import { Loader } from "../../(student)/calendar/right/timetable";
+import CalendarTabsClient from "@/app/(screens)/college-admin/calendar/CalendarTabsClient";
+import MeetingsClient from "@/app/utils/meetings/MeetingsClient";
+import { dummyMeetings } from "@/app/utils/meetings/meetingDummyData";
 
 type ManagerCalendarEvent = {
   id: string;
@@ -469,7 +472,8 @@ function PageContent() {
   );
 }
 
-export default function FinanceManagerCalendarPage() {
+// Legacy Finance calendar remains here intact for future reuse if needed.
+function LegacyFinanceManagerCalendarPage() {
   return (
     <Suspense
       fallback={
@@ -480,5 +484,13 @@ export default function FinanceManagerCalendarPage() {
     >
       <PageContent />
     </Suspense>
+  );
+}
+
+export default function FinanceManagerCalendarPage() {
+  return (
+    <CalendarTabsClient basePath="/finance">
+      <MeetingsClient initialMeetings={dummyMeetings} />
+    </CalendarTabsClient>
   );
 }

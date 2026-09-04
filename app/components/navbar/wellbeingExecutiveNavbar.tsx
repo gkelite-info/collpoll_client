@@ -13,7 +13,6 @@ import {
   Gear,
   Headset,
   House,
-  Laptop,
   PuzzlePiece,
   SignOut,
   Warning,
@@ -227,7 +226,7 @@ export default function WellbeingExecutiveNavbar({
         icon: (isActive) => (
           <CalendarDots size={iconSize} weight={isActive ? "fill" : "regular"} />
         ),
-        label: "Calendar",
+        label: "Calendar / Meetings",
         path: `${base}/calendar`,
       },
       {
@@ -255,13 +254,14 @@ export default function WellbeingExecutiveNavbar({
         label: "Drive",
         path: `${base}/drive`,
       },
+      /* Meetings are now available inside the combined Calendar / Meetings page.
       {
         icon: (isActive) => (
           <Laptop size={iconSize} weight={isActive ? "fill" : "regular"} />
         ),
         label: "Meetings",
         path: `${base}/meetings`,
-      },
+      }, */
       {
         icon: (isActive) => (
           <CheckCircle size={iconSize} weight={isActive ? "fill" : "regular"} />

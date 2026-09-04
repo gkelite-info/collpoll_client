@@ -9,7 +9,6 @@ import {
   FolderOpen,
   Gear,
   House,
-  Laptop,
   SmileyIcon,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
@@ -56,7 +55,7 @@ export default function FinanceNavbar() {
       icon: (isActive) => (
         <CalendarIcon size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: t("Calendar"),
+      label: t("Calendar") + " / Meetings",
       path: "/finance/calendar",
     },
     {
@@ -73,13 +72,14 @@ export default function FinanceNavbar() {
       label: t("Drive"),
       path: "/finance/drive",
     },
+    /* Meetings are now available inside the combined Calendar / Meetings page.
     {
       icon: (isActive) => (
         <Laptop size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: t("Meetings"),
       path: "/finance/meetings",
-    },
+    }, */
     {
       icon: (isActive) => (
         <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />

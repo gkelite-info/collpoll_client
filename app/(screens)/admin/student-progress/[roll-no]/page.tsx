@@ -217,13 +217,14 @@ const StudentProgressDetailsSkeleton = () => (
           </div>
         </div>
 
-        <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-5">
-          <div className="h-full lg:col-span-3">
+        <div className="w-full">
+          <div className="h-full min-w-0 w-full">
             <TasksCardSkeleton />
           </div>
-          <div className="h-full lg:col-span-2">
+          {/* Grades table is intentionally hidden so Academic Tasks uses the full width.
+          <div className="h-full min-w-0">
             <GradesTableSkeleton />
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
@@ -488,8 +489,8 @@ export default function DashboardLayout() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-5">
-              <div className="h-full lg:col-span-3">
+            <div className="w-full">
+              <div className="h-full min-w-0 w-full">
                 <AssignmentsTable
                   scope={{
                     rollNo: rollNo as string,
@@ -508,9 +509,10 @@ export default function DashboardLayout() {
                   insights={details.taskInsights}
                 />
               </div>
-              <div className="h-full lg:col-span-2">
+              {/* Grades table is intentionally hidden so Academic Tasks uses the full width.
+              <div className="h-full min-w-0">
                 <GradesTable grades={details.grades} />
-              </div>
+              </div> */}
             </div>
         </div>
       </div>

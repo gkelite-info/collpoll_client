@@ -100,6 +100,7 @@ export default function AttendanceTable({
   const [savingIds, setSavingIds] = useState<Set<number>>(new Set());
   const [isSavingAll, setIsSavingAll] = useState(false);
   const [saveErrors, setSaveErrors] = useState<Record<number, string>>({});
+  const [bulkTimes, setBulkTimes] = useState({ checkIn: "", checkOut: "" });
   const [validationErrs, setValidationErrs] = useState<
     Record<number, RowValidation>
   >({});
@@ -160,12 +161,16 @@ export default function AttendanceTable({
     setRowEdits({});
     setSaveErrors({});
     setValidationErrs({});
+    setBulkTimes({ checkIn: "", checkOut: "" });
   };
+
+  const isBulkMarkedUser = (userId: number) =>
+    selectedRows.size > 1 && markedUserIds.has(userId);
 
   const getEdit = (item: AttendanceStaffRow): RowEdit =>
     rowEdits[item.userId] ?? {
-      checkIn: item.checkIn ?? "",
-      checkOut: item.checkOut ?? "",
+      checkIn: isBulkMarkedUser(item.userId) ? "" : (item.checkIn ?? ""),
+      checkOut: isBulkMarkedUser(item.userId) ? "" : (item.checkOut ?? ""),
       reason: item.reason ?? "",
     };
 
@@ -205,7 +210,11 @@ export default function AttendanceTable({
 
     const requiresCheckIn =
       status === "present" || status === "late" || status === "halfday";
-    if (requiresCheckIn && !item.rawCheckIn && !edit.checkIn.trim()) {
+    if (
+      requiresCheckIn &&
+      (!item.rawCheckIn || isBulkMarkedUser(item.userId)) &&
+      !edit.checkIn.trim()
+    ) {
       errs.checkIn = "Check-In is required before marking attendance";
       return errs;
     }
@@ -226,7 +235,8 @@ export default function AttendanceTable({
       return errs;
     }
 
-    const hasExistingCheckIn = !!item.rawCheckIn;
+    const hasExistingCheckIn =
+      !!item.rawCheckIn && !isBulkMarkedUser(item.userId);
     const checkInMins = parseToMinutes(edit.checkIn);
     const checkOutMins = parseToMinutes(edit.checkOut);
 
@@ -296,6 +306,52 @@ export default function AttendanceTable({
       activeRole ? staffList.filter((s) => s.role === activeRole) : staffList,
     [staffList, activeRole],
   );
+
+  const bulkTimeStaff = useMemo(
+    () =>
+      Array.from(selectedRows)
+        .map((index) => filtered[index])
+        .filter(
+          (staff): staff is AttendanceStaffRow =>
+            Boolean(staff) &&
+            ["present", "late", "halfday"].includes(
+              (staff.status ?? "").toLowerCase(),
+            ),
+        ),
+    [filtered, selectedRows],
+  );
+
+  const setBulkTime = (field: "checkIn" | "checkOut", value: string) => {
+    setBulkTimes((prev) => ({ ...prev, [field]: value }));
+
+    setRowEdits((prev) => {
+      const next = { ...prev };
+      bulkTimeStaff.forEach((staff) => {
+        const base = next[staff.userId] ?? {
+          checkIn: isBulkMarkedUser(staff.userId)
+            ? ""
+            : (staff.checkIn ?? ""),
+          checkOut: isBulkMarkedUser(staff.userId)
+            ? ""
+            : (staff.checkOut ?? ""),
+          reason: staff.reason ?? "",
+        };
+        next[staff.userId] = { ...base, [field]: value };
+      });
+      return next;
+    });
+
+    setValidationErrs((prev) => {
+      const next = { ...prev };
+      bulkTimeStaff.forEach((staff) => {
+        if (!next[staff.userId]) return;
+        const rowErrors = { ...next[staff.userId] };
+        delete rowErrors[field];
+        next[staff.userId] = rowErrors;
+      });
+      return next;
+    });
+  };
 
   const handleSaveRow = async (
     item: AttendanceStaffRow,
@@ -393,8 +449,9 @@ export default function AttendanceTable({
         const displayCheckIn = item.checkIn ?? "-";
         const displayCheckOut = item.checkOut ?? "-";
         const displayReason = item.reason ?? "-";
-        const isNoShow = ["absent", "leave"].includes(
-          (item.status ?? "").toLowerCase(),
+        const normalizedStatus = (item.status ?? "").toLowerCase();
+        const canEditTimes = ["present", "late", "halfday"].includes(
+          normalizedStatus,
         );
 
         return {
@@ -403,7 +460,7 @@ export default function AttendanceTable({
           role: item.role,
 
           checkIn: isEditMode ? (
-            isNoShow ? (
+            !canEditTimes ? (
               <span className="text-xs text-gray-400">-</span>
             ) : (
               <div className="flex flex-col gap-0.5">
@@ -426,7 +483,7 @@ export default function AttendanceTable({
           ),
 
           checkOut: isEditMode ? (
-            isNoShow ? (
+            !canEditTimes ? (
               <span className="text-xs text-gray-400">-</span>
             ) : (
               <div className="flex flex-col gap-0.5">
@@ -448,7 +505,9 @@ export default function AttendanceTable({
             displayCheckOut
           ),
 
-          totalHours: item.totalHours || "-",
+          totalHours: isBulkMarkedUser(item.userId)
+            ? "-"
+            : item.totalHours || "-",
 
           status:
             item.status && item.status !== "-" ? (
@@ -465,8 +524,12 @@ export default function AttendanceTable({
             item.classesTaken !== null
               ? String(item.classesTaken).padStart(2, "0")
               : "-",
-          lateBy: formatMinutes(item.lateByMinutes),
-          earlyOut: formatMinutes(item.earlyOutMinutes),
+          lateBy: isBulkMarkedUser(item.userId)
+            ? "-"
+            : formatMinutes(item.lateByMinutes),
+          earlyOut: isBulkMarkedUser(item.userId)
+            ? "-"
+            : formatMinutes(item.earlyOutMinutes),
 
           reason: isEditMode ? (
             <div className="flex flex-col gap-0.5 min-w-[140px]">
@@ -659,6 +722,33 @@ export default function AttendanceTable({
 
   return (
     <>
+      {isEditMode && bulkTimeStaff.length > 1 && (
+        <div className="mb-2 flex flex-wrap items-center gap-3 rounded-xl border border-[#B7E8CB] bg-[#F0FDF4] px-4 py-3">
+          <span className="text-xs font-semibold text-[#16894B]">
+            Set time for {bulkTimeStaff.length} selected employees
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-gray-600">Check-In</span>
+            <TimeInput
+              value={bulkTimes.checkIn}
+              defaultMeridiem="AM"
+              onChange={(value) => setBulkTime("checkIn", value)}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-gray-600">Check-Out</span>
+            <TimeInput
+              value={bulkTimes.checkOut}
+              defaultMeridiem="PM"
+              onChange={(value) => setBulkTime("checkOut", value)}
+            />
+          </div>
+          <span className="text-[11px] text-gray-500">
+            These times are applied to every selected employee.
+          </span>
+        </div>
+      )}
+
       <TableComponent
         columns={columns as any[]}
         tableData={tableData}

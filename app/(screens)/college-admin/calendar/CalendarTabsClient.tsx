@@ -11,9 +11,13 @@ import { Toaster } from 'react-hot-toast';
 
 interface CalendarTabsClientProps {
     children: React.ReactNode;
+    basePath?: string;
 }
 
-export default function CalendarTabsClient({ children }: CalendarTabsClientProps) {
+export default function CalendarTabsClient({
+    children,
+    basePath = "/college-admin",
+}: CalendarTabsClientProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const tabQuery = searchParams.get("tab");
@@ -62,13 +66,13 @@ export default function CalendarTabsClient({ children }: CalendarTabsClientProps
 
             <div className="flex gap-3 mb-5 mt-2">
                 <button
-                    onClick={() => router.push("/college-admin/calendar")}
+                    onClick={() => router.push(`${basePath}/calendar`)}
                     className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${activeMainTab === "Academics" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
                 >
                     Calendar Overview
                 </button>
                 <button
-                    onClick={() => router.push("/college-admin/calendar?tab=Holidays")}
+                    onClick={() => router.push(`${basePath}/calendar?tab=Holidays`)}
                     className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${activeMainTab === "Holidays" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
                 >
                     Holiday Calendar
