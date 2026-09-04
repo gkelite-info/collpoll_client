@@ -9,7 +9,6 @@ import {
   FolderOpen,
   Gear,
   House,
-  Laptop,
   SmileyIcon,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
@@ -39,7 +38,7 @@ export default function PlacementNavbar() {
       icon: (isActive) => (
         <Calendar size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: t("Calendar"),
+      label: t("Calendar") + " / Meetings",
       path: `${BASE}/calendar`,
     },
     {
@@ -63,13 +62,14 @@ export default function PlacementNavbar() {
       label: "Leave Request",
       path: `${BASE}/leaveRequests`,
     },
+    /* Meetings are now available inside the combined Calendar / Meetings page.
     {
       icon: (isActive) => (
         <Laptop size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: t("Meetings"),
       path: `${BASE}/meetings`,
-    },
+    }, */
     {
       icon: (isActive) => (
         <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />

@@ -191,13 +191,14 @@ export const StudentProgressDetailsSkeleton = () => (
             <AttendanceSummarySkeleton />
           </div>
         </div>
-        <div className="grid grid-cols-1 items-stretch gap-4 md:gap-6 lg:grid-cols-5">
-          <div className="h-full lg:col-span-3 min-w-0">
+        <div className="w-full">
+          <div className="h-full min-w-0 w-full">
             <AssignmentsTableSkeleton />
           </div>
-          <div className="h-full lg:col-span-2 min-w-0">
+          {/* Grades table is intentionally hidden so Academic Tasks uses the full width.
+          <div className="h-full min-w-0">
             <GradesTableSkeleton />
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

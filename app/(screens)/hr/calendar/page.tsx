@@ -21,6 +21,9 @@ import {
 } from "@/lib/helpers/Hr/calendar/hrCalendarEventsAPI";
 import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/holidayAPI";
 import { Loader } from "../../(student)/calendar/right/timetable";
+import CalendarTabsClient from "@/app/(screens)/college-admin/calendar/CalendarTabsClient";
+import MeetingsClient from "@/app/utils/meetings/MeetingsClient";
+import { dummyMeetings } from "@/app/utils/meetings/meetingDummyData";
 
 const convertTo24Hour = (time12h: string) => {
   const [time, modifier] = time12h.split(" ");
@@ -31,7 +34,8 @@ const convertTo24Hour = (time12h: string) => {
   return `${hours.padStart(2, "0")}:${minutes}:00`;
 };
 
-export default function FinanceCalendarPage() {
+// Legacy HR calendar remains here intact for future reuse if needed.
+function LegacyHrCalendarPage() {
   return (
     <Suspense fallback={<div className="p-4"><Loader /></div>}>
       <FinanceCalendarPageContent />
@@ -359,5 +363,13 @@ function FinanceCalendarPageContent() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function HrCalendarPage() {
+  return (
+    <CalendarTabsClient basePath="/hr">
+      <MeetingsClient initialMeetings={dummyMeetings} />
+    </CalendarTabsClient>
   );
 }

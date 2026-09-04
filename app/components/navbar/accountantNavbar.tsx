@@ -70,7 +70,7 @@ export default function AccountantNavbar({ onClose }: AccountantNavbarProps) {
         icon: (isActive) => (
           <CalendarDots size={iconSize} weight={isActive ? "fill" : "regular"} />
         ),
-        label: "Calendar / Meeting",
+        label: "Calendar / Meetings",
         path: `${base}/calendar`,
         activePaths: [`${base}/calendar`, `${base}/meetings`],
       },
@@ -187,7 +187,7 @@ export default function AccountantNavbar({ onClose }: AccountantNavbarProps) {
             const active = isActivePath(item);
             const canWrap =
               item.label === "Well being / Support" ||
-              item.label === "Calendar / Meeting";
+              item.label === "Calendar / Meetings";
 
             return (
               <Link

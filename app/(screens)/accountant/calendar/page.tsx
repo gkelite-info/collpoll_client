@@ -7,6 +7,9 @@ import {
   MeetingDetailsScreen,
   ScheduleMeetingScreen,
 } from "./components/CalendarMeetingsScreen";
+import CalendarTabsClient from "@/app/(screens)/college-admin/calendar/CalendarTabsClient";
+import MeetingsClient from "@/app/utils/meetings/MeetingsClient";
+import { dummyMeetings } from "@/app/utils/meetings/meetingDummyData";
 
 function AccountantCalendarContent() {
   const router = useRouter();
@@ -68,10 +71,19 @@ function AccountantCalendarContent() {
   );
 }
 
-export default function AccountantCalendarPage() {
+// Legacy Accountant calendar remains here intact for future reuse if needed.
+function LegacyAccountantCalendarPage() {
   return (
     <Suspense fallback={null}>
       <AccountantCalendarContent />
     </Suspense>
+  );
+}
+
+export default function AccountantCalendarPage() {
+  return (
+    <CalendarTabsClient basePath="/accountant">
+      <MeetingsClient initialMeetings={dummyMeetings} />
+    </CalendarTabsClient>
   );
 }

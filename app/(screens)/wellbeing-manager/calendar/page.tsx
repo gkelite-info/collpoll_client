@@ -17,6 +17,9 @@ import HolidayCalendar from "@/app/(screens)/hr/calendar/components/HolidayCalen
 import HolidayCalendarShimmer from "@/app/(screens)/hr/calendar/components/HolidayCalendarShimmer";
 import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/holidayAPI";
 import { Loader } from "../../(student)/calendar/right/timetable";
+import CalendarTabsClient from "@/app/(screens)/college-admin/calendar/CalendarTabsClient";
+import MeetingsClient from "@/app/utils/meetings/MeetingsClient";
+import { dummyMeetings } from "@/app/utils/meetings/meetingDummyData";
 
 const MOCK_EVENTS = [
   {
@@ -222,7 +225,8 @@ function PageContent() {
   );
 }
 
-export default function Page() {
+// Legacy Wellbeing Manager calendar remains here intact for future reuse if needed.
+function LegacyWellbeingManagerCalendarPage() {
   return (
     <Suspense
       fallback={
@@ -233,5 +237,13 @@ export default function Page() {
     >
       <PageContent />
     </Suspense>
+  );
+}
+
+export default function Page() {
+  return (
+    <CalendarTabsClient basePath="/wellbeing-manager">
+      <MeetingsClient initialMeetings={dummyMeetings} />
+    </CalendarTabsClient>
   );
 }
