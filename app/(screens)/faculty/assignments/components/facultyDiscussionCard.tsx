@@ -84,10 +84,10 @@ export default function FacultyDiscussionCard({ data, discussionView = "active",
             {/* Desktop View */}
             <div className="hidden md:flex flex-col gap-1 w-full">
                 <div className="flex justify-between items-start">
-                    <div className="flex flex-col gap-1 lg:w-[60%]">
+                    <div className="flex min-w-0 flex-col gap-1 lg:w-[60%]">
                         <h3 className="text-lg font-bold text-[#282828]">{data.title}</h3>
                         {data.subtitle && (
-                            <p className="text-sm font-medium text-gray-500 mt-0.5">
+                            <p className="custom-scrollbar mt-0.5 block w-full overflow-x-scroll whitespace-nowrap pb-2 text-sm font-medium text-gray-500">
                                 {data.subtitle}
                             </p>
                         )}
@@ -146,7 +146,7 @@ export default function FacultyDiscussionCard({ data, discussionView = "active",
 
                     <div className="flex flex-col gap-2 min-w-0">
                         <span className="font-bold text-[#282828] text-sm">Attachments</span>
-                        <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide w-full">
+                        <div className="custom-scrollbar flex w-full gap-2 overflow-x-scroll whitespace-nowrap pb-2">
                             {(data.discussion_file_uploads ?? []).map((file: { fileUrl: string }, idx: number) => (
                                 <a
                                     key={idx}
@@ -167,10 +167,10 @@ export default function FacultyDiscussionCard({ data, discussionView = "active",
 
             {/* Mobile View */}
             <div className="md:hidden flex flex-col gap-3 w-full">
-                <div className="flex flex-col gap-1">
+                <div className="flex min-w-0 flex-col gap-1">
                     <h3 className="text-[15px] font-bold text-[#282828] leading-tight">{data.title}</h3>
                     {data.subtitle && (
-                        <p className="text-[13px] font-medium text-gray-500 mt-0.5">
+                        <p className="custom-scrollbar mt-0.5 block w-full overflow-x-scroll whitespace-nowrap pb-2 text-[13px] font-medium text-gray-500">
                             {data.subtitle}
                         </p>
                     )}
@@ -201,7 +201,7 @@ export default function FacultyDiscussionCard({ data, discussionView = "active",
                 {data.discussion_file_uploads && data.discussion_file_uploads.length > 0 && (
                     <div className="flex flex-col gap-2 min-w-0 pt-2 border-t border-gray-50">
                         <span className="font-bold text-[#282828] text-[13px]">Attachments</span>
-                        <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide w-full pb-1">
+                        <div className="custom-scrollbar flex w-full gap-2 overflow-x-scroll whitespace-nowrap pb-2">
                             {data.discussion_file_uploads.map((file: { fileUrl: string }, idx: number) => (
                                 <a
                                     key={idx}

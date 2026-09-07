@@ -5,6 +5,7 @@ import { fetchExistingFacultyWeightageConfig, fetchFacultyWeightageConfigs, save
 import { fetchFacultyWeightageItems, saveFacultyWeightageItem, deleteFacultyWeightageItem } from "@/lib/helpers/subjectWeightage/weightageItems";
 import { CardProps } from "@/lib/types/faculty";
 import { useState, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { FaPlusCircle } from "react-icons/fa";
@@ -439,20 +440,20 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
         }
     };
 
-    if (!isOpen) return null;
+    if (!isOpen || typeof document === "undefined") return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-lg w-full max-w-2xl h-[90%] p-10 shadow-2xl mx-6 flex flex-col">
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div role="dialog" aria-modal="true" aria-labelledby="add-weightage-title" className="bg-white rounded-lg w-full max-w-2xl h-[90dvh] max-h-[calc(100dvh-2rem)] p-4 sm:p-6 lg:p-10 shadow-2xl flex flex-col">
                 <header className="flex justify-between items-center mb-8 shrink-0">
-                    <h2 className="text-lg lg:text-2xl font-bold text-[#282828]">Add Weightage</h2>
+                    <h2 id="add-weightage-title" className="text-lg lg:text-2xl font-bold text-[#282828]">Add Weightage</h2>
                     <div className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm ${isTotalValid ? 'bg-green-100 text-green-600' : 'bg-red-50 text-red-500'}`}>
                         {isTotalValid ? <FaCircleCheck /> : <FaCircleExclamation />}
                         Total: {totalPercentage}%
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-y-auto pr-2 space-y-8 custom-scrollbar">
+                <div className="min-h-0 flex-1 overflow-y-auto pr-2 space-y-8 custom-scrollbar">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
 
 
@@ -634,6 +635,7 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, i
                     customDescription={`Are you sure you want to remove the weightage for "${itemToDelete.label || 'this item'}"?`}
                 />
             )}
-        </div>
+        </div>,
+        document.body
     );
 }

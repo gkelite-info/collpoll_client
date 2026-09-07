@@ -19,6 +19,12 @@ export async function GET(
     const pathSegments = resolvedParams.path;
     const bucket = pathSegments[0];
     const filePath = pathSegments.slice(1).join("/");
+
+    // Lab manuals use the role-protected endpoint, which keeps the storage
+    // bucket name out of browser-facing URLs.
+    if (bucket === "faculty_lab_manuals") {
+        return new NextResponse("Not found", { status: 404 });
+    }
     
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (!supabaseUrl) {
@@ -32,8 +38,7 @@ export async function GET(
         bucket === "leave_request_chats_attachments" ||
         bucket === "employee_leave_request_chat_attachments" ||
         bucket === "employee-expense-attachments" ||
-        bucket === "student_submissions" ||
-        bucket === "faculty_lab_manuals"
+        bucket === "student_submissions"
     ) {
         // Securely generate a temporary signed URL server-side to fetch the private file
         const { data, error } = await authClient.storage.from(bucket).createSignedUrl(filePath, 60);

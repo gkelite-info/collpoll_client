@@ -189,9 +189,13 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                 description: form.description,
                 deadline: form.deadline,
                 collegeEducationId: selectedEducationId,
-                collegeBranchId: selectedBranchId,
+                collegeBranchId:
+                    selectedBranchId && selectedBranchId > 0 ? selectedBranchId : null,
                 collegeAcademicYearId: selectedYearId,
-                collegeSemesterId: selectedSemesterId,
+                collegeSemesterId:
+                    selectedSemesterId && selectedSemesterId > 0
+                        ? selectedSemesterId
+                        : null,
                 collegeSubjectId: selectedSubjectId,
             },
                 {
