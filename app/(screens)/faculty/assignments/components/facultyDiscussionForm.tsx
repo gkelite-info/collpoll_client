@@ -13,6 +13,7 @@ import {
   FileHtml,
   FilePng,
   FileJpg,
+  CalendarBlank,
   Trash,
 } from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -50,6 +51,14 @@ const ALLOWED_FILE_EXTENSIONS = [
   "jpg",
   "jpeg",
 ];
+
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
+const formatDeadlineForDisplay = (value: string) => {
+  if (!value) return "DD/MM/YYYY";
+  const [year, month, day] = value.split("-");
+  return day && month && year ? `${day}/${month}/${year}` : "DD/MM/YYYY";
+};
 
 const isValidFile = (file: File) => {
   const ext = file.name.split(".").pop()?.toLowerCase();
@@ -353,8 +362,42 @@ export default function FacultyDiscussionForm({
         toast.error("Please enter valid marks", { id: "discussion-toast" });
         return;
       }
+      if (!facultyId) {
+        toast.error("Faculty details are still loading. Please try again.", {
+          id: "discussion-toast",
+        });
+        return;
+      }
+      if (!selectedEducationId) {
+        toast.error("Education is required", { id: "discussion-toast" });
+        return;
+      }
+      if (!isSchool && !selectedBranchId) {
+        toast.error(`${isInter ? "Group" : "Branch"} is required`, {
+          id: "discussion-toast",
+        });
+        return;
+      }
+      if (!selectedYearId) {
+        toast.error("Academic year is required", { id: "discussion-toast" });
+        return;
+      }
+      if (!isSchool && !isInter && !selectedSemesterId) {
+        toast.error("Semester is required", { id: "discussion-toast" });
+        return;
+      }
+      if (!selectedSubjectId) {
+        toast.error("Subject is required", { id: "discussion-toast" });
+        return;
+      }
       if (!selectedSectionIds || selectedSectionIds.length === 0) {
         toast.error("Please select at least one section", { id: "discussion-toast" });
+        return;
+      }
+      if (files.some((file) => file.size > MAX_FILE_SIZE_BYTES)) {
+        toast.error("Each file must be 10 MB or smaller.", {
+          id: "discussion-toast",
+        });
         return;
       }
 
@@ -380,16 +423,23 @@ export default function FacultyDiscussionForm({
         description: form.description,
         deadline: form.deadline,
         collegeEducationId: selectedEducationId,
-        collegeBranchId: selectedBranchId,
+        collegeBranchId:
+          selectedBranchId && selectedBranchId > 0 ? selectedBranchId : null,
         collegeAcademicYearId: selectedYearId,
-        collegeSemesterId: selectedSemesterId,
+        collegeSemesterId:
+          selectedSemesterId && selectedSemesterId > 0
+            ? selectedSemesterId
+            : null,
         collegeSubjectId: selectedSubjectId,
       },
         { facultyId: facultyId ?? undefined },
       );
 
       if (!payload.success || !payload.discussionId) {
-        toast.error("Failed to save discussion. Please try again.", { id: "discussion-toast" });
+        toast.error(
+          payload.errorMessage || "Failed to save discussion. Please try again.",
+          { id: "discussion-toast" },
+        );
         return;
       }
 
@@ -492,17 +542,24 @@ export default function FacultyDiscussionForm({
   const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
-      // setFiles(prev => [...prev, ...newFiles]);
-
-      const validFiles = newFiles.filter(isValidFile);
       const invalidFiles = newFiles.filter((f) => !isValidFile(f));
+      const oversizedFiles = newFiles.filter(
+        (file) => isValidFile(file) && file.size > MAX_FILE_SIZE_BYTES,
+      );
+      const validFiles = newFiles.filter(
+        (file) => isValidFile(file) && file.size <= MAX_FILE_SIZE_BYTES,
+      );
       if (invalidFiles.length > 0) {
         toast.error(
           "Only project related files allowed (pdf, doc, excel, images)",
         );
       }
+      if (oversizedFiles.length > 0) {
+        toast.error("Each file must be 10 MB or smaller.");
+      }
 
       setFiles((prev) => [...prev, ...validFiles]);
+      e.target.value = "";
     }
   };
 
@@ -521,11 +578,18 @@ export default function FacultyDiscussionForm({
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const droppedFiles = Array.from(e.dataTransfer.files);
-      // setFiles(prev => [...prev, ...droppedFiles]);
-      const validFiles = droppedFiles.filter(isValidFile);
       const invalidFiles = droppedFiles.filter((f) => !isValidFile(f));
+      const oversizedFiles = droppedFiles.filter(
+        (file) => isValidFile(file) && file.size > MAX_FILE_SIZE_BYTES,
+      );
+      const validFiles = droppedFiles.filter(
+        (file) => isValidFile(file) && file.size <= MAX_FILE_SIZE_BYTES,
+      );
       if (invalidFiles.length > 0) {
         toast.error("Unsupported file type detected");
+      }
+      if (oversizedFiles.length > 0) {
+        toast.error("Each file must be 10 MB or smaller.");
       }
       setFiles((prev) => [...prev, ...validFiles]);
     }
@@ -619,12 +683,21 @@ export default function FacultyDiscussionForm({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="flex flex-col gap-2">
             <label className="font-bold text-[#282828] text-sm">Deadline <span className="text-red-500">*</span></label>
-            <input
-              type="date"
-              value={form.deadline}
-              onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-              className="w-full border cursor-pointer border-gray-200 rounded-md px-4 py-2.5 text-sm outline-none focus:border-[#43C17A] text-gray-600"
-            />
+            <div className="relative flex w-full items-center rounded-md border border-gray-200 px-4 py-2.5 text-sm text-gray-600 focus-within:border-[#43C17A]">
+              <span className={form.deadline ? "text-gray-600" : "text-gray-400"}>
+                {formatDeadlineForDisplay(form.deadline)}
+              </span>
+              <CalendarBlank size={18} className="ml-auto text-gray-700" />
+              <input
+                type="date"
+                value={form.deadline}
+                onChange={(e) =>
+                  setForm({ ...form, deadline: e.target.value })
+                }
+                aria-label="Deadline in day, month, year format"
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -761,6 +834,7 @@ export default function FacultyDiscussionForm({
             <p className="text-sm text-gray-500">
               Drag & Drop Your File here or
             </p>
+            <p className="text-xs text-gray-400">Maximum file size: 10 MB</p>
             <button
               onClick={() => fileInputRef.current?.click()}
               className="bg-white cursor-pointer border border-gray-200 text-[#282828] px-4 py-1.5 rounded-md text-sm font-bold shadow-sm hover:bg-gray-50 transition-colors"
@@ -780,7 +854,10 @@ export default function FacultyDiscussionForm({
                     {/* <FilePdf size={24} weight="fill" className="text-blue-500 flex-shrink-0" /> */}
                     {getFileIcon(file.fileUrl)}
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="text-sm font-medium text-[#282828] whitespace-nowrap overflow-x-auto">
+                      <span
+                        className="block w-full overflow-x-scroll whitespace-nowrap pb-1 text-sm font-medium text-[#282828] [scrollbar-color:#cbd5e1_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent"
+                        title={file.fileUrl.split("/").pop()}
+                      >
                         {file.fileUrl.split("/").pop()}
                       </span>
                       <span className="text-xs text-gray-400">
@@ -809,7 +886,10 @@ export default function FacultyDiscussionForm({
                     {/* <FilePdf size={24} weight="fill" className="text-red-500 flex-shrink-0" /> */}
                     {getFileIcon(file.name)}
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="text-sm font-medium text-[#282828] whitespace-nowrap overflow-x-auto">
+                      <span
+                        className="block w-full overflow-x-scroll whitespace-nowrap pb-1 text-sm font-medium text-[#282828] [scrollbar-color:#cbd5e1_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent"
+                        title={file.name}
+                      >
                         {file.name}
                       </span>
                       <span className="text-xs text-gray-400">

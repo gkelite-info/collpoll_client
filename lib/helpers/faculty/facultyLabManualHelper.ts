@@ -301,7 +301,7 @@ export async function deleteLabManual(labManualId: number) {
 
 
 export async function getLabManualPublicUrl(path: string) {
-    return `/api/files/faculty_lab_manuals/${path}`;
+    return `/api/academic-files/${path}`;
 }
 
 export async function deleteLabManualFile(path: string) {
@@ -317,6 +317,11 @@ export async function deleteLabManualFile(path: string) {
 
 
 export async function uploadLabManualFile(file: File, folderName: string) {
+    const maxFileSizeBytes = 10 * 1024 * 1024;
+    if (file.size > maxFileSizeBytes) {
+        throw new Error("Lab manual PDF must be 10 MB or smaller.");
+    }
+
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `${folderName}/${fileName}`;

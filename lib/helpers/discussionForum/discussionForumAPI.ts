@@ -1,5 +1,13 @@
 import { supabase } from "@/lib/supabaseClient";
 
+const getDatabaseErrorMessage = (error: unknown) => {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return "Unable to save discussion.";
+};
+
 export type DiscussionForumRow = {
   discussionId: number;
   title: string;
@@ -66,12 +74,9 @@ export async function fetchExistingDiscussion(title: string, deadline: string) {
     .eq("title", title.trim())
     .eq("deadline", deadline)
     .is("deletedAt", null)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    if (error.code === "PGRST116") {
-      return { success: true, data: null };
-    }
     throw error;
   }
 
@@ -121,8 +126,9 @@ export async function saveDiscussionForum(
       .single();
 
     if (error) {
-      console.error("saveDiscussionForum error:", error);
-      return { success: false, error };
+      const errorMessage = getDatabaseErrorMessage(error);
+      console.warn("saveDiscussionForum failed:", errorMessage);
+      return { success: false, error, errorMessage };
     }
 
     return {
@@ -137,8 +143,9 @@ export async function saveDiscussionForum(
     .eq("discussionId", payload.discussionId);
 
   if (error) {
-    console.error("updateDiscussionForum error:", error);
-    return { success: false, error };
+    const errorMessage = getDatabaseErrorMessage(error);
+    console.warn("updateDiscussionForum failed:", errorMessage);
+    return { success: false, error, errorMessage };
   }
 
   return {

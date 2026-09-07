@@ -14,6 +14,8 @@ import { deleteLabManualFile, getLabManualPublicUrl, saveLabManual, uploadLabMan
 import { CustomDropdown } from "@/app/components/CustomDropdown";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
+const MAX_LAB_MANUAL_SIZE_BYTES = 10 * 1024 * 1024;
+
 interface FacultyLabFormProps {
     onSaved?: () => void;
     onCancel?: () => void;
@@ -322,20 +324,31 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
         e.preventDefault();
         setIsDragging(false);
         const file = e.dataTransfer.files?.[0];
-        if (file && file.type === "application/pdf") {
-            setPdfFile(file);
-        } else {
+        if (!file || file.type !== "application/pdf") {
             toast.error("Please upload a PDF file only.");
+            return;
         }
+        if (file.size > MAX_LAB_MANUAL_SIZE_BYTES) {
+            toast.error("Lab manual PDF must be 10 MB or smaller.");
+            return;
+        }
+        setPdfFile(file);
     }, []);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file && file.type === "application/pdf") {
-            setPdfFile(file);
-        } else {
+        if (!file || file.type !== "application/pdf") {
             toast.error("Please upload a PDF file only.");
+            e.target.value = "";
+            return;
         }
+        if (file.size > MAX_LAB_MANUAL_SIZE_BYTES) {
+            toast.error("Lab manual PDF must be 10 MB or smaller.");
+            e.target.value = "";
+            return;
+        }
+        setPdfFile(file);
+        e.target.value = "";
     };
 
     const formatFileSize = (bytes: number) => {
@@ -371,6 +384,7 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
         if (!subjectId) return toast.error("Subject is required");
         if (!sectionId) return toast.error("Section is required");
         if (!pdfFile && (!initialData?.pdfUrl || removeExistingFile)) return toast.error("PDF is required");
+        if (pdfFile && pdfFile.size > MAX_LAB_MANUAL_SIZE_BYTES) return toast.error("Lab manual PDF must be 10 MB or smaller.");
         if (!faculty.facultyId) return toast.error("Faculty session not found");
 
         const hasValidAssignment = assignedData.some(item =>
@@ -666,6 +680,9 @@ export default function FacultyLabForm({ onSaved, onCancel, initialData }: Facul
                             </p>
                             <p className="text-xs text-gray-400 mb-4">
                                 or click to browse from your computer
+                            </p>
+                            <p className="text-xs font-medium text-gray-500">
+                                Maximum file size: 10 MB
                             </p>
 
                             <input
