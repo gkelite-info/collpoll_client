@@ -66,8 +66,8 @@ export default function NewMeetingCard({
   onEdit?: (meetingId: number, sectionId: number | null) => void;
 }) {
   const { isSchool } = useInstitutionTerminology();
-  const [fromTime, toTime] = data.timeRange.split(" - ");
-  const formattedTimeRange = `${formatToAMPM(fromTime)} - ${formatToAMPM(toTime)}`;
+  const [fromTime, toTime] = (data.timeRange || "").split(" - ");
+  const formattedTimeRange = fromTime && toTime ? `${formatToAMPM(fromTime)} - ${formatToAMPM(toTime)}` : "TBA";
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -77,6 +77,31 @@ export default function NewMeetingCard({
   const [isParticipantsLoading, setIsParticipantsLoading] = useState(false);
 
   const displayAvatars = data.participantAvatars || [];
+  
+  const isMeetingStartedOrPast = () => {
+    try {
+      if (!data.date || !fromTime) return false;
+      const startDateTime = new Date(`${data.date} ${fromTime}`);
+      return new Date().getTime() >= startDateTime.getTime();
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const joinStatus = (() => {
+    if (data.type === "previous") return "completed";
+    try {
+      if (!data.date || !fromTime || !toTime) return "upcoming";
+      const now = new Date().getTime();
+      const startDateTime = new Date(`${data.date} ${fromTime}`).getTime();
+      const endDateTime = new Date(`${data.date} ${toTime}`).getTime();
+      if (now > endDateTime) return "completed";
+      if (startDateTime - now <= 15 * 60 * 1000) return "active";
+      return "upcoming";
+    } catch {
+      return "upcoming";
+    }
+  })();
 
   const loadParticipants = async () => {
     try {
@@ -109,7 +134,7 @@ export default function NewMeetingCard({
             </span>
           </div>
 
-          {data.type === "upcoming" && role === "Finance" && (
+          {data.type === "upcoming" && role === "Finance" && !isMeetingStartedOrPast() && (
             <div className="flex gap-2 items-center justify-center">
               <button
                 className="w-7 h-7 cursor-pointer flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50"
@@ -196,14 +221,15 @@ export default function NewMeetingCard({
             </div>
 
             <button
+              disabled={joinStatus !== "active"}
               className={`px-5 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                data.type === "previous"
+                joinStatus === "completed" || joinStatus === "upcoming"
                   ? "bg-[#E9E9E9] text-[#7A7A7A] cursor-not-allowed"
                   : "bg-[#16284F] text-white hover:bg-[#111e3b] cursor-pointer"
               }`}
               onClick={(e) => {
                 e.stopPropagation();
-                if (data.type !== "previous") {
+                if (joinStatus === "active") {
                   window.open(
                     data.meetingLink,
                     "_blank",
@@ -212,7 +238,7 @@ export default function NewMeetingCard({
                 }
               }}
             >
-              {data.type === "previous" ? "Completed" : "Join Meeting"}
+              {joinStatus === "completed" ? "Completed" : joinStatus === "upcoming" ? "Upcoming" : "Join Meeting"}
             </button>
           </div>
         </div>

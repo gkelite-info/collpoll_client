@@ -1,5 +1,6 @@
 import { MouseEvent } from 'react';
 import { Meeting } from '../meetingTypes';
+import { Avatar } from '@/app/utils/Avatar';
 import { CalendarBlank, Clock, MapPin, Users, CaretRight, Trash, PencilSimple } from '@phosphor-icons/react';
 
 interface MeetingCardProps {
@@ -13,11 +14,11 @@ export default function MeetingCard({ meeting, onClick, onDelete, onEdit }: Meet
     const isToday = meeting.date === new Date().toISOString().split('T')[0];
 
     const getTypeColor = (type: string) => {
-        switch (type) {
-            case 'Internal': return 'bg-blue-50 text-blue-600 border-blue-200';
-            case 'External': return 'bg-purple-50 text-purple-600 border-purple-200';
-            case 'Staff': return 'bg-emerald-50 text-emerald-600 border-emerald-200';
-            case 'Management': return 'bg-amber-50 text-amber-600 border-amber-200';
+        switch (type.toLowerCase()) {
+            case 'internal': return 'bg-blue-50 text-blue-600 border-blue-200';
+            case 'external': return 'bg-purple-50 text-purple-600 border-purple-200';
+            case 'staff': return 'bg-emerald-50 text-emerald-600 border-emerald-200';
+            case 'management': return 'bg-amber-50 text-amber-600 border-amber-200';
             default: return 'bg-gray-50 text-gray-600 border-gray-200';
         }
     };
@@ -74,9 +75,7 @@ export default function MeetingCard({ meeting, onClick, onDelete, onEdit }: Meet
                             <span>{formatTime12h(meeting.startTime)} - {formatTime12h(meeting.endTime)}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-emerald-100 to-purple-100 flex items-center justify-center text-emerald-700 text-[10px] border border-white shadow-sm">
-                                {meeting.organizer.charAt(0)}
-                            </div>
+                            <Avatar src={meeting.organizerAvatar} alt={meeting.organizer} sizes="w-6 h-6" />
                             <span className="truncate max-w-[120px] sm:max-w-none">{meeting.organizer}</span>
                         </div>
                         {meeting.meetingLink && (

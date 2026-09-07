@@ -1,297 +1,39 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Meeting } from '../meetingTypes';
-import { X, CalendarBlank, Clock, User, Link as LinkIcon, Note, Users, TextAa, CaretDown, WarningCircle, Check } from '@phosphor-icons/react';
+import { X, CalendarBlank, Clock, User, Link as LinkIcon, Note, Users, WarningCircle } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
-import { useRef } from 'react';
-import { Avatar } from '@/app/utils/Avatar';
-
 import { CustomDropdown } from '@/app/components/CustomDropdown';
-
-const STATIC_USERS = [
-    { id: '1', employeeId: '100234', name: 'John Doe', role: 'Faculty', avatar: 'J' },
-    { id: '2', employeeId: '100235', name: 'Jane Smith', role: 'Admin', avatar: 'J' },
-    { id: '3', employeeId: '100236', name: 'Dr. Sharma', role: 'Principal', avatar: 'S' },
-    { id: '4', employeeId: '100237', name: 'Admin Team', role: 'Staff', avatar: 'A' },
-    { id: '5', employeeId: '100238', name: 'All Staff', role: 'Group', avatar: 'A' },
-    { id: '6', employeeId: '100239', name: 'Michael Scott', role: 'Regional Manager', avatar: 'M' },
-    { id: '7', employeeId: '100240', name: 'Pam Beesly', role: 'Receptionist', avatar: 'P' },
-    { id: '8', employeeId: '100241', name: 'Jim Halpert', role: 'Sales', avatar: 'J' },
-];
-
-const StaticUserMultiSelect = ({ value, onChange }: { value: string, onChange: (v: string) => void }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [search, setSearch] = useState('');
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-                setSearch('');
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const selectedNames = value ? value.split(',').map(v => v.trim()).filter(Boolean) : [];
-    
-    const toggleUser = (name: string) => {
-        if (selectedNames.includes(name)) {
-            onChange(selectedNames.filter(n => n !== name).join(', '));
-        } else {
-            onChange([...selectedNames, name].join(', '));
-        }
-    };
-
-    const filteredUsers = STATIC_USERS.filter(u => u.name.toLowerCase().includes(search.toLowerCase()) || u.role.toLowerCase().includes(search.toLowerCase()));
-
-    return (
-        <div ref={dropdownRef} className="relative w-full">
-            <div 
-                onClick={() => setIsOpen(!isOpen)}
-                className="cursor-pointer w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[14px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 flex flex-wrap items-center gap-2 min-h-[48px] transition-colors hover:bg-gray-100/50"
-            >
-                {selectedNames.length > 0 ? (
-                    selectedNames.map(name => (
-                        <span key={name} className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            {name}
-                            <X size={12} weight="bold" className="cursor-pointer hover:text-emerald-900 ml-1" onClick={() => toggleUser(name)} />
-                        </span>
-                    ))
-                ) : (
-                    <span className="text-gray-400">Search and select attendees...</span>
-                )}
-                <CaretDown className={`ml-auto text-gray-400 transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} size={16} weight="bold" />
-            </div>
-
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.15 }}
-                        className="absolute top-full mt-2 left-0 w-full bg-white rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-gray-100 z-[70] overflow-hidden flex flex-col"
-                    >
-                        <div className="p-3 border-b border-gray-100">
-                            <input 
-                                autoFocus
-                                type="text"
-                                placeholder="Search by name or role..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-gray-400"
-                            />
-                        </div>
-                        <div className="max-h-60 overflow-y-auto custom-scrollbar p-2 space-y-1">
-                            {filteredUsers.length === 0 ? (
-                                <div className="p-4 text-center text-sm text-gray-500">No users found</div>
-                            ) : (
-                                filteredUsers.map(user => {
-                                    const isSelected = selectedNames.includes(user.name);
-                                    return (
-                                        <div 
-                                            key={user.id}
-                                            onClick={() => toggleUser(user.name)}
-                                            className={`px-3 py-2.5 flex items-center gap-3 cursor-pointer transition-colors rounded-lg
-                                                ${isSelected ? 'bg-emerald-50' : 'hover:bg-gray-50'}
-                                            `}
-                                        >
-                                            <Avatar alt={user.name} size={36} />
-                                            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                                                <div className={`text-[14px] font-bold leading-none truncate ${isSelected ? 'text-emerald-700' : 'text-gray-800'}`}>{user.name}</div>
-                                                <div className="text-[11px] text-gray-400 font-semibold leading-none truncate">{user.employeeId}</div>
-                                                <div className="text-[11px] text-gray-500 font-medium leading-none truncate">{user.role}</div>
-                                            </div>
-                                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors shrink-0 ${isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 bg-white'}`}>
-                                                {isSelected && <Check size={12} weight="bold" className="text-white" />}
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
-};
-
-const StaticUserSingleSelect = ({ value, onChange }: { value: string, onChange: (v: string) => void }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [search, setSearch] = useState('');
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-                setSearch('');
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const selectedUser = STATIC_USERS.find(u => u.name === value);
-
-    const toggleUser = (name: string) => {
-        onChange(name);
-        setIsOpen(false);
-        setSearch('');
-    };
-
-    const filteredUsers = STATIC_USERS.filter(u => u.name.toLowerCase().includes(search.toLowerCase()) || u.role.toLowerCase().includes(search.toLowerCase()));
-
-    return (
-        <div ref={dropdownRef} className="relative w-full">
-            <div 
-                onClick={() => setIsOpen(!isOpen)}
-                className="cursor-pointer w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[14px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 flex flex-wrap items-center gap-2 min-h-[48px] transition-colors hover:bg-gray-100/50"
-            >
-                {selectedUser ? (
-                    <div className="flex items-center gap-2">
-                        <Avatar alt={selectedUser.name} size={24} />
-                        <span className="font-bold text-emerald-700">{selectedUser.name}</span>
-                    </div>
-                ) : (
-                    <span className="text-gray-400">Search and select an organizer...</span>
-                )}
-                <CaretDown className={`ml-auto text-gray-400 transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} size={16} weight="bold" />
-            </div>
-
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.15 }}
-                        className="absolute top-full mt-2 left-0 w-full bg-white rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-gray-100 z-[70] overflow-hidden flex flex-col"
-                    >
-                        <div className="p-3 border-b border-gray-100">
-                            <input 
-                                autoFocus
-                                type="text"
-                                placeholder="Search by name or role..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-gray-400"
-                            />
-                        </div>
-                        <div className="max-h-60 overflow-y-auto custom-scrollbar p-2 space-y-1">
-                            {filteredUsers.length === 0 ? (
-                                <div className="p-4 text-center text-sm text-gray-500">No users found</div>
-                            ) : (
-                                filteredUsers.map(user => {
-                                    const isSelected = value === user.name;
-                                    return (
-                                        <div 
-                                            key={user.id}
-                                            onClick={() => toggleUser(user.name)}
-                                            className={`px-3 py-2.5 flex items-center gap-3 cursor-pointer transition-colors rounded-lg
-                                                ${isSelected ? 'bg-emerald-50' : 'hover:bg-gray-50'}
-                                            `}
-                                        >
-                                            <Avatar alt={user.name} size={36} />
-                                            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                                                <div className={`text-[14px] font-bold leading-none truncate ${isSelected ? 'text-emerald-700' : 'text-gray-800'}`}>{user.name}</div>
-                                                <div className="text-[11px] text-gray-400 font-semibold leading-none truncate">{user.employeeId}</div>
-                                                <div className="text-[11px] text-gray-500 font-medium leading-none truncate">{user.role}</div>
-                                            </div>
-                                            <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors shrink-0 ${isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 bg-white'}`}>
-                                                {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
-};
-
-const TimeSelector = ({ value, onChange, bounds }: { value: string, onChange: (v: string) => void, bounds: {start: number, end: number} }) => {
-    const [hStr, mStr] = value ? value.split(':') : ['10', '00'];
-    let h24 = parseInt(hStr, 10) || 10;
-    const minute = mStr || '00';
-    
-    let hour12 = h24 % 12 || 12;
-    let ampm = h24 >= 12 && h24 < 24 ? 'PM' : 'AM';
-
-    const handleHourChange = (newH12: string) => {
-        let nH24 = parseInt(newH12, 10);
-        if (ampm === 'PM' && nH24 !== 12) nH24 += 12;
-        if (ampm === 'AM' && nH24 === 12) nH24 = 0;
-        if (nH24 < bounds.start) nH24 = bounds.start;
-        if (nH24 > bounds.end) nH24 = bounds.end;
-        onChange(`${String(nH24).padStart(2, '0')}:${minute}`);
-    };
-
-    const handleMinuteChange = (newM: string) => {
-        onChange(`${String(h24).padStart(2, '0')}:${newM}`);
-    };
-
-    const handleAmPmChange = (newAmPm: string) => {
-        let nH24 = hour12;
-        if (newAmPm === 'PM' && hour12 !== 12) nH24 += 12;
-        if (newAmPm === 'AM' && hour12 === 12) nH24 = 0;
-        if (nH24 < bounds.start) nH24 = bounds.start;
-        if (nH24 > bounds.end) nH24 = bounds.end;
-        onChange(`${String(nH24).padStart(2, '0')}:${minute}`);
-    };
-
-    const hourOptions = [];
-    for (let i = 1; i <= 12; i++) {
-        let test24 = i;
-        if (ampm === 'PM' && i !== 12) test24 += 12;
-        if (ampm === 'AM' && i === 12) test24 = 0;
-        const isDisabled = test24 < bounds.start || test24 > bounds.end;
-        if (!isDisabled) {
-            hourOptions.push({ value: String(i).padStart(2, '0'), label: String(i).padStart(2, '0') });
-        }
-    }
-
-    const minOptions = [];
-    for (let i = 0; i < 12; i++) {
-        minOptions.push({ value: String(i*5).padStart(2, '0'), label: String(i*5).padStart(2, '0') });
-    }
-    
-    const isAmDisabled = bounds.start >= 12;
-    const isPmDisabled = bounds.end < 12;
-    const amPmOptions = [];
-    if (!isAmDisabled) amPmOptions.push({value: 'AM', label: 'AM'});
-    if (!isPmDisabled) amPmOptions.push({value: 'PM', label: 'PM'});
-    
-    return (
-        <div className="flex gap-1.5 items-center w-full">
-            <CustomDropdown value={String(hour12).padStart(2, '0')} onChange={(v) => handleHourChange(String(v))} options={hourOptions} theme="green" className="py-2 px-2 rounded-xl" widthClassName="flex-1" />
-            <span className="text-gray-500 font-bold">:</span>
-            <CustomDropdown value={minute} onChange={(v) => handleMinuteChange(String(v))} options={minOptions} theme="green" className="py-2 px-2 rounded-xl" widthClassName="flex-1" />
-            <CustomDropdown value={ampm} onChange={(v) => handleAmPmChange(String(v))} options={amPmOptions} theme="green" className="py-2 px-1 rounded-xl" widthClassName="w-[70px]" />
-        </div>
-    );
-};
+import { UserMultiSelect, UserSingleSelect, TimeSelector } from './MeetingFormInputs';
+import ConflictWarningModal from './ConflictWarningModal';
+import { useCreateMeeting, useUpdateMeeting } from '../hooks/useMeetingsMutation';
+import { useUser } from '@/app/utils/context/UserContext';
+import { fetchMeetingConflicts } from '@/lib/helpers/collegeMeetings/fetchMeetingConflicts';
+import { getUsersByIds, SelectUser } from '@/lib/helpers/Hr/meetings/getCollegeUsers';
 
 interface MeetingFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (meeting: Omit<Meeting, 'id'>, id?: string) => void;
     initialData?: Meeting | null;
     timings?: any[];
     holidays?: any[];
 }
 
-export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialData, timings = [], holidays = [] }: MeetingFormModalProps) {
+export default function MeetingFormModal({ isOpen, onClose, initialData, timings = [], holidays = [] }: MeetingFormModalProps) {
+    const { collegeId, userId } = useUser();
+    
+    const { mutateAsync: createMeeting } = useCreateMeeting(collegeId || 0);
+    const { mutateAsync: updateMeeting } = useUpdateMeeting(collegeId || 0);
+
     const defaultState = {
         title: '',
-        date: new Date().toISOString().split('T')[0],
+        date: '',
         startTime: '10:00',
         endTime: '11:00',
         organizer: '',
         type: 'Internal' as Meeting['type'],
         agenda: '',
-        attendees: '',
+        attendees: '', // comma separated userIds
         meetingLink: '',
         zoomId: '',
         zoomPassword: '',
@@ -302,7 +44,12 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [warningMsg, setWarningMsg] = useState<string | null>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
-    const [isTypeOpen, setIsTypeOpen] = useState(false);
+    
+    const [conflicts, setConflicts] = useState<any[]>([]);
+    const [showConflictModal, setShowConflictModal] = useState(false);
+
+    const [initialAttendees, setInitialAttendees] = useState<SelectUser[]>([]);
+    const [initialOrganizer, setInitialOrganizer] = useState<SelectUser | null>(null);
 
     useEffect(() => {
         if (isOpen && initialData) {
@@ -314,16 +61,49 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
                 organizer: initialData.organizer,
                 type: initialData.type,
                 agenda: initialData.agenda,
-                attendees: initialData.attendees.join(', '),
+                attendees: initialData.participantDetails?.map(p => p.userId).join(',') || '',
                 meetingLink: initialData.meetingLink || '',
                 zoomId: initialData.zoomId || '',
                 zoomPassword: initialData.zoomPassword || '',
                 platform: initialData.platform || 'Google Meet'
             });
+
+            if (collegeId) {
+                const preloadedAttendees: SelectUser[] = (initialData.participantDetails || []).map(p => ({
+                    id: p.userId,
+                    userId: p.userId,
+                    name: p.name,
+                    subLabel: p.role || 'Attendee',
+                    avatar: p.avatar,
+                    displayId: String(p.userId)
+                }));
+                setInitialAttendees(preloadedAttendees);
+
+                // If organizer is a string, we might not have their ID.
+                // But we can try to fetch it if we had their ID. If not, the input just displays the string.
+                // If initialData provides organizerAvatar or if we fetch by name...
+                // Actually the UserSingleSelect can just display the name. 
+                // But for a better experience, we can construct a SelectUser object manually
+                // since we don't have the organizer ID.
+                setInitialOrganizer({
+                    id: 0,
+                    userId: 0,
+                    name: initialData.organizer,
+                    subLabel: 'Organizer',
+                    avatar: initialData.organizerAvatar || null,
+                    displayId: ''
+                });
+            }
+
         } else if (isOpen) {
-            setFormData(defaultState);
+            setFormData({
+                ...defaultState,
+                date: new Date().toISOString().split('T')[0]
+            });
+            setInitialAttendees([]);
+            setInitialOrganizer(null);
         }
-    }, [isOpen, initialData]);
+    }, [isOpen, initialData, collegeId]);
 
     useEffect(() => {
         setWarningMsg(null);
@@ -339,18 +119,15 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
 
         const holiday = holidays.find(h => h.holidayDate === formData.date);
         if (holiday) {
-            setErrorMsg(`Error: ${formData.date} is a holiday (${holiday.title}). Meetings cannot be scheduled.`);
-            return;
+            setWarningMsg(`Warning: ${formData.date} is a holiday (${holiday.title}).`);
         }
 
         const dayTiming = timings.find(t => t.dayOfWeek === dayName);
         if (dayTiming && !dayTiming.isOpen) {
-            setErrorMsg(`Error: The college is closed on ${dayName}s. Meetings cannot be scheduled.`);
-            return;
+            setWarningMsg(`Warning: The college is usually closed on ${dayName}s.`);
         }
 
         if (dayTiming && dayTiming.isOpen && dayTiming.openAt && dayTiming.closeAt && formData.startTime && formData.endTime) {
-
             const to24 = (timeStr: string) => {
                 if (!timeStr) return '00:00';
                 if (!timeStr.toLowerCase().includes('am') && !timeStr.toLowerCase().includes('pm')) return timeStr;
@@ -369,11 +146,54 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
             const close24 = to24(dayTiming.closeAt);
 
             if (formData.startTime < open24 || formData.endTime > close24) {
-
                 setWarningMsg(`Warning: The selected time is outside normal college hours (${dayTiming.openAt} - ${dayTiming.closeAt}).`);
             }
         }
     }, [formData.date, formData.startTime, formData.endTime, timings, holidays]);
+
+    const performSave = async () => {
+        const platform = formData.platform as string;
+        const attendeesList = formData.attendees.split(',').filter(Boolean).map(id => ({
+            userId: parseInt(id),
+            role: 'Attendee'
+        }));
+
+        const platformMap: Record<string, string> = {
+            'Google Meet': 'googlemeet',
+            'Zoom Meeting': 'zoom',
+            'Others': 'others'
+        };
+
+        const payload = {
+            id: initialData ? parseInt(initialData.id) : undefined,
+            collegeId: collegeId || 0,
+            title: formData.title.trim(),
+            date: formData.date,
+            fromTime: formData.startTime,
+            toTime: formData.endTime,
+            organizer: formData.organizer,
+            type: formData.type.toLowerCase(),
+            agenda: formData.agenda.trim(),
+            participants: attendeesList,
+            meetingLink: platform === 'Zoom Meeting' ? undefined : formData.meetingLink?.trim(),
+            zoomId: platform === 'Zoom Meeting' ? formData.zoomId?.trim() : undefined,
+            zoomPassword: platform === 'Zoom Meeting' ? formData.zoomPassword?.trim() : undefined,
+            platform: platformMap[platform] || 'googlemeet',
+        };
+
+        try {
+            if (initialData) {
+                await updateMeeting({ payload, userId: userId || 0 });
+            } else {
+                await createMeeting({ payload, userId: userId || 0 });
+            }
+            onClose();
+        } catch (error) {
+            // Error is handled in mutation hooks via toast
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -400,13 +220,23 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
             return;
         }
 
-        if (!formData.organizer) {
-            toast.error('Organizer is required.', { id: toastId });
+        const todayDate = new Date().toISOString().split('T')[0];
+        if (formData.date < todayDate) {
+            toast.error('Meetings cannot be scheduled in the past.', { id: toastId });
             return;
         }
+        if (formData.date === todayDate) {
+            const currentHour = new Date().getHours();
+            const currentMinute = new Date().getMinutes();
+            const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+            if (formData.endTime <= currentTimeStr) {
+                toast.error('End Time must be greater than the current time.', { id: toastId });
+                return;
+            }
+        }
 
-        if (!formData.type) {
-            toast.error('Meeting type is required.', { id: toastId });
+        if (!formData.organizer) {
+            toast.error('Organizer is required.', { id: toastId });
             return;
         }
 
@@ -416,8 +246,7 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
             return;
         }
 
-        const attendeesList = formData.attendees.split(',').map(a => a.trim()).filter(Boolean);
-        if (attendeesList.length === 0) {
+        if (!formData.attendees) {
             toast.error('Please select at least one attendee.', { id: toastId });
             return;
         }
@@ -429,20 +258,10 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
                 toast.error('Zoom Meeting ID is required.', { id: toastId });
                 return;
             }
-            if (trimmedZoomId.replace(/\D/g, '').length < 6) {
-                toast.error('Zoom Meeting ID must be at least 6 digits.', { id: toastId });
-                return;
-            }
         } else if (platform === 'Google Meet' || platform === 'Others') {
             const trimmedLink = formData.meetingLink?.trim() || '';
             if (!trimmedLink) {
                 toast.error('Meeting Link is required.', { id: toastId });
-                return;
-            }
-            try {
-                new URL(trimmedLink);
-            } catch (err) {
-                toast.error('Please enter a valid URL for the Meeting Link.', { id: toastId });
                 return;
             }
         }
@@ -450,97 +269,39 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
         setIsSubmitting(true);
         
         try {
-            await new Promise(resolve => setTimeout(resolve, 800));
-            
-            onSubmit({
-                title: trimmedTitle,
+            const attendeesIds = formData.attendees.split(',').filter(Boolean).map(id => parseInt(id));
+            const participantUserIds = userId ? [...new Set([...attendeesIds, userId])] : attendeesIds;
+
+            // Check conflicts before saving
+            const foundConflicts = await fetchMeetingConflicts({
+                collegeId: collegeId || 0,
                 date: formData.date,
-                startTime: formData.startTime,
-                endTime: formData.endTime,
-                organizer: formData.organizer,
-                type: formData.type,
-                agenda: trimmedAgenda,
-                attendees: attendeesList,
-                meetingLink: platform === 'Zoom Meeting' ? undefined : formData.meetingLink?.trim(),
-                zoomId: platform === 'Zoom Meeting' ? formData.zoomId?.trim() : undefined,
-                zoomPassword: platform === 'Zoom Meeting' ? formData.zoomPassword?.trim() : undefined,
-                platform: formData.platform as Meeting['platform'],
-                isEditable: true
-            }, initialData?.id);
-            
-            toast.success(initialData ? 'Meeting updated successfully!' : 'Meeting created successfully!', { id: toastId });
-            onClose();
+                fromTime: formData.startTime,
+                toTime: formData.endTime,
+                participantUserIds,
+                excludeMeetingId: initialData ? parseInt(initialData.id) : undefined
+            });
+
+            if (foundConflicts.length > 0) {
+                setConflicts(foundConflicts);
+                setShowConflictModal(true);
+                setIsSubmitting(false);
+                return;
+            }
+
+            await performSave();
         } catch (error) {
             toast.error('An error occurred. Please try again.', { id: toastId });
-        } finally {
             setIsSubmitting(false);
         }
     };
 
-    const getBounds = () => {
-        if (!formData.date) return { start: 8, end: 21 };
-        const dateObj = new Date(formData.date);
-        const dayName = dateObj.toLocaleString('en-US', { weekday: 'long' });
-        const dayTiming = timings.find(t => t.dayOfWeek === dayName);
-        
-        let startHour = 8;
-        let endHour = 21;
-        
-        if (dayTiming && dayTiming.isOpen && dayTiming.openAt && dayTiming.closeAt) {
-            startHour = parseInt(dayTiming.openAt.split(':')[0], 10);
-            let closeH = parseInt(dayTiming.closeAt.split(':')[0], 10);
-            if (closeH < startHour) closeH += 12; 
-            endHour = closeH;
-        }
-        
-        const todayDate = new Date().toISOString().split('T')[0];
-        if (formData.date === todayDate) {
-            const currentHour = new Date().getHours();
-            if (currentHour > startHour) {
-                startHour = Math.min(currentHour, endHour);
-            }
-        }
-        
-        return { start: startHour, end: endHour };
-    };
-
-    const bounds = getBounds();
-
-    useEffect(() => {
-        if (!isOpen) return;
-        
-        let currentStart = parseInt(formData.startTime.split(':')[0], 10);
-        let currentEnd = parseInt(formData.endTime.split(':')[0], 10);
-        let updated = false;
-
-        if (currentStart < bounds.start) {
-            currentStart = bounds.start;
-            updated = true;
-        } else if (currentStart > bounds.end) {
-            currentStart = bounds.end;
-            updated = true;
-        }
-
-        if (currentEnd <= currentStart || currentEnd > bounds.end + 1) {
-            currentEnd = Math.min(currentStart + 1, bounds.end + 1);
-            updated = true;
-        }
-
-        if (updated) {
-            setFormData(prev => ({
-                ...prev,
-                startTime: `${String(currentStart).padStart(2, '0')}:${prev.startTime.split(':')[1] || '00'}`,
-                endTime: `${String(currentEnd).padStart(2, '0')}:${prev.endTime.split(':')[1] || '00'}`
-            }));
-        }
-    }, [formData.date, bounds.start, bounds.end, isOpen]);
-
-    if (!isOpen) return null;
+    // Removed getBounds and auto-adjusting useEffect so users can select any time
 
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
+                <div key="meeting-modal-overlay" className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6">
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
                         onClick={onClose}
@@ -564,24 +325,23 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
                         <form id="meeting-form" onSubmit={handleSubmit} className="overflow-y-auto custom-scrollbar flex-1 px-4 sm:px-6 py-6 space-y-6">
 
                             {warningMsg && (
-                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl flex gap-3 text-sm font-semibold shadow-sm">
-                                    <WarningCircle size={20} weight="fill" className="text-amber-500 shrink-0 mt-0.5" />
+                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl flex items-center justify-center text-center gap-3 text-sm font-semibold shadow-sm">
+                                    <WarningCircle size={20} weight="fill" className="text-amber-500 shrink-0" />
                                     <span>{warningMsg}</span>
                                 </motion.div>
                             )}
                             {errorMsg && (
-                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl flex gap-3 text-sm font-semibold shadow-sm">
-                                    <WarningCircle size={20} weight="fill" className="text-red-500 shrink-0 mt-0.5" />
+                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl flex items-center justify-center text-center gap-3 text-sm font-semibold shadow-sm">
+                                    <WarningCircle size={20} weight="fill" className="text-red-500 shrink-0" />
                                     <span>{errorMsg}</span>
                                 </motion.div>
                             )}
 
                             <div>
                                 <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
-                                    {/* <TextAa size={16} weight="bold" /> */}
                                      Meeting Title <span className="text-red-500">*</span>
                                 </label>
-                                <input required type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" placeholder="e.g. Weekly Sync" />
+                                <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" placeholder="e.g. Weekly Sync" />
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -606,7 +366,7 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
                                     <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                         <CalendarBlank size={16} weight="bold" /> Date <span className="text-red-500">*</span>
                                     </label>
-                                    <input required type="date" min={new Date().toISOString().split('T')[0]} value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="cursor-pointer w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
+                                    <input type="date" min={new Date().toISOString().split('T')[0]} value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="cursor-pointer w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
                                 </div>
                             </div>
 
@@ -615,13 +375,13 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
                                     <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                         <Clock size={16} weight="bold" /> Start Time <span className="text-red-500">*</span>
                                     </label>
-                                    <TimeSelector value={formData.startTime} onChange={v => setFormData({...formData, startTime: v})} bounds={bounds} />
+                                    <TimeSelector value={formData.startTime} onChange={v => setFormData({...formData, startTime: v})} bounds={{start: 0, end: 24}} />
                                 </div>
                                 <div>
                                     <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                         <Clock size={16} weight="bold" /> End Time <span className="text-red-500">*</span>
                                     </label>
-                                    <TimeSelector value={formData.endTime} onChange={v => setFormData({...formData, endTime: v})} bounds={bounds} />
+                                    <TimeSelector value={formData.endTime} onChange={v => setFormData({...formData, endTime: v})} bounds={{start: 0, end: 24}} />
                                 </div>
                             </div>
 
@@ -629,7 +389,7 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
                                 <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                     <User size={16} weight="bold" /> Organizer <span className="text-red-500">*</span>
                                 </label>
-                                <StaticUserSingleSelect value={formData.organizer} onChange={v => setFormData({...formData, organizer: v})} />
+                                <UserSingleSelect value={formData.organizer} onChange={v => setFormData({...formData, organizer: v})} initialSelectedUser={initialOrganizer} />
                             </div>
                             
                             <div className="flex flex-col gap-2 mt-2">
@@ -659,13 +419,13 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
                                         <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                             <LinkIcon size={16} weight="bold" /> Zoom ID <span className="text-red-500">*</span>
                                         </label>
-                                        <input required type="text" value={formData.zoomId} onChange={e => setFormData({...formData, zoomId: e.target.value})} placeholder="Enter Zoom ID" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
+                                        <input type="text" value={formData.zoomId} onChange={e => setFormData({...formData, zoomId: e.target.value})} placeholder="Enter Zoom ID" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
                                     </div>
                                     <div>
                                         <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                             Password <span className="text-red-500">*</span>
                                         </label>
-                                        <input required type="text" value={formData.zoomPassword} onChange={e => setFormData({...formData, zoomPassword: e.target.value})} placeholder="Enter Password" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
+                                        <input type="text" value={formData.zoomPassword} onChange={e => setFormData({...formData, zoomPassword: e.target.value})} placeholder="Enter Password" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
                                     </div>
                                 </div>
                             ) : (
@@ -673,7 +433,7 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
                                     <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                         <LinkIcon size={16} weight="bold" /> {(formData.platform as string) === 'Others' ? 'Meeting' : formData.platform} Link <span className="text-red-500">*</span>
                                     </label>
-                                    <input required type="url" value={formData.meetingLink} onChange={e => setFormData({...formData, meetingLink: e.target.value})} placeholder={`https://${(formData.platform as string) === 'Zoom Meeting' ? 'zoom.us' : 'meet.google.com'}/...`} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
+                                    <input type="url" value={formData.meetingLink} onChange={e => setFormData({...formData, meetingLink: e.target.value})} placeholder={`https://${(formData.platform as string) === 'Zoom Meeting' ? 'zoom.us' : 'meet.google.com'}/...`} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
                                 </div>
                             )}
 
@@ -681,14 +441,14 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
                                 <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                     <Users size={16} weight="bold" /> Attendees <span className="text-red-500">*</span>
                                 </label>
-                                <StaticUserMultiSelect value={formData.attendees} onChange={v => setFormData({...formData, attendees: v})} />
+                                <UserMultiSelect value={formData.attendees} onChange={v => setFormData({...formData, attendees: v})} initialSelectedUsers={initialAttendees} />
                             </div>
 
                             <div>
                                 <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                     <Note size={16} weight="bold" /> Agenda <span className="text-red-500">*</span>
                                 </label>
-                                <textarea required maxLength={1000} rows={6} value={formData.agenda} onChange={e => setFormData({...formData, agenda: e.target.value})} placeholder="Enter meeting agenda details..." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all resize-none min-h-[140px]"></textarea>
+                                <textarea maxLength={1000} rows={6} value={formData.agenda} onChange={e => setFormData({...formData, agenda: e.target.value})} placeholder="Enter meeting agenda details..." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all resize-none min-h-[140px]"></textarea>
                                 <div className="text-right text-[11px] font-medium text-gray-400 mt-1.5 flex justify-end items-center gap-1">
                                     <span className={formData.agenda.length >= 1000 ? 'text-red-500 font-bold' : ''}>{formData.agenda.length}</span>
                                     <span>/ 1000</span>
@@ -714,6 +474,18 @@ export default function MeetingFormModal({ isOpen, onClose, onSubmit, initialDat
                     </motion.div>
                 </div>
             )}
+            
+            <ConflictWarningModal
+                key="conflict-warning-modal"
+                isOpen={showConflictModal}
+                conflicts={conflicts}
+                onClose={() => {
+                    setShowConflictModal(false);
+                    setIsSubmitting(true);
+                    performSave();
+                }}
+                onChangeTimings={() => setShowConflictModal(false)}
+            />
         </AnimatePresence>
     );
 }

@@ -3,8 +3,12 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MagnifyingGlass, UserCircle, X, CaretDown, CheckCircle } from "@phosphor-icons/react";
-import { SelectUser } from "@/lib/helpers/Hr/meetings/getCollegeUsers";
-import { dummyUsers } from "../meetingDummyData";
+import { SelectUser, getUsersByIds } from "@/lib/helpers/Hr/meetings/getCollegeUsers";
+import { useInfiniteCollegeUsers } from "../hooks/useInfiniteCollegeUsers";
+import UserSearchShimmer from "./UserSearchShimmer";
+import { useInView } from "react-intersection-observer";
+import { useUser } from "@/app/utils/context/UserContext";
+import { Avatar } from "@/app/utils/Avatar";
 
 interface UserSearchBarProps {
     currentUser: SelectUser;
@@ -13,11 +17,47 @@ interface UserSearchBarProps {
 }
 
 export default function UserSearchBar({ currentUser, onSelectUser, selectedUser }: UserSearchBarProps) {
+    const { collegeId } = useUser();
+    
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
     const [isFocused, setIsFocused] = useState(false);
+    const [enrichedMeUser, setEnrichedMeUser] = useState<SelectUser | null>(null);
+
+    useEffect(() => {
+        if (collegeId && currentUser.userId) {
+            getUsersByIds(collegeId, [currentUser.userId]).then(res => {
+                if (res && res.length > 0) setEnrichedMeUser(res[0]);
+            }).catch(console.error);
+        }
+    }, [collegeId, currentUser.userId]);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
+
+    const { 
+        data, 
+        isLoading, 
+        isFetchingNextPage, 
+        fetchNextPage, 
+        hasNextPage 
+    } = useInfiniteCollegeUsers(collegeId || 0, debouncedSearchQuery);
     
-    // For now, we will use static dummy users. We append "Me" (currentUser) to the results.
+    const users = data?.pages.flatMap((page) => page) || [];
+    
+    const { ref: loadMoreRef, inView } = useInView();
+
+    useEffect(() => {
+        if (inView && hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -30,11 +70,8 @@ export default function UserSearchBar({ currentUser, onSelectUser, selectedUser 
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Filter dummy users based on search
-    const filteredUsers = dummyUsers.filter(u => 
-        u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        u.userId.toString().includes(searchQuery)
-    );
+    // Filter users based on search
+    const filteredUsers = users;
 
     const handleSelect = (user: SelectUser | null) => {
         onSelectUser(user);
@@ -42,7 +79,10 @@ export default function UserSearchBar({ currentUser, onSelectUser, selectedUser 
         setSearchQuery("");
     };
 
-    const displayUser = selectedUser || currentUser;
+    const meUser = users.find(u => u.userId === currentUser.userId) || enrichedMeUser;
+    const enrichedCurrentUser = meUser ? { ...currentUser, displayId: meUser.displayId, subLabel: meUser.subLabel } : currentUser;
+
+    const displayUser = selectedUser || enrichedCurrentUser;
     const isMe = !selectedUser || selectedUser.userId === currentUser.userId;
 
     return (
@@ -61,13 +101,7 @@ export default function UserSearchBar({ currentUser, onSelectUser, selectedUser 
                     <MagnifyingGlass size={18} className="text-emerald-500 shrink-0" weight="bold" />
                 ) : (
                     <div className="flex items-center gap-2 shrink-0">
-                        {displayUser.avatar ? (
-                            <img src={displayUser.avatar} alt={displayUser.name} className="w-6 h-6 rounded-full object-cover shadow-sm border border-gray-100" />
-                        ) : (
-                            <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-emerald-500 to-purple-500 flex items-center justify-center text-white text-[10px] font-bold shadow-sm">
-                                {displayUser.name.charAt(0)}
-                            </div>
-                        )}
+                        <Avatar src={displayUser.avatar} alt={displayUser.name} sizes="w-6 h-6" />
                     </div>
                 )}
                 
@@ -77,7 +111,7 @@ export default function UserSearchBar({ currentUser, onSelectUser, selectedUser 
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
-                    placeholder="Search users by name or ID..."
+                    placeholder={isLoading ? "Loading users..." : "Search users by name or ID..."}
                     readOnly={!isOpen}
                     className={`flex-1 bg-transparent border-none outline-none text-[14px] font-medium placeholder:text-gray-500 placeholder:font-medium w-full truncate ${!isOpen ? 'cursor-pointer text-gray-800' : 'text-emerald-950'}`}
                 />
@@ -115,22 +149,16 @@ export default function UserSearchBar({ currentUser, onSelectUser, selectedUser 
                                     }`}
                                 >
                                     <div className="flex items-center gap-3 min-w-0">
-                                        {currentUser.avatar ? (
-                                            <img src={currentUser.avatar} alt="Me" className="w-9 h-9 rounded-full object-cover border border-gray-100" />
-                                        ) : (
-                                            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold shadow-sm">
-                                                {currentUser.name.charAt(0)}
-                                            </div>
-                                        )}
+                                        <Avatar src={enrichedCurrentUser.avatar} alt="Me" sizes="w-9 h-9" />
                                         <div className="flex flex-col min-w-0">
                                             <span className={`text-[14px] font-bold break-words ${isMe ? 'text-emerald-700' : 'text-gray-800'}`}>
                                                 My Calendar (Me)
                                             </span>
                                             <span className="text-[12px] text-gray-500 font-medium break-words mt-0.5">
-                                                ID: {currentUser.userId}
+                                                ID: {enrichedCurrentUser.displayId || enrichedCurrentUser.userId}
                                             </span>
                                             <span className="text-[12px] text-gray-500 font-medium break-words mt-0.5">
-                                                {currentUser.subLabel || currentUser.name}
+                                                {enrichedCurrentUser.subLabel || enrichedCurrentUser.name}
                                             </span>
                                         </div>
                                     </div>
@@ -141,47 +169,53 @@ export default function UserSearchBar({ currentUser, onSelectUser, selectedUser 
                             {filteredUsers.length > 0 && <div className="h-px bg-gray-100 mx-2 my-1" />}
 
                             {/* Search Results */}
-                            {filteredUsers.map((user) => {
-                                const isSelected = selectedUser?.userId === user.userId;
-                                return (
-                                    <div 
-                                        key={user.userId}
-                                        onClick={() => handleSelect(user as any)}
-                                        className={`flex items-center justify-between gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
-                                            isSelected ? "bg-emerald-50/80" : "hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            {user.avatar ? (
-                                                <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-full object-cover border border-gray-100" />
-                                            ) : (
-                                                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-slate-400 to-slate-500 flex items-center justify-center text-white text-sm font-bold shadow-sm">
-                                                    {user.name.charAt(0)}
+                            {isLoading ? (
+                                <UserSearchShimmer />
+                            ) : (
+                                <>
+                                    {filteredUsers.map((user) => {
+                                        const isSelected = selectedUser?.userId === user.userId;
+                                        return (
+                                            <div 
+                                                key={user.userId}
+                                                onClick={() => handleSelect(user as any)}
+                                                className={`flex items-center justify-between gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                                                    isSelected ? "bg-emerald-50/80" : "hover:bg-gray-50"
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <Avatar src={user.avatar} alt={user.name} sizes="w-9 h-9" />
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className={`text-[14px] font-bold break-words ${isSelected ? 'text-emerald-700' : 'text-gray-800'}`}>
+                                                            {user.name}
+                                                        </span>
+                                                        <span className="text-[12px] text-gray-500 font-medium break-words mt-0.5">
+                                                            ID: {user.displayId || user.userId}
+                                                        </span>
+                                                        <span className="text-[12px] text-gray-500 font-medium break-words mt-0.5">
+                                                            {user.subLabel}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                            )}
-                                            <div className="flex flex-col min-w-0">
-                                                <span className={`text-[14px] font-bold break-words ${isSelected ? 'text-emerald-700' : 'text-gray-800'}`}>
-                                                    {user.name}
-                                                </span>
-                                                <span className="text-[12px] text-gray-500 font-medium break-words mt-0.5">
-                                                    ID: {user.userId}
-                                                </span>
-                                                <span className="text-[12px] text-gray-500 font-medium break-words mt-0.5">
-                                                    {user.subLabel}
-                                                </span>
+                                                {isSelected && <CheckCircle size={18} weight="fill" className="text-emerald-600 shrink-0" />}
                                             </div>
-                                        </div>
-                                        {isSelected && <CheckCircle size={18} weight="fill" className="text-emerald-600 shrink-0" />}
-                                    </div>
-                                );
-                            })}
+                                        );
+                                    })}
 
-                            {filteredUsers.length === 0 && searchQuery && (
-                                <div className="py-6 px-4 text-center">
-                                    <UserCircle size={32} weight="light" className="text-gray-300 mx-auto mb-2" />
-                                    <p className="text-[14px] font-semibold text-gray-600">No users found</p>
-                                    <p className="text-[12px] text-gray-400 mt-0.5">Try searching with a different name or ID</p>
-                                </div>
+                                    {hasNextPage && (
+                                        <div ref={loadMoreRef}>
+                                            <UserSearchShimmer />
+                                        </div>
+                                    )}
+
+                                    {filteredUsers.length === 0 && debouncedSearchQuery && (
+                                        <div className="py-6 px-4 text-center">
+                                            <UserCircle size={32} weight="light" className="text-gray-300 mx-auto mb-2" />
+                                            <p className="text-[14px] font-semibold text-gray-600">No users found</p>
+                                            <p className="text-[12px] text-gray-400 mt-0.5">Try searching with a different name or ID</p>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </motion.div>

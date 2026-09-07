@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { ArrowLeft, UserCircle } from "@phosphor-icons/react";
 import { SelectUser } from "@/lib/helpers/Hr/meetings/getCollegeUsers";
+import { Avatar } from "@/app/utils/Avatar";
 
 interface ViewingUserBannerProps {
     viewedUser: SelectUser;
@@ -19,13 +20,7 @@ export default function ViewingUserBanner({ viewedUser, onBackToMyCalendar }: Vi
             className="bg-emerald-50/80 border-b border-emerald-100 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 overflow-hidden shrink-0"
         >
             <div className="flex items-center gap-3 min-w-0">
-                {viewedUser.avatar ? (
-                    <img src={viewedUser.avatar} alt={viewedUser.name} className="w-10 h-10 rounded-full object-cover shadow-sm border border-emerald-200" />
-                ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-400 to-slate-500 flex items-center justify-center text-white text-[15px] font-bold shadow-sm">
-                        {viewedUser.name.charAt(0)}
-                    </div>
-                )}
+                <Avatar src={viewedUser.avatar} alt={viewedUser.name} sizes="w-10 h-10" />
                 
                 <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-2">
@@ -35,7 +30,7 @@ export default function ViewingUserBanner({ viewedUser, onBackToMyCalendar }: Vi
                         {viewedUser.name}
                     </h3>
                     <span className="text-[13px] text-emerald-700/70 font-medium truncate">
-                        ID: {viewedUser.userId} • {viewedUser.subLabel}
+                        ID: {viewedUser.displayId || viewedUser.userId} • {viewedUser.subLabel}
                     </span>
                 </div>
             </div>
