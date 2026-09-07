@@ -1,26 +1,22 @@
-import { Suspense } from 'react';
+"use client";
+
 import MeetingsClient from './MeetingsClient';
 import MeetingsShimmer from './MeetingsShimmer';
-import { dummyMeetings } from './meetingDummyData';
+import { useUser } from "@/app/utils/context/UserContext";
+import { useMeetingsMonthly } from './hooks/useMeetingsQuery';
+import { useState } from 'react';
 
-// This acts as our Server Component that will fetch data in the future
-async function fetchMeetingsData() {
-    // Simulate a network request delay for demonstration of Suspense/Shimmer
-    await new Promise(resolve => setTimeout(resolve, 1500));
+interface WrapperProps {
+    isReadOnly?: boolean;
+}
+
+export default function MeetingsServerWrapper({ isReadOnly }: WrapperProps) {
+    const { collegeId, userId, role } = useUser();
     
-    // In the future, this would be a DB call using collegeId or user roles
-    return dummyMeetings;
-}
+    // We fetch current month initially, MeetingsClient handles month navigation
+    // but the initial state needs to be passed down or handled here.
+    // For simplicity, we can let MeetingsClient do the fetching since it owns the `currentDate` state.
+    // So this wrapper just renders MeetingsClient and passes the props.
 
-async function MeetingsServerContent() {
-    const initialMeetings = await fetchMeetingsData();
-    return <MeetingsClient initialMeetings={initialMeetings} />;
-}
-
-export default function MeetingsServerWrapper() {
-    return (
-        <Suspense fallback={<MeetingsShimmer />}>
-            <MeetingsServerContent />
-        </Suspense>
-    );
+    return <MeetingsClient isReadOnly={isReadOnly} />;
 }

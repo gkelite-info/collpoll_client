@@ -4,6 +4,9 @@ import { X, CalendarBlank, Clock, User, Link as LinkIcon, Users, Note, PencilSim
 import Link from 'next/link';
 import { useUser } from "@/app/utils/context/UserContext";
 import { useState, useEffect } from 'react';
+import { Avatar } from '@/app/utils/Avatar';
+import { useMeetingDetailsQuery } from '../hooks/useMeetingDetailsQuery';
+import MeetingViewModalShimmer from './MeetingViewModalShimmer';
 
 interface MeetingViewModalProps {
     meeting: Meeting | null;
@@ -12,7 +15,8 @@ interface MeetingViewModalProps {
 }
 
 export default function MeetingViewModal({ meeting, isOpen, onClose }: MeetingViewModalProps) {
-    if (!meeting) return null;
+    const [isMounted, setIsMounted] = useState(false);
+    useEffect(() => setIsMounted(true), []);
 
     const formatTime12h = (time24: string) => {
         if (!time24) return '';
@@ -24,7 +28,7 @@ export default function MeetingViewModal({ meeting, isOpen, onClose }: MeetingVi
     };
 
     const { userId } = useUser();
-    const [currentTime, setCurrentTime] = useState(new Date());
+    const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -33,8 +37,13 @@ export default function MeetingViewModal({ meeting, isOpen, onClose }: MeetingVi
         return () => clearInterval(timer);
     }, [isOpen]);
 
-    // Check if the current user owns this meeting (assuming meeting.userId exists, if not fallback to true or handle)
-    const isMyMeeting = meeting.userId ? meeting.userId === userId : true;
+    const { data: detailsData, isLoading: isLoadingDetails } = useMeetingDetailsQuery(isOpen && meeting ? meeting.id : null);
+
+    if (!meeting || !isMounted) return null;
+    if (!currentTime) return null;
+    const isOrganizer = meeting.userId ? meeting.userId === userId : true;
+    const isAttendee = meeting.participantDetails?.some(p => p.userId === userId) || false;
+    const canJoin = isOrganizer || isAttendee;
 
     const meetStart = new Date(`${meeting.date}T${meeting.startTime}`);
     const meetEnd = new Date(`${meeting.date}T${meeting.endTime}`);
@@ -46,16 +55,23 @@ export default function MeetingViewModal({ meeting, isOpen, onClose }: MeetingVi
     
     const todayStr = `${currentTime.getFullYear()}-${String(currentTime.getMonth() + 1).padStart(2, '0')}-${String(currentTime.getDate()).padStart(2, '0')}`;
     const isSameDate = meeting.date === todayStr;
-    const isTooEarly = (!isSameDate && meetStart.getTime() > currentTime.getTime()) || (isSameDate && minsBeforeStart > 15);
+    const isTooEarly = minsBeforeStart > 15;
 
     let earlyStatusText = "";
     if (isTooEarly) {
         if (!isSameDate) {
             earlyStatusText = "Upcoming";
         } else {
-            earlyStatusText = `Starts in ${Math.ceil(minsBeforeStart)}m`;
+            if (minsBeforeStart > 60) {
+                earlyStatusText = `Starts in ${Math.floor(minsBeforeStart / 60)}h ${Math.ceil(minsBeforeStart % 60)}m`;
+            } else {
+                earlyStatusText = `Starts in ${Math.ceil(minsBeforeStart)}m`;
+            }
         }
     }
+
+    const agendaText = detailsData?.agenda || meeting.agenda || "No agenda provided.";
+    const displayAttendees = detailsData?.attendees?.length ? detailsData.attendees : meeting.attendees;
 
     return (
         <AnimatePresence>
@@ -99,118 +115,129 @@ export default function MeetingViewModal({ meeting, isOpen, onClose }: MeetingVi
                             </div>
                         </div>
 
-                        <div className="px-5 sm:px-6 py-5 sm:py-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 sm:space-y-8">
+                        {isLoadingDetails ? (
+                            <MeetingViewModalShimmer />
+                        ) : (
+                            <div className="px-5 sm:px-6 py-5 sm:py-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 sm:space-y-8">
 
-                            {/* Prominent Top-Level Join Section */}
-                            {(meeting.meetingLink || meeting.platform === 'Zoom Meeting') && isMyMeeting && (
-                                <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
+                                {/* Prominent Top-Level Join Section */}
+                                {(meeting.meetingLink || meeting.platform === 'Zoom Meeting') && canJoin && (
+                                    <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <LinkIcon size={20} weight="fill" className="text-emerald-600 shrink-0" />
+                                                <h3 className="text-[15px] font-bold text-gray-800 tracking-tight">{meeting.platform || 'Meeting'} Details</h3>
+                                            </div>
+                                            {meeting.platform === 'Zoom Meeting' ? (
+                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mt-2">
+                                                    <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-gray-200">
+                                                        <span className="text-gray-500 font-medium">ID:</span> <span className="font-bold text-gray-800">{meeting.zoomId || 'N/A'}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-gray-200">
+                                                        <span className="text-gray-500 font-medium">Pass:</span> <span className="font-bold text-gray-800">{meeting.zoomPassword || 'N/A'}</span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-gray-500 truncate mt-0.5">{meeting.meetingLink}</p>
+                                            )}
+                                        </div>
+                                        <div className="shrink-0 w-full sm:w-auto">
+                                            {!isTooEarly && !hasEnded ? (
+                                                <Link 
+                                                    href={meeting.meetingLink || `https://zoom.us/j/${meeting.zoomId?.replace(/\s/g, '')}`} 
+                                                    target="_blank" 
+                                                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-white rounded-xl font-bold text-[15px] transition-all active:scale-95 group bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20"
+                                                >
+                                                    <span>Join Meeting</span>
+                                                    <LinkIcon size={18} weight="bold" className="group-hover:rotate-12 transition-transform" />
+                                                </Link>
+                                            ) : (
+                                                <div className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-200/80 text-gray-400 rounded-xl font-semibold text-[15px] cursor-not-allowed">
+                                                    <span>{hasEnded ? "Meeting Ended" : (earlyStatusText || "Join Meeting")}</span>
+                                                    <LinkIcon size={18} weight="bold" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                    <div className="bg-gray-50 rounded-2xl p-3 sm:p-4 flex items-center gap-3 sm:gap-4 overflow-hidden">
+                                        <div className="h-10 w-10 sm:h-12 sm:w-12 shrink-0 rounded-full bg-white shadow-sm flex items-center justify-center text-[#43C17A]">
+                                            <CalendarBlank size={22} weight="duotone" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[11px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">Date</p>
+                                            <div className="text-[13px] sm:text-[14px] font-bold text-gray-800 break-words flex flex-col leading-snug">
+                                                <span>{new Date(meeting.date).toLocaleDateString('en-US', { weekday: 'long' })},</span>
+                                                <span className="text-gray-600 font-semibold">{new Date(meeting.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-gray-50 rounded-2xl p-3 sm:p-4 flex items-center gap-3 sm:gap-4 overflow-hidden">
+                                        <div className="h-10 w-10 sm:h-12 sm:w-12 shrink-0 rounded-full bg-white shadow-sm flex items-center justify-center text-blue-500">
+                                            <Clock size={22} weight="duotone" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[11px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">Time</p>
+                                            <div className="text-[13px] sm:text-[14px] font-bold text-gray-800 break-words flex flex-col leading-snug">
+                                                <span>{formatTime12h(meeting.startTime)}</span>
+                                                <span className="text-gray-500 text-[11px] sm:text-[12px]">to {formatTime12h(meeting.endTime)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-5 sm:gap-6">
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <LinkIcon size={20} weight="fill" className="text-emerald-600 shrink-0" />
-                                            <h3 className="text-[15px] font-bold text-gray-800 tracking-tight">{meeting.platform || 'Meeting'} Details</h3>
+                                        <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                                            <User size={18} weight="fill" className="text-gray-400 shrink-0" />
+                                            <h3 className="text-xs sm:text-sm font-bold text-gray-700 uppercase tracking-wider break-words">Organizer</h3>
                                         </div>
-                                        {meeting.platform === 'Zoom Meeting' ? (
-                                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mt-2">
-                                                <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-gray-200">
-                                                    <span className="text-gray-500 font-medium">ID:</span> <span className="font-bold text-gray-800">{meeting.zoomId || 'N/A'}</span>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar src={meeting.organizerAvatar} alt={meeting.organizer} sizes="h-10 w-10 shrink-0" />
+                                            <span className="text-[13px] sm:text-[14px] font-semibold text-gray-800 break-words">{meeting.organizer}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr className="border-gray-100" />
+
+                                <div>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Note size={18} weight="fill" className="text-gray-400" />
+                                        <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Agenda</h3>
+                                    </div>
+                                    <div className="bg-gray-50 rounded-2xl p-4 sm:p-5 text-[14px] text-gray-600 leading-relaxed border border-gray-100/50 break-words whitespace-pre-wrap">
+                                        {agendaText}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Users size={18} weight="fill" className="text-gray-400" />
+                                        <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Attendees</h3>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {meeting.participantDetails && meeting.participantDetails.length > 0 ? (
+                                            meeting.participantDetails.map((attendee, idx) => (
+                                                <div key={idx} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 shadow-sm flex items-center gap-2">
+                                                    <Avatar src={attendee.avatar} alt={attendee.name} sizes="h-5 w-5 shrink-0" />
+                                                    {attendee.name}
                                                 </div>
-                                                <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-gray-200">
-                                                    <span className="text-gray-500 font-medium">Pass:</span> <span className="font-bold text-gray-800">{meeting.zoomPassword || 'N/A'}</span>
-                                                </div>
-                                            </div>
+                                            ))
                                         ) : (
-                                            <p className="text-sm text-gray-500 truncate mt-0.5">{meeting.meetingLink}</p>
+                                            displayAttendees.map((attendee: string, idx: number) => (
+                                                <div key={idx} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 shadow-sm flex items-center gap-2">
+                                                    <div className="h-2 w-2 rounded-full bg-gray-300"></div>
+                                                    {attendee}
+                                                </div>
+                                            ))
                                         )}
                                     </div>
-                                    <div className="shrink-0 w-full sm:w-auto">
-                                        {!isTooEarly && !hasEnded ? (
-                                            <Link 
-                                                href={meeting.meetingLink || `https://zoom.us/j/${meeting.zoomId?.replace(/\s/g, '')}`} 
-                                                target="_blank" 
-                                                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-white rounded-xl font-bold text-[15px] transition-all active:scale-95 group bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20"
-                                            >
-                                                <span>Join Meeting</span>
-                                                <LinkIcon size={18} weight="bold" className="group-hover:rotate-12 transition-transform" />
-                                            </Link>
-                                        ) : (
-                                            <div className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-200/80 text-gray-400 rounded-xl font-semibold text-[15px] cursor-not-allowed">
-                                                <span>{hasEnded ? "Meeting Ended" : (earlyStatusText || "Join Meeting")}</span>
-                                                <LinkIcon size={18} weight="bold" />
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                                <div className="bg-gray-50 rounded-2xl p-3 sm:p-4 flex items-center gap-3 sm:gap-4 overflow-hidden">
-                                    <div className="h-10 w-10 sm:h-12 sm:w-12 shrink-0 rounded-full bg-white shadow-sm flex items-center justify-center text-[#43C17A]">
-                                        <CalendarBlank size={22} weight="duotone" />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[11px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">Date</p>
-                                        <div className="text-[13px] sm:text-[14px] font-bold text-gray-800 break-words flex flex-col leading-snug">
-                                            <span>{new Date(meeting.date).toLocaleDateString('en-US', { weekday: 'long' })},</span>
-                                            <span className="text-gray-600 font-semibold">{new Date(meeting.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="bg-gray-50 rounded-2xl p-3 sm:p-4 flex items-center gap-3 sm:gap-4 overflow-hidden">
-                                    <div className="h-10 w-10 sm:h-12 sm:w-12 shrink-0 rounded-full bg-white shadow-sm flex items-center justify-center text-blue-500">
-                                        <Clock size={22} weight="duotone" />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[11px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">Time</p>
-                                        <div className="text-[13px] sm:text-[14px] font-bold text-gray-800 break-words flex flex-col leading-snug">
-                                            <span>{formatTime12h(meeting.startTime)}</span>
-                                            <span className="text-gray-500 text-[11px] sm:text-[12px]">to {formatTime12h(meeting.endTime)}</span>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
-
-                            <div className="flex flex-col sm:flex-row gap-5 sm:gap-6">
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                                        <User size={18} weight="fill" className="text-gray-400 shrink-0" />
-                                        <h3 className="text-xs sm:text-sm font-bold text-gray-700 uppercase tracking-wider break-words">Organizer</h3>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-tr from-[#43C17A] to-emerald-400 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                                            {meeting.organizer.charAt(0)}
-                                        </div>
-                                        <span className="text-[13px] sm:text-[14px] font-semibold text-gray-800 break-words">{meeting.organizer}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <hr className="border-gray-100" />
-
-                            <div>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Note size={18} weight="fill" className="text-gray-400" />
-                                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Agenda</h3>
-                                </div>
-                                <div className="bg-gray-50 rounded-2xl p-4 sm:p-5 text-[14px] text-gray-600 leading-relaxed border border-gray-100/50 break-words">
-                                    {meeting.agenda || "No agenda provided."}
-                                </div>
-                            </div>
-
-                            <div>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Users size={18} weight="fill" className="text-gray-400" />
-                                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Attendees</h3>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                    {meeting.attendees.map((attendee, idx) => (
-                                        <div key={idx} className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 shadow-sm flex items-center gap-2">
-                                            <div className="h-2 w-2 rounded-full bg-gray-300"></div>
-                                            {attendee}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
+                        )}
 
                     </motion.div>
                 </div>

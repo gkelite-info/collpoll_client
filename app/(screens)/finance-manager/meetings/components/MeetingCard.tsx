@@ -49,10 +49,35 @@ export default function MeetingCard({
   onEdit?: (meeting: number, sectionId: number | null) => void;
 }) {
   const t = useTranslations("Meetings.parent");
-  const [fromTime, toTime] = data.timeRange.split(" - ");
-  const formattedTimeRange = `${formatToAMPM(fromTime)} - ${formatToAMPM(toTime)}`;
+  const [fromTime, toTime] = (data.timeRange || "").split(" - ");
+  const formattedTimeRange = fromTime && toTime ? `${formatToAMPM(fromTime)} - ${formatToAMPM(toTime)}` : "TBA";
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isSectionMeeting = sectionMeetingRoles.includes(data.category);
+  
+  const isMeetingStartedOrPast = () => {
+    try {
+      if (!data.date || !fromTime) return false;
+      const startDateTime = new Date(`${data.date} ${fromTime}`);
+      return new Date().getTime() >= startDateTime.getTime();
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const joinStatus = (() => {
+    if (data.type === "previous") return "completed";
+    try {
+      if (!data.date || !fromTime || !toTime) return "upcoming";
+      const now = new Date().getTime();
+      const startDateTime = new Date(`${data.date} ${fromTime}`).getTime();
+      const endDateTime = new Date(`${data.date} ${toTime}`).getTime();
+      if (now > endDateTime) return "completed";
+      if (startDateTime - now <= 15 * 60 * 1000) return "active";
+      return "upcoming";
+    } catch {
+      return "upcoming";
+    }
+  })();
 
   return (
     <>
@@ -74,7 +99,7 @@ export default function MeetingCard({
             {data.date}
           </div>
 
-          {data.type === "upcoming" && role === "Finance" && (
+          {data.type === "upcoming" && role === "Finance" && !isMeetingStartedOrPast() && (
             <div className="flex gap-1.5 items-center justify-center max-md:hidden">
               <button
                 className="w-6 h-6 cursor-pointer flex items-center justify-center rounded-full bg-white"
@@ -145,19 +170,20 @@ export default function MeetingCard({
                 </div>
               </div>
               <button
-                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  data.type === "previous"
-                    ? "bg-[#CDCDCD] text-[#414141]"
-                    : "bg-[#16284F] text-white"
+                disabled={joinStatus !== "active"}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  joinStatus === "completed" || joinStatus === "upcoming"
+                    ? "bg-[#E9E9E9] text-[#7A7A7A] cursor-not-allowed"
+                    : "bg-[#16284F] text-white hover:bg-[#111e3b] cursor-pointer"
                 }`}
                 onClick={(e: MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation();
-                  if (data.type !== "previous") {
-                    window.open(data.meetingLink, "_blank");
+                  if (joinStatus === "active") {
+                    window.open(data.meetingLink, "_blank", "noopener,noreferrer");
                   }
                 }}
               >
-                {data.type === "previous" ? t("Completed") : t("Join Meeting")}
+                {joinStatus === "completed" ? t("Completed") : joinStatus === "upcoming" ? "Upcoming" : t("Join Meeting")}
               </button>
             </div>
           </div>
@@ -186,13 +212,20 @@ export default function MeetingCard({
                 </div>
               </div>
               <button
-                className="bg-[#16284F] text-white px-4 py-1.5 rounded-full text-xs font-semibold"
+                disabled={joinStatus !== "active"}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                  joinStatus === "completed" || joinStatus === "upcoming"
+                    ? "bg-[#E9E9E9] text-[#7A7A7A] cursor-not-allowed"
+                    : "bg-[#16284F] text-white hover:bg-[#111e3b] cursor-pointer"
+                }`}
                 onClick={(e: MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation();
-                  window.open(data.meetingLink, "_blank");
+                  if (joinStatus === "active") {
+                    window.open(data.meetingLink, "_blank", "noopener,noreferrer");
+                  }
                 }}
               >
-                {t("Join Meeting")}
+                {joinStatus === "completed" ? t("Completed") : joinStatus === "upcoming" ? "Upcoming" : t("Join Meeting")}
               </button>
             </div>
           </div>

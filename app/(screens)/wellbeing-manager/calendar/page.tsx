@@ -19,7 +19,7 @@ import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/
 import { Loader } from "../../(student)/calendar/right/timetable";
 import CalendarTabsClient from "@/app/(screens)/college-admin/calendar/CalendarTabsClient";
 import MeetingsClient from "@/app/utils/meetings/MeetingsClient";
-import { dummyMeetings } from "@/app/utils/meetings/meetingDummyData";
+
 
 const MOCK_EVENTS = [
   {
@@ -243,7 +243,7 @@ function LegacyWellbeingManagerCalendarPage() {
 export default function Page() {
   return (
     <CalendarTabsClient basePath="/wellbeing-manager">
-      <MeetingsClient initialMeetings={dummyMeetings} />
+      <MeetingsClient />
     </CalendarTabsClient>
   );
 }

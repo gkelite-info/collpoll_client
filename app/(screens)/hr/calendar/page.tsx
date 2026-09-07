@@ -23,7 +23,7 @@ import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/
 import { Loader } from "../../(student)/calendar/right/timetable";
 import CalendarTabsClient from "@/app/(screens)/college-admin/calendar/CalendarTabsClient";
 import MeetingsClient from "@/app/utils/meetings/MeetingsClient";
-import { dummyMeetings } from "@/app/utils/meetings/meetingDummyData";
+
 
 const convertTo24Hour = (time12h: string) => {
   const [time, modifier] = time12h.split(" ");
@@ -369,7 +369,7 @@ function FinanceCalendarPageContent() {
 export default function HrCalendarPage() {
   return (
     <CalendarTabsClient basePath="/hr">
-      <MeetingsClient initialMeetings={dummyMeetings} />
+      <MeetingsClient />
     </CalendarTabsClient>
   );
 }

@@ -27,7 +27,7 @@ import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/
 import { Loader } from "../../(student)/calendar/right/timetable";
 import CalendarTabsClient from "@/app/(screens)/college-admin/calendar/CalendarTabsClient";
 import MeetingsClient from "@/app/utils/meetings/MeetingsClient";
-import { dummyMeetings } from "@/app/utils/meetings/meetingDummyData";
+
 
 type ManagerCalendarEvent = {
   id: string;
@@ -490,7 +490,7 @@ function LegacyFinanceManagerCalendarPage() {
 export default function FinanceManagerCalendarPage() {
   return (
     <CalendarTabsClient basePath="/finance">
-      <MeetingsClient initialMeetings={dummyMeetings} />
+      <MeetingsClient />
     </CalendarTabsClient>
   );
 }

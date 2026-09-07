@@ -64,4 +64,20 @@ export const queryKeys = {
     grades: (studentId: string) => [...queryKeys.student.all, 'grades', studentId] as const,
     attendance: (studentId: string) => [...queryKeys.student.all, 'attendance', studentId] as const,
   },
+
+  // ---------------------------------------------------------
+  // MEETINGS DOMAIN
+  // ---------------------------------------------------------
+  meetings: {
+    all: ['meetings'] as const,
+    monthly: (collegeId: number, year: number, month: number) =>
+      [...queryKeys.meetings.all, 'monthly', collegeId, year, month] as const,
+    conflicts: (collegeId: number, date: string, from: string, to: string) =>
+      [...queryKeys.meetings.all, 'conflicts', collegeId, date, from, to] as const,
+    userMonthly: (userId: number, year: number, month: number) =>
+      [...queryKeys.meetings.all, 'user', userId, year, month] as const,
+  },
 };
+
+
+// touched for HMR
