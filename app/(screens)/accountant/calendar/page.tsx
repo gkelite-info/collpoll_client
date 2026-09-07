@@ -9,7 +9,7 @@ import {
 } from "./components/CalendarMeetingsScreen";
 import CalendarTabsClient from "@/app/(screens)/college-admin/calendar/CalendarTabsClient";
 import MeetingsClient from "@/app/utils/meetings/MeetingsClient";
-import { dummyMeetings } from "@/app/utils/meetings/meetingDummyData";
+
 
 function AccountantCalendarContent() {
   const router = useRouter();
@@ -83,7 +83,7 @@ function LegacyAccountantCalendarPage() {
 export default function AccountantCalendarPage() {
   return (
     <CalendarTabsClient basePath="/accountant">
-      <MeetingsClient initialMeetings={dummyMeetings} />
+      <MeetingsClient />
     </CalendarTabsClient>
   );
 }

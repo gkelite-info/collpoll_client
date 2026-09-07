@@ -16,7 +16,7 @@ import { fetchCollegeHolidays, CollegeHoliday } from "@/lib/helpers/Hr/holidays/
 import { Loader } from "../../(student)/calendar/right/timetable";
 import CalendarTabsClient from "@/app/(screens)/college-admin/calendar/CalendarTabsClient";
 import MeetingsClient from "@/app/utils/meetings/MeetingsClient";
-import { dummyMeetings } from "@/app/utils/meetings/meetingDummyData";
+
 
 const getWeekDays = (baseDate: Date): WeekDay[] => {
   const startOfWeek = new Date(baseDate);
@@ -205,7 +205,7 @@ function LegacyWellbeingExecutiveCalendarPage() {
 export default function CalendarPage() {
   return (
     <CalendarTabsClient basePath="/wellbeing-executive">
-      <MeetingsClient initialMeetings={dummyMeetings} />
+      <MeetingsClient />
     </CalendarTabsClient>
   );
 }
