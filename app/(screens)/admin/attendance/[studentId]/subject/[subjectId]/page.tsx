@@ -183,8 +183,9 @@ export default function SubjectDetailPage() {
                 ]}
                 value={facultyFilter}
                 onChange={(val) => {
-                  updateUrlParams({ faculty: val === "ALL" ? "" : val, page: "1" });
-                  setFacultyFilter(val as string);
+                  const faculty = String(val);
+                  updateUrlParams({ faculty: faculty === "ALL" ? "" : faculty, page: "1" });
+                  setFacultyFilter(faculty);
                   setCurrentPage(1);
                 }}
                 theme="always-green"
