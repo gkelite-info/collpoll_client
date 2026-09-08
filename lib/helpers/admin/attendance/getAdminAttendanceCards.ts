@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { resolveSchoolAttendanceSections } from "@/lib/helpers/faculty/attendance/resolveSchoolAttendanceSections";
 
 function getBranch(row: any) {
   return Array.isArray(row.collegeBranch)
@@ -286,6 +288,7 @@ export async function getAdminAcademicsCards(
       collegeSections,
       collegeAcademicYearId,
       collegeEducationId,
+      college_education(collegeEducationType),
       collegeAcademicYear:collegeAcademicYearId (
         collegeAcademicYear,
         collegeAcademicYearId
@@ -390,7 +393,12 @@ export async function getAdminAcademicsCards(
     if (p.profileUrl) profileMap.set(p.userId, p.profileUrl);
   });
 
-  const enrichedData = (data ?? []).map((row) => {
+  const enrichedData = await Promise.all((data ?? []).map(async (row) => {
+    const education = Array.isArray(row.college_education) ? row.college_education[0] : row.college_education;
+    if (isSchoolEducation(education?.collegeEducationType)) {
+      const schoolData = await getSchoolCardData(row.collegeSectionsId, subId);
+      return { ...row, ...schoolData, isSchoolCard: true };
+    }
     const stats = sectionStatsMap.get(row.collegeSectionsId);
 
     if (row.faculty_sections) {
@@ -412,7 +420,7 @@ export async function getAdminAcademicsCards(
       avgAttendance: stats?.avgAttendance || 0,
       belowThresholdCount: stats?.belowThresholdCount || 0,
     };
-  });
+  }));
 
   return {
     data: enrichedData,
@@ -420,7 +428,37 @@ export async function getAdminAcademicsCards(
   };
 }
 
-async function getBatchSectionStatsClient(sectionIds: number[]) {
+async function getSchoolCardData(sectionId: number, subjectId: number | null) {
+  const sectionIds = await resolveSchoolAttendanceSections(supabase, [sectionId]);
+  let facultyQuery = supabase.from("faculty_sections")
+    .select("facultyId, collegeSubjectId, collegeEducationId, collegeBranchId, faculty(facultyId, userId, fullName, email, collegeEducationId, collegeBranchId, deletedAt)")
+    .in("collegeSectionsId", sectionIds).eq("isActive", true).is("deletedAt", null);
+  if (subjectId) facultyQuery = facultyQuery.eq("collegeSubjectId", subjectId);
+  const [facultyResult, studentResult, stats] = await Promise.all([
+    facultyQuery,
+    supabase.from("student_academic_history")
+      .select("studentId, students!inner(isActive, deletedAt)")
+      .in("collegeSectionsId", sectionIds).eq("isCurrent", true).is("deletedAt", null)
+      .eq("students.isActive", true).is("students.deletedAt", null),
+    getBatchSectionStatsClient(sectionIds, sectionId),
+  ]);
+  if (facultyResult.error) throw facultyResult.error;
+  if (studentResult.error) throw studentResult.error;
+  const assignments = (facultyResult.data ?? []).filter(row => {
+    const faculty = Array.isArray(row.faculty) ? row.faculty[0] : row.faculty;
+    return faculty && faculty.deletedAt == null;
+  });
+  return {
+    faculty_sections: assignments,
+    studentCount: new Set((studentResult.data ?? []).map(row => row.studentId)).size,
+    facultyCount: new Set(assignments.map(row => row.facultyId)).size,
+    subjectCount: new Set(assignments.map(row => row.collegeSubjectId)).size,
+    avgAttendance: stats.get(sectionId)?.avgAttendance ?? 0,
+    belowThresholdCount: stats.get(sectionId)?.belowThresholdCount ?? 0,
+  };
+}
+
+async function getBatchSectionStatsClient(sectionIds: number[], schoolSectionId?: number) {
   if (sectionIds.length === 0) return new Map<number, { avgAttendance: number; belowThresholdCount: number }>();
 
   const { data: histories } = await supabase
@@ -436,11 +474,12 @@ async function getBatchSectionStatsClient(sectionIds: number[]) {
   const allStudentIds: number[] = [];
 
   histories.forEach((h) => {
-    if (!sectionStudentMap.has(h.collegeSectionsId)) {
-      sectionStudentMap.set(h.collegeSectionsId, []);
+    const sectionId = schoolSectionId ?? h.collegeSectionsId;
+    if (!sectionStudentMap.has(sectionId)) {
+      sectionStudentMap.set(sectionId, []);
     }
-    sectionStudentMap.get(h.collegeSectionsId)?.push(h.studentId);
-    allStudentIds.push(h.studentId);
+    if (!schoolSectionId || !sectionStudentMap.get(sectionId)!.includes(h.studentId)) sectionStudentMap.get(sectionId)!.push(h.studentId);
+    if (!schoolSectionId || !allStudentIds.includes(h.studentId)) allStudentIds.push(h.studentId);
   });
 
   if (allStudentIds.length === 0) return new Map();
@@ -490,7 +529,7 @@ async function getBatchSectionStatsClient(sectionIds: number[]) {
 
   const statsMap = new Map<number, { avgAttendance: number; belowThresholdCount: number }>();
 
-  sectionIds.forEach((secId) => {
+  (schoolSectionId ? [schoolSectionId] : sectionIds).forEach((secId) => {
     const students = sectionStudentMap.get(secId) || [];
     let sectionTotalPct = 0;
     let studentCountWithData = 0;
@@ -523,11 +562,11 @@ export function mapAcademicCards(data: any[]) {
     row.faculty_sections?.forEach((fs: any) => {
       const f = Array.isArray(fs.faculty) ? fs.faculty[0] : fs.faculty;
       
-      const eduId = f?.collegeEducationId ?? fs?.collegeEducationId;
+      const eduId = row.isSchoolCard ? fs?.collegeEducationId ?? f?.collegeEducationId : f?.collegeEducationId ?? fs?.collegeEducationId;
       const branchId = f?.collegeBranchId ?? fs?.collegeBranchId;
       
       if (eduId && row.collegeEducationId && eduId !== row.collegeEducationId) return;
-      if (branchId && row.collegeBranchId && branchId !== row.collegeBranchId) return;
+      if (!row.isSchoolCard && branchId && row.collegeBranchId && branchId !== row.collegeBranchId) return;
 
       if (f && f.facultyId && !uniqueFacultiesMap.has(f.facultyId)) {
         uniqueFacultiesMap.set(f.facultyId, {

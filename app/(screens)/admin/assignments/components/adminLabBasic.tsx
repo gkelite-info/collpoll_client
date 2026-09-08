@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
-import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import FacultyLabCard, {
   type LabManual,
 } from "@/app/(screens)/faculty/assignments/components/FacultyLabCard";
@@ -143,8 +143,7 @@ export default function AdminLabBasic() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { adminId, collegeId, collegeEducationId: defaultEducationId, collegeEducationType: defaultEducationType } = useAdmin();
-  const { isSchool } = useInstitutionTerminology();
+  const { adminId, collegeId, loading: adminLoading, collegeEducationId: defaultEducationId, collegeEducationType: defaultEducationType } = useAdmin();
   const action = searchParams.get("action");
   const branchIdParam = searchParams.get("branchId");
   const yearIdParam = searchParams.get("yearId");
@@ -195,6 +194,7 @@ export default function AdminLabBasic() {
 
   const currentEducationId = education?.collegeEducationId ?? defaultEducationId;
   const currentEducationType = education?.collegeEducationType ?? defaultEducationType;
+  const isSchool = isSchoolEducation(currentEducationType) || currentEducationType === "School" || currentEducationType === "Pre School";
 
   const [allSubjects, setAllSubjects] = useState<any[]>([]);
   const [allSections, setAllSections] = useState<any[]>([]);
@@ -281,6 +281,7 @@ export default function AdminLabBasic() {
   ];
 
   const handleSubjectChange = (val: string) => {
+    setCurrentPage(1);
     const params = new URLSearchParams(searchParams.toString());
     if (val === "All") {
       params.delete("subjectId");
@@ -288,12 +289,17 @@ export default function AdminLabBasic() {
       params.delete("branchId");
       params.delete("yearId");
       params.delete("dept");
-      params.delete("year");
+      if (!isSchool) params.delete("year");
       router.push(`${pathname}?${params.toString()}`);
     } else {
       const subj = allSubjects.find(s => String(s.collegeSubjectId) === val);
       if (subj) {
-        params.set("branchId", String(subj.collegeBranchId));
+        if (isSchool) {
+          params.delete("branchId");
+          params.delete("dept");
+        } else {
+          params.set("branchId", String(subj.collegeBranchId));
+        }
         params.set("yearId", String(subj.collegeAcademicYearId));
         const branchCode = Array.isArray(subj.college_branch) ? subj.college_branch[0]?.collegeBranchCode : subj.college_branch?.collegeBranchCode;
         const yearStr = Array.isArray(subj.college_academic_year) ? subj.college_academic_year[0]?.collegeAcademicYear : subj.college_academic_year?.collegeAcademicYear;
@@ -337,7 +343,7 @@ export default function AdminLabBasic() {
     if (
       !collegeId ||
       !currentEducationId ||
-      !branchIdParam ||
+      (!isSchool && !branchIdParam) ||
       !yearIdParam ||
       !subjectId
     ) {
@@ -349,7 +355,7 @@ export default function AdminLabBasic() {
       const response = await fetchLabManualsForStaff({
         collegeId,
         collegeEducationId: currentEducationId,
-        collegeBranchId: Number(branchIdParam),
+        collegeBranchId: isSchool ? undefined : Number(branchIdParam),
         collegeAcademicYearId: Number(yearIdParam),
         collegeSubjectId: Number(subjectId),
         collegeSectionsId: sectionIdParam ? Number(sectionIdParam) : undefined,
@@ -400,6 +406,7 @@ export default function AdminLabBasic() {
     yearIdParam,
     labSubjectSectionFilter,
     currentPage,
+    isSchool,
   ]);
 
   useEffect(() => {
@@ -410,7 +417,7 @@ export default function AdminLabBasic() {
 
     const loadBranchYearLabel = async () => {
       const [{ data: branch }, { data: academicYear }] = await Promise.all([
-        branchIdParam
+        !isSchool && branchIdParam
           ? supabase
               .from("college_branch")
               .select("collegeBranchCode")
@@ -433,7 +440,7 @@ export default function AdminLabBasic() {
     };
 
     loadBranchYearLabel();
-  }, [branchIdParam, yearIdParam]);
+  }, [branchIdParam, yearIdParam, isSchool]);
 
   const fetchTasks = async () => {
     if (!facultyId) {
@@ -555,7 +562,7 @@ export default function AdminLabBasic() {
   }, [collegeId, currentEducationId]);
 
   useEffect(() => {
-    if (!collegeId || !currentEducationId || branchIdParam) return;
+    if (!collegeId || !currentEducationId || (!isSchool && branchIdParam)) return;
 
     setDeptLoading(true);
     fetchAdminLabDepartments(
@@ -565,6 +572,7 @@ export default function AdminLabBasic() {
       yearFilter,
       deptPage,
       9,
+      isSchool,
     )
       .then((response) => {
         setDeptCards(response.data);
@@ -578,23 +586,25 @@ export default function AdminLabBasic() {
     branchFilter,
     yearFilter,
     deptPage,
+    isSchool,
   ]);
 
   useEffect(() => {
-    if (!collegeId || !branchIdParam || !yearIdParam || subjectId) return;
+    if (!collegeId || (!isSchool && !branchIdParam) || !yearIdParam || subjectId || !currentEducationId) return;
 
     setSubjectsLoading(true);
     fetchAdminLabSubjects(
       collegeId,
-      Number(branchIdParam),
+      isSchool ? null : Number(branchIdParam),
       Number(yearIdParam),
+      isSchool ? currentEducationId : undefined,
     )
       .then((cards) => {
         setSubjectCards(cards);
         setSubjectPage(1);
       })
       .finally(() => setSubjectsLoading(false));
-  }, [collegeId, branchIdParam, yearIdParam, subjectId]);
+  }, [collegeId, branchIdParam, yearIdParam, subjectId, isSchool, currentEducationId]);
 
   const paginatedSubjectCards = subjectCards.slice(
     (subjectPage - 1) * ITEMS_PER_PAGE,
@@ -663,6 +673,14 @@ export default function AdminLabBasic() {
     }
   };
 
+  if (adminLoading) {
+    return (
+      <div role="status" aria-label="Loading lab" className="flex min-h-[calc(100vh-100px)] w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#43C17A] border-t-transparent" />
+      </div>
+    );
+  }
+
   if (action === "createLab" || action === "editLab") {
     return (
       <div className="flex w-full gap-4 mt-2">
@@ -715,7 +733,7 @@ export default function AdminLabBasic() {
             }
           }}
         />
-        {!isSchool && (
+        {currentEducationType && !isSchool && (
           <CustomDropdown
             label={currentEducationType === "Inter" ? "Group" : "Branch"}
             value={branchFilter}
@@ -788,7 +806,7 @@ export default function AdminLabBasic() {
         />
       </div>
 
-      {!branchIdParam || !yearIdParam ? (
+      {(!isSchool && !branchIdParam) || !yearIdParam ? (
         <>
           <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto">
@@ -865,14 +883,15 @@ export default function AdminLabBasic() {
             )}
           </div>
           {!subjectsLoading && (
+            <div className="mt-auto pt-8">
             <Pagination
               currentPage={subjectPage}
               totalItems={subjectCards.length}
               itemsPerPage={ITEMS_PER_PAGE}
               onPageChange={setSubjectPage}
               alwaysShow
-              bgClassName="bg-transparent"
             />
+            </div>
           )}
         </div>
       ) : (
@@ -923,14 +942,15 @@ export default function AdminLabBasic() {
         </div>
 
         {!labsLoading && (
+          <div className="mt-auto pt-8">
           <Pagination
             currentPage={currentPage}
             totalItems={totalCount}
             itemsPerPage={ITEMS_PER_PAGE}
             onPageChange={setCurrentPage}
             alwaysShow
-            bgClassName="bg-transparent"
           />
+          </div>
         )}
       </div>
       <AdminLabRightPanel

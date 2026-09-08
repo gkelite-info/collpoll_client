@@ -112,6 +112,8 @@ export default function TaskPanel({
     hasNextPage: hasNextFacultyTasks,
     isFetchingNextPage: isFetchingNextFacultyTasks,
     isPending: isInfiniteFacultyPending,
+    isError: isInfiniteFacultyError,
+    refetch: refetchFacultyTasks,
   } = useInfiniteQuery({
     queryKey: ["facultyTasksInfinite", facultyId, collegeSubjectId, selectedDate],
     queryFn: async ({ pageParam = 1 }) => {
@@ -130,10 +132,10 @@ export default function TaskPanel({
   });
 
   useEffect(() => {
-    if (inView && hasNextFacultyTasks && !isFetchingNextFacultyTasks) {
+    if (inView && hasNextFacultyTasks && !isFetchingNextFacultyTasks && !isInfiniteFacultyError) {
       fetchNextFacultyTasks();
     }
-  }, [inView, hasNextFacultyTasks, isFetchingNextFacultyTasks, fetchNextFacultyTasks]);
+  }, [inView, hasNextFacultyTasks, isFetchingNextFacultyTasks, isInfiniteFacultyError, fetchNextFacultyTasks]);
 
   const infiniteFacultyTasks = (infiniteFacultyTasksData?.pages.flatMap(p => p.data) || []).map(t => ({
     facultyTaskId: t.facultyTaskId,
@@ -512,6 +514,13 @@ export default function TaskPanel({
               <TaskCardShimmer />
               <TaskCardShimmer />
             </>
+          ) : enableInfiniteScroll && role === "faculty" && isInfiniteFacultyError && tasksToShow.length === 0 ? (
+            <p role="alert" className="text-xs text-gray-500 text-center mt-10">
+              Unable to load tasks.{" "}
+              <button type="button" className="text-indigo-600 underline" onClick={() => refetchFacultyTasks()}>
+                Try again
+              </button>
+            </p>
           ) : tasksToShow.length === 0 ? (
             <p className="text-xs text-gray-400 text-center mt-10">
               {t("No tasks available")}

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/app/utils/supabase/server";
+import { resolveSchoolAttendanceSections } from "@/lib/helpers/faculty/attendance/resolveSchoolAttendanceSections";
 import { create } from "domain";
 
 // --- TYPES ---
@@ -286,6 +287,8 @@ export async function getStudentsForClass(
   }
 
   if (targetSectionIds.length === 0) return { data: [], totalCount: 0 };
+
+  targetSectionIds = await resolveSchoolAttendanceSections(supabase, targetSectionIds);
 
   const { data: history } = await supabase
     .from("student_academic_history")

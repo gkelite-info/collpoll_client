@@ -14,6 +14,7 @@ export async function fetchAdminLabDepartments(
   yearFilter: string = "All",
   page: number = 1,
   limit: number = 9,
+  isSchool: boolean = false,
 ) {
   let branchQuery = supabase
     .from("college_branch")
@@ -99,10 +100,13 @@ export async function fetchAdminLabDepartments(
   const results = [];
   let colorIndex = 0;
 
-  for (const branch of branches || []) {
+  const cardBranches = isSchool
+    ? [{ collegeBranchId: null, collegeBranchCode: "" }]
+    : branches || [];
+  for (const branch of cardBranches) {
     for (const year of years || []) {
       if (
-        year.collegeBranchId &&
+        !isSchool && year.collegeBranchId &&
         year.collegeBranchId !== branch.collegeBranchId
       ) {
         continue;
@@ -113,7 +117,7 @@ export async function fetchAdminLabDepartments(
         ?.filter(
           (assignment) =>
             assignment.collegeAcademicYearId === year.collegeAcademicYearId &&
-            assignment.collegeBranchId === branch.collegeBranchId,
+            (isSchool || assignment.collegeBranchId === branch.collegeBranchId),
         )
         .forEach((assignment: any) => {
           const assignedFaculty = Array.isArray(assignment.faculty)
@@ -129,7 +133,7 @@ export async function fetchAdminLabDepartments(
       const studentCount =
         history?.filter(
           (item) =>
-            studentBranchMap.get(item.studentId) === branch.collegeBranchId &&
+            (isSchool ? studentBranchMap.has(item.studentId) : studentBranchMap.get(item.studentId) === branch.collegeBranchId) &&
             item.collegeAcademicYearId === year.collegeAcademicYearId,
         ).length || 0;
 
@@ -140,7 +144,7 @@ export async function fetchAdminLabDepartments(
             : lab.college_subjects;
 
           return (
-            subject?.collegeBranchId === branch.collegeBranchId &&
+            (isSchool || subject?.collegeBranchId === branch.collegeBranchId) &&
             lab.collegeAcademicYearId === year.collegeAcademicYearId
           );
         }).length || 0;
@@ -151,7 +155,8 @@ export async function fetchAdminLabDepartments(
       results.push({
         branchId: branch.collegeBranchId,
         yearId: year.collegeAcademicYearId,
-        name: branch.collegeBranchCode,
+        name: isSchool ? year.collegeAcademicYear : branch.collegeBranchCode,
+        isSchool,
         year: year.collegeAcademicYear,
         facultyList: branchFaculty.map((item: any) => {
           const profile = item.users?.user_profile;
@@ -184,20 +189,26 @@ export async function fetchAdminLabDepartments(
 
 export async function fetchAdminLabSubjects(
   collegeId: number,
-  branchId: number,
+  branchId: number | null,
   yearId: number,
+  schoolEducationId?: number,
 ) {
+  let subjectsQuery = supabase
+    .from("college_subjects")
+    .select("collegeSubjectId, subjectName, subjectCode")
+    .eq("collegeId", collegeId)
+    .eq("collegeAcademicYearId", yearId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("subjectName", { ascending: true });
+  if (schoolEducationId) {
+    subjectsQuery = subjectsQuery.eq("collegeEducationId", schoolEducationId);
+  } else {
+    subjectsQuery = subjectsQuery.eq("collegeBranchId", branchId);
+  }
   const [{ data: subjects }, { data: facultyAssignments }, { data: labs }] =
     await Promise.all([
-      supabase
-        .from("college_subjects")
-        .select("collegeSubjectId, subjectName, subjectCode")
-        .eq("collegeId", collegeId)
-        .eq("collegeBranchId", branchId)
-        .eq("collegeAcademicYearId", yearId)
-        .eq("isActive", true)
-        .is("deletedAt", null)
-        .order("subjectName", { ascending: true }),
+      subjectsQuery,
       supabase
         .from("faculty_sections")
         .select(

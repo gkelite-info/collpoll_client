@@ -15,6 +15,7 @@ import SubjectDetailShimmer from "./shimmer";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useSearchParams, usePathname } from "next/navigation";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 
 type StudentAttendanceDetails = Awaited<
   ReturnType<typeof getStudentAttendanceDetails>
@@ -43,10 +44,12 @@ export default function SubjectDetailPage() {
   const urlFilter = (searchParams.get("filter") as "ALL" | "Present" | "Absent" | "Leave") || "ALL";
   const urlPage = parseInt(searchParams.get("page") || "1", 10);
   const urlLimit = parseInt(searchParams.get("limit") || "20", 10);
+  const urlFaculty = searchParams.get("faculty") || "ALL";
 
   const [filter, setFilter] = useState<"ALL" | "Present" | "Absent" | "Leave">(urlFilter);
   const [currentPage, setCurrentPage] = useState(urlPage);
   const [itemsPerPage, setItemsPerPage] = useState(urlLimit);
+  const [facultyFilter, setFacultyFilter] = useState(urlFaculty);
 
   useEffect(() => {
     if (urlFilter) setFilter(urlFilter);
@@ -64,8 +67,8 @@ export default function SubjectDetailPage() {
   };
 
   const { data: dataRaw, isLoading: attendanceLoading, isFetching: attendanceFetching } = useQuery({
-    queryKey: ["adminSubjectAttendance", studentId, subjectId, filter, currentPage, itemsPerPage],
-    queryFn: () => getSubjectAttendanceDetails(studentId as string, subjectId as string, filter, currentPage, itemsPerPage),
+    queryKey: ["adminSubjectAttendance", studentId, subjectId, filter, currentPage, itemsPerPage, facultyFilter],
+    queryFn: () => getSubjectAttendanceDetails(studentId as string, subjectId as string, filter, currentPage, itemsPerPage, facultyFilter),
     enabled: !!studentId && !!subjectId,
     placeholderData: keepPreviousData,
   });
@@ -172,9 +175,27 @@ export default function SubjectDetailPage() {
             <span className="text-[#64748B] font-medium uppercase tracking-wide text-xs">
               Faculty :
             </span>
-            <span className="bg-[#E6F4FF] text-[#007AFF] px-4 py-1 rounded-full font-medium">
-              {data.facultyName}
-            </span>
+            {data.allFaculties && data.allFaculties.length > 1 ? (
+              <CustomDropdown
+                options={[
+                  { label: "All Faculties", value: "ALL" },
+                  ...data.allFaculties.map((fac) => ({ label: fac, value: fac }))
+                ]}
+                value={facultyFilter}
+                onChange={(val) => {
+                  const faculty = String(val);
+                  updateUrlParams({ faculty: faculty === "ALL" ? "" : faculty, page: "1" });
+                  setFacultyFilter(faculty);
+                  setCurrentPage(1);
+                }}
+                theme="always-green"
+                widthClassName="w-[180px]"
+              />
+            ) : (
+              <span className="bg-[#E6F4FF] text-[#007AFF] px-4 py-1 rounded-full font-medium">
+                {data.facultyName}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3">

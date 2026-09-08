@@ -1,5 +1,24 @@
 import { supabase } from "@/lib/supabaseClient";
 
+export async function fetchSchoolYearSubjects(
+  collegeId: number,
+  educationId: number,
+  academicYearId: number,
+) {
+  const { data, error } = await supabase
+    .from("college_subjects")
+    .select("collegeSubjectId, subjectName")
+    .eq("collegeId", collegeId)
+    .eq("collegeEducationId", educationId)
+    .eq("collegeAcademicYearId", academicYearId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("subjectName", { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 /* =========================
    EDUCATION TYPES
 ========================= */

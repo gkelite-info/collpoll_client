@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { createQueryError } from "@/lib/helpers/queryError";
 
 export type FacultyTaskRow = {
   facultyTaskId: number;
@@ -212,11 +213,10 @@ export async function fetchFacultyTasksForLoggedInFaculty({
     query = query.eq("collegeSectionsId", collegeSectionId);
   }
 
-  const { data: facultyTaskData, error: facultyTaskError, count } = await query.range(from, to);
+  const { data: facultyTaskData, error: facultyTaskError, count, status, statusText } = await query.range(from, to);
 
   if (facultyTaskError) {
-    console.error("fetchFacultyTasksForLoggedInFaculty error:", facultyTaskError);
-    throw facultyTaskError;
+    throw createQueryError("fetchFacultyTasksForLoggedInFaculty", facultyTaskError, status, statusText);
   }
 
   return {

@@ -1,15 +1,16 @@
 import { supabase } from "@/lib/supabaseClient";
+import { createQueryError } from "@/lib/helpers/queryError";
 
 export async function getUnreadNotificationCount(userId: number) {
-  const { count, error } = await supabase
+  const { count, error, status, statusText } = await supabase
     .from("notifications")
-    .select("*", { count: "exact", head: true })
+    .select("userId", { count: "exact" })
     .eq("userId", userId)
-    .eq("isRead", false);
+    .eq("isRead", false)
+    .limit(1);
 
   if (error) {
-    console.error("getUnreadNotificationCount error:", error);
-    return 0;
+    throw createQueryError("getUnreadNotificationCount", error, status, statusText);
   }
 
   return count ?? 0;

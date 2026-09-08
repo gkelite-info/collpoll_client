@@ -48,7 +48,8 @@ export async function getSubjectAttendanceDetails(
   subjectIdStr: string,
   filter: "ALL" | "Present" | "Absent" | "Leave" = "ALL",
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
+  facultyFilter: string = "ALL"
 ) {
   const supabase = await createClient();
   const studentId = parseInt(studentIdStr);
@@ -82,34 +83,32 @@ export async function getSubjectAttendanceDetails(
   let absent = 0;
   let leave = 0;
 
-  const facultyNames = new Map<string, number>();
+  const facultyNames = new Set<string>();
 
   const allStatuses = [...(singleStatusRes.data || []), ...(bulkStatusRes.data || [])];
   allStatuses.forEach((r) => {
-    if (["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
-      totalClasses++;
-      if (r.status === "PRESENT" || r.status === "LATE") attended++;
-      if (r.status === "ABSENT") absent++;
-      if (r.status === "LEAVE") leave++;
-    }
-
     const rAny = r as any;
     const eventObj = r.calendarEventId ? rAny.event : rAny.bulk_event;
     const e = safeGet(eventObj);
     const fac = safeGet(e?.faculty);
     const user = safeGet((fac as any)?.users);
     const fname = user?.fullName || "Unknown Faculty";
-    facultyNames.set(fname, (facultyNames.get(fname) || 0) + 1);
-  });
+    facultyNames.add(fname);
 
-  let topFaculty = "Unknown Faculty";
-  let maxCount = -1;
-  facultyNames.forEach((count, name) => {
-    if (count > maxCount) {
-      maxCount = count;
-      topFaculty = name;
+    if (facultyFilter && facultyFilter !== "ALL" && fname !== facultyFilter) {
+      return;
+    }
+
+    if (["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
+      totalClasses++;
+      if (r.status === "PRESENT" || r.status === "LATE") attended++;
+      if (r.status === "ABSENT") absent++;
+      if (r.status === "LEAVE") leave++;
     }
   });
+
+  const allFaculties = Array.from(facultyNames);
+  let topFaculty = allFaculties.length > 0 ? allFaculties[0] : "Unknown Faculty";
 
   const pctString = calculateAttendancePercentage(attended, totalClasses);
 
@@ -184,7 +183,7 @@ export async function getSubjectAttendanceDetails(
     };
   }
 
-  const formattedRecords = (records as AttendanceRecordRow[]).map((r) => {
+  let formattedRecords = (records as AttendanceRecordRow[]).map((r) => {
     const rAny = r as any;
     const eventObj = r.calendarEventId ? rAny.event : rAny.bulk_event;
 
@@ -229,6 +228,10 @@ export async function getSubjectAttendanceDetails(
     };
   });
 
+  if (facultyFilter && facultyFilter !== "ALL") {
+    formattedRecords = formattedRecords.filter((r) => r.faculty === facultyFilter);
+  }
+
   const totalCount = formattedRecords.length;
   const from = (page - 1) * limit;
   const to = from + limit;
@@ -237,6 +240,7 @@ export async function getSubjectAttendanceDetails(
   return {
     subjectName,
     facultyName: topFaculty,
+    allFaculties,
     summary: {
       totalClasses,
       attended,

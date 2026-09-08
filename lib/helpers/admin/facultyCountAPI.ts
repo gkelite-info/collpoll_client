@@ -150,7 +150,8 @@ export async function fetchSubjectFacultyList(
     collegeAcademicYearId: number, 
     collegeBranchId: number | null,
     page: number = 1,
-    limit: number = 9
+    limit: number = 9,
+    schoolEducationId?: number
 ): Promise<{ data: any[], total: number }> {
     try {
         let query = supabase
@@ -160,14 +161,16 @@ export async function fetchSubjectFacultyList(
                 collegeSubjectId,
                 facultyId,
                 college_sections!inner (
-                    collegeBranchId
+                    collegeBranchId, collegeEducationId
                 )
             `)
             .eq("collegeAcademicYearId", collegeAcademicYearId)
             .eq("isActive", true)
             .is("deletedAt", null);
 
-        if (collegeBranchId !== null) {
+        if (schoolEducationId) {
+            query = query.eq("college_sections.collegeEducationId", schoolEducationId);
+        } else if (collegeBranchId !== null) {
             query = query.eq("college_sections.collegeBranchId", collegeBranchId);
         } else {
             query = query.is("college_sections.collegeBranchId", null);

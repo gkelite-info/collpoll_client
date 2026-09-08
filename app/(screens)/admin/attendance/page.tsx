@@ -18,6 +18,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import toast from "react-hot-toast";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { useAcademicFilters } from "@/lib/helpers/admin/academics/useAcademicFilters";
+import { fetchSchoolYearSubjects } from "@/lib/helpers/admin/academics/academicDropdowns";
 import {
   getAdminAcademicsCards,
   mapAcademicCards,
@@ -106,7 +107,7 @@ const AttendancePage = () => {
     branches,
     years,
     sections,
-    subjects,
+    subjects: assignedSubjects,
     education,
     branch,
     year,
@@ -129,6 +130,13 @@ const AttendancePage = () => {
 
   const currentEducationId =
     education?.collegeEducationId ?? defaultEduId ?? null;
+
+  const { data: schoolSubjects = [], isLoading: schoolSubjectsLoading } = useQuery({
+    queryKey: ["adminAttendanceSchoolSubjects", collegeId, currentEducationId, year?.collegeAcademicYearId],
+    queryFn: () => fetchSchoolYearSubjects(collegeId!, currentEducationId!, year.collegeAcademicYearId),
+    enabled: isSchool && !!collegeId && !!currentEducationId && !!year,
+  });
+  const subjects = isSchool ? schoolSubjects : assignedSubjects;
 
   const apiFilters = {
     educationId: currentEducationId,
@@ -399,8 +407,12 @@ const AttendancePage = () => {
             ]}
             onChange={(val) => {
               if (val === "All") {
-                setSection(null);
-                setSubject(null);
+                if (isSchool) {
+                  selectYear(null);
+                } else {
+                  setSection(null);
+                  setSubject(null);
+                }
                 return;
               }
               const yr = years.find((y) => y.collegeAcademicYearId === +val);
@@ -444,10 +456,10 @@ const AttendancePage = () => {
 
           <FilterDropdown
             label="Subject"
-            isLoading={adminLoading}
+            isLoading={adminLoading || (isSchool && schoolSubjectsLoading)}
             widthClassName="flex-1 min-w-0 md:min-w-[110px]"
             value={subject?.collegeSubjectId?.toString() ?? "All"}
-            disabled={!section}
+            disabled={isSchool ? !year || schoolSubjectsLoading : !section}
             placeholder="Select Subject"
             options={[
               "All",
@@ -488,6 +500,7 @@ const AttendancePage = () => {
 
               return (
                 <FacultyAttendanceCard
+                  showFacultyTooltip={isSchool}
                   key={dept.id}
                   avgAttendance={dept.avgAttendance || 0}
                   belowThresholdCount={dept.belowThresholdCount || 0}

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/app/utils/supabase/server";
 import { calculateAttendancePercentage } from "@/lib/helpers/attendance/attendancePolicyMessage";
+import { resolveSchoolAttendanceSections } from "./resolveSchoolAttendanceSections";
 import { saveFacultyClassSession } from "../facultyClassSessionsAPI";
 import {
   activateDeviceSessionForClass,
@@ -285,6 +286,8 @@ export async function getStudentsForClass(
   }
 
   if (targetSectionIds.length === 0) return { data: [], total: 0 };
+
+  targetSectionIds = await resolveSchoolAttendanceSections(supabase, targetSectionIds);
 
   const { data: history } = await supabase
     .from("student_academic_history")

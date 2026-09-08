@@ -97,7 +97,7 @@ export default function AdminDiscussionList({
   };
 
   return (
-    <div className="w-full h-full flex flex-col mx-auto">
+    <div className="w-full flex flex-col mx-auto">
       <div className="flex items-center gap-1 mb-6 hover:text-gray-600 transition-colors">
         <CaretLeft
           size={24}
@@ -187,7 +187,6 @@ export default function AdminDiscussionList({
           itemsPerPage={ITEMS_PER_PAGE}
           onPageChange={setCurrentPage}
           alwaysShow
-          bgClassName="bg-transparent border-t border-gray-200"
         />
       )}
     </div>
