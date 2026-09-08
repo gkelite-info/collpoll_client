@@ -24,6 +24,8 @@ import { AssignmentPageShimmer } from "./components/shimmers/AssignmentPageShimm
 import { Pagination } from "../academic-setup/components/pagination";
 import { CustomDropdown } from "@/app/components/CustomDropdown";
 
+let hasHandledReload = false;
+
 const AssignmentPage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -35,6 +37,12 @@ const AssignmentPage = () => {
   );
   const [yearFilter, setYearFilter] = useState(
     searchParams.get("classYear") || "All",
+  );
+  const [subjectFilter, setSubjectFilter] = useState(
+    searchParams.get("subject") || "All",
+  );
+  const [sectionFilter, setSectionFilter] = useState(
+    searchParams.get("section") || "All",
   );
   const savedPage = Number(searchParams.get("assignmentsPage"));
   const [currentPage, setCurrentPage] = useState(
@@ -49,6 +57,8 @@ const AssignmentPage = () => {
   const [totalRecords, setTotalRecords] = useState(0);
   const [uniqueDepts, setUniqueDepts] = useState<string[]>(["All"]);
   const [uniqueYears, setUniqueYears] = useState<string[]>(["All"]);
+  const [uniqueSubjects, setUniqueSubjects] = useState<string[]>(["All"]);
+  const [uniqueSections, setUniqueSections] = useState<string[]>(["All"]);
   const cardsPerPage = 9;
   const { userId } = useUser();
 
@@ -100,11 +110,33 @@ const AssignmentPage = () => {
   }, [search]);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && !hasHandledReload) {
+      hasHandledReload = true;
+      const navEntries = window.performance.getEntriesByType("navigation");
+      if (navEntries.length > 0) {
+        const navType = (navEntries[0] as PerformanceNavigationTiming).type;
+        if (navType === "reload") {
+          setSearch("");
+          setDeptFilter("All");
+          setYearFilter("All");
+          setSubjectFilter("All");
+          setSectionFilter("All");
+          setCurrentPage(1);
+          setEducationFilter("All");
+          router.replace("/admin/assignments", { scroll: false });
+        }
+      }
+    }
+  }, [router]);
+
+  useEffect(() => {
     const query = new URLSearchParams();
     if (activeTab !== "assignments") query.set("tab", activeTab);
     if (educationFilter !== "All") query.set("education", educationFilter);
     if (deptFilter !== "All") query.set("branch", deptFilter);
     if (yearFilter !== "All") query.set("classYear", yearFilter);
+    if (subjectFilter !== "All") query.set("subject", subjectFilter);
+    if (sectionFilter !== "All") query.set("section", sectionFilter);
     if (debouncedSearch) query.set("search", debouncedSearch);
     if (currentPage > 1) query.set("assignmentsPage", currentPage.toString());
 
@@ -113,7 +145,7 @@ const AssignmentPage = () => {
       queryString ? `/admin/assignments?${queryString}` : "/admin/assignments",
       { scroll: false },
     );
-  }, [activeTab, educationFilter, deptFilter, yearFilter, debouncedSearch, currentPage, router]);
+  }, [activeTab, educationFilter, deptFilter, yearFilter, subjectFilter, sectionFilter, debouncedSearch, currentPage, router]);
 
   useEffect(() => {
     if (!userId || !collegeId || educations.length === 0) return;
@@ -124,45 +156,51 @@ const AssignmentPage = () => {
         setLoading(true);
         if (!isMounted) return;
 
-        const res =
-          educationFilter === "All"
-            ? await fetchAdminAllEducationStats(
-                collegeId,
-                educations.map((education) => education.collegeEducationId),
-                currentPage,
-                cardsPerPage,
-                debouncedSearch,
-                deptFilter,
-                yearFilter,
-              )
-            : await fetchAdminDepartmentStats(
-                collegeId,
-                currentEducationId!,
-                currentPage,
-                cardsPerPage,
-                debouncedSearch,
-                deptFilter,
-                yearFilter,
-              );
+          const res =
+            educationFilter === "All"
+              ? await fetchAdminAllEducationStats(
+                  collegeId,
+                  educations.map((education) => education.collegeEducationId),
+                  currentPage,
+                  cardsPerPage,
+                  debouncedSearch,
+                  deptFilter,
+                  yearFilter,
+                  subjectFilter,
+                  sectionFilter
+                )
+              : await fetchAdminDepartmentStats(
+                  collegeId,
+                  currentEducationId!,
+                  currentPage,
+                  cardsPerPage,
+                  debouncedSearch,
+                  deptFilter,
+                  yearFilter,
+                  subjectFilter,
+                  sectionFilter
+                );
 
-        if (isMounted) {
-          setDataList(res.data || []);
-          setTotalRecords(res.totalCount || 0);
+          if (isMounted) {
+            setDataList(res.data || []);
+            setTotalRecords(res.totalCount || 0);
 
-          if (res.uniqueDepts) setUniqueDepts(res.uniqueDepts);
-          if (res.uniqueYears) setUniqueYears(res.uniqueYears);
+            if (res.uniqueDepts) setUniqueDepts(res.uniqueDepts);
+            if (res.uniqueYears) setUniqueYears(res.uniqueYears);
+            if (res.uniqueSubjects) setUniqueSubjects(res.uniqueSubjects);
+            if (res.uniqueSections) setUniqueSections(res.uniqueSections);
+          }
+        } catch (err) {
+          console.error(err);
+        } finally {
+          if (isMounted) {
+            setLoading(false);
+          }
         }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-    loadData();
-    return () => { isMounted = false; };
-  }, [userId, currentPage, debouncedSearch, deptFilter, yearFilter, currentEducationId, collegeId, educationFilter, educations]);
+      };
+      loadData();
+      return () => { isMounted = false; };
+    }, [userId, currentPage, debouncedSearch, deptFilter, yearFilter, subjectFilter, sectionFilter, currentEducationId, collegeId, educationFilter, educations]);
 
   const totalPages = Math.ceil(totalRecords / cardsPerPage);
 
@@ -210,7 +248,7 @@ const AssignmentPage = () => {
           />
         </div>
 
-        <div className="flex w-full flex-wrap items-end gap-4">
+        <div className="flex w-full flex-nowrap overflow-x-auto items-end gap-4 pb-2" style={{ scrollbarWidth: "thin" }}>
           <CustomDropdown
             label="Education Type"
             value={educationFilter}
@@ -246,13 +284,37 @@ const AssignmentPage = () => {
           )}
 
           <CustomDropdown
-            label={isSchoolContext ? "Class" : "Year"}
+            label="Year"
             value={yearFilter}
             onChange={(value) => {
               setYearFilter(String(value));
               setCurrentPage(1);
             }}
             options={uniqueYears.map((value) => ({ label: value, value }))}
+            theme="green"
+            widthClassName="w-[160px]"
+          />
+
+          <CustomDropdown
+            label="Subject"
+            value={subjectFilter}
+            onChange={(value) => {
+              setSubjectFilter(String(value));
+              setCurrentPage(1);
+            }}
+            options={uniqueSubjects.map((value) => ({ label: value, value }))}
+            theme="green"
+            widthClassName="w-[160px]"
+          />
+
+          <CustomDropdown
+            label="Section"
+            value={sectionFilter}
+            onChange={(value) => {
+              setSectionFilter(String(value));
+              setCurrentPage(1);
+            }}
+            options={uniqueSections.map((value) => ({ label: value, value }))}
             theme="green"
             widthClassName="w-[160px]"
           />

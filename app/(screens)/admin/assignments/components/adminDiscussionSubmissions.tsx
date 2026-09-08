@@ -116,7 +116,7 @@ export default function AdminDiscussionSubmissions({
   };
 
   return (
-    <div className="flex flex-col mx-auto h-full pb-10 w-full">
+    <div className="flex flex-col mx-auto pb-10 w-full">
       <div className="flex items-center gap-1 mb-5 text-[#282828] hover:text-black transition-colors">
         <CaretLeft
           size={24}
@@ -257,15 +257,16 @@ export default function AdminDiscussionSubmissions({
         </div>
       )}
 
-      {!loading && !error && submissions.length > 0 && (
+      {!loading && !error && (
+        <div className="mt-8">
         <Pagination
           currentPage={currentPage}
           totalItems={submissions.length}
           itemsPerPage={ITEMS_PER_PAGE}
           onPageChange={setCurrentPage}
           alwaysShow
-          bgClassName="bg-transparent border-t border-gray-200"
         />
+        </div>
       )}
 
       {isModalOpen && (

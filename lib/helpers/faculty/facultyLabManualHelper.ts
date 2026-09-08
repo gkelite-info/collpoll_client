@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { resolveSchoolAttendanceSections } from "@/lib/helpers/faculty/attendance/resolveSchoolAttendanceSections";
 
 export type LabManualRow = {
     labManualId: number;
@@ -152,7 +153,12 @@ export async function fetchLabManualsForStaff(params: {
     }
 
     if (params.collegeSectionsId) {
-        query = query.eq("collegeSectionsId", params.collegeSectionsId);
+        // Older school manuals can reference a retired ID for the same class section.
+        // The resolver preserves exact section IDs for college education.
+        const sectionIds = await resolveSchoolAttendanceSections(supabase, [params.collegeSectionsId]);
+        query = sectionIds.length > 1
+            ? query.in("collegeSectionsId", sectionIds)
+            : query.eq("collegeSectionsId", params.collegeSectionsId);
     }
 
     const { data: facultyLabManual, error: faculty_lab_manualsError, count } = await query

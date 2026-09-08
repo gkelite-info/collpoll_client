@@ -112,7 +112,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 const inflightStatsCache = new Map<string, Promise<any>>();
 
-export async function fetchAdminDepartmentStats(
+export async function fetchAdminDiscussionStats(
   collegeId: number,
   collegeEducationId: number,
   page: number = 1,
@@ -138,7 +138,7 @@ export async function fetchAdminDepartmentStats(
   return promise;
 }
 
-export async function fetchAdminAllEducationStats(
+export async function fetchAdminAllDiscussionStats(
   collegeId: number,
   collegeEducationIds: number[],
   page: number = 1,
@@ -163,7 +163,7 @@ export async function fetchAdminAllEducationStats(
 
   const results = await Promise.all(
     collegeEducationIds.map(async (educationId) => {
-      const result = await fetchAdminDepartmentStats(
+      const result = await fetchAdminDiscussionStats(
         collegeId,
         educationId,
         1,
@@ -331,6 +331,7 @@ async function executeFetch(
           subjectNames: new Set<string>(),
           sectionNames: new Set<string>(),
           studentCount: studentCountsByYear.get(y.collegeAcademicYearId) || 0,
+          yearId: y.collegeAcademicYearId,
         });
       });
     } else {
@@ -349,6 +350,7 @@ async function executeFetch(
             subjectNames: new Set<string>(),
             sectionNames: new Set<string>(),
             studentCount: count,
+            yearId: y.collegeAcademicYearId,
           });
         });
       });
@@ -472,16 +474,35 @@ async function executeFetch(
       });
     });
 
-    const [assignmentsRes, profilesRes] = await Promise.all([
+    const today = new Date().toISOString().split("T")[0];
+    const [discussionsRes, profilesRes] = await Promise.all([
       subjectIdsToFetch.length > 0
-        ? supabase.from("assignments").select("subjectId").eq("status", "Active").eq("is_deleted", false).in("subjectId", subjectIdsToFetch)
+        ? supabase.from("discussion_forum_sections")
+          .select("discussionId, collegeSectionsId, discussion_forum!inner(isActive, is_deleted, deadline), college_sections!inner(collegeBranchId, collegeAcademicYearId)")
+          .eq("discussion_forum.isActive", true)
+          .eq("discussion_forum.is_deleted", false)
+          .gte("discussion_forum.deadline", today)
+          .eq("isActive", true)
+          .eq("is_deleted", false)
         : Promise.resolve({ data: [] }),
       facultyUserIds.size > 0
         ? supabase.from("user_profile").select("userId, profileUrl").in("userId", Array.from(facultyUserIds))
         : Promise.resolve({ data: [] })
     ]);
 
-    const activeAssignments = new Set(assignmentsRes.data?.map((a) => a.subjectId));
+    // We only care about active discussion counts per branch/year (or school/year)
+    // Actually, discussion_forums are not tied to subjectId directly! They are tied to collegeSectionsId.
+    // If the filters include Subject or Section, we already filtered the groups!
+    // But wait, the card needs "Active Discussions" count. 
+    // We should compute how many discussions belong to the current group's sections.
+    const activeDiscussionsByGroup = new Map<string, number>();
+    
+    discussionsRes.data?.forEach((d: any) => {
+      const branchId = d.college_sections?.collegeBranchId;
+      const yearId = d.college_sections?.collegeAcademicYearId;
+      const key = isSchool ? `School-${yearId}` : `${branchId}-${yearId}`;
+      activeDiscussionsByGroup.set(key, (activeDiscussionsByGroup.get(key) || 0) + 1);
+    });
 
     const profileMap = new Map<number, string>();
     profilesRes.data?.forEach((p: any) => {
@@ -490,8 +511,7 @@ async function executeFetch(
 
     // 9. Map final results
     const result = paginatedGroups.map((g) => {
-      const subIds = Array.from(g.subjectIds) as number[];
-      const activeSubjectsCount = subIds.filter(id => activeAssignments.has(id)).length;
+      const discussionCount = activeDiscussionsByGroup.get(isSchool ? `School-${g.yearId}` : `${g.branchId}-${g.yearId}`) || 0;
 
       const uniqueFaculty = Array.from(g.facultyMap.values()).map((f: any) => {
         return {
@@ -505,9 +525,11 @@ async function executeFetch(
         name: g.name,
         deptCode: g.deptCode,
         year: g.year,
+        yearId: g.yearId,
+        branchId: g.branchId,
         ...getDeptColor(g.name),
         totalStudents: g.studentCount,
-        activeSubjects: activeSubjectsCount,
+        activeSubjects: discussionCount,
         issuesRaised: 0,
         facultyCount: uniqueFaculty.length,
         facultyList: uniqueFaculty,

@@ -216,9 +216,6 @@ export default function SubjectWiseAttendance({
                 <tr key={index} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 text-sm text-[#333333] font-semibold">
                     {row.subjectName}
-                    <div className="text-[10px] text-gray-400 font-normal">
-                      {row.subjectCode}
-                    </div>
                   </td>
 
                   <td className="px-4 py-3 text-sm text-[#666666]">

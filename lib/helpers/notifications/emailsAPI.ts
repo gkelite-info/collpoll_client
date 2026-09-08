@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { createQueryError } from "@/lib/helpers/queryError";
 
 export async function getUserEmails(userId: number, userEmail: string) {
   const { data, error } = await supabase
@@ -15,17 +16,17 @@ export async function getUserEmails(userId: number, userEmail: string) {
 }
 
 export async function getUnreadEmailCount(userId: number, userEmail: string) {
-  const { count, error } = await supabase
+  const { count, error, status, statusText } = await supabase
     .from("email_queue")
-    .select("*", { count: "exact", head: true })
+    .select("userId", { count: "exact" })
     .eq("userId", userId)
     .eq("isRead", false)
     .not("senderName", "is", null)
-    .neq("senderAddress", userEmail);
+    .neq("senderAddress", userEmail)
+    .limit(1);
 
   if (error) {
-    console.error("getUnreadEmailCount error:", error);
-    return 0;
+    throw createQueryError("getUnreadEmailCount", error, status, statusText);
   }
   return count ?? 0;
 }

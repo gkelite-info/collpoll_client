@@ -1,14 +1,17 @@
 'use client';
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
-export default function TabNavigation() {
+export default function TabNavigation({ educationType }: { educationType?: string } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "assignments";
   const { collegeEducationType } = useAdmin();
+  const currentEducationType = educationType ?? collegeEducationType;
+  const isSchool = isSchoolEducation(currentEducationType) || currentEducationType === "School" || currentEducationType === "Pre School";
 
   const handleTabChange = (tab: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -20,6 +23,16 @@ export default function TabNavigation() {
     params.delete("subjectId");
     params.delete("discussionView");
     params.delete("labId");
+
+    // Reset assignment filters
+    params.delete("education");
+    params.delete("branch");
+    params.delete("classYear");
+    params.delete("subject");
+    params.delete("section");
+    params.delete("search");
+    params.delete("assignmentsPage");
+
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -70,7 +83,9 @@ export default function TabNavigation() {
         <p className="text-[#282828] text-sm">
           {activeTab === "assignments" && "Track subjects, faculty who created assignments, raised issues, and submission progress."}
           {activeTab === "quiz" && "Monitor and manage quizzes across all departments."}
-          {activeTab === "discussion" && `Manage project discussions and forums across all ${!(collegeEducationType === "Inter") ? "branches." : "groups."}`}
+          {activeTab === "discussion" && (currentEducationType
+            ? `Manage project discussions and forums across all ${isSchool ? "years." : currentEducationType === "Inter" ? "groups." : "branches."}`
+            : "Manage project discussions and forums.")}
           {activeTab === "lab" && "Upload and manage lab manuals across subjects and sections."}
         </p>
       </div>

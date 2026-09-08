@@ -1,6 +1,6 @@
 import { Avatar } from "@/app/utils/Avatar";
 import { CaretDown, UserCircle } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export interface Department {
   facultyName?: string;
@@ -31,12 +31,18 @@ const AssignmentCard = ({
   collegeEducationId,
 }: Department) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleViewDetails = () => {
     const query = new URLSearchParams({ year });
     if (collegeEducationId) {
       query.set("educationId", collegeEducationId.toString());
     }
+    const subject = searchParams.get("subject");
+    const section = searchParams.get("section");
+    if (subject && subject !== "All") query.set("subject", subject);
+    if (section && section !== "All") query.set("section", section);
+
     router.push(`/admin/assignments/${encodeURIComponent(name)}?${query.toString()}`);
   };
 

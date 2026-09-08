@@ -19,6 +19,7 @@ import {
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { fetchAcademicYearOptionsForAdmin } from "@/lib/helpers/admin/collegeAcademicYearAPI";
 import { fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns";
+import { fetchAdminDiscussionStats } from "@/lib/helpers/admin/assignments/fetchAdminDiscussionStats";
 import { DiscussionDeptCardSkeleton } from "./shimmers/DiscussionDeptCardSkeleton";
 import { getBranchTheme } from "../utils/palette";
 import {
@@ -41,6 +42,7 @@ import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcem
 import { useUser } from "@/app/utils/context/UserContext";
 import toast from "react-hot-toast";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 const ITEMS_PER_PAGE = 6;
 const emptySubscribe = () => () => {};
@@ -99,7 +101,7 @@ export default function DiscussionForumBasic({
   const subjectId = searchParams.get("subjectId");
   const action = searchParams.get("action");
   const discussionId = searchParams.get("discussionId");
-  const { userId, collegeEducationId: defaultEducationId, collegeEducationType: defaultEducationType } = useAdmin();
+  const { userId, loading: adminLoading, collegeEducationId: defaultEducationId, collegeEducationType: defaultEducationType } = useAdmin();
 
   const facultyIdFromUrl = searchParams.get("facultyId");
   const facultyId =
@@ -144,11 +146,75 @@ export default function DiscussionForumBasic({
   const [departmentPage, setDepartmentPage] = useState(1);
   const [coursePage, setCoursePage] = useState(1);
 
+  const [schoolDataList, setSchoolDataList] = useState<any[]>([]);
+  const [schoolUniqueYears, setSchoolUniqueYears] = useState<string[]>(["All"]);
+  const [schoolUniqueSubjects, setSchoolUniqueSubjects] = useState<string[]>(["All"]);
+  const [schoolUniqueSections, setSchoolUniqueSections] = useState<string[]>(["All"]);
+  const [schoolTotalRecords, setSchoolTotalRecords] = useState(0);
+  const [schoolLoading, setSchoolLoading] = useState(false);
+  const [subjectFilter, setSubjectFilter] = useState(searchParams.get("subject") || "All");
+  const [sectionFilter, setSectionFilter] = useState(searchParams.get("section") || "All");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const isSchoolContext = isSchoolEducation(currentEducationType) || currentEducationType === "School" || currentEducationType === "Pre School";
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadSchoolData = async () => {
+      if (!isSchoolContext || !userId || !collegeId || !currentEducationId) return;
+      try {
+        setSchoolLoading(true);
+        const res = await fetchAdminDiscussionStats(
+          collegeId,
+          currentEducationId,
+          departmentPage,
+          ITEMS_PER_PAGE,
+          debouncedSearch,
+          "All", // branch
+          yearFilter,
+          subjectFilter,
+          sectionFilter
+        );
+        if (isMounted) {
+          setSchoolDataList(res.data || []);
+          setSchoolTotalRecords(res.totalCount || 0);
+          if (res.uniqueYears) setSchoolUniqueYears(res.uniqueYears);
+          if (res.uniqueSubjects) setSchoolUniqueSubjects(res.uniqueSubjects);
+          if (res.uniqueSections) setSchoolUniqueSections(res.uniqueSections);
+        }
+      } catch (err) {
+        console.error("Fetch Error:", err);
+      } finally {
+        if (isMounted) setSchoolLoading(false);
+      }
+    };
+    loadSchoolData();
+    return () => { isMounted = false; };
+  }, [isSchoolContext, currentEducationId, departmentPage, debouncedSearch, yearFilter, subjectFilter, sectionFilter, collegeId, userId]);
+
   useEffect(() => {
     if (collegeId) {
       fetchEducations(collegeId).then(setEducations);
     }
   }, [collegeId]);
+
+  useEffect(() => {
+    if (!isSchoolContext) return;
+    const query = new URLSearchParams(searchParams.toString());
+    let changed = false;
+    
+    if (subjectFilter !== "All" && query.get("subject") !== subjectFilter) { query.set("subject", subjectFilter); changed = true; }
+    else if (subjectFilter === "All" && query.has("subject")) { query.delete("subject"); changed = true; }
+    
+    if (sectionFilter !== "All" && query.get("section") !== sectionFilter) { query.set("section", sectionFilter); changed = true; }
+    else if (sectionFilter === "All" && query.has("section")) { query.delete("section"); changed = true; }
+
+    if (yearFilter !== "All" && query.get("yearFilter") !== yearFilter) { query.set("yearFilter", yearFilter); changed = true; }
+    else if (yearFilter === "All" && query.has("yearFilter")) { query.delete("yearFilter"); changed = true; }
+
+    if (changed) {
+      router.replace(`?${query.toString()}`, { scroll: false });
+    }
+  }, [subjectFilter, sectionFilter, yearFilter, isSchoolContext, router, searchParams]);
 
   useEffect(() => {
     if (!facultyId) return;
@@ -260,11 +326,14 @@ export default function DiscussionForumBasic({
       const yearIdFromParams = searchParams.get("yearId");
       const branchIdFromParams = searchParams.get("branchId");
 
-      if (dept && yearIdFromParams) {
+      if ((dept || (isSchoolContext && year)) && Number(yearIdFromParams) > 0 && (!isSchoolContext || currentEducationId)) {
         setCourseLoading(true);
         const response = await fetchSubjectFacultyList(
           Number(yearIdFromParams),
-          Number(branchIdFromParams),
+          isSchoolContext ? null : Number(branchIdFromParams),
+          1,
+          isSchoolContext ? Number.MAX_SAFE_INTEGER : 9,
+          isSchoolContext ? currentEducationId : undefined,
         );
 
         const uniqueCoursesMap = new Map();
@@ -299,7 +368,7 @@ export default function DiscussionForumBasic({
       }
     };
     loadCourses();
-  }, [dept, searchParams]);
+  }, [dept, year, searchParams, isSchoolContext, currentEducationId]);
 
   useEffect(() => {
     const loadBranches = async () => {
@@ -402,6 +471,8 @@ export default function DiscussionForumBasic({
     const params = new URLSearchParams(searchParams.toString());
     params.delete("dept");
     params.delete("year");
+    params.delete("yearId");
+    params.delete("branchId");
     router.push(`?${params.toString()}`);
   };
 
@@ -507,7 +578,7 @@ export default function DiscussionForumBasic({
     return () => clearTimeout(timer);
   }, [filteredCards, currentEducationId]);
 
-  if (!isHydrated) {
+  if (!isHydrated || adminLoading) {
     return (
       <div className="flex min-h-[calc(100vh-100px)] w-full items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#43C17A] border-t-transparent" />
@@ -517,10 +588,10 @@ export default function DiscussionForumBasic({
 
   return (
     <div className="flex flex-col w-full min-h-[calc(100vh-100px)] px-6 py-4">
-      {(!isInnerScreen || (!!subjectId && !action)) && <TabNavigation />}
+      {(!isInnerScreen || (!!subjectId && !action)) && <TabNavigation educationType={currentEducationType} />}
 
       {!isInnerScreen ? (
-        !dept ? (
+        !(dept || (isSchoolContext && year)) ? (
           <>
             <div className="flex flex-wrap items-center gap-6 mt-1 mb-5">
               <CustomDropdown
@@ -542,40 +613,44 @@ export default function DiscussionForumBasic({
                 theme="green"
                 widthClassName="w-[180px]"
               />
-              <CustomDropdown
-                label={currentEducationType === "Inter" ? "Group" : "Branch"}
-                value={branchFilter}
-                options={[
-                  { label: "All", value: "All" },
-                  ...branchOptions.map((b) => ({
-                    label: b.code,
-                    value: String(b.id),
-                  })),
-                ]}
-                onChange={(val) => {
-                  setBranchFilter(String(val));
-                  setDepartmentPage(1);
-                  if (val === "All") {
-                    setYearFilter("All");
-                  }
-                }}
-                theme="green"
-                widthClassName="w-[180px]"
-              />
+              {currentEducationType && !isSchoolContext && (
+                <CustomDropdown
+                  label={currentEducationType === "Inter" ? "Group" : "Branch"}
+                  value={branchFilter}
+                  options={[
+                    { label: "All", value: "All" },
+                    ...branchOptions.map((b) => ({
+                      label: b.code,
+                      value: String(b.id),
+                    })),
+                  ]}
+                  onChange={(val) => {
+                    setBranchFilter(String(val));
+                    setDepartmentPage(1);
+                    if (val === "All") {
+                      setYearFilter("All");
+                    }
+                  }}
+                  theme="green"
+                  widthClassName="w-[180px]"
+                />
+              )}
               <CustomDropdown
                 label="Year"
                 value={yearFilter}
                 disabled={yearLoading}
                 options={
-                  yearLoading
-                    ? [{ label: "Loading...", value: "loading" }]
-                    : [
-                      { label: "All", value: "All" },
-                      ...yearOptions.map((y) => ({
-                        label: y.label,
-                        value: String(y.id),
-                      })),
-                    ]
+                  isSchoolContext 
+                    ? schoolUniqueYears.map(y => ({ label: y, value: y }))
+                    : yearLoading
+                      ? [{ label: "Loading...", value: "loading" }]
+                      : [
+                        { label: "All", value: "All" },
+                        ...yearOptions.map((y) => ({
+                          label: y.label,
+                          value: String(y.id),
+                        })),
+                      ]
                 }
                 theme="green"
                 widthClassName="w-[160px]"
@@ -586,59 +661,122 @@ export default function DiscussionForumBasic({
                   }
                 }}
               />
+              {isSchoolContext && (
+                <>
+                  <CustomDropdown
+                    label="Subject"
+                    value={subjectFilter}
+                    options={schoolUniqueSubjects.map(s => ({ label: s, value: s }))}
+                    onChange={(val) => {
+                      setSubjectFilter(String(val));
+                      setDepartmentPage(1);
+                    }}
+                    theme="green"
+                    widthClassName="w-[160px]"
+                  />
+                  <CustomDropdown
+                    label="Section"
+                    value={sectionFilter}
+                    options={schoolUniqueSections.map(s => ({ label: s, value: s }))}
+                    onChange={(val) => {
+                      setSectionFilter(String(val));
+                      setDepartmentPage(1);
+                    }}
+                    theme="green"
+                    widthClassName="w-[160px]"
+                  />
+                </>
+              )}
             </div>
 
-            <div className="bg-transparent rounded-xl flex flex-col">
+            <div className="bg-transparent rounded-xl flex flex-col gap-8">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto ">
-                {branchLoading || yearLoading
-                  ? Array.from({ length: 6 }).map((_, i) => (
+                {isSchoolContext ? (
+                  schoolLoading ? Array.from({ length: 6 }).map((_, i) => (
                     <DiscussionDeptCardSkeleton key={i} />
-                  ))
-                  : filteredCards.length > 0
-                    ? paginatedCards.map((card, idx) => {
-                      const branchTheme = getBranchTheme(card.name);
-
-                      const cardData = countsData.find(
-                        (c) =>
-                          c.branchId === card.branchId &&
-                          c.yearId === card.yearId,
-                      );
-
-                      return (
-                        <DiscussionDeptCard
-                          key={`${card.branchId}-${card.year}-${idx}`}
-                          name={card.name}
-                          year={card.year}
-                          branchId={card.branchId}
-                          yearId={card.yearId}
-                          text={branchTheme.text}
-                          color={branchTheme.color}
-                          bgColor={branchTheme.bgColor}
-                          activeText="Active discussions forums"
-                          activeCount={
-                            cardData ? String(cardData.discussionCount) : "0"
-                          }
-                          students={cardData ? cardData.studentCount : 0}
-                          facultyCount={cardData ? cardData.facultyCount : 0}
-                          facultyPhotos={
-                            cardData ? cardData.facultyPhotos : []
-                          }
-                        />
-                      );
-                    })
-                    : Array.from({ length: 6 }).map((_, i) => (
+                  )) : schoolDataList.length > 0 ? schoolDataList.map((card, idx) => (
+                    <DiscussionDeptCard
+                      key={`school-${card.year}-${idx}`}
+                      name={card.name}
+                      year={card.year}
+                      branchId={null}
+                      yearId={card.yearId}
+                      text={card.text}
+                      color={card.color}
+                      bgColor={card.bgColor}
+                      activeText="Active discussions forums"
+                      activeCount={card.activeSubjects || 0}
+                      students={card.totalStudents}
+                      facultyCount={card.facultyCount}
+                      facultyPhotos={card.facultyList.map((f: any) => f.profileUrl)}
+                      facultyList={card.facultyList}
+                      isSchool={true}
+                    />
+                  )) : (
+                    <div className="col-span-full py-10 text-center text-gray-500">No school data found</div>
+                  )
+                ) : (
+                  branchLoading || yearLoading
+                    ? Array.from({ length: 6 }).map((_, i) => (
                       <DiscussionDeptCardSkeleton key={i} />
-                    ))}
+                    ))
+                    : filteredCards.length > 0
+                      ? paginatedCards.map((card, idx) => {
+                        const branchTheme = getBranchTheme(card.name);
+
+                        const cardData = countsData.find(
+                          (c) =>
+                            c.branchId === card.branchId &&
+                            c.yearId === card.yearId,
+                        );
+
+                        return (
+                          <DiscussionDeptCard
+                            key={`${card.branchId}-${card.year}-${idx}`}
+                            name={card.name}
+                            year={card.year}
+                            branchId={card.branchId}
+                            yearId={card.yearId}
+                            text={branchTheme.text}
+                            color={branchTheme.color}
+                            bgColor={branchTheme.bgColor}
+                            activeText="Active discussions forums"
+                            activeCount={
+                              cardData ? String(cardData.discussionCount) : "0"
+                            }
+                            students={cardData ? cardData.studentCount : 0}
+                            facultyCount={cardData ? cardData.facultyCount : 0}
+                            facultyPhotos={
+                              cardData ? cardData.facultyPhotos : []
+                            }
+                          />
+                        );
+                      })
+                      : Array.from({ length: 6 }).map((_, i) => (
+                        <DiscussionDeptCardSkeleton key={i} />
+                      ))
+                )}
               </div>
-              {!branchLoading && !yearLoading && filteredCards.length > 0 && (
-                <Pagination
-                  currentPage={departmentPage}
-                  totalItems={filteredCards.length}
-                  itemsPerPage={ITEMS_PER_PAGE}
-                  onPageChange={setDepartmentPage}
-                  alwaysShow
-                  bgClassName="bg-transparent border-t border-gray-200"
-                />
+              {isSchoolContext ? (
+                schoolDataList.length > 0 && (
+                  <Pagination
+                    currentPage={departmentPage}
+                    totalItems={schoolTotalRecords}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    onPageChange={setDepartmentPage}
+                    alwaysShow
+                  />
+                )
+              ) : (
+                !branchLoading && !yearLoading && filteredCards.length > 0 && (
+                  <Pagination
+                    currentPage={departmentPage}
+                    totalItems={filteredCards.length}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    onPageChange={setDepartmentPage}
+                    alwaysShow
+                  />
+                )
               )}
             </div>
           </>
@@ -657,11 +795,11 @@ export default function DiscussionForumBasic({
                   />
                 </button>
                 <h2 className="text-xl font-bold text-gray-800">
-                  {currentEducationType} {dept} - {year}
+                  {isSchoolContext ? `${currentEducationType} ${year}` : `${currentEducationType} ${dept} - ${year}`}
                 </h2>
               </div>
 
-              <div className="bg-pink-00 gap-5 w-full mx-auto">
+              <div className="bg-pink-00 gap-5 w-full mx-auto mb-8">
                 {courseLoading ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto">
                     {Array.from({ length: 6 }).map((_, i) => (
@@ -674,6 +812,7 @@ export default function DiscussionForumBasic({
                       <DiscussionCourseCard
                         key={`${course.id}-${course.facultyId}`}
                         {...course}
+                        id={isSchoolContext ? course.subjectId : course.id}
                         subject={course.subject}
                         facultyName={course.facultyName}
                         avatar={course.avatar}
@@ -684,7 +823,7 @@ export default function DiscussionForumBasic({
                 ) : (
                   <div className="col-span-full py-20 text-center">
                     <p className="text-gray-400 italic">
-                      No subjects or faculty assigned to this branch yet.
+                      No subjects or faculty assigned to this {isSchoolContext ? "year" : "branch"} yet.
                     </p>
                   </div>
                 )}
@@ -696,7 +835,6 @@ export default function DiscussionForumBasic({
                   itemsPerPage={ITEMS_PER_PAGE}
                   onPageChange={setCoursePage}
                   alwaysShow
-                  bgClassName="bg-transparent border-t border-gray-200"
                 />
               )}
             </div>

@@ -195,10 +195,15 @@ export default function DiscussionDeptCard({
 
   const handleViewDetails = () => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("dept", name);
+    if (isSchool) {
+      params.delete("dept");
+      params.delete("branchId");
+    } else {
+      params.set("dept", name);
+    }
     params.set("year", year);
     params.set("yearId", String(yearId));
-    if (branchId !== null) params.set("branchId", String(branchId));
+    if (!isSchool && branchId !== null) params.set("branchId", String(branchId));
     router.push(`?${params.toString()}`);
   };
 

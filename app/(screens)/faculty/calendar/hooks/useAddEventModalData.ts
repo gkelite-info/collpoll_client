@@ -159,10 +159,31 @@ export const useAddEventModalData = (
     enabled: !!collegeId && !!educationId && !!academicYearId,
   });
 
+  const sectionEducationType = educations.find(e => e.collegeEducationId === educationId)?.collegeEducationType
+    || facultyCtx.faculty_edu_type;
+  const isSchoolSection = isSchoolEducation(sectionEducationType);
+
   const { data: sections = [], isFetching: isSectionsFetching } = useQuery<any[]>({
-    queryKey: ["academicDropdowns", "section", collegeId, educationId, branchId, academicYearId, subjectId],
+    queryKey: ["academicDropdowns", "section", collegeId, educationId, branchId, academicYearId, subjectId, isSchoolSection],
     queryFn: async () => {
-      if (!collegeId || !educationId || !academicYearId || !subjectId) return [];
+      if (!collegeId || !educationId || !academicYearId) return [];
+
+      if (isSchoolSection) {
+        const { data, error } = await supabase
+          .from("college_sections")
+          .select("collegeSectionsId, collegeSections")
+          .eq("collegeId", collegeId)
+          .eq("collegeEducationId", educationId)
+          .eq("collegeAcademicYearId", academicYearId)
+          .eq("isActive", true)
+          .is("deletedAt", null)
+          .order("collegeSections", { ascending: true });
+
+        if (error) throw error;
+        return data ?? [];
+      }
+
+      if (!subjectId) return [];
       const allSections = await fetchAcademicDropdowns({
         type: "section",
         collegeId,
@@ -177,7 +198,7 @@ export const useAddEventModalData = (
 
       return (allSections ?? []).filter((s: any) => assignedSectionIds.includes(s.collegeSectionsId));
     },
-    enabled: !!collegeId && !!educationId && !!academicYearId && !!subjectId,
+    enabled: !!collegeId && !!educationId && !!academicYearId && (isSchoolSection || !!subjectId),
   });
 
   const { data: topics = [] } = useQuery({

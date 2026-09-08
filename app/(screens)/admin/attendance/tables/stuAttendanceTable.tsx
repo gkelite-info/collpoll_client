@@ -17,6 +17,7 @@ import {
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { CustomDropdown } from "@/app/components/CustomDropdown";
 
 interface Props {
   students: UIStudent[];
@@ -182,80 +183,53 @@ export default function StuAttendanceTable({
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {!isTopicMode && onFilterChange && (
-            <div className="relative">
-              <select
-                value={selectedClass}
-                onChange={(e) => onFilterChange("class", e.target.value)}
-                className="appearance-none rounded-full bg-[#43C17A1C] pl-4 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm min-w-[180px]"
-                disabled={loadingFilters}
-              >
-                {classes.length > 0 ? (
-                  classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">No Classes Today</option>
-                )}
-              </select>
-              <CaretDown
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
-                size={12}
-                weight="bold"
-              />
-            </div>
+            <CustomDropdown
+              options={
+                classes.length > 0
+                  ? classes.map((c) => ({ label: c.label, value: c.id }))
+                  : [{ label: "No Classes Today", value: "" }]
+              }
+              value={selectedClass}
+              onChange={(val) => onFilterChange("class", val as string)}
+              disabled={loadingFilters}
+              theme="always-green"
+              widthClassName="min-w-[180px]"
+            />
           )}
 
           {!isTopicMode && onFilterChange && (
-            <div className="relative">
-              <select
-                value={selectedSection}
-                onChange={(e) => onFilterChange("section", e.target.value)}
-                className="appearance-none rounded-full bg-[#43C17A1C] pl-4 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm"
-                disabled={loadingFilters || !selectedClass}
-              >
-                {sections.length > 0 ? (
-                  sections.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      Section {s.name}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">All Sections</option>
-                )}
-              </select>
-              <CaretDown
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
-                size={12}
-                weight="bold"
-              />
-            </div>
+            <CustomDropdown
+              options={
+                sections.length > 0
+                  ? sections.map((s) => ({ label: `Section ${s.name}`, value: s.id }))
+                  : [{ label: "All Sections", value: "" }]
+              }
+              value={selectedSection}
+              onChange={(val) => onFilterChange("section", val as string)}
+              disabled={loadingFilters || !selectedClass}
+              theme="always-green"
+              widthClassName="min-w-[140px]"
+            />
           )}
 
           <div className="flex items-center gap-2 text-sm">
             <span className="text-gray-500 font-medium hidden sm:inline">
               Sort:
             </span>
-            <div className="relative">
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                className="appearance-none rounded-full bg-[#43C17A1C] pl-3 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm"
-              >
-                <option value="All">All Students</option>
-                <option value="Present">Present</option>
-                <option value="Absent">Absent</option>
-                <option value="Leave">Leave</option>
-                <option value="Late">Late</option>
-                <option value="Class Cancel">Class Cancelled</option>
-              </select>
-              <CaretDown
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
-                size={12}
-                weight="bold"
-              />
-            </div>
+            <CustomDropdown
+              options={[
+                { label: "All Students", value: "All" },
+                { label: "Present", value: "Present" },
+                { label: "Absent", value: "Absent" },
+                { label: "Leave", value: "Leave" },
+                { label: "Late", value: "Late" },
+                { label: "Class Cancelled", value: "Class Cancel" },
+              ]}
+              value={sort}
+              onChange={(val) => setSort(val as string)}
+              theme="always-green"
+              widthClassName="w-[150px]"
+            />
           </div>
         </div>
 

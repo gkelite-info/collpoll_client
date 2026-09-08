@@ -50,8 +50,8 @@ export default function StudentAttendanceDetailsPage() {
   return (
     <main className="p-4 space-y-6 min-h-screen">
       <section className="flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <CaretLeftIcon onClick={() => router.back()} className="cursor-pointer h-4 w-4 -mr-4 font-bold" color="#282828" />
+        <div className="flex items-center gap-4">
+          <CaretLeftIcon onClick={() => router.back()} className="h-6 w-6 cursor-pointer text-[#282828]" color="#282828" />
           {!isSchool && <Info label={collegeEducationType === "Inter" ? "Group" : "Branch"} value={student.department} />}
           <Info label="Year" value={student.year?.toString()} />
           <Info label="Section" value={student.section} />

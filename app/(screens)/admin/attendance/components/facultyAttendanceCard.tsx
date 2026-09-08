@@ -19,6 +19,7 @@ export interface Department {
   avgAttendance?: number;
   belowThresholdCount?: number;
   year?: string;
+  showFacultyTooltip?: boolean;
   faculties?: {
     facultyId: number;
     fullName: string;
@@ -46,6 +47,7 @@ const FacultyAttendanceCard = ({
   belowThresholdCount,
   year,
   faculties = [],
+  showFacultyTooltip = false,
 }: Department) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -105,14 +107,25 @@ const FacultyAttendanceCard = ({
                 <div
                   // key={f.facultyId} same key passed, faculty id 24
                   key={index}
-                  title={f.fullName}
-                  className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
+                  title={showFacultyTooltip ? undefined : f.fullName}
+                  tabIndex={showFacultyTooltip ? 0 : undefined}
+                  aria-label={showFacultyTooltip ? f.fullName : undefined}
+                  className={showFacultyTooltip
+                    ? "group relative w-8 h-8 rounded-full border-2 border-white bg-gray-100 shadow-sm cursor-pointer hover:z-30 focus:z-30 focus:outline-2 focus:outline-emerald-600"
+                    : "w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"}
                 >
+                  {showFacultyTooltip && (
+                    <span role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus:opacity-100">
+                      {f.fullName}
+                    </span>
+                  )}
+                  <div className="w-full h-full rounded-full overflow-hidden">
                   <Avatar 
                     src={f.profileUrl} 
                     alt={f.fullName} 
                     sizes="w-full h-full !border-0" 
                   />
+                  </div>
                 </div>
               ))}
 
