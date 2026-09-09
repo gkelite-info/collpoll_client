@@ -15,25 +15,7 @@ import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTermi
 type MeetingType = 'upcoming' | 'previous';
 type MeetingCategory = 'Faculty';
 
-export interface Meeting {
-    id: string;
-    financeMeetingId: number;
-    financeMeetingSectionsId: number;
-    category: MeetingCategory;
-    title: string;
-    timeRange: string;
-    educationType: string;
-    branch: string;
-    description: string;
-    date: string;
-    participants: number;
-    year: string;
-    section: string;
-    tags: string;
-    type: MeetingType;
-    meetingLink: string;
-    sections?: any[];
-}
+import { RoleMeeting as Meeting } from "@/app/utils/meetings/RoleMeetingType";
 
 export default function FacultyMeetingsPage() {
     const [isLoading, setIsLoading] = useState(true);

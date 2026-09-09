@@ -13,29 +13,7 @@ import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTermi
 type MeetingType = "upcoming" | "previous";
 type MeetingCategory = "Hr";
 
-interface Meeting {
-  id: string;
-  hrMeetingId: number;
-  hrMeetingSectionsId: number;
-  category: MeetingCategory;
-  title: string;
-  timeRange: string;
-  fromTime?: string;
-  toTime?: string;
-  rawDate?: string;
-  educationType: string;
-  branch: string;
-  description: string;
-  date: string;
-  participants: number;
-  participantAvatars?: string[];
-  year: string;
-  section: string;
-  tags: string;
-  type: MeetingType;
-  meetingLink: string;
-  sections?: any[];
-}
+import { RoleMeeting as Meeting } from "@/app/utils/meetings/RoleMeetingType";
 
 const formatToAMPM = (timeStr: string) => {
   if (!timeStr) return "";
@@ -106,7 +84,7 @@ export default function NewMeetingCard({
   const loadParticipants = async () => {
     try {
       setIsParticipantsLoading(true);
-      const res = await fetchMeetingParticipants(data.hrMeetingId);
+      const res = await fetchMeetingParticipants(data.hrMeetingId!);
       setParticipants(res);
     } catch (error) {
       toast.error("Failed to load participants");
@@ -141,7 +119,7 @@ export default function NewMeetingCard({
                 onClick={(e) => {
                   e.stopPropagation();
                   const params = new URLSearchParams(searchParams.toString());
-                  params.set("editMeetingId", String(data.hrMeetingId));
+                  params.set("editMeetingId", String(data.hrMeetingId!));
                   params.set("create", "true");
                   router.push(`${pathname}?${params.toString()}`, {
                     scroll: false,
