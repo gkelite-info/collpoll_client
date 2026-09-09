@@ -1,4 +1,12 @@
-import { CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, CaretDown } from '@phosphor-icons/react';
+
+const MONTHS = [
+    'January', 'February', 'March', 'April', 'May', 'June', 
+    'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: (CURRENT_YEAR + 10) - 2026 + 1 }, (_, i) => 2026 + i);
 
 interface MonthPickerProps {
     isOpen: boolean;
@@ -10,7 +18,6 @@ interface MonthPickerProps {
 export default function MonthPicker({ isOpen, currentDate, onChangeDate, onClose }: MonthPickerProps) {
     if (!isOpen) return null;
 
-    const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
     
     const generateCalendarGrid = () => {
         const year = currentDate.getFullYear();
@@ -41,8 +48,41 @@ export default function MonthPicker({ isOpen, currentDate, onChangeDate, onClose
     return (
         <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 z-50 p-4">
             <div className="flex justify-between items-center mb-3">
-                <span className="font-bold text-gray-800">{monthName}</span>
-                <div className="flex gap-1">
+                <div className="flex items-center gap-1.5">
+                    <div className="relative flex items-center">
+                        <select
+                            value={currentDate.getMonth()}
+                            onChange={(e) => {
+                                const newDate = new Date(currentDate);
+                                newDate.setMonth(parseInt(e.target.value, 10));
+                                onChangeDate(newDate);
+                            }}
+                            className="appearance-none bg-transparent font-bold text-gray-800 pr-3.5 outline-none cursor-pointer text-sm"
+                        >
+                            {MONTHS.map((m, i) => (
+                                <option key={m} value={i}>{m}</option>
+                            ))}
+                        </select>
+                        <CaretDown size={12} weight="bold" className="absolute right-0 text-gray-500 pointer-events-none" />
+                    </div>
+                    <div className="relative flex items-center">
+                        <select
+                            value={currentDate.getFullYear()}
+                            onChange={(e) => {
+                                const newDate = new Date(currentDate);
+                                newDate.setFullYear(parseInt(e.target.value, 10));
+                                onChangeDate(newDate);
+                            }}
+                            className="appearance-none bg-transparent font-bold text-gray-800 pr-3.5 outline-none cursor-pointer text-sm"
+                        >
+                            {YEARS.map(y => (
+                                <option key={y} value={y}>{y}</option>
+                            ))}
+                        </select>
+                        <CaretDown size={12} weight="bold" className="absolute right-0 text-gray-500 pointer-events-none" />
+                    </div>
+                </div>
+                <div className="flex gap-1 shrink-0">
                     <button 
                         onClick={(e) => { 
                             e.stopPropagation(); 
@@ -50,7 +90,8 @@ export default function MonthPicker({ isOpen, currentDate, onChangeDate, onClose
                             d.setMonth(d.getMonth() - 1); 
                             onChangeDate(d); 
                         }} 
-                        className="cursor-pointer p-1 hover:bg-gray-100 rounded text-gray-500"
+                        disabled={currentDate.getFullYear() < 2026 || (currentDate.getFullYear() === 2026 && currentDate.getMonth() === 0)}
+                        className={`p-1 rounded ${currentDate.getFullYear() < 2026 || (currentDate.getFullYear() === 2026 && currentDate.getMonth() === 0) ? 'text-gray-300 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-100 text-gray-500'}`}
                     >
                         <CaretLeft size={16} weight="bold" />
                     </button>

@@ -47,6 +47,7 @@ export async function fetchHrMeetings({
       fromTime,
       toTime,
       meetingLink,
+      createdBy,
       hr_meeting_participants (
         userId,
         users (
@@ -114,6 +115,7 @@ export async function fetchHrMeetings({
       section: "",
       tags: "",
       participantName: null,
+      createdBy: meeting.createdBy,
     };
   });
 

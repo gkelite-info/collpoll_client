@@ -12,10 +12,10 @@ export type SelectUser = {
 function mapUserToSelectUser(u: any): SelectUser {
   const profile = u.user_profile;
   const profileUrl = Array.isArray(profile) ? profile[0]?.profileUrl : profile?.profileUrl;
-  
+
   const empIds = u.employee_ids;
   let displayId = Array.isArray(empIds) ? empIds[0]?.employeeId : empIds?.employeeId;
-  
+
   if (!displayId && u.students) {
     const std = Array.isArray(u.students) ? u.students[0] : u.students;
     const pins = std?.student_pins;
@@ -26,22 +26,27 @@ function mapUserToSelectUser(u: any): SelectUser {
   if (u.role === "Parent" && u.parents) {
     const parentRecord = Array.isArray(u.parents) ? u.parents[0] : u.parents;
     if (parentRecord && parentRecord.students) {
-       const linkedStudent = Array.isArray(parentRecord.students) ? parentRecord.students[0] : parentRecord.students;
-       const linkedPins = linkedStudent?.student_pins;
-       const linkedStudentId = Array.isArray(linkedPins) ? linkedPins[0]?.pinNumber : linkedPins?.pinNumber;
-       
-       if (linkedStudentId) {
-         const genderChar = u.gender?.toLowerCase() === 'female' ? 'M' : (u.gender?.toLowerCase() === 'male' ? 'F' : '');
-         displayId = genderChar ? `${linkedStudentId}/${genderChar}` : linkedStudentId;
-       }
+      const linkedStudent = Array.isArray(parentRecord.students) ? parentRecord.students[0] : parentRecord.students;
+      const linkedPins = linkedStudent?.student_pins;
+      const linkedStudentId = Array.isArray(linkedPins) ? linkedPins[0]?.pinNumber : linkedPins?.pinNumber;
+
+      if (linkedStudentId) {
+        const genderChar = u.gender?.toLowerCase() === 'female' ? 'M' : (u.gender?.toLowerCase() === 'male' ? 'F' : '');
+        displayId = genderChar ? `${linkedStudentId}/${genderChar}` : linkedStudentId;
+      }
     }
   }
-  
+
+  let displayRole = u.role || "User";
+  if (displayRole === "Finance") {
+    displayRole = "FinanceExecutive";
+  }
+
   return {
     id: u.userId, // Using userId as primary id for this generic query
     userId: u.userId,
     name: u.fullName || "",
-    subLabel: u.role || "User",
+    subLabel: displayRole,
     avatar: profileUrl || null,
     displayId: displayId || u.userId.toString(),
   };
@@ -56,7 +61,7 @@ export async function getAllUsersForSearch(
   if (!collegeId) return [];
 
   const excludedRoles = ["wellbeing", "wellbeingmanager", "superadmin"];
-  
+
   let query = supabase
     .from("users")
     .select(`
@@ -75,16 +80,16 @@ export async function getAllUsersForSearch(
     `)
     .eq("collegeId", collegeId)
     .eq("is_deleted", false);
-    
+
   if (searchQuery) {
     const matchedUserIds = new Set<number>();
-    
+
     // Check employee_ids
     const { data: empData } = await supabase
       .from("employee_ids")
       .select("userId")
       .ilike("employeeId", `%${searchQuery}%`);
-      
+
     if (empData) empData.forEach(r => matchedUserIds.add(r.userId));
 
     // Check student_pins
@@ -92,19 +97,19 @@ export async function getAllUsersForSearch(
       .from("student_pins")
       .select("studentId")
       .ilike("pinNumber", `%${searchQuery}%`);
-      
+
     if (pinData && pinData.length > 0) {
       const studentIds = pinData.map(p => p.studentId);
-      
+
       const [stdData, parentData] = await Promise.all([
         supabase.from("students").select("userId").in("studentId", studentIds),
         supabase.from("parents").select("userId").in("studentId", studentIds)
       ]);
-      
+
       if (stdData.data) stdData.data.forEach(r => matchedUserIds.add(r.userId));
       if (parentData.data) parentData.data.forEach(r => matchedUserIds.add(r.userId));
     }
-    
+
     if (matchedUserIds.size > 0) {
       const ids = Array.from(matchedUserIds).join(',');
       query = query.or(`fullName.ilike.%${searchQuery}%,userId.in.(${ids})`);
@@ -112,7 +117,7 @@ export async function getAllUsersForSearch(
       query = query.ilike("fullName", `%${searchQuery}%`);
     }
   }
-  
+
   if (limit !== undefined && offset !== undefined) {
     query = query.range(offset, offset + limit - 1);
   }
@@ -133,7 +138,7 @@ export async function getUsersByIds(
   userIds: number[]
 ): Promise<SelectUser[]> {
   if (!collegeId || !userIds || userIds.length === 0) return [];
-  
+
   const { data, error } = await supabase
     .from("users")
     .select(`
@@ -152,9 +157,9 @@ export async function getUsersByIds(
     `)
     .eq("collegeId", collegeId)
     .in("userId", userIds);
-    
+
   if (error) throw error;
-  
+
   return (data || []).map(mapUserToSelectUser);
 }
 
@@ -224,7 +229,7 @@ export async function getCollegeUsers(
         : profile?.profileUrl;
       const empIds = a.users?.employee_ids;
       const empId = Array.isArray(empIds) ? empIds[0]?.employeeId : empIds?.employeeId;
-        
+
       return {
         id: a.adminId,
         userId: a.userId,
@@ -269,12 +274,12 @@ export async function getCollegeUsers(
         : profile?.profileUrl;
       const empIds = f.users?.employee_ids;
       const empId = Array.isArray(empIds) ? empIds[0]?.employeeId : empIds?.employeeId;
-        
+
       return {
         id: f.financeManagerId,
         userId: f.userId,
         name: f.users?.fullName ?? "",
-        subLabel: role,
+        subLabel: role === "Finance" ? "FinanceExecutive" : role,
         avatar: profileUrl || null,
         displayId: empId || f.userId.toString(),
       };
@@ -363,7 +368,7 @@ export async function getCollegeUsers(
       const profileUrl = Array.isArray(profile)
         ? profile[0]?.profileUrl
         : profile?.profileUrl;
-      
+
       const pins = s.student_pins;
       const pin = Array.isArray(pins) ? pins[0]?.pinNumber : pins?.pinNumber;
 

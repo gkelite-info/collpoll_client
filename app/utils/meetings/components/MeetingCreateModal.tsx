@@ -21,7 +21,7 @@ interface MeetingFormModalProps {
 
 export default function MeetingFormModal({ isOpen, onClose, initialData, timings = [], holidays = [] }: MeetingFormModalProps) {
     const { collegeId, userId } = useUser();
-    
+
     const { mutateAsync: createMeeting } = useCreateMeeting(collegeId || 0);
     const { mutateAsync: updateMeeting } = useUpdateMeeting(collegeId || 0);
 
@@ -44,7 +44,7 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [warningMsg, setWarningMsg] = useState<string | null>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
-    
+
     const [conflicts, setConflicts] = useState<any[]>([]);
     const [showConflictModal, setShowConflictModal] = useState(false);
 
@@ -109,7 +109,7 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
         setWarningMsg(null);
         setErrorMsg(null);
         if (!formData.date) return;
-        
+
         if (formData.startTime >= formData.endTime) {
             setErrorMsg('Start Time must be strictly before End Time.');
         }
@@ -131,17 +131,17 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
             const to24 = (timeStr: string) => {
                 if (!timeStr) return '00:00';
                 if (!timeStr.toLowerCase().includes('am') && !timeStr.toLowerCase().includes('pm')) return timeStr;
-                
+
                 const parts = timeStr.trim().split(' ');
                 if (parts.length !== 2) return timeStr;
-                
+
                 let [hours, minutes] = parts[0].split(':');
                 if (hours === '12') hours = '00';
                 if (parts[1].toLowerCase() === 'pm') hours = String(parseInt(hours, 10) + 12);
-                
+
                 return `${hours.padStart(2, '0')}:${minutes}`;
             };
-            
+
             const open24 = to24(dayTiming.openAt);
             const close24 = to24(dayTiming.closeAt);
 
@@ -197,7 +197,7 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        
+
         const toastId = 'meeting-validation';
 
         const trimmedTitle = formData.title.trim();
@@ -267,7 +267,7 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
         }
 
         setIsSubmitting(true);
-        
+
         try {
             const attendeesIds = formData.attendees.split(',').filter(Boolean).map(id => parseInt(id));
             const participantUserIds = userId ? [...new Set([...attendeesIds, userId])] : attendeesIds;
@@ -339,9 +339,9 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
 
                             <div>
                                 <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
-                                     Meeting Title <span className="text-red-500">*</span>
+                                    Meeting Title <span className="text-red-500">*</span>
                                 </label>
-                                <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" placeholder="e.g. Weekly Sync" />
+                                <input type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" placeholder="e.g. Weekly Sync" />
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -349,14 +349,14 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
                                     <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                         Type <span className="text-red-500">*</span>
                                     </label>
-                                    <CustomDropdown 
-                                        value={formData.type} 
-                                        onChange={(v: string | number) => setFormData({...formData, type: String(v) as any})} 
+                                    <CustomDropdown
+                                        value={formData.type}
+                                        onChange={(v: string | number) => setFormData({ ...formData, type: String(v) as any })}
                                         options={[
                                             { value: 'Internal', label: 'Internal' },
                                             { value: 'Staff', label: 'Staff' },
                                             { value: 'Management', label: 'Management' }
-                                        ]} 
+                                        ]}
                                         widthClassName="w-full"
                                         theme="green"
                                         className="!py-3 !px-4 !rounded-xl"
@@ -366,7 +366,7 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
                                     <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                         <CalendarBlank size={16} weight="bold" /> Date <span className="text-red-500">*</span>
                                     </label>
-                                    <input type="date" min={new Date().toISOString().split('T')[0]} value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="cursor-pointer w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
+                                    <input type="date" min={new Date().toISOString().split('T')[0]} value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} className="cursor-pointer w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
                                 </div>
                             </div>
 
@@ -375,13 +375,13 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
                                     <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                         <Clock size={16} weight="bold" /> Start Time <span className="text-red-500">*</span>
                                     </label>
-                                    <TimeSelector value={formData.startTime} onChange={v => setFormData({...formData, startTime: v})} bounds={{start: 0, end: 24}} />
+                                    <TimeSelector value={formData.startTime} onChange={v => setFormData({ ...formData, startTime: v })} bounds={{ start: 0, end: 24 }} />
                                 </div>
                                 <div>
                                     <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                         <Clock size={16} weight="bold" /> End Time <span className="text-red-500">*</span>
                                     </label>
-                                    <TimeSelector value={formData.endTime} onChange={v => setFormData({...formData, endTime: v})} bounds={{start: 0, end: 24}} />
+                                    <TimeSelector value={formData.endTime} onChange={v => setFormData({ ...formData, endTime: v })} bounds={{ start: 0, end: 24 }} />
                                 </div>
                             </div>
 
@@ -389,9 +389,9 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
                                 <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                     <User size={16} weight="bold" /> Organizer <span className="text-red-500">*</span>
                                 </label>
-                                <UserSingleSelect value={formData.organizer} onChange={v => setFormData({...formData, organizer: v})} initialSelectedUser={initialOrganizer} />
+                                <UserSingleSelect value={formData.organizer} onChange={v => setFormData({ ...formData, organizer: v })} initialSelectedUser={initialOrganizer} />
                             </div>
-                            
+
                             <div className="flex flex-col gap-2 mt-2">
                                 <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                     Meeting Platform <span className="text-red-500">*</span>
@@ -399,12 +399,12 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
                                 <div className="flex items-center gap-4">
                                     {(['Google Meet', 'Zoom Meeting', 'Others'] as const).map(plat => (
                                         <label key={plat} className="flex items-center gap-2 cursor-pointer">
-                                            <input 
-                                                type="radio" 
-                                                name="platform" 
-                                                value={plat} 
+                                            <input
+                                                type="radio"
+                                                name="platform"
+                                                value={plat}
                                                 checked={formData.platform === plat}
-                                                onChange={() => setFormData({...formData, platform: plat})}
+                                                onChange={() => setFormData({ ...formData, platform: plat })}
                                                 className="w-4 h-4 text-emerald-600 focus:ring-emerald-600 border-gray-300 accent-emerald-600"
                                             />
                                             <span className="text-[14px] font-medium text-gray-700">{plat}</span>
@@ -419,13 +419,13 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
                                         <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                             <LinkIcon size={16} weight="bold" /> Zoom ID <span className="text-red-500">*</span>
                                         </label>
-                                        <input type="text" value={formData.zoomId} onChange={e => setFormData({...formData, zoomId: e.target.value})} placeholder="Enter Zoom ID" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
+                                        <input type="text" value={formData.zoomId} onChange={e => setFormData({ ...formData, zoomId: e.target.value })} placeholder="Enter Zoom ID" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
                                     </div>
                                     <div>
                                         <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                             Password <span className="text-red-500">*</span>
                                         </label>
-                                        <input type="text" value={formData.zoomPassword} onChange={e => setFormData({...formData, zoomPassword: e.target.value})} placeholder="Enter Password" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
+                                        <input type="text" value={formData.zoomPassword} onChange={e => setFormData({ ...formData, zoomPassword: e.target.value })} placeholder="Enter Password" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
                                     </div>
                                 </div>
                             ) : (
@@ -433,7 +433,7 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
                                     <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                         <LinkIcon size={16} weight="bold" /> {(formData.platform as string) === 'Others' ? 'Meeting' : formData.platform} Link <span className="text-red-500">*</span>
                                     </label>
-                                    <input type="url" value={formData.meetingLink} onChange={e => setFormData({...formData, meetingLink: e.target.value})} placeholder={`https://${(formData.platform as string) === 'Zoom Meeting' ? 'zoom.us' : 'meet.google.com'}/...`} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
+                                    <input type="url" value={formData.meetingLink} onChange={e => setFormData({ ...formData, meetingLink: e.target.value })} placeholder={`https://${(formData.platform as string) === 'Zoom Meeting' ? 'zoom.us' : 'meet.google.com'}/...`} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
                                 </div>
                             )}
 
@@ -441,14 +441,14 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
                                 <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                     <Users size={16} weight="bold" /> Attendees <span className="text-red-500">*</span>
                                 </label>
-                                <UserMultiSelect value={formData.attendees} onChange={v => setFormData({...formData, attendees: v})} initialSelectedUsers={initialAttendees} />
+                                <UserMultiSelect value={formData.attendees} onChange={v => setFormData({ ...formData, attendees: v })} initialSelectedUsers={initialAttendees} />
                             </div>
 
                             <div>
                                 <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                     <Note size={16} weight="bold" /> Agenda <span className="text-red-500">*</span>
                                 </label>
-                                <textarea maxLength={1000} rows={6} value={formData.agenda} onChange={e => setFormData({...formData, agenda: e.target.value})} placeholder="Enter meeting agenda details..." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all resize-none min-h-[140px]"></textarea>
+                                <textarea maxLength={1000} rows={6} value={formData.agenda} onChange={e => setFormData({ ...formData, agenda: e.target.value })} placeholder="Enter meeting agenda details..." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all resize-none min-h-[140px]"></textarea>
                                 <div className="text-right text-[11px] font-medium text-gray-400 mt-1.5 flex justify-end items-center gap-1">
                                     <span className={formData.agenda.length >= 1000 ? 'text-red-500 font-bold' : ''}>{formData.agenda.length}</span>
                                     <span>/ 1000</span>
@@ -474,7 +474,7 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
                     </motion.div>
                 </div>
             )}
-            
+
             <ConflictWarningModal
                 key="conflict-warning-modal"
                 isOpen={showConflictModal}

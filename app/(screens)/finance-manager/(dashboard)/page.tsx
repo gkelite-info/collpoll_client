@@ -35,9 +35,6 @@ function DashboardContent() {
   const branch = searchParams.get("branch") || "CSE";
   const { userId, financeManagerId } = useUser();
 
-  console.log("What we have actually", userId, financeManagerId);
-
-
   return (
     <DashboardView
       key={`${currentView || "dashboard"}-${program}-${branch}`}

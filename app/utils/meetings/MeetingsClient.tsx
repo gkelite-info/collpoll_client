@@ -23,6 +23,22 @@ interface MeetingsClientProps {
     isReadOnly?: boolean;
 }
 
+const parseTimeToHour = (timeStr: string, isEnd = false): number | null => {
+    if (!timeStr) return null;
+    const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
+    if (!match) return null;
+    let h = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10);
+    const ampm = match[3]?.toUpperCase();
+    if (ampm === 'PM' && h !== 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    // If end time has minutes (e.g. 03:30 PM), round up to next hour so the slot fully covers the time
+    if (isEnd && m > 0) {
+        h = Math.min(24, h + 1);
+    }
+    return h;
+};
+
 export default function MeetingsClient({ isReadOnly = false }: MeetingsClientProps) {
     const { collegeId, userId, fullName, role, profilePhoto } = useUser();
 
@@ -161,24 +177,27 @@ export default function MeetingsClient({ isReadOnly = false }: MeetingsClientPro
         return days;
     }, [currentDate, viewMode, timings, holidays]);
 
-    const getGridBounds = useCallback(() => {
+    const gridHours = useMemo(() => {
         let minHour = 8; // Default 8 AM
         let maxHour = 18; // Default 6 PM
         
         if (timings.length > 0) {
-            const allHours: number[] = [];
+            const openHours: number[] = [];
+            const closeHours: number[] = [];
             timings.forEach(t => {
                 if (t.isOpen && t.openAt && t.closeAt) {
-                    const openH = parseInt(t.openAt.split(':')[0]);
-                    let closeH = parseInt(t.closeAt.split(':')[0]);
-                    if (closeH < openH) closeH += 12; // Handle AM/PM fix
-                    allHours.push(openH, closeH);
+                    const openH = parseTimeToHour(t.openAt, false);
+                    const closeH = parseTimeToHour(t.closeAt, true);
+                    if (openH !== null) openHours.push(openH);
+                    if (closeH !== null) closeHours.push(closeH);
                 }
             });
             
-            if (allHours.length > 0) {
-                minHour = Math.max(0, Math.min(...allHours));
-                maxHour = Math.min(24, Math.max(...allHours));
+            if (openHours.length > 0) {
+                minHour = Math.max(0, Math.min(...openHours));
+            }
+            if (closeHours.length > 0) {
+                maxHour = Math.min(24, Math.max(...closeHours));
             }
         }
 
@@ -186,25 +205,23 @@ export default function MeetingsClient({ isReadOnly = false }: MeetingsClientPro
         if (displayMeetings && displayMeetings.length > 0) {
             displayMeetings.forEach(m => {
                 if (m.startTime && m.endTime) {
-                    const startH = parseInt(m.startTime.split(':')[0]);
-                    const endH = parseInt(m.endTime.split(':')[0]);
-                    if (startH < minHour) minHour = Math.max(0, startH);
-                    if (endH > maxHour) maxHour = Math.min(24, endH);
+                    const startH = parseTimeToHour(m.startTime, false);
+                    const endH = parseTimeToHour(m.endTime, true);
+                    if (startH !== null && startH < minHour) minHour = Math.max(0, startH);
+                    if (endH !== null && endH > maxHour) maxHour = Math.min(24, endH);
                 }
             });
         }
         
         if (minHour < 6) minHour = 6;
-        if (maxHour > 22) maxHour = 22;
+        if (maxHour > 23) maxHour = 23;
 
         const result = [];
         for (let i = 0; i <= maxHour - minHour; i++) {
             result.push(minHour + i);
         }
         return result;
-    }, [timings]);
-
-    const gridHours = getGridBounds();
+    }, [timings, displayMeetings]);
     const HOUR_HEIGHT = 160;
 
     const currentTimeOffset = useMemo(() => {
@@ -371,6 +388,7 @@ export default function MeetingsClient({ isReadOnly = false }: MeetingsClientPro
                     isOpen={!!viewMeeting} 
                     onClose={() => setViewMeeting(null)} 
                     meeting={viewMeeting} 
+                    isViewingOtherUser={!!viewedUser}
                 />
 
                 <MeetingFormModal 

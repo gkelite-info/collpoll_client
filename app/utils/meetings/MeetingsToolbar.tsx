@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import MonthPicker from './components/MonthPicker';
+
 import { Plus, CaretLeft, CaretRight, CaretDown, CalendarBlank } from '@phosphor-icons/react';
 import UserSearchBar from './components/UserSearchBar';
 import { SelectUser } from "@/lib/helpers/Hr/meetings/getCollegeUsers";
@@ -33,16 +33,12 @@ export default function MeetingsToolbar({
     isReadOnly,
     onNewMeeting
 }: MeetingsToolbarProps) {
-    const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
     const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
-    const monthPickerRef = useRef<HTMLDivElement>(null);
     const viewDropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (monthPickerRef.current && !monthPickerRef.current.contains(event.target as Node)) {
-                setIsMonthPickerOpen(false);
-            }
+
             if (viewDropdownRef.current && !viewDropdownRef.current.contains(event.target as Node)) {
                 setIsViewDropdownOpen(false);
             }
@@ -53,22 +49,72 @@ export default function MeetingsToolbar({
 
     const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
+    const isPrevDisabled = (() => {
+        const next = new Date(currentDate);
+        if (viewMode === 'Day') {
+            next.setDate(next.getDate() - 1);
+        } else {
+            next.setDate(next.getDate() - 7);
+        }
+        return next.getFullYear() < 2026;
+    })();
+
+    const dateInputRef = useRef<HTMLInputElement>(null);
+
+    const formattedDate = (() => {
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const year = currentDate.getFullYear();
+        return `${day}/${month}/${year}`;
+    })();
+
+    const inputDateValue = (() => {
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    })();
+
+    const handleOpenDatePicker = () => {
+        try {
+            dateInputRef.current?.showPicker();
+        } catch {
+            dateInputRef.current?.focus();
+        }
+    };
+
     return (
         <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 p-4 border-b border-gray-200 bg-white z-40 relative shadow-sm">
             <div className="flex items-center justify-between w-full xl:w-auto gap-2 sm:gap-4">
-                <div className="relative" ref={monthPickerRef}>
-                    <button 
-                        onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)}
-                        className="cursor-pointer flex items-center justify-center gap-1.5 px-3 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 text-base font-bold text-gray-800 transition-colors"
-                    >
-                        <span className="whitespace-nowrap">{monthName}</span>
-                        <CaretDown size={14} weight="bold" className={`text-gray-400 transition-transform ${isMonthPickerOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    <MonthPicker 
-                        isOpen={isMonthPickerOpen} 
-                        currentDate={currentDate} 
-                        onChangeDate={setCurrentDate} 
-                        onClose={() => setIsMonthPickerOpen(false)} 
+                <div 
+                    onClick={handleOpenDatePicker}
+                    className="relative cursor-pointer flex items-center justify-center gap-2.5 px-3 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 text-sm font-bold text-gray-800 transition-colors focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 select-none"
+                >
+                    <span>{formattedDate}</span>
+                    <CalendarBlank size={16} weight="bold" className="text-gray-600 pointer-events-none" />
+                    <input 
+                        ref={dateInputRef}
+                        type="date"
+                        min="2026-01-01"
+                        value={inputDateValue}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            try {
+                                (e.target as HTMLInputElement).showPicker();
+                            } catch {
+                                (e.target as HTMLInputElement).focus();
+                            }
+                        }}
+                        onChange={(e) => {
+                            if (e.target.value) {
+                                const [year, month, day] = e.target.value.split('-');
+                                const newDate = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+                                setCurrentDate(newDate);
+                            }
+                        }}
+                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                        tabIndex={0}
+                        aria-label="Select date"
                     />
                 </div>
                 
@@ -79,7 +125,11 @@ export default function MeetingsToolbar({
                     </button>
                     
                     <div className="flex items-center">
-                        <button onClick={() => navigate('prev')} className="cursor-pointer px-2 h-10 flex items-center justify-center hover:bg-gray-50 border border-gray-200 rounded-l-lg bg-white text-gray-500 transition-colors shadow-sm">
+                        <button 
+                            onClick={() => navigate('prev')} 
+                            disabled={isPrevDisabled}
+                            className={`px-2 h-10 flex items-center justify-center border border-gray-200 rounded-l-lg bg-white transition-colors shadow-sm ${isPrevDisabled ? 'text-gray-300 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50 text-gray-500'}`}
+                        >
                             <CaretLeft size={16} weight="bold" />
                         </button>
                         <button onClick={() => navigate('next')} className="cursor-pointer px-2 h-10 flex items-center justify-center hover:bg-gray-50 border-y border-r border-gray-200 rounded-r-lg bg-white text-gray-500 transition-colors shadow-sm">

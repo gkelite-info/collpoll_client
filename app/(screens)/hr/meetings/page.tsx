@@ -1,16 +1,9 @@
-'use client'
-import { Suspense } from "react";
-import { Loader } from "../../(student)/calendar/right/timetable";
-import AdminMeetingsPage from "./hrMeetings";
+import MeetingsServerWrapper from '@/app/utils/meetings/MeetingsServerWrapper';
 
-export default function FacultyMeetings() {
+export default function MeetingsPage() {
     return (
-        <Suspense fallback={
-            <div className="h-screen w-full flex justify-center items-center">
-                <Loader />
-            </div>
-        }>
-            <AdminMeetingsPage />
-        </Suspense>
+        <div className="w-full p-2 min-h-[calc(100vh-64px)] bg-gray-50/30">
+            <MeetingsServerWrapper />
+        </div>
     );
 }

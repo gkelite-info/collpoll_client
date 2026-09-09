@@ -7,6 +7,7 @@ export async function fetchMeetingsByMonth(
   endDate: string,
   options?: {
     participantUserId?: number;
+    participantUserIds?: number[];
     parentUserId?: number;
   }
 ): Promise<Meeting[]> {
@@ -42,7 +43,12 @@ export async function fetchMeetingsByMonth(
 
   let filteredData = data || [];
 
-  if (options?.participantUserId) {
+  if (options?.participantUserIds && options.participantUserIds.length > 0) {
+    filteredData = filteredData.filter((m: any) => 
+      options.participantUserIds!.includes(m.createdBy) || 
+      (m.college_meeting_participants || []).some((p: any) => options.participantUserIds!.includes(p.userId))
+    );
+  } else if (options?.participantUserId) {
     filteredData = filteredData.filter((m: any) => 
       m.createdBy === options.participantUserId || 
       (m.college_meeting_participants || []).some((p: any) => p.userId === options.participantUserId)
