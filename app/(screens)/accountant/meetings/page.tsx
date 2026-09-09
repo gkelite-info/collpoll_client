@@ -1,14 +1,9 @@
-import AccountantPageShell from "../components/AccountantPageShell";
+import MeetingsServerWrapper from '@/app/utils/meetings/MeetingsServerWrapper';
 
-export default function AccountantMeetingsPage() {
-  return (
-    <AccountantPageShell
-      title="Meetings"
-      subtitle="View accountant meetings and discussions."
-    >
-      <section className="rounded-lg bg-white p-5 shadow-sm">
-        <p className="text-sm text-gray-500">No meetings available.</p>
-      </section>
-    </AccountantPageShell>
-  );
+export default function MeetingsPage() {
+    return (
+        <div className="w-full p-2 min-h-[calc(100vh-64px)] bg-gray-50/30">
+            <MeetingsServerWrapper />
+        </div>
+    );
 }

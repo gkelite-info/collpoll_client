@@ -4,7 +4,7 @@ import { MouseEvent, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Laptop, PencilSimple, Trash, X } from "@phosphor-icons/react";
 import PillTag from "./PillTag";
-import { Meeting } from "../page";
+import { RoleMeeting as Meeting } from "@/app/utils/meetings/RoleMeetingType";
 import { useTranslations } from "next-intl";
 import { Avatar } from "@/app/utils/Avatar";
 
@@ -106,8 +106,8 @@ export default function MeetingCard({
                 onClick={(e: MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation();
                   onEdit?.(
-                    data.financeMeetingId,
-                    data.financeMeetingSectionsId,
+                    data.financeMeetingId!,
+                    data.financeMeetingSectionsId ?? null,
                   );
                 }}
               >

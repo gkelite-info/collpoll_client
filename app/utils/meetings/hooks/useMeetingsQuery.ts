@@ -12,26 +12,13 @@ export function useMeetingsMonthly(collegeId: number | null, year: number, month
       const startDate = new Date(year, month, -7).toISOString().split("T")[0];
       const endDate = new Date(year, month + 1, 7).toISOString().split("T")[0];
       
-      let participantUserId = undefined;
+      let participantUserIds: number[] = [];
+      if (userId) participantUserIds.push(userId);
       
-      if (role === "Parent" && userId) {
-        // Find child's userId
-        const { data: student } = await supabase
-          .from("students")
-          .select("userId")
-          .eq("parentId", userId)
-          .single();
-          
-        if (student?.userId) {
-          participantUserId = student.userId;
-        }
-      } else if (userId) {
-        // For Students, Faculty, Management, Staff, etc. - pass their own userId 
-        // to filter meetings or fetch their classes
-        participantUserId = userId;
-      }
+      // Strict filtering: User only sees meetings where they are explicitly an attendee or organizer
+      // This applies to all roles, ensuring Parents don't see Student meetings and vice versa.
       
-      return fetchMeetingsByMonth(collegeId, startDate, endDate, { participantUserId });
+      return fetchMeetingsByMonth(collegeId, startDate, endDate, { participantUserIds });
     },
     enabled: !!collegeId,
     staleTime: 5 * 60 * 1000, // 5 minutes

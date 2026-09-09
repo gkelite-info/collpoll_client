@@ -12,9 +12,10 @@ interface MeetingViewModalProps {
     meeting: Meeting | null;
     isOpen: boolean;
     onClose: () => void;
+    isViewingOtherUser?: boolean;
 }
 
-export default function MeetingViewModal({ meeting, isOpen, onClose }: MeetingViewModalProps) {
+export default function MeetingViewModal({ meeting, isOpen, onClose, isViewingOtherUser }: MeetingViewModalProps) {
     const [isMounted, setIsMounted] = useState(false);
     useEffect(() => setIsMounted(true), []);
 
@@ -121,7 +122,7 @@ export default function MeetingViewModal({ meeting, isOpen, onClose }: MeetingVi
                             <div className="px-5 sm:px-6 py-5 sm:py-6 overflow-y-auto custom-scrollbar flex-1 space-y-6 sm:space-y-8">
 
                                 {/* Prominent Top-Level Join Section */}
-                                {(meeting.meetingLink || meeting.platform === 'Zoom Meeting') && canJoin && (
+                                {(meeting.meetingLink || meeting.platform === 'Zoom Meeting') && canJoin && !meeting.id.startsWith('ce_') && !meeting.id.startsWith('bce_') && !isViewingOtherUser && (
                                     <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">

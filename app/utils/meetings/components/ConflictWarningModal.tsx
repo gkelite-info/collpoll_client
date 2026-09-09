@@ -44,7 +44,7 @@ export default function ConflictWarningModal({ isOpen, conflicts, onClose, onCha
                             <Warning size={24} weight="fill" />
                             <h2 className="text-lg font-bold">Time Conflict Detected</h2>
                         </div>
-                        <button onClick={onChangeTimings} className="p-2 rounded-full hover:bg-rose-100 text-rose-400 hover:text-rose-600 transition-colors">
+                        <button onClick={onChangeTimings} className="p-2 rounded-full cursor-pointer hover:bg-rose-100 text-rose-400 hover:text-rose-600 transition-colors">
                             <X size={20} weight="bold" />
                         </button>
                     </div>
@@ -88,7 +88,7 @@ export default function ConflictWarningModal({ isOpen, conflicts, onClose, onCha
                             Ignore (Not Recommended)
                         </button>
                         */}
-                        <button onClick={onChangeTimings} className="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-colors">
+                        <button onClick={onChangeTimings} className="px-5 py-2.5 rounded-xl cursor-pointer text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-colors">
                             Change Timings
                         </button>
                     </div>

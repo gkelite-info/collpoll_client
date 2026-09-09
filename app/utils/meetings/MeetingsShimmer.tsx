@@ -51,9 +51,12 @@ export default function MeetingsShimmer({
                     <div className="flex flex-1 relative bg-white pr-4 pb-4">
 
                         <div className="w-[60px] flex-shrink-0 border-r border-gray-200 bg-white relative z-20 sticky left-0">
-                            {gridHours.map(hour => (
+                            {gridHours.map((hour, idx) => (
                                 <div key={hour} className="h-[160px] relative">
-                                    <div className="absolute -top-2 right-2 h-3 w-8 bg-gray-200 rounded-sm"></div>
+                                    <div className={`absolute right-2 h-3 w-8 bg-gray-200 rounded-sm ${idx === 0 ? 'top-1' : '-top-2'}`}></div>
+                                    {idx === gridHours.length - 1 && (
+                                        <div className="absolute bottom-1 right-2 h-3 w-8 bg-gray-200 rounded-sm"></div>
+                                    )}
                                 </div>
                             ))}
                         </div>

@@ -1,11 +1,9 @@
-import PageUnderConstruction from "@/app/utils/PageUnderConstruction";
+import MeetingsServerWrapper from '@/app/utils/meetings/MeetingsServerWrapper';
 
 export default function MeetingsPage() {
     return (
-        <div>
-            <div className="w-full h-full dark:bg-slate-950 flex flex-col">
-                <PageUnderConstruction />
-            </div>
+        <div className="w-full p-2 min-h-[calc(100vh-64px)] bg-gray-50/30">
+            <MeetingsServerWrapper />
         </div>
-    )
+    );
 }

@@ -20,28 +20,7 @@ import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTermi
 type MeetingType = "upcoming" | "previous";
 type MeetingCategory = "Hr";
 
-interface Meeting {
-  id: string;
-  hrMeetingId: number;
-  hrMeetingSectionsId: number;
-  category: MeetingCategory;
-  title: string;
-  timeRange: string;
-  fromTime?: string;
-  toTime?: string;
-  rawDate?: string;
-  educationType: string;
-  branch: string;
-  description: string;
-  date: string;
-  participants: number;
-  year: string;
-  section: string;
-  tags: string;
-  type: MeetingType;
-  meetingLink: string;
-  sections?: any[];
-}
+import { RoleMeeting as Meeting } from "@/app/utils/meetings/RoleMeetingType";
 
 const getCurrentTime12Hour = () => {
   const now = new Date();
@@ -168,7 +147,7 @@ export default function MeetingsPage() {
     if (!selectedMeeting) return;
     try {
       setIsDeleting(true);
-      const res = await deactivateHrMeeting(selectedMeeting.hrMeetingId);
+      const res = await deactivateHrMeeting(selectedMeeting.hrMeetingId!);
       if (!res.success) {
         toast.error("Failed to delete meeting");
         return;
@@ -186,7 +165,7 @@ export default function MeetingsPage() {
 
   const editMeetingId = searchParams.get("editMeetingId");
   const editData = editMeetingId
-    ? meetings.find((m) => String(m.hrMeetingId) === editMeetingId)
+    ? meetings.find((m) => String(m.hrMeetingId!) === editMeetingId)
     : undefined;
 
   return (

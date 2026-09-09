@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { Meeting } from './meetingTypes';
 import { PencilSimple, Trash } from '@phosphor-icons/react';
 import { SelectUser } from "@/lib/helpers/Hr/meetings/getCollegeUsers";
+import { useUser } from "@/app/utils/context/UserContext";
 
 interface MeetingsCalendarGridProps {
     daysToRender: Date[];
@@ -42,6 +43,7 @@ export default function MeetingsCalendarGrid({
     setDeleteMeeting,
     isLoadingData
 }: MeetingsCalendarGridProps) {
+    const { userId } = useUser();
     const HOUR_HEIGHT = 160;
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [hasInitialScrolled, setHasInitialScrolled] = useState(false);
@@ -61,6 +63,14 @@ export default function MeetingsCalendarGrid({
 
     const getLocalISODate = (d: Date) => {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    const formatHour = (hour: number) => {
+        const h = hour % 24;
+        if (h === 0 || h === 24) return '12 AM';
+        if (h === 12) return '12 PM';
+        if (h > 12) return `${h - 12} PM`;
+        return `${h} AM`;
     };
 
     return (
@@ -103,11 +113,16 @@ export default function MeetingsCalendarGrid({
                 <div className="flex flex-1 relative bg-white pr-4 pb-4">
 
                     <div className="w-[60px] flex-shrink-0 border-r border-gray-200 bg-white relative z-20 sticky left-0">
-                        {gridHours.map(hour => (
+                        {gridHours.map((hour, idx) => (
                             <div key={hour} className="relative" style={{ height: `${HOUR_HEIGHT}px` }}>
-                                <span className="absolute -top-3 right-2 text-[11px] font-bold text-gray-500 bg-white px-1 leading-none z-20">
-                                    {hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : hour === 0 ? '12 AM' : `${hour} AM`}
+                                <span className={`absolute right-2 text-[11px] font-bold text-gray-500 bg-white px-1 leading-none z-20 ${idx === 0 ? 'top-1' : '-top-3'}`}>
+                                    {formatHour(hour)}
                                 </span>
+                                {idx === gridHours.length - 1 && (
+                                    <span className="absolute bottom-1 right-2 text-[11px] font-bold text-gray-500 bg-white px-1 leading-none z-20">
+                                        {formatHour(hour + 1)}
+                                    </span>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -164,7 +179,7 @@ export default function MeetingsCalendarGrid({
                                             <div className="flex justify-between items-start gap-1">
                                                 <div className="text-[13px] font-bold truncate leading-tight flex-1">{meeting.title}</div>
                                                 {/* Edit/Delete Actions */}
-                                                {!viewedUser && !isReadOnly && !isMeetingInPast(meeting) && (
+                                                {!viewedUser && !isReadOnly && !isMeetingInPast(meeting) && meeting.createdBy === userId && (
                                                     <div className="hidden group-hover:flex items-center shrink-0 bg-white/95 backdrop-blur-md rounded-md shadow-sm border border-gray-100 p-1 mt-[-4px] mr-[-4px] gap-1 z-50">
                                                         <button 
                                                             onClick={(e) => { e.stopPropagation(); openEditModal(meeting); }} 
