@@ -20,7 +20,7 @@ interface MeetingFormModalProps {
 }
 
 export default function MeetingFormModal({ isOpen, onClose, initialData, timings = [], holidays = [] }: MeetingFormModalProps) {
-    const { collegeId, userId } = useUser();
+    const { collegeId, userId, fullName, profilePhoto, role } = useUser();
 
     const { mutateAsync: createMeeting } = useCreateMeeting(collegeId || 0);
     const { mutateAsync: updateMeeting } = useUpdateMeeting(collegeId || 0);
@@ -98,10 +98,18 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
         } else if (isOpen) {
             setFormData({
                 ...defaultState,
-                date: new Date().toISOString().split('T')[0]
+                date: new Date().toISOString().split('T')[0],
+                organizer: fullName || ''
             });
             setInitialAttendees([]);
-            setInitialOrganizer(null);
+            setInitialOrganizer(fullName && userId ? {
+                id: userId,
+                userId: userId,
+                name: fullName,
+                subLabel: role || 'Organizer',
+                avatar: profilePhoto,
+                displayId: String(userId)
+            } : null);
         }
     }, [isOpen, initialData, collegeId]);
 
@@ -221,14 +229,18 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
         }
 
         const todayDate = new Date().toISOString().split('T')[0];
-        if (formData.date < todayDate) {
+        if (formData.date < todayDate && !initialData) {
             toast.error('Meetings cannot be scheduled in the past.', { id: toastId });
             return;
         }
-        if (formData.date === todayDate) {
+        if (formData.date === todayDate && !initialData) {
             const currentHour = new Date().getHours();
             const currentMinute = new Date().getMinutes();
             const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+            if (formData.startTime < currentTimeStr) {
+                toast.error('Start Time cannot be in the past.', { id: toastId });
+                return;
+            }
             if (formData.endTime <= currentTimeStr) {
                 toast.error('End Time must be greater than the current time.', { id: toastId });
                 return;
@@ -258,10 +270,59 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
                 toast.error('Zoom Meeting ID is required.', { id: toastId });
                 return;
             }
-        } else if (platform === 'Google Meet' || platform === 'Others') {
+            if (!/^[\d\s-]+$/.test(trimmedZoomId)) {
+                toast.error('Zoom Meeting ID must contain only numbers, spaces, or dashes.', { id: toastId });
+                return;
+            }
+            const zoomIdNumbers = trimmedZoomId.replace(/\D/g, '');
+            if (zoomIdNumbers.length < 9 || zoomIdNumbers.length > 11) {
+                toast.error('Please enter a valid 9 to 11-digit Zoom Meeting ID.', { id: toastId });
+                return;
+            }
+        } else if (platform === 'Google Meet') {
+            const trimmedLink = formData.meetingLink?.trim() || '';
+            if (!trimmedLink) {
+                toast.error('Google Meet Link is required.', { id: toastId });
+                return;
+            }
+            if (!/^https?:\/\/meet\.google\.com\/[a-z0-9-]+$/i.test(trimmedLink) && !trimmedLink.includes('meet.google.com/')) {
+                toast.error('Please enter a valid Google Meet URL (e.g., https://meet.google.com/xyz-abcd-xyz).', { id: toastId });
+                return;
+            }
+        } else if (platform === 'Others') {
             const trimmedLink = formData.meetingLink?.trim() || '';
             if (!trimmedLink) {
                 toast.error('Meeting Link is required.', { id: toastId });
+                return;
+            }
+            try {
+                const url = new URL(trimmedLink.startsWith('http') ? trimmedLink : `https://${trimmedLink}`);
+                if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                    toast.error('Please enter a valid URL starting with http:// or https://', { id: toastId });
+                    return;
+                }
+                
+                const blockedDomains = ['youtube.com', 'youtu.be', 'netflix.com', 'instagram.com', 'facebook.com', 'tiktok.com', 'twitter.com', 'x.com', 'pornhub.com'];
+                const hostname = url.hostname.toLowerCase();
+                
+                if (blockedDomains.some(domain => hostname.includes(domain))) {
+                    toast.error('Social media, video, or restricted links are not permitted.', { id: toastId });
+                    return;
+                }
+                
+                const restrictedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.mp4', '.avi', '.mov', '.pdf', '.doc', '.docx', '.exe', '.zip'];
+                const pathname = url.pathname.toLowerCase();
+                if (restrictedExtensions.some(ext => pathname.endsWith(ext))) {
+                    toast.error('Media, images, and document files (like PDFs) are not allowed as meeting links.', { id: toastId });
+                    return;
+                }
+                
+                // If it successfully parsed but missed protocol in user input, ensure we save it properly
+                if (!trimmedLink.startsWith('http')) {
+                    setFormData(prev => ({ ...prev, meetingLink: url.toString() }));
+                }
+            } catch (e) {
+                toast.error('Please enter a properly formatted meeting URL.', { id: toastId });
                 return;
             }
         }
@@ -419,7 +480,7 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
                                         <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
                                             <LinkIcon size={16} weight="bold" /> Zoom ID <span className="text-red-500">*</span>
                                         </label>
-                                        <input type="text" value={formData.zoomId} onChange={e => setFormData({ ...formData, zoomId: e.target.value })} placeholder="Enter Zoom ID" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
+                                        <input type="text" maxLength={20} value={formData.zoomId} onChange={e => setFormData({ ...formData, zoomId: e.target.value })} placeholder="Enter Zoom ID" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[15px] font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 transition-all" />
                                     </div>
                                     <div>
                                         <label className="flex items-center gap-2 text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">
@@ -460,7 +521,7 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
                             <button type="button" onClick={onClose} disabled={isSubmitting} className="cursor-pointer w-full sm:w-auto px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50 shadow-sm">
                                 Cancel
                             </button>
-                            <button type="submit" form="meeting-form" disabled={isSubmitting || !!errorMsg} className="cursor-pointer w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
+                            <button type="submit" form="meeting-form" disabled={isSubmitting} className="cursor-pointer w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
                                 {isSubmitting ? (
                                     <>
                                         <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>

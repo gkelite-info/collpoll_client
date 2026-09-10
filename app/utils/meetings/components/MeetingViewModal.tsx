@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Meeting } from '../meetingTypes';
-import { X, CalendarBlank, Clock, User, Link as LinkIcon, Users, Note, PencilSimple, Trash } from '@phosphor-icons/react';
+import { X, CalendarBlank, Clock, User, Link as LinkIcon, Users, Note, PencilSimple, Trash, Lock } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { useUser } from "@/app/utils/context/UserContext";
 import { useState, useEffect } from 'react';
@@ -34,7 +34,7 @@ export default function MeetingViewModal({ meeting, isOpen, onClose, isViewingOt
     useEffect(() => {
         if (!isOpen) return;
         setCurrentTime(new Date()); // initial set when opened
-        const timer = setInterval(() => setCurrentTime(new Date()), 10000); // Check every 10 seconds
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000); // Check every second for real-time updates
         return () => clearInterval(timer);
     }, [isOpen]);
 
@@ -63,10 +63,12 @@ export default function MeetingViewModal({ meeting, isOpen, onClose, isViewingOt
         if (!isSameDate) {
             earlyStatusText = "Upcoming";
         } else {
-            if (minsBeforeStart > 60) {
-                earlyStatusText = `Starts in ${Math.floor(minsBeforeStart / 60)}h ${Math.ceil(minsBeforeStart % 60)}m`;
+            const hours = Math.floor(minsBeforeStart / 60);
+            const mins = Math.floor(minsBeforeStart % 60);
+            if (hours > 0) {
+                earlyStatusText = `Starts in ${hours}h ${mins}m`;
             } else {
-                earlyStatusText = `Starts in ${Math.ceil(minsBeforeStart)}m`;
+                earlyStatusText = `Starts in ${mins}m`;
             }
         }
     }
@@ -129,7 +131,16 @@ export default function MeetingViewModal({ meeting, isOpen, onClose, isViewingOt
                                                 <LinkIcon size={20} weight="fill" className="text-emerald-600 shrink-0" />
                                                 <h3 className="text-[15px] font-bold text-gray-800 tracking-tight">{meeting.platform || 'Meeting'} Details</h3>
                                             </div>
-                                            {meeting.platform === 'Zoom Meeting' ? (
+                                            {isTooEarly || hasEnded ? (
+                                                <div className="flex items-start gap-2 mt-1.5">
+                                                    <div className="bg-white/80 p-1 rounded-md shrink-0 border border-gray-200/60 shadow-sm">
+                                                        <Lock size={12} weight="bold" className="text-gray-500" />
+                                                    </div>
+                                                    <p className="text-[13px] text-gray-500 font-medium leading-snug mt-0.5">
+                                                        {hasEnded ? "This meeting has already ended." : "Link will be visible 15 mins before start."}
+                                                    </p>
+                                                </div>
+                                            ) : meeting.platform === 'Zoom Meeting' ? (
                                                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mt-2">
                                                     <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-gray-200">
                                                         <span className="text-gray-500 font-medium">ID:</span> <span className="font-bold text-gray-800">{meeting.zoomId || 'N/A'}</span>
@@ -139,7 +150,7 @@ export default function MeetingViewModal({ meeting, isOpen, onClose, isViewingOt
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <p className="text-sm text-gray-500 truncate mt-0.5">{meeting.meetingLink}</p>
+                                                <p className="text-sm text-gray-500 truncate mt-0.5 select-all">{meeting.meetingLink}</p>
                                             )}
                                         </div>
                                         <div className="shrink-0 w-full sm:w-auto">
