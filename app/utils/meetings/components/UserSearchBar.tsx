@@ -17,7 +17,7 @@ interface UserSearchBarProps {
 }
 
 export default function UserSearchBar({ currentUser, onSelectUser, selectedUser }: UserSearchBarProps) {
-    const { collegeId } = useUser();
+    const { collegeId, role, userId } = useUser();
     
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -46,11 +46,13 @@ export default function UserSearchBar({ currentUser, onSelectUser, selectedUser 
         isFetchingNextPage, 
         fetchNextPage, 
         hasNextPage 
-    } = useInfiniteCollegeUsers(collegeId || 0, debouncedSearchQuery);
+    } = useInfiniteCollegeUsers(collegeId || 0, debouncedSearchQuery, userId, role);
     
-    const users = data?.pages.flatMap((page) => page) || [];
+    const usersRaw = data?.pages.flatMap((page) => page) || [];
+    const users = Array.from(new Map(usersRaw.map(u => [u.userId, u])).values());
     
-    const { ref: loadMoreRef, inView } = useInView();
+    const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
+    const { ref: loadMoreRef, inView } = useInView({ root: scrollRoot, rootMargin: '100px' });
 
     useEffect(() => {
         if (inView && hasNextPage && !isFetchingNextPage) {
@@ -138,7 +140,7 @@ export default function UserSearchBar({ currentUser, onSelectUser, selectedUser 
                         transition={{ duration: 0.15 }}
                         className="absolute top-[calc(100%+8px)] left-0 w-full bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 overflow-hidden z-[9999]"
                     >
-                        <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-1.5">
+                        <div ref={setScrollRoot} className="max-h-[300px] overflow-y-auto custom-scrollbar p-1.5">
                             
                             {/* "Me" Option (Always at top) */}
                             {(!searchQuery || "my calendar".includes(searchQuery.toLowerCase()) || currentUser.name.toLowerCase().includes(searchQuery.toLowerCase())) && (

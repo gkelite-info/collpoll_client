@@ -10,7 +10,7 @@ import UserSearchShimmer from './UserSearchShimmer';
 import { useInView } from 'react-intersection-observer';
 
 export const UserMultiSelect = ({ value, onChange, initialSelectedUsers = [] }: { value: string, onChange: (v: string) => void, initialSelectedUsers?: SelectUser[] }) => {
-    const { collegeId } = useUser();
+    const { collegeId, userId, role } = useUser();
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -30,9 +30,11 @@ export const UserMultiSelect = ({ value, onChange, initialSelectedUsers = [] }: 
         }
     }, [initialSelectedUsers]);
 
-    const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } = useInfiniteCollegeUsers(collegeId || 0, debouncedSearchQuery);
-    const users = data?.pages.flatMap(page => page) || [];
-    const { ref: loadMoreRef, inView } = useInView();
+    const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
+    const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } = useInfiniteCollegeUsers(collegeId || 0, debouncedSearchQuery, userId, role);
+    const usersRaw = data?.pages.flatMap(page => page) || [];
+    const users = Array.from(new Map(usersRaw.map(u => [u.userId, u])).values());
+    const { ref: loadMoreRef, inView } = useInView({ root: scrollRoot, rootMargin: '100px' });
 
     useEffect(() => {
         if (inView && hasNextPage && !isFetchingNextPage) {
@@ -77,7 +79,7 @@ export const UserMultiSelect = ({ value, onChange, initialSelectedUsers = [] }: 
             >
                 {selectedUserObjects.map(user => (
                     <span key={user.userId} className="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        {user.name}
+                        {user.name} {user.userId === userId ? "(Me)" : ""}
                         <X size={12} weight="bold" className="cursor-pointer hover:text-emerald-900 ml-1" onClick={() => toggleUser(user)} />
                     </span>
                 ))}
@@ -103,7 +105,7 @@ export const UserMultiSelect = ({ value, onChange, initialSelectedUsers = [] }: 
                         initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.15 }}
                         className="absolute top-[calc(100%+8px)] left-0 w-full bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 z-[9999] overflow-hidden flex flex-col"
                     >
-                        <div className="max-h-60 overflow-y-auto custom-scrollbar p-1.5 space-y-1">
+                        <div ref={setScrollRoot} className="max-h-60 overflow-y-auto custom-scrollbar p-1.5 space-y-1">
                             {isLoading ? (
                                 <UserSearchShimmer />
                             ) : users.length === 0 ? (
@@ -122,7 +124,10 @@ export const UserMultiSelect = ({ value, onChange, initialSelectedUsers = [] }: 
                                             >
                                                 <Avatar alt={user.name} src={user.avatar} size={36} />
                                                 <div className="flex-1 min-w-0 flex flex-col">
-                                                    <div className={`text-[14px] font-bold leading-tight truncate ${isSelected ? 'text-emerald-700' : 'text-gray-800'}`}>{user.name}</div>
+                                                    <div className={`text-[14px] font-bold leading-tight truncate flex items-center gap-1.5 ${isSelected ? 'text-emerald-700' : 'text-gray-800'}`}>
+                                                        {user.name}
+                                                        {user.userId === userId && <span className="text-gray-400 font-medium text-xs">(Me)</span>}
+                                                    </div>
                                                     <div className="text-[12px] text-gray-500 font-medium leading-tight truncate">ID: {user.displayId || user.userId}</div>
                                                     <div className="text-[11px] text-gray-400 font-medium leading-tight truncate">{user.subLabel}</div>
                                                 </div>
@@ -148,7 +153,7 @@ export const UserMultiSelect = ({ value, onChange, initialSelectedUsers = [] }: 
 };
 
 export const UserSingleSelect = ({ value, onChange, initialSelectedUser = null }: { value: string, onChange: (v: string) => void, initialSelectedUser?: SelectUser | null }) => {
-    const { collegeId } = useUser();
+    const { collegeId, userId, role } = useUser();
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -168,9 +173,11 @@ export const UserSingleSelect = ({ value, onChange, initialSelectedUser = null }
         }
     }, [initialSelectedUser]);
 
-    const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } = useInfiniteCollegeUsers(collegeId || 0, debouncedSearchQuery);
-    const users = data?.pages.flatMap(page => page) || [];
-    const { ref: loadMoreRef, inView } = useInView();
+    const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
+    const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } = useInfiniteCollegeUsers(collegeId || 0, debouncedSearchQuery, userId, role);
+    const usersRaw = data?.pages.flatMap(page => page) || [];
+    const users = Array.from(new Map(usersRaw.map(u => [u.userId, u])).values());
+    const { ref: loadMoreRef, inView } = useInView({ root: scrollRoot, rootMargin: '100px' });
 
     useEffect(() => {
         if (inView && hasNextPage && !isFetchingNextPage) {
@@ -212,7 +219,7 @@ export const UserSingleSelect = ({ value, onChange, initialSelectedUser = null }
                 
                 <input
                     type="text"
-                    value={isOpen ? searchQuery : (selectedUserObject ? selectedUserObject.name : '')}
+                    value={isOpen ? searchQuery : (selectedUserObject ? `${selectedUserObject.name}${selectedUserObject.userId === userId ? ' (Me)' : ''}` : '')}
                     onChange={(e) => {
                         setSearchQuery(e.target.value);
                         setIsOpen(true);
@@ -241,7 +248,7 @@ export const UserSingleSelect = ({ value, onChange, initialSelectedUser = null }
                         initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.15 }}
                         className="absolute top-[calc(100%+8px)] left-0 w-full bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 z-[9999] overflow-hidden flex flex-col"
                     >
-                        <div className="max-h-60 overflow-y-auto custom-scrollbar p-1.5 space-y-1">
+                        <div ref={setScrollRoot} className="max-h-60 overflow-y-auto custom-scrollbar p-1.5 space-y-1">
                             {isLoading ? (
                                 <UserSearchShimmer />
                             ) : users.length === 0 ? (
@@ -260,7 +267,10 @@ export const UserSingleSelect = ({ value, onChange, initialSelectedUser = null }
                                             >
                                                 <Avatar alt={user.name} src={user.avatar} size={36} />
                                                 <div className="flex-1 min-w-0 flex flex-col">
-                                                    <div className={`text-[14px] font-bold leading-tight truncate ${isSelected ? 'text-emerald-700' : 'text-gray-800'}`}>{user.name}</div>
+                                                    <div className={`text-[14px] font-bold leading-tight truncate flex items-center gap-1.5 ${isSelected ? 'text-emerald-700' : 'text-gray-800'}`}>
+                                                        {user.name}
+                                                        {user.userId === userId && <span className="text-gray-400 font-medium text-xs">(Me)</span>}
+                                                    </div>
                                                     <div className="text-[12px] text-gray-500 font-medium leading-tight truncate">ID: {user.displayId || user.userId}</div>
                                                     <div className="text-[11px] text-gray-400 font-medium leading-tight truncate">{user.subLabel}</div>
                                                 </div>
@@ -287,7 +297,8 @@ export const UserSingleSelect = ({ value, onChange, initialSelectedUser = null }
 
 export const TimeSelector = ({ value, onChange, bounds }: { value: string, onChange: (v: string) => void, bounds: {start: number, end: number} }) => {
     const [hStr, mStr] = value ? value.split(':') : ['10', '00'];
-    let h24 = parseInt(hStr, 10) || 10;
+    let parsedH = parseInt(hStr, 10);
+    let h24 = isNaN(parsedH) ? 10 : parsedH;
     const minute = mStr || '00';
     
     let hour12 = h24 % 12 || 12;

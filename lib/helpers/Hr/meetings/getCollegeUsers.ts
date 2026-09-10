@@ -56,11 +56,15 @@ export async function getAllUsersForSearch(
   collegeId: number,
   searchQuery?: string,
   limit?: number,
-  offset?: number
+  offset?: number,
+  includeUserId?: number | null,
+  currentUserRole?: string | null
 ): Promise<SelectUser[]> {
   if (!collegeId) return [];
 
-  const excludedRoles = ["wellbeing", "wellbeingmanager", "superadmin"];
+  // As per current requirements, superadmin is always excluded for all roles.
+  // This may be updated later after team discussion to allow CollegeAdmin to see superadmin.
+  const excludedRoles: string[] = ["superadmin"];
 
   let query = supabase
     .from("users")
@@ -80,6 +84,15 @@ export async function getAllUsersForSearch(
     `)
     .eq("collegeId", collegeId)
     .eq("is_deleted", false);
+
+  if (excludedRoles.length > 0) {
+    const excludedRolesStr = excludedRoles.join(",");
+    if (includeUserId) {
+      query = query.or(`role.not.in.(${excludedRolesStr}),role.is.null,userId.eq.${includeUserId}`);
+    } else {
+      query = query.or(`role.not.in.(${excludedRolesStr}),role.is.null`);
+    }
+  }
 
   if (searchQuery) {
     const matchedUserIds = new Set<number>();
@@ -118,6 +131,8 @@ export async function getAllUsersForSearch(
     }
   }
 
+  query = query.order("fullName", { ascending: true, nullsFirst: false }).order("userId", { ascending: true });
+
   if (limit !== undefined && offset !== undefined) {
     query = query.range(offset, offset + limit - 1);
   }
@@ -125,12 +140,7 @@ export async function getAllUsersForSearch(
   const { data, error } = await query;
   if (error) throw error;
 
-  return (data || [])
-    .filter((u: any) => {
-      const roleStr = (u.role || "").toLowerCase();
-      return !excludedRoles.includes(roleStr);
-    })
-    .map(mapUserToSelectUser);
+  return (data || []).map(mapUserToSelectUser);
 }
 
 export async function getUsersByIds(

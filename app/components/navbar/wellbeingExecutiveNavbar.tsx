@@ -87,6 +87,7 @@ export default function WellbeingExecutiveNavbar({
     wellBeingCategoryIds,
     wellBeingCategoryName,
     wellBeingCategoryNames,
+    loading: contextLoading,
   } = useUser();
   const [newIssuesCount, setNewIssuesCount] = useState(0);
   const executiveCategories = [wellBeingCategoryName, ...wellBeingCategoryNames];
@@ -403,9 +404,20 @@ export default function WellbeingExecutiveNavbar({
           Logo
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col items-start gap-[11px] overflow-y-auto pt-4 pl-4 pr-0 pb-5">
-          {items.map((item) => {
-            const active = isActivePath(item.path);
+        <div className="flex min-h-0 flex-1 flex-col items-start w-full h-full lg:gap-[11px] pt-4 pl-4 pr-0 pb-5 overflow-y-auto focus:outline-none">
+          {contextLoading ? (
+            <div className="flex flex-col gap-[11px] w-full pr-4">
+              {Array.from({ length: 15 }).map((_, i) => (
+                <div key={i} className="flex relative items-center gap-3 w-full pl-4 py-2">
+                  <div className="h-[18px] w-[18px] bg-white/20 rounded-full animate-pulse"></div>
+                  <div className="h-4 w-3/4 bg-white/20 rounded animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              {items.map((item) => {
+                const active = isActivePath(item.path);
 
             return (
               <Link
@@ -461,6 +473,8 @@ export default function WellbeingExecutiveNavbar({
               <span className="min-w-0 flex-1 truncate">Executives</span>
             </Link>
           ) : null}
+          </>
+          )}
 
           <button
             onClick={() => setShowLogoutModal(true)}
