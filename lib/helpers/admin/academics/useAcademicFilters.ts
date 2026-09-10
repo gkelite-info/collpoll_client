@@ -1,19 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   fetchEducations,
   fetchBranches,
   fetchAcademicYears,
   fetchSections,
+  fetchSubjects,
 } from "@/lib/helpers/admin/academics/academicDropdowns";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { getSubjects } from "./getAdminAcademicsCards";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 export function useAcademicFilters(
-  input?: number | { userId?: number; collegeId?: number | null }
+  input?: number | { userId?: number; collegeId?: number | null; configuredSubjects?: boolean }
 ) {
+  const configuredSubjects = typeof input === "object" && input.configuredSubjects === true;
+  const requestVersion = useRef(0);
+  const sectionRequestVersion = useRef(0);
   const parsedUserId = typeof input === "number" ? input : input?.userId;
   const parsedCollegeId = typeof input === "object" ? input?.collegeId : null;
 
@@ -70,18 +74,31 @@ export function useAcademicFilters(
       return;
     }
 
-    getSubjects(
+    let cancelled = false;
+    setSubjects([]);
+    setSubject(null);
+    const request = configuredSubjects
+      ? fetchSubjects(collegeId, education.collegeEducationId, branch?.collegeBranchId ?? null, year.collegeAcademicYearId)
+      : getSubjects(
       collegeId,
       branch?.collegeBranchId ?? null,
       year.collegeAcademicYearId,
       section?.collegeSectionsId ?? null
-    )
-      .then(setSubjects)
-      .catch(() => setSubjects([]));
-  }, [collegeId, education, branch, year, section]);
+    );
+    request
+      .then((data) => { if (!cancelled) setSubjects(data); })
+      .catch(() => { if (!cancelled) setSubjects([]); });
+    return () => { cancelled = true; };
+  }, [collegeId, education, branch, year, section, configuredSubjects]);
 
   const selectEducation = async (edu: any) => {
     if (!collegeId || !edu) return;
+    const version = ++requestVersion.current;
+    ++sectionRequestVersion.current;
+    setBranches([]);
+    setYears([]);
+    setSections([]);
+    setSubjects([]);
     setEducation(edu);
     setBranch(null);
     setYear(null);
@@ -96,10 +113,12 @@ export function useAcademicFilters(
         edu.collegeEducationId,
         null
       );
+      if (version !== requestVersion.current) return;
       setYears(yearsData);
       setSections([]);
     } else {
       const branchData = await fetchBranches(collegeId, edu.collegeEducationId);
+      if (version !== requestVersion.current) return;
       setBranches(branchData);
       setYears([]);
       setSections([]);
@@ -107,6 +126,11 @@ export function useAcademicFilters(
   };
 
   const selectBranch = async (br: any) => {
+    const version = ++requestVersion.current;
+    ++sectionRequestVersion.current;
+    setYears([]);
+    setSections([]);
+    setSubjects([]);
     setBranch(br);
     setYear(null);
     setSection(null);
@@ -124,11 +148,15 @@ export function useAcademicFilters(
       br.collegeBranchId,
     );
 
+    if (version !== requestVersion.current) return;
     setYears(yearsData);
     setSections([]);
   };
 
   const selectYear = async (yr: any) => {
+    const version = ++sectionRequestVersion.current;
+    setSections([]);
+    setSubjects([]);
     setYear(yr);
     setSection(null);
     setSubject(null);
@@ -145,10 +173,13 @@ export function useAcademicFilters(
       yr.collegeAcademicYearId,
     );
 
+    if (version !== sectionRequestVersion.current) return;
     setSections(sectionsData);
   };
 
   const resetEducation = () => {
+    ++requestVersion.current;
+    ++sectionRequestVersion.current;
     setEducation(null);
     setBranch(null);
     setYear(null);

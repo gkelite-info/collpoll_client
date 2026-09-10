@@ -1,6 +1,6 @@
 "use client";
 
-import { CaretDown, UserCircle } from "@phosphor-icons/react";
+import { UserCircle } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/app/utils/Avatar";
 
@@ -15,7 +15,9 @@ export interface Department {
   avgAttendance: number;
   belowThresholdCount: number;
   year?: string;
+  section?: string;
   returnQuery?: string;
+  onViewDetails?: () => void;
   faculties?: {
     facultyId: number;
     fullName: string;
@@ -31,15 +33,19 @@ const FacultyAcademicCard = ({
   color,
   bgColor,
   totalStudents,
-  avgAttendance,
-  belowThresholdCount,
   year,
+  section,
   faculties,
   returnQuery,
+  onViewDetails,
 }: Department) => {
   const router = useRouter();
 
   const handleViewDetails = () => {
+    if (onViewDetails) {
+      onViewDetails();
+      return;
+    }
     sessionStorage.setItem("cardFaculties", JSON.stringify(faculties ?? []));
     sessionStorage.setItem("cardYear", year ?? "");
     if (returnQuery) {
@@ -49,7 +55,7 @@ const FacultyAcademicCard = ({
         `/admin/academics?${returnQuery}`,
       );
     }
-    router.push(`/admin/academics/${id}?year=${year}`);
+    router.push(`/admin/academics/${id}?${new URLSearchParams({ year: year ?? "" })}`);
   };
 
   return (
@@ -72,6 +78,11 @@ const FacultyAcademicCard = ({
         </div>
       </div>
 
+      {section && (
+        <p className="mb-3 text-[13px] text-[#282828]">
+          <span className="font-medium">Section - </span>{section}
+        </p>
+      )}
       <div className="flex items-center gap-2 mb-4">
         <span className="text-[#282828] text-[13px] font-medium">
           Faculty -
@@ -79,12 +90,12 @@ const FacultyAcademicCard = ({
         <div className="flex -space-x-2.5 items-center">
           {faculties && faculties.length > 0 ? (
             <>
-              {faculties.slice(0, 5).map((f, index) => (
+              {faculties.map((f, index) => (
                 <div
                   key={f.facultyId || index}
                   tabIndex={0}
                   aria-label={f.fullName}
-                  className="group relative rounded-full border-2 border-white bg-gray-100 shadow-sm outline-none"
+                  className="group relative rounded-full border-2 border-white bg-gray-100 shadow-sm outline-none hover:z-10 focus:z-10"
                 >
                   <div className="overflow-hidden rounded-full">
                     <Avatar src={f.profileUrl} alt={f.fullName} size={32} />
@@ -94,11 +105,6 @@ const FacultyAcademicCard = ({
                   </span>
                 </div>
               ))}
-              {faculties.length > 5 && (
-                <span className="text-gray-700 font-semibold text-sm ml-4">
-                  +{faculties.length - 5}
-                </span>
-              )}
             </>
           ) : (
             <span className="text-gray-400 text-xs">No Faculty</span>
@@ -115,7 +121,7 @@ const FacultyAcademicCard = ({
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2 text-[#282828] font-medium">
           <UserCircle size={28} className="text-[#43C17A]" weight="fill" />
-          <span className="text-[13px]">{totalStudents ?? 0} Students</span>
+          <span className="text-[13px]">{totalStudents ?? 0} {totalStudents === 1 ? "Student" : "Students"}</span>
         </div>
         <button
           onClick={handleViewDetails}

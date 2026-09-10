@@ -33,6 +33,7 @@ export function ClientAcademicsWrapper({
   const [currentPage, setCurrentPage] = useState(1);
   const subjectsPerPage = 9;
 
+
   const loadData = async () => {
     if (!userId) return;
     try {
@@ -103,14 +104,16 @@ export function ClientAcademicsWrapper({
         ) : subjectData.length > 0 ? (
           <div className="flex flex-col gap-5">
             <SubjectCard subjectProps={paginatedSubjects} isSchool={isSchool} />
-            <Pagination
-              currentPage={currentPage}
-              totalItems={subjectData.length}
-              itemsPerPage={subjectsPerPage}
-              onPageChange={setCurrentPage}
-              alwaysShow
-              bgClassName="bg-transparent"
-            />
+            <div className="mt-6 flex w-full items-center justify-center rounded-lg shadow-sm">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={subjectData.length}
+                itemsPerPage={subjectsPerPage}
+                onPageChange={setCurrentPage}
+                alwaysShow
+                roundedBottom="rounded-lg"
+              />
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20">
@@ -118,7 +121,7 @@ export function ClientAcademicsWrapper({
               No subjects found for this class.
             </p>
             <p className="text-gray-400 text-sm">
-              Use "Add Unit" to assign units and topics.
+              Use &quot;Add Unit&quot; to assign units and topics.
             </p>
           </div>
         )}

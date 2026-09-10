@@ -16,6 +16,7 @@ export async function getAdminSubjectsList(
         collegeSectionsId,
         collegeSections,
         collegeBranchId,
+        collegeEducationId,
         collegeAcademicYearId,
         college_branch ( collegeBranchCode ),
         college_academic_year ( collegeAcademicYear )
@@ -26,7 +27,7 @@ export async function getAdminSubjectsList(
       .maybeSingle();
 
     if (sectionError || !rawSectionData) {
-      console.error("Section Fetch Error:", sectionError);
+      if (sectionError) console.error("Section Fetch Error:", sectionError);
       return {
         subjects: [],
         meta: { title: "Section Not Found", year: "N/A" },
@@ -49,6 +50,20 @@ export async function getAdminSubjectsList(
 
     const branchId = sectionData.collegeBranchId;
     const academicYearId = sectionData.collegeAcademicYearId;
+    const sectionIds = [sectionId];
+    if (branchId == null) {
+      const { data: relatedSections, error: relatedError } = await supabase
+        .from("college_sections")
+        .select("collegeSectionsId, collegeSections")
+        .eq("collegeId", collegeId)
+        .eq("collegeEducationId", sectionData.collegeEducationId)
+        .eq("collegeAcademicYearId", academicYearId);
+      if (relatedError) throw relatedError;
+      for (const related of relatedSections ?? []) {
+        if (related.collegeSections.trim().toLowerCase() === sectionName.trim().toLowerCase() &&
+          related.collegeSectionsId !== sectionId) sectionIds.push(related.collegeSectionsId);
+      }
+    }
 
     let subjectsQuery = supabase
       .from("college_subjects")
@@ -115,7 +130,9 @@ export async function getAdminSubjectsList(
         )
       `,
       )
-      .eq("collegeSectionsId", sectionId)
+      .in("collegeSectionsId", sectionIds)
+      .eq("collegeAcademicYearId", academicYearId)
+      .is("deletedAt", null)
       .eq("isActive", true);
 
     const facultyMap: Record<number, any> = {};
@@ -134,7 +151,7 @@ export async function getAdminSubjectsList(
       const rawUnits = (subject.college_subject_units || []).filter(
         (unit: any) =>
           unit.isActive !== false &&
-          (unit.collegeSectionsId == null || unit.collegeSectionsId === sectionId),
+          (unit.collegeSectionsId == null || sectionIds.includes(unit.collegeSectionsId)),
       );
       const unitsByNumber = new Map<number, any>();
       rawUnits.forEach((unit: any) => {
@@ -183,7 +200,7 @@ export async function getAdminSubjectsList(
         const rawTopics = (u.college_subject_unit_topics || []).filter(
           (topic: any) =>
             topic.isActive !== false &&
-            (topic.collegeSectionsId == null || topic.collegeSectionsId === sectionId),
+            (topic.collegeSectionsId == null || sectionIds.includes(topic.collegeSectionsId)),
         );
         const topicsByTitle = new Map<string, any>();
         rawTopics.forEach((topic: any) => {

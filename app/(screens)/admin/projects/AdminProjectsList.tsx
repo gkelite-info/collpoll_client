@@ -71,7 +71,10 @@ export default function AdminProjectsList({
 
     useEffect(() => {
         const getProjects = async () => {
-            if (!facultyId) {
+            const branchId = searchParams.get("branchId");
+            const yearId = searchParams.get("yearId");
+
+            if (!facultyId && !branchId && !yearId) {
                 setLoading(false);
                 return;
             }
@@ -79,11 +82,13 @@ export default function AdminProjectsList({
             setLoading(true);
             try {
                 const { data, total } = await fetchEnrichedProjectsByFaculty(
-                    Number(facultyId),
+                    facultyId ? Number(facultyId) : null,
                     subjectId ? Number(subjectId) : undefined,
                     currentPage,
                     cardsPerPage,
-                    projectView as "active" | "completed"
+                    projectView as "active" | "completed",
+                    branchId ? Number(branchId) : undefined,
+                    yearId ? Number(yearId) : undefined
                 );
                 setProjects(data);
                 setTotalItems(total);
@@ -124,15 +129,20 @@ export default function AdminProjectsList({
 
     const handleFormSaved = async () => {
         setShowCreateForm(false);
-        if (facultyId) {
+        const branchId = searchParams.get("branchId");
+        const yearId = searchParams.get("yearId");
+
+        if (facultyId || branchId || yearId) {
             setLoading(true);
             try {
                 const { data, total } = await fetchEnrichedProjectsByFaculty(
-                    Number(facultyId),
+                    facultyId ? Number(facultyId) : null,
                     subjectId ? Number(subjectId) : undefined,
                     currentPage,
                     cardsPerPage,
-                    projectView as "active" | "completed"
+                    projectView as "active" | "completed",
+                    branchId ? Number(branchId) : undefined,
+                    yearId ? Number(yearId) : undefined
                 );
                 setProjects(data);
                 setTotalItems(total);

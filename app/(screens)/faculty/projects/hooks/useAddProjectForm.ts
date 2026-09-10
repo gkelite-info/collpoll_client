@@ -351,25 +351,38 @@ export const useAddProjectForm = ({
     e.stopPropagation();
   };
 
+  const validateProjectFiles = (files: File[]) => {
+    const allowedExtensions = ["pdf", "jpg", "jpeg", "png", "zip"];
+    const maxFileSize = 10 * 1024 * 1024;
+    const validFiles = files.filter((file) => {
+      const extension = file.name.split(".").pop()?.toLowerCase() || "";
+      return allowedExtensions.includes(extension) && file.size <= maxFileSize;
+    });
+
+    if (files.some((file) => file.size > maxFileSize)) {
+      toast.error("Each uploaded file must be 10 MB or smaller.");
+    }
+    if (files.some((file) =>
+      !allowedExtensions.includes(file.name.split(".").pop()?.toLowerCase() || ""),
+    )) {
+      toast.error("Only PDF, JPG, JPEG, PNG, and ZIP files are allowed.");
+    }
+
+    return validFiles;
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const droppedFiles = e.dataTransfer.files;
     if (droppedFiles?.length > 0) {
-      const allowedExtensions = ["pdf", "jpg", "jpeg", "png", "zip"];
-      const validFiles = Array.from(droppedFiles).filter((file) =>
-        allowedExtensions.includes(
-          file.name.split(".").pop()?.toLowerCase() || "",
-        ),
-      );
+      const validFiles = validateProjectFiles(Array.from(droppedFiles));
       if (validFiles.length > 0) {
         setFormData((prev) => ({
           ...prev,
           files: [...prev.files, ...validFiles],
           fileUrls: [...prev.fileUrls, ...validFiles.map((f) => f.name)],
         }));
-      } else {
-        alert("Invalid file type. Please upload PDF, JPG, PNG, or ZIP.");
       }
     }
   };
@@ -377,12 +390,15 @@ export const useAddProjectForm = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files?.length) {
-      const newFiles = Array.from(files);
-      setFormData((prev) => ({
-        ...prev,
-        files: [...prev.files, ...newFiles],
-        fileUrls: [...prev.fileUrls, ...newFiles.map((f) => f.name)],
-      }));
+      const newFiles = validateProjectFiles(Array.from(files));
+      if (newFiles.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          files: [...prev.files, ...newFiles],
+          fileUrls: [...prev.fileUrls, ...newFiles.map((f) => f.name)],
+        }));
+      }
+      e.target.value = "";
     }
   };
 

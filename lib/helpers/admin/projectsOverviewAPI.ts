@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { getEquivalentSectionIds } from "./academics/getEquivalentSectionIds";
 
 export interface CardKey {
     branchId: number | null;
@@ -23,7 +24,7 @@ export async function getBatchStudentCounts(
     try {
         const yearIds = [...new Set(cards.map((c) => c.yearId))];
 
-        let query = supabase
+        const query = supabase
             .from("students")
             .select(`
                 studentId,
@@ -70,8 +71,8 @@ export async function getBatchStudentCounts(
 export async function getBatchFacultyData(
     collegeEducationId: number,
     cards: CardKey[]
-): Promise<Map<string, { count: number; photos: string[] }>> {
-    const result = new Map<string, { count: number; photos: string[] }>();
+): Promise<Map<string, { count: number; facultyList: { id: number; name: string; avatar?: string }[] }>> {
+    const result = new Map<string, { count: number; facultyList: { id: number; name: string; avatar?: string }[] }>();
     if (cards.length === 0) return result;
 
     try {
@@ -81,14 +82,14 @@ export async function getBatchFacultyData(
         const [sectionResult, facultyResult] = await Promise.all([
             supabase
                 .from("faculty_sections")
-                .select("facultyId, collegeAcademicYearId")
+                .select("facultyId, collegeAcademicYearId, collegeEducationId, collegeBranchId")
                 .in("collegeAcademicYearId", yearIds)
                 .eq("isActive", true)
                 .is("deletedAt", null),
             supabase
                 .from("faculty")
-                .select("facultyId, userId, collegeBranchId")
-                .eq("collegeEducationId", collegeEducationId)
+                .select("facultyId, userId, collegeEducationId, collegeBranchId, fullName")
+                .or(`collegeEducationId.eq.${collegeEducationId},collegeEducationId.is.null`)
                 .eq("isActive", true)
                 .is("deletedAt", null)
         ]);
@@ -100,7 +101,12 @@ export async function getBatchFacultyData(
         if (facultyError || !facultyData?.length) return result;
         
         // Filter facultyData to only include those present in sections
-        const sectionFacultyIds = new Set(sectionData.map((s: any) => s.facultyId));
+        const scopedSectionData = sectionData.filter(
+            (section: any) =>
+                section.collegeEducationId == null ||
+                section.collegeEducationId === collegeEducationId,
+        );
+        const sectionFacultyIds = new Set(scopedSectionData.map((s: any) => s.facultyId));
         const relevantFaculty = facultyData.filter((f: any) => sectionFacultyIds.has(f.facultyId));
 
         // Step 3: Get all profile photos (single query)
@@ -115,14 +121,14 @@ export async function getBatchFacultyData(
             (profileData ?? []).map((p: any) => [p.userId, p.profileUrl])
         );
 
-        // Build a map: facultyId -> { userId, branchId }
+        // Build a map: facultyId -> { userId, branchId, fullName }
         const facultyMap = new Map(
-            relevantFaculty.map((f: any) => [f.facultyId, { userId: f.userId, branchId: f.collegeBranchId }])
+            relevantFaculty.map((f: any) => [f.facultyId, { userId: f.userId, branchId: f.collegeBranchId, fullName: f.fullName }])
         );
 
         // Build a map: yearId -> Set<facultyId> from sections
         const yearFacultyMap = new Map<number, Set<number>>();
-        for (const sec of sectionData) {
+        for (const sec of scopedSectionData) {
             if (!yearFacultyMap.has(sec.collegeAcademicYearId)) {
                 yearFacultyMap.set(sec.collegeAcademicYearId, new Set());
             }
@@ -134,24 +140,26 @@ export async function getBatchFacultyData(
             const key = makeKey(card.branchId, card.yearId);
             const facultyIdsForYear = yearFacultyMap.get(card.yearId) ?? new Set();
 
-            const matchingFaculty: { userId: number; branchId: number | null }[] = [];
+            const matchingFaculty: { id: number; userId: number; branchId: number | null; fullName: string }[] = [];
             for (const fId of facultyIdsForYear) {
                 const fInfo = facultyMap.get(fId);
                 if (!fInfo) continue;
 
                 // Match branch: null === null, or exact match
                 if (card.branchId === null ? fInfo.branchId === null : fInfo.branchId === card.branchId) {
-                    matchingFaculty.push(fInfo);
+                    matchingFaculty.push({ id: fId, ...fInfo });
                 }
             }
 
-            const photos = matchingFaculty
-                .map((f) => profileMap.get(f.userId))
-                .filter((url): url is string => !!url)
-                .filter((value, index, self) => self.indexOf(value) === index)
-                .slice(0, 4);
+            const facultyList = matchingFaculty
+                .slice(0, 4)
+                .map((f) => ({
+                    id: f.id,
+                    name: f.fullName || "Faculty",
+                    avatar: profileMap.get(f.userId)
+                }));
 
-            result.set(key, { count: matchingFaculty.length, photos });
+            result.set(key, { count: matchingFaculty.length, facultyList });
         }
     } catch (err) {
         console.error("Unexpected error in getBatchFacultyData:", err);
@@ -243,7 +251,12 @@ export async function getBatchProjectCounts(
             .gte("endDate", today);
 
         if (filters?.sectionId) {
-            projectQuery = projectQuery.eq("collegeSectionsId", filters.sectionId);
+            const matchingSectionIds = await getEquivalentSectionIds(
+                collegeId,
+                cards[0].yearId,
+                filters.sectionId,
+            );
+            projectQuery = projectQuery.in("collegeSectionsId", matchingSectionIds);
         }
         if (filters?.subjectId) {
             projectQuery = projectQuery.eq("collegeSubjectId", filters.subjectId);
@@ -267,7 +280,10 @@ export async function getBatchProjectCounts(
                 facultyBranchMap.get(project.facultyId);
             const projectYearId = project.collegeAcademicYearId;
 
-            if (branchId === undefined || branchId === null || !projectYearId) continue;
+            // School education cards do not have a branch, so `null` is a valid
+            // part of their card key (for example, `null-91`). Only an unresolved
+            // branch (`undefined`) should prevent a project from being counted.
+            if (branchId === undefined || !projectYearId) continue;
 
             const key = makeKey(branchId, projectYearId);
             if (cardFacultyMap.has(key)) {
