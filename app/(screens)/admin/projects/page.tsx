@@ -410,7 +410,7 @@ function ProjectsOverview() {
 
             const results = initialPaginatedCards.map((card) => {
                 const key = `${card.branchId ?? "null"}-${card.yearId}`;
-                const facultyInfo = facultyDataMap.get(key) ?? { count: 0, photos: [] };
+                const facultyInfo = facultyDataMap.get(key) ?? { count: 0, facultyList: [] };
 
                 return {
                     branchId: card.branchId,
@@ -567,7 +567,7 @@ function ProjectsOverview() {
 
         const results = paginatedCards.map((card) => {
           const key = `${card.branchId ?? "null"}-${card.yearId}`;
-          const facultyInfo = facultyDataMap.get(key) ?? { count: 0, photos: [] };
+          const facultyInfo = facultyDataMap.get(key) ?? { count: 0, facultyList: [] };
 
           return {
             branchId: card.branchId,
