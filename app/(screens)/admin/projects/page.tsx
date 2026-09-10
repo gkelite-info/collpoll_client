@@ -23,6 +23,7 @@ import { Loader } from "../../(student)/calendar/right/timetable";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { supabase } from "@/lib/supabaseClient";
 import { fetchAdminPendingStats } from "@/lib/helpers/projects/project";
+import { getSubjects } from "@/lib/helpers/admin/academics/getAdminAcademicsCards";
 
 function ProjectsOverview() {
   const { userId, collegeEducationId, collegeId, collegeEducationType, loading: adminLoading } = useAdmin();
@@ -51,7 +52,9 @@ function ProjectsOverview() {
   const yearId = searchParams.get("yearId");
 
   const [educations, setEducations] = useState<any[]>([]);
-  const [educationFilter, setEducationFilter] = useState<string>("All");
+  const [educationFilter, setEducationFilter] = useState<string>(
+    searchParams.get("educationId") || "All",
+  );
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isMetadataLoaded, setIsMetadataLoaded] = useState(false);
   const [isPageReady, setIsPageReady] = useState(false);
@@ -69,6 +72,7 @@ function ProjectsOverview() {
   const [sectionOptions, setSectionOptions] = useState<
     { id: number; label: string }[]
   >([]);
+  const [cardSectionsMap, setCardSectionsMap] = useState<Record<string, string[]>>({});
   const [subjectOptions, setSubjectOptions] = useState<
     { id: number; label: string }[]
   >([]);
@@ -84,6 +88,10 @@ function ProjectsOverview() {
   const isSchool = isSchoolEducation(
     education?.collegeEducationType || collegeEducationType || "unknown"
   );
+  const resolvedEducationId =
+    educationFilter === "All"
+      ? collegeEducationId
+      : Number(educationFilter) || null;
 
   const resolvedFilterYearId = useMemo(() => {
     if (yearFilter === "All") return null;
@@ -98,7 +106,7 @@ function ProjectsOverview() {
   useEffect(() => {
     if (
       !collegeId ||
-      educationFilter === "All" ||
+      !resolvedEducationId ||
       !resolvedFilterYearId ||
       (!isSchool && branchFilter === "All")
     ) {
@@ -114,7 +122,7 @@ function ProjectsOverview() {
       .from("college_sections")
       .select("collegeSectionsId, collegeSections")
       .eq("collegeId", collegeId)
-      .eq("collegeEducationId", Number(educationFilter))
+      .eq("collegeEducationId", resolvedEducationId)
       .eq("collegeAcademicYearId", resolvedFilterYearId)
       .eq("isActive", true)
       .is("deletedAt", null);
@@ -137,46 +145,47 @@ function ProjectsOverview() {
     });
 
     return () => { mounted = false; };
-  }, [branchFilter, collegeId, educationFilter, isSchool, resolvedFilterYearId]);
+  }, [branchFilter, collegeId, isSchool, resolvedEducationId, resolvedFilterYearId]);
 
   useEffect(() => {
-    if (sectionFilter === "All") {
+    if (
+      !collegeId ||
+      !resolvedFilterYearId ||
+      sectionFilter === "All"
+    ) {
       setSubjectOptions([]);
       setSubjectFilter("All");
       return;
     }
 
     let mounted = true;
-    supabase
-      .from("faculty_sections")
-      .select("collegeSubjectId, college_subjects:collegeSubjectId(subjectName)")
-      .eq("collegeSectionsId", Number(sectionFilter))
-      .eq("collegeAcademicYearId", resolvedFilterYearId!)
-      .eq("isActive", true)
-      .is("deletedAt", null)
-      .then(({ data, error }) => {
-        if (!mounted) return;
-        if (error) {
-          console.error("Failed to load project subjects", error);
-          setSubjectOptions([]);
-          return;
-        }
-        const unique = new Map<number, string>();
-        (data ?? []).forEach((item: any) => {
-          const subject = Array.isArray(item.college_subjects)
-            ? item.college_subjects[0]
-            : item.college_subjects;
-          if (item.collegeSubjectId && subject?.subjectName) {
-            unique.set(item.collegeSubjectId, subject.subjectName);
-          }
-        });
-        setSubjectOptions(
-          Array.from(unique, ([id, label]) => ({ id, label })),
+
+    const loadSubjects = async () => {
+      try {
+        const subjects = await getSubjects(
+          collegeId,
+          isSchool || branchFilter === "All" ? null : Number(branchFilter),
+          resolvedFilterYearId,
+          Number(sectionFilter),
         );
-      });
+        if (!mounted) return;
+        setSubjectOptions(
+          subjects.map((subject) => ({
+            id: subject.collegeSubjectId,
+            label: subject.subjectName,
+          })),
+        );
+      } catch (error) {
+        if (!mounted) return;
+        console.error("Failed to load project subjects", error);
+        setSubjectOptions([]);
+      }
+    };
+
+    loadSubjects();
 
     return () => { mounted = false; };
-  }, [resolvedFilterYearId, sectionFilter]);
+  }, [branchFilter, collegeId, isSchool, resolvedFilterYearId, sectionFilter]);
 
   useEffect(() => {
     if (!branchId) {
@@ -218,7 +227,7 @@ function ProjectsOverview() {
     return edu ? edu.collegeEducationType : collegeEducationType;
   }, [educationFilter, educations, dbEducationType, collegeEducationType]);
 
-  const isEducationReady = educations.length > 0 && educationFilter !== "All";
+  const isEducationReady = educations.length > 0 && Boolean(resolvedEducationId);
 
   const [activeProjectCounts, setActiveProjectCounts] = useState<Record<string, number>>({});
 
@@ -250,8 +259,13 @@ function ProjectsOverview() {
           if (!targetEdu) {
             targetEdu = loadedEdus[0];
           }
-          setEducationFilter(targetEdu.collegeEducationId.toString());
-          setEducation(targetEdu);
+          const requestedEducationId = searchParams.get("educationId");
+          const requestedEducation = loadedEdus.find(
+            (item: any) => String(item.collegeEducationId) === requestedEducationId,
+          );
+          const selectedEducation = requestedEducation ?? targetEdu;
+          setEducationFilter(selectedEducation.collegeEducationId.toString());
+          setEducation(selectedEducation);
         }
         setIsInitialLoad(false);
       } catch (err) {
@@ -263,7 +277,7 @@ function ProjectsOverview() {
   }, [userId, collegeId, collegeEducationId]);
 
   useEffect(() => {
-    if (!userId || !collegeId || !educationFilter || educationFilter === "All") {
+    if (!userId || !collegeId || !resolvedEducationId) {
       setBranchOptions([]);
       setBranches([]);
       setYearOptions([]);
@@ -273,10 +287,36 @@ function ProjectsOverview() {
 
     const loadMetadata = async () => {
       try {
-        const branchData = await fetchBranchOptionsDirectly(
-          collegeId as number,
-          Number(educationFilter)
-        );
+        const [branchData, sectionsResult] = await Promise.all([
+          fetchBranchOptionsDirectly(
+            collegeId as number,
+            resolvedEducationId
+          ),
+          supabase
+            .from("college_sections")
+            .select("collegeSections, collegeAcademicYearId, collegeBranchId")
+            .eq("collegeId", collegeId as number)
+            .eq("collegeEducationId", resolvedEducationId)
+            .eq("isActive", true)
+            .is("deletedAt", null),
+        ]);
+
+        if (sectionsResult.error) {
+          console.error("Failed to load project card sections", sectionsResult.error);
+          setCardSectionsMap({});
+        } else {
+          const sectionsByCard: Record<string, string[]> = {};
+          for (const section of sectionsResult.data ?? []) {
+            const key = `${section.collegeBranchId ?? "null"}-${section.collegeAcademicYearId}`;
+            const sectionName = String(section.collegeSections ?? "").trim();
+            if (!sectionName) continue;
+            sectionsByCard[key] = sectionsByCard[key] ?? [];
+            if (!sectionsByCard[key].includes(sectionName)) {
+              sectionsByCard[key].push(sectionName);
+            }
+          }
+          setCardSectionsMap(sectionsByCard);
+        }
 
         setBranchOptions(
           branchData.map((b) => ({
@@ -298,7 +338,7 @@ function ProjectsOverview() {
         }
 
         let uniqueYears: any[] = [];
-        let newMap: Record<number, { id: number; label: string }[]> = {};
+        const newMap: Record<number, { id: number; label: string }[]> = {};
 
         if (isSchool) {
           const years = await fetchAcademicYearOptionsDirectly(collegeId as number, null);
@@ -363,8 +403,8 @@ function ProjectsOverview() {
             // We can kick off the counts fetch while React does its render cycle!
             setIsFetchingCounts(true);
             const [studentCountsMap, facultyDataMap, projectCountsMap] = await Promise.all([
-                getBatchStudentCounts(Number(educationFilter), cardKeys),
-                getBatchFacultyData(Number(educationFilter), cardKeys),
+                getBatchStudentCounts(resolvedEducationId, cardKeys),
+                getBatchFacultyData(resolvedEducationId, cardKeys),
                 getBatchProjectCounts(collegeId as number, cardKeys),
             ]);
 
@@ -377,7 +417,7 @@ function ProjectsOverview() {
                     yearId: card.yearId,
                     studentCount: studentCountsMap.get(key) ?? 0,
                     facultyCount: facultyInfo.count,
-                    facultyPhotos: facultyInfo.photos,
+                    facultyList: facultyInfo.facultyList ?? [],
                     activeProjectCount: projectCountsMap.get(key) ?? 0,
                 };
             });
@@ -395,7 +435,7 @@ function ProjectsOverview() {
     };
 
     loadMetadata();
-  }, [userId, educationFilter, isSchool]);
+  }, [userId, educationFilter, isSchool, resolvedEducationId]);
 
   const filteredCards = useMemo(() => {
     if (isSchool) {
@@ -453,7 +493,13 @@ function ProjectsOverview() {
         setCourseLoading(true);
 
         const [listResponse, projectStats] = await Promise.all([
-          fetchSubjectFacultyList(Number(yearId), branchId ? Number(branchId) : null, currentCoursePage, coursesPerPage),
+          fetchSubjectFacultyList(
+            Number(yearId),
+            branchId ? Number(branchId) : null,
+            currentCoursePage,
+            coursesPerPage,
+            isSchool ? resolvedEducationId ?? undefined : undefined,
+          ),
           fetchAdminPendingStats(Number(yearId), collegeId as number)
         ]);
 
@@ -480,7 +526,7 @@ function ProjectsOverview() {
     };
 
     loadCourses();
-  }, [branchId, yearId, collegeId, adminLoading, isSchool, currentCoursePage, coursesPerPage]);
+  }, [branchId, yearId, collegeId, adminLoading, isSchool, educationFilter, currentCoursePage, coursesPerPage]);
 
 
   useEffect(() => {
@@ -511,8 +557,8 @@ function ProjectsOverview() {
 
         // 3 bulk queries instead of N*3 individual queries
         const [studentCountsMap, facultyDataMap, projectCountsMap] = await Promise.all([
-          getBatchStudentCounts(Number(educationFilter), cardKeys),
-          getBatchFacultyData(Number(educationFilter), cardKeys),
+          getBatchStudentCounts(resolvedEducationId!, cardKeys),
+          getBatchFacultyData(resolvedEducationId!, cardKeys),
           getBatchProjectCounts(collegeId as number, cardKeys, {
             sectionId: sectionFilter === "All" ? null : Number(sectionFilter),
             subjectId: subjectFilter === "All" ? null : Number(subjectFilter),
@@ -528,7 +574,7 @@ function ProjectsOverview() {
             yearId: card.yearId,
             studentCount: studentCountsMap.get(key) ?? 0,
             facultyCount: facultyInfo.count,
-            facultyPhotos: facultyInfo.photos,
+            facultyList: facultyInfo.facultyList ?? [],
             activeProjectCount: projectCountsMap.get(key) ?? 0,
           };
         });
@@ -546,6 +592,7 @@ function ProjectsOverview() {
   }, [
     paginatedCards,
     educationFilter,
+    resolvedEducationId,
     collegeId,
     isMetadataLoading,
     sectionFilter,
@@ -576,7 +623,7 @@ function ProjectsOverview() {
           <ProjectsHeader
             title="Projects"
             subtitle="Create, manage, and track student projects effortlessly."
-            showBack={Boolean(dept)}
+            showBack={Boolean(dept || yearId || subjectId)}
             onBackClick={handleBack}
           />
         </div>
@@ -585,7 +632,7 @@ function ProjectsOverview() {
         </div>
       </div>
 
-      {!dept ? (
+      {!(dept || yearId) ? (
         <>
           {!isPageReady ? (
             <>
@@ -605,10 +652,13 @@ function ProjectsOverview() {
                   widthClassName="w-full md:w-[210px]"
                   theme="always-green"
                   className="rounded-full min-h-9"
-                  options={educations.map((e) => ({
-                    label: e.collegeEducationType,
-                    value: e.collegeEducationId.toString()
-                  }))}
+                  options={[
+                    { label: "All", value: "All" },
+                    ...educations.map((e) => ({
+                      label: e.collegeEducationType,
+                      value: e.collegeEducationId.toString()
+                    })),
+                  ]}
                   onChange={(value) => {
                     const val = String(value);
                     setIsMetadataLoading(true);
@@ -756,6 +806,13 @@ function ProjectsOverview() {
                       );
 
                       const branchTheme = getBranchTheme(card.name);
+                      const cardKey = `${card.branchId ?? "null"}-${card.yearId}`;
+                      const selectedSection = sectionOptions.find(
+                        (section) => String(section.id) === sectionFilter,
+                      );
+                      const displayedSections = selectedSection
+                        ? [selectedSection.label]
+                        : cardSectionsMap[cardKey] ?? [];
 
                       return (
                         <DiscussionDeptCard
@@ -764,6 +821,7 @@ function ProjectsOverview() {
                           year={card.year}
                           branchId={card.branchId}
                           yearId={card.yearId}
+                          educationId={resolvedEducationId ?? undefined}
                           text={branchTheme.text}
                           color={branchTheme.color}
                           bgColor={branchTheme.bgColor}
@@ -771,8 +829,9 @@ function ProjectsOverview() {
                           activeCount={cardData ? cardData.activeProjectCount : 0}
                           students={cardData ? cardData.studentCount : 0}
                           facultyCount={cardData ? cardData.facultyCount : 0}
-                          facultyPhotos={cardData ? cardData.facultyPhotos : []}
+                          facultyList={cardData ? cardData.facultyList : []}
                           isSchool={isSchool}
+                          sections={displayedSections}
                         />
                       );
                     })

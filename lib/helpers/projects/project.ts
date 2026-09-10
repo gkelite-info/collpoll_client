@@ -247,7 +247,7 @@ export async function fetchProjectsByAdminId(adminId: number) {
 }
 
 export async function fetchEnrichedProjectsByFaculty(
-    facultyId: number,
+    facultyId: number | null,
     collegeSubjectId?: number,
     page?: number,
     limit?: number,
@@ -275,9 +275,12 @@ export async function fetchEnrichedProjectsByFaculty(
                 subjectName
             )
         `, { count: "exact" })
-        .eq("facultyId", facultyId)
         .is("deletedAt", null)
         .order("createdAt", { ascending: false });
+
+    if (facultyId) {
+        query = query.eq("facultyId", facultyId);
+    }
 
     if (collegeSubjectId !== undefined && collegeSubjectId !== null) {
         query = query.eq("collegeSubjectId", collegeSubjectId);

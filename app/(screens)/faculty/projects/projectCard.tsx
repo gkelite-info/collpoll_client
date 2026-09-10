@@ -4,6 +4,8 @@ import { ProjectCardProps } from "@/lib/projectTypes/project";
 import { CaretLeft, PencilSimple, Trash } from "@phosphor-icons/react";
 import { Avatar } from "@/app/utils/Avatar";
 import { getSecureAttachmentUrl } from "@/lib/helpers/projects/projectFiles";
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 type ProjectCardListProps = {
   data: ProjectCardProps[];
@@ -204,9 +206,19 @@ export const ProjectDetailsModal = ({
     .map((s) => s.trim())
     .filter(Boolean);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
-      <div className="flex w-full max-w-2xl max-h-[84vh] flex-col rounded-3xl bg-white shadow-lg">
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4 md:p-6">
+      <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-lg md:max-h-[calc(100dvh-3rem)]">
         <div className="bg-red-00 flex shrink-0 items-start justify-between gap-4 px-6 pt-6 md:px-8 md:pt-8">
           <div className="flex min-w-0 items-center gap-2 text-sm text-gray-600 mb-4">
             <CaretLeft
@@ -228,7 +240,7 @@ export const ProjectDetailsModal = ({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 md:px-8 md:pb-8">
+        <div className="custom-scrollbar min-h-0 flex-1 overscroll-contain overflow-y-auto px-6 pb-6 md:px-8 md:pb-8">
           <h1 className="mb-4 max-w-full overflow-x-auto whitespace-nowrap pb-1 text-lg lg:text-2xl font-semibold text-[#16a34a] [scrollbar-color:#CBD5E1_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-track]:bg-transparent">
             {project.title}
           </h1>
@@ -375,6 +387,7 @@ export const ProjectDetailsModal = ({
           </section>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };

@@ -428,6 +428,9 @@ const AddProjectForm = ({
             <label className="block text-sm font-semibold mb-2 text-[#282828]">
               Upload Your File
             </label>
+            <p className="mb-2 text-xs text-gray-500">
+              PDF, JPG, JPEG, PNG, or ZIP files up to 10 MB each.
+            </p>
             <input
               type="file"
               ref={fileInputRef}
@@ -475,7 +478,7 @@ const AddProjectForm = ({
             </div>
 
             {formData.fileUrls.length > 0 && (
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="custom-scrollbar mt-4 grid max-h-40 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
                 {formData.fileUrls.map((name, index) => (
                   <div
                     key={index}

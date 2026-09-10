@@ -9,6 +9,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import toast from "react-hot-toast";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { getAdminAcademicsCards, mapAcademicCards } from "@/lib/helpers/admin/academics/getAdminAcademicsCards";
+import { getSchoolAcademicYearCards } from "@/lib/helpers/admin/academics/getSchoolAcademicYearCards";
 import { useAcademicFilters } from "@/lib/helpers/admin/academics/useAcademicFilters";
 import { useQuery } from "@tanstack/react-query";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
@@ -17,7 +18,7 @@ import { FilterDropdown } from "./components/filterDropdown";
 import { AcademicSectionsSkeleton } from "./shimmer/academicSectionsSkeleton";
 import { SubjectWiseAttendance } from "./components/subjectWiseAttendance";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
-import { Loader } from "../../(student)/calendar/right/timetable";
+import { AcademicPageSkeleton } from "./shimmer/academicPageSkeleton";
 
 const COLOR_PALETTE = [
   { text: "#FF767D", color: "#FFB4B8", bgColor: "#FFF5F5" },
@@ -67,24 +68,47 @@ export type AcademicCardData = {
   }[];
 };
 
+let hasHandledReload = false;
+
 const AcademicPage = () => {
   const searchParams = useSearchParams();
-  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
-  const [debouncedSearch, setDebouncedSearch] = useState(
-    () => searchParams.get("search")?.trim() ?? "",
-  );
+  const restoreFilters = useRef(true);
+  const initialized = useRef(false);
+  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get("search") ?? "");
   const [currentPage, setCurrentPage] = useState(1);
   const { userId } = useUser();
   const [mounted, setMounted] = useState(false);
   const { collegeId: adminCollegeId, collegeEducationId, collegeEducationType, loading: adminLoading } = useAdmin();
+  const updateFilterUrl = (key: string, value: string) => {
+    restoreFilters.current = false;
+    const keys = ["educationId", "branchId", "yearId", "sectionId", "subjectId"];
+    const params = new URLSearchParams(searchParams.toString());
+    for (const dependent of keys.slice(keys.indexOf(key))) params.delete(dependent);
+    params.set(key, value);
+    router.replace('/admin/academics?' + params.toString(), { scroll: false });
+  };
 
   const cardsPerPage = 9;
   const view = searchParams.get("view");
   const router = useRouter();
 
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    if (!hasHandledReload) {
+      hasHandledReload = true;
+      const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+      if (navigation?.type === "reload") {
+        restoreFilters.current = false;
+        setSearch("");
+        setDebouncedSearch("");
+        setCurrentPage(1);
+        router.replace("/admin/academics", { scroll: false });
+      }
+    }
     setMounted(true);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -114,101 +138,113 @@ const AcademicPage = () => {
     selectYear,
     setSection,
     setSubject,
-  } = useAcademicFilters({ userId: userId ?? undefined, collegeId: adminCollegeId });
+  } = useAcademicFilters({ userId: userId ?? undefined, collegeId: adminCollegeId, configuredSubjects: true });
 
-  const isSchool = education
-    ? isSchoolEducation(education.collegeEducationType)
-    : false;
+  useEffect(() => {
+    if (!mounted || !restoreFilters.current || education) return;
+    const requested = educations.find(item => Number(item.collegeEducationId) === Number(searchParams.get("educationId")));
+    if (requested) selectEducation(requested);
+  }, [mounted, education, educations, searchParams, selectEducation]);
+
+  useEffect(() => {
+    if (!mounted || !restoreFilters.current || branch) return;
+    const requested = branches.find(item => Number(item.collegeBranchId) === Number(searchParams.get("branchId")));
+    if (requested) selectBranch(requested);
+  }, [mounted, branch, branches, searchParams, selectBranch]);
+
+  useEffect(() => {
+    if (!mounted || !restoreFilters.current || year) return;
+    const requested = years.find(item => Number(item.collegeAcademicYearId) === Number(searchParams.get("yearId")));
+    if (requested) selectYear(requested);
+  }, [mounted, year, years, searchParams, selectYear]);
+
+  useEffect(() => {
+    if (!mounted || !restoreFilters.current || section) return;
+    const requested = sections.find(item => Number(item.collegeSectionsId) === Number(searchParams.get("sectionId")));
+    if (requested) setSection(requested);
+  }, [mounted, section, sections, searchParams, setSection]);
+
+  useEffect(() => {
+    if (!mounted || !restoreFilters.current || subject) return;
+    const requested = subjects.find(item => Number(item.collegeSubjectId) === Number(searchParams.get("subjectId")));
+    if (requested) setSubject(requested);
+  }, [mounted, subject, subjects, searchParams, setSubject]);
+
+  const isSchool = isSchoolEducation(education?.collegeEducationType ?? collegeEducationType);
   const currentEducationId = education?.collegeEducationId ?? null;
+
 
   const apiFilters = {
     educationId: currentEducationId,
-    branchId: branch?.collegeBranchId ?? null,
+    branchId: isSchool ? null : branch?.collegeBranchId ?? null,
     academicYearId: year?.collegeAcademicYearId ?? null,
     sectionId: section?.collegeSectionsId ?? null,
     subjectId: subject?.collegeSubjectId ?? null,
   };
 
   const apiFiltersStr = JSON.stringify(apiFilters);
+  const educationIdsStr = educations
+    .map((item) => item.collegeEducationId)
+    .sort((a, b) => a - b)
+    .join(",");
 
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearch, apiFiltersStr]);
 
-  useEffect(() => {
-    if (educations.length > 0 && !education) {
-      const requestedEducationId = Number(searchParams.get("educationId"));
-      if (!requestedEducationId) return;
-      const assignedEdu = educations.find(
-        (e) => Number(e.collegeEducationId) === Number(requestedEducationId)
-      );
-      if (assignedEdu) {
-        selectEducation(assignedEdu);
-      }
-    }
-  }, [educations, education, searchParams, selectEducation]);
-
-  useEffect(() => {
-    const requestedId = Number(searchParams.get("branchId"));
-    if (!branch && requestedId && branches.length) {
-      const requested = branches.find(
-        (item) => Number(item.collegeBranchId) === requestedId,
-      );
-      if (requested) selectBranch(requested);
-    }
-  }, [branch, branches, searchParams, selectBranch]);
-
-  useEffect(() => {
-    const requestedId = Number(searchParams.get("yearId"));
-    if (!year && requestedId && years.length) {
-      const requested = years.find(
-        (item) => Number(item.collegeAcademicYearId) === requestedId,
-      );
-      if (requested) selectYear(requested);
-    }
-  }, [searchParams, selectYear, year, years]);
-
-  useEffect(() => {
-    const requestedId = Number(searchParams.get("sectionId"));
-    if (!section && requestedId && sections.length) {
-      const requested = sections.find(
-        (item) => Number(item.collegeSectionsId) === requestedId,
-      );
-      if (requested) setSection(requested);
-    }
-  }, [searchParams, section, sections, setSection]);
-
-  useEffect(() => {
-    const requestedId = Number(searchParams.get("subjectId"));
-    if (!subject && requestedId && subjects.length) {
-      const requested = subjects.find(
-        (item) => Number(item.collegeSubjectId) === requestedId,
-      );
-      if (requested) setSubject(requested);
-    }
-  }, [searchParams, setSubject, subject, subjects]);
-
-  const { data: cardsQueryData, isLoading: isCardsLoading } = useQuery({
-    queryKey: ["adminAcademicsCards", adminCollegeId, currentPage, cardsPerPage, debouncedSearch, apiFiltersStr],
+  const { data: cardsQueryData, isPending: isCardsLoading, isFetching: isCardsFetching } = useQuery({
+    queryKey: ["adminAcademicsSectionCards", adminCollegeId, currentPage, cardsPerPage, debouncedSearch, apiFiltersStr, isSchool, educationIdsStr],
     queryFn: async () => {
+      if (isSchool && currentEducationId) {
+        return getSchoolAcademicYearCards(adminCollegeId!, currentEducationId, currentPage, cardsPerPage, debouncedSearch, apiFilters, true);
+      }
+      if (isSchool && !currentEducationId) {
+        const schoolEducations = educations.filter((item) =>
+          isSchoolEducation(item.collegeEducationType),
+        );
+        const results = await Promise.all(
+          schoolEducations.map((item) =>
+            getSchoolAcademicYearCards(
+              adminCollegeId!,
+              item.collegeEducationId,
+              1,
+              Number.MAX_SAFE_INTEGER,
+              debouncedSearch,
+              apiFilters,
+              true,
+            ),
+          ),
+        );
+        const allCards = results
+          .flatMap((result) => result.mappedCards)
+          .sort((a, b) =>
+            a.year.localeCompare(b.year, undefined, { numeric: true }) ||
+            a.section.localeCompare(b.section, undefined, { numeric: true }),
+          );
+        const from = (currentPage - 1) * cardsPerPage;
+        return {
+          mappedCards: allCards.slice(from, from + cardsPerPage),
+          totalCount: allCards.length,
+        };
+      }
       const { data, totalCount } = await getAdminAcademicsCards(
         adminCollegeId!,
         currentPage,
         cardsPerPage,
-        debouncedSearch,
+        isSchool ? "" : debouncedSearch,
         JSON.parse(apiFiltersStr)
       );
       return { mappedCards: mapAcademicCards(data), totalCount };
     },
-    enabled: !!adminCollegeId && !adminLoading,
+    enabled: !!adminCollegeId && !adminLoading && educations.length > 0,
   });
 
   const cards = cardsQueryData?.mappedCards || [];
   const totalRecords = cardsQueryData?.totalCount || 0;
-  const loading = isCardsLoading || adminLoading;
+  const loading = isCardsLoading || isCardsFetching || adminLoading;
   const returnQuery = new URLSearchParams(
     Object.entries({
-      educationId: currentEducationId?.toString() ?? "",
+      educationId: currentEducationId?.toString() ?? "All",
       branchId: branch?.collegeBranchId?.toString() ?? "",
       yearId: year?.collegeAcademicYearId?.toString() ?? "",
       sectionId: section?.collegeSectionsId?.toString() ?? "",
@@ -217,7 +253,7 @@ const AcademicPage = () => {
     }).filter(([, value]) => value !== ""),
   ).toString();
 
-  if (!mounted) return null;
+  if (!mounted || adminLoading) return <AcademicPageSkeleton />;
 
   const handleBack = () => {
     router.push("/admin/attendance");
@@ -250,7 +286,7 @@ const AcademicPage = () => {
           <input
             type="text"
             placeholder={
-              education?.collegeEducationType === "Inter"
+              isSchool ? "Search by year..." : education?.collegeEducationType === "Inter"
                 ? "Search by group..."
                 : "Search by branch..."
             }
@@ -276,6 +312,7 @@ const AcademicPage = () => {
               ...educations.map((e) => e.collegeEducationId.toString()),
             ]}
             onChange={(val) => {
+              updateFilterUrl("educationId", val);
               if (val === "All") {
                 resetEducation();
                 return;
@@ -292,7 +329,7 @@ const AcademicPage = () => {
             }}
           />
 
-          {!isSchool && (
+          {(education || collegeEducationType) && !isSchool && (
             <FilterDropdown
               label={education?.collegeEducationType === "Inter" ? "Group" : "Branch"}
               isLoading={adminLoading}
@@ -302,6 +339,7 @@ const AcademicPage = () => {
               placeholder={education?.collegeEducationType === "Inter" ? "Select Group" : "Select Branch"}
               options={["All", ...branches.map((b) => b.collegeBranchId.toString())]}
               onChange={(val) => {
+              updateFilterUrl("branchId", val);
                 if (val === "All") {
                   selectBranch(null);
                   selectYear(null);
@@ -332,6 +370,7 @@ const AcademicPage = () => {
             disabled={isSchool ? !education : !branch}
             options={["All", ...[...years].sort((a, b) => (a.collegeAcademicYear || "").localeCompare(b.collegeAcademicYear || "")).map((y) => y.collegeAcademicYearId.toString())]}
             onChange={(val) => {
+              updateFilterUrl("yearId", val);
               if (val === "All") {
                 selectYear(null);
                 setSection(null);
@@ -356,6 +395,7 @@ const AcademicPage = () => {
             disabled={!year}
             options={["All", ...sections.map((s) => s.collegeSectionsId.toString())]}
             onChange={(val) => {
+              updateFilterUrl("sectionId", val);
               if (val === "All") {
                 setSection(null);
                 setSubject(null);
@@ -375,9 +415,10 @@ const AcademicPage = () => {
             widthClassName="flex-1 min-w-0 md:min-w-[110px]"
             value={subject?.collegeSubjectId?.toString() ?? "All"}
             placeholder="Select Subject"
-            disabled={!section}
+            disabled={!year}
             options={["All", ...subjects.map((s) => s.collegeSubjectId.toString())]}
             onChange={(val) => {
+              updateFilterUrl("subjectId", val);
               if (val === "All") {
                 setSubject(null);
                 return;
@@ -399,19 +440,19 @@ const AcademicPage = () => {
           ) : !loading && cards.length === 0 ? (
             <div className="col-span-full flex justify-center py-20 text-gray-400">
               {debouncedSearch
-                ? "No matching branches found."
+                ? isSchool ? "No matching years found." : "No matching branches found."
                 : "No academic records found."}
             </div>
           ) : (
             cards.map((dept) => {
-              const style = getDynamicBranchStyle(dept.branchCode);
+              const style = getDynamicBranchStyle(isSchool ? dept.year : dept.branchCode);
               const cardTitle = isSchool
-                ? `Section - ${dept.section}`
+                ? `${dept.year} - ${dept.section}`
                 : `${dept.branchCode} - ${dept.section}`;
               return (
                 <FacultyAcademicCard
                   key={dept.id}
-                  id={dept.id}
+                  id={String(dept.collegeSectionsId)}
                   name={cardTitle}
                   year={dept.year}
                   totalStudents={dept.totalStudents}
@@ -446,7 +487,7 @@ const AcademicPage = () => {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="w-full h-full py-10 text-center"><Loader/></div>}>
+    <Suspense fallback={<AcademicPageSkeleton />}>
       <AcademicPage />
     </Suspense>
   );

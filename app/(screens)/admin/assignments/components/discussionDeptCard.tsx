@@ -148,7 +148,7 @@
 
 "use client";
 import { Avatar } from "@/app/utils/Avatar";
-import { User, UserCircle } from "@phosphor-icons/react";
+import { UserCircle } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 interface FacultyItem {
@@ -168,10 +168,12 @@ interface Props {
   students: number;
   yearId: number;
   branchId: number | null;
+  educationId?: number;
   facultyCount?: number;
   facultyPhotos?: string[];
   facultyList?: FacultyItem[];
   isSchool?: boolean;
+  sections?: string[];
 }
 
 export default function DiscussionDeptCard({
@@ -185,10 +187,12 @@ export default function DiscussionDeptCard({
   students,
   yearId,
   branchId,
+  educationId,
   facultyCount,
   facultyPhotos,
   facultyList = [],
   isSchool = false,
+  sections = [],
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -203,6 +207,7 @@ export default function DiscussionDeptCard({
     }
     params.set("year", year);
     params.set("yearId", String(yearId));
+    if (educationId) params.set("educationId", String(educationId));
     if (!isSchool && branchId !== null) params.set("branchId", String(branchId));
     router.push(`?${params.toString()}`);
   };
@@ -223,16 +228,12 @@ export default function DiscussionDeptCard({
       style={{ borderLeftColor: color }}
     >
       <div className="flex justify-between items-start mb-4">
-        {!isSchool ? (
-          <h2
-            className="text-[17px] font-bold tracking-tight truncate block"
-            style={{ color: text }}
-          >
-            {name}
-          </h2>
-        ) : (
-          <div />
-        )}
+        <h2
+          className="text-[17px] font-bold tracking-tight truncate block"
+          style={{ color: text }}
+        >
+          {name}
+        </h2>
         <div
           className="flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-semibold"
           style={{ backgroundColor: bgColor, color: text }}
@@ -240,6 +241,12 @@ export default function DiscussionDeptCard({
           <span className="ml-1">{year}</span>
         </div>
       </div>
+
+      {sections.length > 0 && (
+        <p className="mb-4 text-[13px] font-medium text-[#282828]">
+          {sections.length === 1 ? "Section" : "Sections"} - {sections.join(", ")}
+        </p>
+      )}
 
       <div className="flex items-center gap-2 mb-4">
         <span className="text-[#282828] text-[13px] font-medium">
@@ -256,7 +263,7 @@ export default function DiscussionDeptCard({
                     key={i}
                     tabIndex={0}
                     aria-label={fac?.name || "Faculty"}
-                    className="group relative flex h-8 w-8 cursor-help items-center justify-center rounded-full border-2 border-white bg-gray-200 shadow-sm outline-none"
+                    className="group relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-gray-200 shadow-sm outline-none"
                   >
                     <div className="overflow-hidden rounded-full">
                       <Avatar

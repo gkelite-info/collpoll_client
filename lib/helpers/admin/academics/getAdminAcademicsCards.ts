@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { getEquivalentSectionIds } from "./getEquivalentSectionIds";
 
 function getBranch(row: any) {
   return Array.isArray(row.collegeBranch)
@@ -314,8 +315,8 @@ export function mapAcademicCards(data: any[]) {
     row.faculty_sections?.forEach((fs: any) => {
       const f = Array.isArray(fs.faculty) ? fs.faculty[0] : fs.faculty;
       
-      const eduId = f?.collegeEducationId ?? fs?.collegeEducationId;
-      const branchId = f?.collegeBranchId ?? fs?.collegeBranchId;
+      const eduId = fs?.collegeEducationId ?? f?.collegeEducationId;
+      const branchId = fs?.collegeBranchId ?? f?.collegeBranchId;
       
       if (eduId && row.collegeEducationId && eduId !== row.collegeEducationId) return;
       if (branchId && row.collegeBranchId && branchId !== row.collegeBranchId) return;
@@ -427,6 +428,16 @@ export async function getSubjects(
   academicYearId: number,
   sectionId?: number | null,
 ) {
+  let matchingSectionIds: number[] = [];
+
+  if (sectionId) {
+    matchingSectionIds = await getEquivalentSectionIds(
+      collegeId,
+      academicYearId,
+      sectionId,
+    );
+  }
+
   let facultySectionsQuery = supabase
     .from("faculty_sections")
     .select("collegeSubjectId")
@@ -435,7 +446,7 @@ export async function getSubjects(
     .is("deletedAt", null);
 
   if (sectionId) {
-    facultySectionsQuery = facultySectionsQuery.eq("collegeSectionsId", sectionId);
+    facultySectionsQuery = facultySectionsQuery.in("collegeSectionsId", matchingSectionIds);
   }
 
   const { data: facultySectionRows, error: facultySectionError } = await facultySectionsQuery;

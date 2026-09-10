@@ -28,12 +28,6 @@ export default function AttendanceSummaryCard({
       <div className="flex-1 flex flex-col items-center justify-center min-h-[180px]">
         <div className="w-full max-w-[220px] md:max-w-[260px] aspect-[2/1] relative">
           <svg viewBox="0 0 200 100" className="w-full h-full overflow-visible">
-            <defs>
-              <linearGradient id="gaugeGradient" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#4ABF08" />
-                <stop offset="100%" stopColor="#A1D683" />
-              </linearGradient>
-            </defs>
             <path
               d="M 20 100 A 80 80 0 0 1 180 100"
               fill="none"
@@ -44,7 +38,7 @@ export default function AttendanceSummaryCard({
             <motion.path
               d="M 20 100 A 80 80 0 0 1 180 100"
               fill="none"
-              stroke="url(#gaugeGradient)"
+              stroke="#4ABF08"
               strokeWidth="24"
               strokeLinecap="round"
               initial={{ pathLength: 0 }}
