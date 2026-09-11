@@ -22,7 +22,7 @@ import {
   fetchExamScheduleSubjects,
 } from "@/lib/helpers/admin/collegeExamAPI";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
-import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import { isSchoolEducation, isStrictlySchoolAssigned } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { ExamForm } from "./components/ExamForm";
 import { PreviousSchedulesCard } from "./components/PreviousSchedulesCard";
 import { ExamSchedulesTable } from "./components/ExamSchedulesTable";
@@ -48,7 +48,7 @@ const getTodayFormatted = () => {
 };
 
 export default function ExamsPage() {
-  const { userId } = useUser();
+  const { userId, collegeEducationId, collegeEducationType } = useUser();
   const [collegeId, setCollegeId] = useState<number | null>(null);
   const [adminId, setAdminId] = useState<number | null>(null);
 
@@ -210,11 +210,14 @@ export default function ExamsPage() {
 
   const activeEdu = educations.find((e) => e.collegeEducationId === educationSelect);
   const isInterGlobal = activeEdu?.collegeEducationType === "Inter";
-  const isSchool = isSchoolEducation(activeEdu?.collegeEducationType || "unknown");
+  const isSchool = activeEdu
+    ? isSchoolEducation(activeEdu.collegeEducationType)
+    : isStrictlySchoolAssigned(collegeEducationType);
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
   useEffect(() => {
-    setShowDateRangePicker(isInterGlobal || ["Select", "Mid 1 Exam", "Mid 2 Exam", "Semester Exam"].includes(examTypeSelect));
-  }, [isInterGlobal, examTypeSelect]);
+    if (editingScheduleId !== null) return;
+    setShowDateRangePicker(!isSchool && (isInterGlobal || ["Select", "Mid 1 Exam", "Mid 2 Exam", "Semester Exam"].includes(examTypeSelect)));
+  }, [isSchool, isInterGlobal, examTypeSelect, editingScheduleId]);
 
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [currentAcademicYearId, setCurrentAcademicYearId] = useState<number | null>(null);
@@ -252,7 +255,7 @@ export default function ExamsPage() {
       setSidePage(nextPage);
       if (collegeId) {
         // Find corresponding yearVal
-        const yearVal = drillDownYear === "Year - 1" ? "1st Year" : drillDownYear === "Year - 2" ? "2nd Year" : drillDownYear === "Year - 3" ? "3rd Year" : "4th Year";
+        const yearVal = isSchoolForPrev ? drillDownYear : drillDownYear === "Year - 1" ? "1st Year" : drillDownYear === "Year - 2" ? "2nd Year" : drillDownYear === "Year - 3" ? "3rd Year" : "4th Year";
         loadSideSchedules(collegeId, nextPage, prevSchedulesEduSelect, isSchoolForPrev ? null : selectedBranch, yearVal, true);
       }
     }
@@ -280,6 +283,9 @@ export default function ExamsPage() {
       })
       .then((eduList) => {
         setEducations(eduList);
+        const defaultEducation = eduList.find((edu: { collegeEducationId: number }) => edu.collegeEducationId === collegeEducationId)
+          ?? (eduList.length === 1 ? eduList[0] : null);
+        if (defaultEducation) setEducationSelect(defaultEducation.collegeEducationId);
         if (eduList.length > 0) {
           setPrevSchedulesEduSelect(eduList[0].collegeEducationId);
         }
@@ -290,10 +296,10 @@ export default function ExamsPage() {
       .finally(() => {
         setPageLoading(false);
       });
-  }, [userId]);
+  }, [userId, collegeEducationId]);
 
   useEffect(() => {
-    if (!collegeId || !educationSelect) {
+    if (!collegeId || !educationSelect || isSchool) {
       setBranches([]);
       setBranchSelect(null);
       setSelectedBranch(null);
@@ -310,10 +316,10 @@ export default function ExamsPage() {
       .catch((err) => {
         console.error("Error fetching branches:", err);
       });
-  }, [collegeId, educationSelect]);
+  }, [collegeId, educationSelect, isSchool]);
 
   useEffect(() => {
-    if (!collegeId || !prevSchedulesEduSelect) {
+    if (!collegeId || !prevSchedulesEduSelect || isSchoolForPrev) {
       setPrevSchedulesBranches([]);
       return;
     }
@@ -324,13 +330,13 @@ export default function ExamsPage() {
       .catch((err) => {
         console.error("Error fetching branches for previous schedules:", err);
       });
-  }, [collegeId, prevSchedulesEduSelect]);
+  }, [collegeId, prevSchedulesEduSelect, isSchoolForPrev]);
 
   useEffect(() => {
     const isSchool = isSchoolEducation(activeEdu?.collegeEducationType || "unknown");
     
     let isValid = false;
-    if (!showDateRangePicker && collegeId && educationSelect) {
+    if ((!showDateRangePicker || isSchool) && collegeId && educationSelect) {
       if (isSchool) {
         isValid = true;
       } else if (branchSelect) {
@@ -367,7 +373,7 @@ export default function ExamsPage() {
     const isInter = activeEdu?.collegeEducationType === "Inter";
 
     let isValid = false;
-    if (!showDateRangePicker && collegeId && educationSelect && currentAcademicYearId) {
+    if ((!showDateRangePicker || isSchool) && collegeId && educationSelect && currentAcademicYearId) {
       if (isSchool) {
         isValid = true;
       } else if (branchSelect) {
@@ -483,7 +489,7 @@ export default function ExamsPage() {
       toast.error("Please select an Education Type.");
       return;
     }
-    if (!showDateRangePicker && sectionSelect.length === 0) {
+    if ((!showDateRangePicker || isSchool) && sectionSelect.length === 0) {
       toast.error("Please select at least one section.");
       return;
     }
@@ -492,7 +498,7 @@ export default function ExamsPage() {
       toast.error(isInter ? "Please select a group." : "Please select branch and semester.");
       return;
     }
-    if (!showDateRangePicker && !isSchool && !isInter && !yearSelect) {
+    if ((!showDateRangePicker || isSchool) && !yearSelect) {
       toast.error("Please select an academic year.");
       return;
     }
@@ -526,9 +532,9 @@ export default function ExamsPage() {
         collegeId,
         collegeEducationId: educationSelect || 0,
         collegeBranchId: (showDateRangePicker || isSchool) ? null : branchSelect,
-        academicYear: showDateRangePicker ? null : yearSelect,
-        collegeSectionsId: showDateRangePicker ? null : sectionSelect[0] ?? null,
-        collegeSectionIds: showDateRangePicker ? [] : sectionSelect,
+        academicYear: showDateRangePicker && !isSchool ? null : yearSelect,
+        collegeSectionsId: showDateRangePicker && !isSchool ? null : sectionSelect[0] ?? null,
+        collegeSectionIds: showDateRangePicker && !isSchool ? [] : sectionSelect,
         collegeSemesterId: (showDateRangePicker || isInter || isSchool) ? null : semesterSelect,
         examType: finalExamType,
         fromDate: showDateRangePicker ? fromDate : null,
@@ -599,6 +605,10 @@ export default function ExamsPage() {
     e.preventDefault();
     if (!newSubjectName.trim()) {
       toast.error("Please select or enter a subject name");
+      return;
+    }
+    if (!newSubjectDate || !newSubjectTime || !newSubjectEndTime) {
+      toast.error("Please enter an exam date, start time, and end time.");
       return;
     }
 

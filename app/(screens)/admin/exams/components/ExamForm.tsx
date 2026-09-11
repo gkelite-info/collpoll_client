@@ -105,6 +105,7 @@ export function ExamForm({
 
   const handleBranchChange = (val: string | number) => {
     setBranchSelect(Number(val));
+    setYearSelect("");
     setSemesterSelect(null);
     setSectionSelect([]);
   };
@@ -170,7 +171,7 @@ export function ExamForm({
       <form onSubmit={handleCreateSchedule} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="flex flex-col">
-            <label className="text-xs font-bold text-gray-600 mb-1.5">Schedule Title</label>
+            <label className="text-xs font-bold text-gray-600 mb-1.5">Schedule Title <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={scheduleTitle}
@@ -180,7 +181,7 @@ export function ExamForm({
             />
           </div>
           <div className="flex flex-col">
-            <label className="text-xs font-bold text-gray-600 mb-1.5">Education Type</label>
+            <label className="text-xs font-bold text-gray-600 mb-1.5">Education Type <span className="text-red-500">*</span></label>
             <CustomSelect
               value={educationSelect?.toString() || ""}
               onChange={handleEducationChange}
@@ -196,7 +197,7 @@ export function ExamForm({
         <div className="flex flex-col gap-4">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex-1 flex flex-col">
-              <label className="text-xs font-bold text-gray-600 mb-1.5">Exam Type</label>
+              <label className="text-xs font-bold text-gray-600 mb-1.5">Exam Type <span className="text-red-500">*</span></label>
               {isCustomExamType ? (
                 <div className="flex items-center gap-2">
                   <input
@@ -256,7 +257,7 @@ export function ExamForm({
           {showDateRangePicker && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2 p-4 bg-gray-50 border border-gray-150 rounded-xl">
               <div className="flex flex-col">
-                <label className="text-xs font-bold text-gray-600 mb-1.5">From Date</label>
+                <label className="text-xs font-bold text-gray-600 mb-1.5">From Date <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <input
                     type="date"
@@ -267,7 +268,7 @@ export function ExamForm({
                 </div>
               </div>
               <div className="flex flex-col">
-                <label className="text-xs font-bold text-gray-600 mb-1.5">To Date</label>
+                <label className="text-xs font-bold text-gray-600 mb-1.5">To Date <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <input
                     type="date"
@@ -282,13 +283,13 @@ export function ExamForm({
         </div>
 
         {/* Dynamic Class/Branch Logic */}
-        {!showDateRangePicker && (
+        {(!showDateRangePicker || isSchool) && (
           <>
             <div className={`grid grid-cols-1 gap-6 ${isSchool ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
               {!isSchool && (
                 <div className="flex flex-col">
                   <label className="text-xs font-bold text-gray-600 mb-1.5">
-                    {isInter ? "Group" : "Branch"}
+                    {isInter ? "Group" : "Branch"} <span className="text-red-500">*</span>
                   </label>
                   <CustomSelect
                     value={branchSelect?.toString() || ""}
@@ -305,7 +306,7 @@ export function ExamForm({
 
               <div className="flex flex-col">
                 <label className="text-xs font-bold text-gray-600 mb-1.5">
-                  {isSchool ? "Class" : "Year"}
+                  Year <span className="text-red-500">*</span>
                 </label>
                 <CustomSelect
                   value={yearSelect}
@@ -314,14 +315,14 @@ export function ExamForm({
                     value: yr.collegeAcademicYear,
                     label: yr.collegeAcademicYear,
                   }))}
-                  placeholder={`Select ${isSchool ? "Class" : "Year"}`}
+                  placeholder="Select Year"
                   disabled={!educationSelect || (!isSchool && !branchSelect)}
                 />
               </div>
 
               {!isSchool && !isInter && (
                 <div className="flex flex-col">
-                  <label className="text-xs font-bold text-gray-600 mb-1.5">Semester</label>
+                  <label className="text-xs font-bold text-gray-600 mb-1.5">Semester <span className="text-red-500">*</span></label>
                   <CustomSelect
                     value={semesterSelect?.toString() || ""}
                     onChange={(val) => setSemesterSelect(Number(val))}
@@ -336,7 +337,7 @@ export function ExamForm({
               )}
 
               <div className="flex flex-col">
-                <label className="text-xs font-bold text-gray-600 mb-1.5">Section</label>
+                <label className="text-xs font-bold text-gray-600 mb-1.5">Section <span className="text-red-500">*</span></label>
                 <CustomDropdown
                   value=""
                   isMultiSelect

@@ -1,7 +1,8 @@
 "use client";
 
 import { CaretDown, X } from "@phosphor-icons/react";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -46,6 +47,10 @@ const initialFormData: LeaveFormData = {
   tags: [],
 };
 
+const subscribeToHydration = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export default function AdminRequestLeaveModal({
   open,
   onClose,
@@ -62,14 +67,28 @@ export default function AdminRequestLeaveModal({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [previousOpen, setPreviousOpen] = useState(open);
+  const mounted = useSyncExternalStore(
+    subscribeToHydration,
+    getClientSnapshot,
+    getServerSnapshot
+  );
+
+  if (previousOpen !== open) {
+    setPreviousOpen(open);
+    if (open) setIsClosing(false);
+  }
 
   useEffect(() => {
-    if (open) {
-      setIsClosing(false);
-    }
-  }, [open]);
+    if (!open || isClosing) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open, isClosing]);
 
-  if (!open || isClosing) return null;
+  if (!mounted || !open || isClosing) return null;
 
   const resetForm = () => {
     setFormData(initialFormData);
@@ -150,162 +169,172 @@ export default function AdminRequestLeaveModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
       <style>{`
         .request-leave-date-input::-webkit-calendar-picker-indicator {
           margin-left: auto;
           cursor: pointer;
         }
       `}</style>
-      <div className="custom-scrollbar relative max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-md bg-white p-6 shadow-2xl">
-        <button
-          onClick={handleClose}
-          disabled={isSubmitting}
-          className="absolute right-5 top-5 flex h-8 w-8 cursor-pointer items-center justify-center text-[#525252] hover:text-[#282828]"
-          type="button"
-        >
-          <X size={22} />
-        </button>
-        <h2 className="pr-10 text-xl font-semibold text-[#282828]">
-          Request Leave
-        </h2>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-request-leave-title"
+        className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-[520px] flex-col overflow-hidden rounded-md bg-white shadow-2xl"
+      >
+        <div className="relative shrink-0 px-6 pb-4 pt-6">
+          <button
+            aria-label="Close leave request"
+            onClick={handleClose}
+            disabled={isSubmitting}
+            className="absolute right-5 top-5 flex h-8 w-8 cursor-pointer items-center justify-center text-[#525252] hover:text-[#282828]"
+            type="button"
+          >
+            <X size={22} />
+          </button>
+          <h2 id="admin-request-leave-title" className="pr-10 text-xl font-semibold text-[#282828]">
+            Request Leave
+          </h2>
+        </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-[#282828]">
-              Leave Type
-              <RequiredMark />
-            </label>
-            <div className="relative">
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => setIsDropdownOpen((isOpen) => !isOpen)}
-                className="flex h-11 w-full cursor-pointer items-center justify-between rounded border border-[#43C17A] bg-white px-4 text-sm text-[#525252] outline-none disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {formData.leaveType || "Select Leave Type"}
-                <CaretDown
-                  size={18}
-                  className={`text-[#282828] transition-transform duration-200 ${
-                    isDropdownOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="custom-scrollbar flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-6 pb-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-[#282828]">
+                Leave Type
+                <RequiredMark />
+              </label>
+              <div className="relative">
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => setIsDropdownOpen((isOpen) => !isOpen)}
+                  className="flex h-11 w-full cursor-pointer items-center justify-between rounded border border-[#43C17A] bg-white px-4 text-sm text-[#525252] outline-none disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {formData.leaveType || "Select Leave Type"}
+                  <CaretDown
+                    size={18}
+                    className={`text-[#282828] transition-transform duration-200 ${
+                      isDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
 
-              {isDropdownOpen && (
-                <div className="absolute left-0 right-0 z-50 mt-1 max-h-[320px] overflow-hidden rounded border border-[#CFCFCF] bg-white shadow-lg">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData({ ...formData, leaveType: "" })
-                    }
-                    className="flex h-10 w-full items-center bg-[#1F6FD6] px-4 text-left text-sm font-semibold text-white"
-                  >
-                    Select Leave Type
-                  </button>
+                {isDropdownOpen && (
+                  <div className="absolute left-0 right-0 z-50 mt-1 max-h-[320px] overflow-hidden rounded border border-[#CFCFCF] bg-white shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({ ...formData, leaveType: "" })
+                      }
+                      className="flex h-10 w-full items-center bg-[#1F6FD6] px-4 text-left text-sm font-semibold text-white"
+                    >
+                      Select Leave Type
+                    </button>
 
-                  <div className="custom-scrollbar max-h-[260px] overflow-y-auto">
-                    {defaultLeaveTypes.map((leaveType) => {
-                      const isSelected = formData.leaveType === leaveType;
-                      return (
-                        <button
-                          key={leaveType}
-                          type="button"
-                          onClick={() => {
-                            setFormData({ ...formData, leaveType });
-                            setIsDropdownOpen(false);
-                          }}
-                          className={`flex h-10 w-full cursor-pointer items-center px-4 text-left text-sm transition-colors duration-150 ${
-                            isSelected
-                              ? "bg-[#E7F8EE] font-semibold text-[#43C17A]"
-                              : "text-[#282828] hover:bg-gray-50"
-                          }`}
-                        >
-                          {leaveType}
-                        </button>
-                      );
-                    })}
+                    <div className="custom-scrollbar max-h-[260px] overflow-y-auto">
+                      {defaultLeaveTypes.map((leaveType) => {
+                        const isSelected = formData.leaveType === leaveType;
+                        return (
+                          <button
+                            key={leaveType}
+                            type="button"
+                            onClick={() => {
+                              setFormData({ ...formData, leaveType });
+                              setIsDropdownOpen(false);
+                            }}
+                            className={`flex h-10 w-full cursor-pointer items-center px-4 text-left text-sm transition-colors duration-150 ${
+                              isSelected
+                                ? "bg-[#E7F8EE] font-semibold text-[#43C17A]"
+                                : "text-[#282828] hover:bg-gray-50"
+                            }`}
+                          >
+                            {leaveType}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <EmployeeLeaveRoutingFields
-            value={formData.tags}
-            onChange={(tags) => setFormData({ ...formData, tags })}
-          />
-
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-[#282828]">
-              Leave Date
-              <RequiredMark />
-            </label>
-            <div className="grid grid-cols-2 gap-5">
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold text-[#282828]">
-                  Start Date
-                  <RequiredMark />
-                </span>
-                <label className="relative">
-                  <input
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(event) =>
-                      setFormData({
-                        ...formData,
-                        startDate: event.target.value,
-                        endDate:
-                          formData.endDate &&
-                          formData.endDate < event.target.value
-                            ? ""
-                            : formData.endDate,
-                      })
-                    }
-                    className="request-leave-date-input h-12 w-full rounded-xl border border-[#CFCFCF] px-5 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
-                  />
-                </label>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold text-[#282828]">
-                  End Date
-                  <RequiredMark />
-                </span>
-                <label className="relative">
-                  <input
-                    type="date"
-                    value={formData.endDate}
-                    min={formData.startDate || undefined}
-                    onChange={(event) =>
-                      setFormData({ ...formData, endDate: event.target.value })
-                    }
-                    className="request-leave-date-input h-12 w-full rounded-xl border border-[#CFCFCF] px-5 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
-                  />
-                </label>
+                )}
               </div>
             </div>
-          </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-[#282828]">
-              Description
-              <RequiredMark />
-            </label>
-            <textarea
-              rows={5}
-              maxLength={255}
-              value={formData.description}
-              onChange={(event) =>
-                setFormData({ ...formData, description: event.target.value })
-              }
-              placeholder="Provide a short explanation for your leave request............"
-              className="w-full resize-none rounded border border-[#CFCFCF] px-4 py-3 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
+            <EmployeeLeaveRoutingFields
+              value={formData.tags}
+              onChange={(tags) => setFormData({ ...formData, tags })}
             />
-          </div>
 
-          <div className="mt-1 grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-[#282828]">
+                Leave Date
+                <RequiredMark />
+              </label>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[11px] font-semibold text-[#282828]">
+                    Start Date
+                    <RequiredMark />
+                  </span>
+                  <label className="relative">
+                    <input
+                      type="date"
+                      value={formData.startDate}
+                      onChange={(event) =>
+                        setFormData({
+                          ...formData,
+                          startDate: event.target.value,
+                          endDate:
+                            formData.endDate &&
+                            formData.endDate < event.target.value
+                              ? ""
+                              : formData.endDate,
+                        })
+                      }
+                      className="request-leave-date-input h-12 w-full rounded-xl border border-[#CFCFCF] px-5 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
+                    />
+                  </label>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-[11px] font-semibold text-[#282828]">
+                    End Date
+                    <RequiredMark />
+                  </span>
+                  <label className="relative">
+                    <input
+                      type="date"
+                      value={formData.endDate}
+                      min={formData.startDate || undefined}
+                      onChange={(event) =>
+                        setFormData({ ...formData, endDate: event.target.value })
+                      }
+                      className="request-leave-date-input h-12 w-full rounded-xl border border-[#CFCFCF] px-5 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-[#282828]">
+                Description
+                <RequiredMark />
+              </label>
+              <textarea
+                rows={5}
+                maxLength={255}
+                value={formData.description}
+                onChange={(event) =>
+                  setFormData({ ...formData, description: event.target.value })
+                }
+                placeholder="Provide a short explanation for your leave request............"
+                className="w-full resize-none rounded border border-[#CFCFCF] px-4 py-3 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
+              />
+            </div>
+
+          </div>
+          <div className="grid shrink-0 grid-cols-2 gap-3 border-t border-gray-100 bg-white px-6 py-4">
             <button
               type="button"
               onClick={handleClose}
@@ -326,7 +355,8 @@ export default function AdminRequestLeaveModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

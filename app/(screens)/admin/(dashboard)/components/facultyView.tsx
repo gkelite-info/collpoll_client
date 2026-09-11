@@ -17,12 +17,14 @@ import { Pagination } from "../../academic-setup/components/pagination";
 import { Avatar } from "@/app/utils/Avatar";
 import { CardValueShimmer, TableShimmer } from "../utils/TableShimmer";
 import { CustomDropdown } from "@/app/components/CustomDropdown";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 interface FacultyViewProps {
-  departmentId: number;
+  departmentId: number | null;
   departmentName: string;
   collegeId: number;
   collegeEducationId: number;
+  educationType?: string;
   onBack: () => void;
 }
 
@@ -31,6 +33,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
   departmentName,
   collegeId,
   collegeEducationId,
+  educationType,
   onBack,
 }) => {
   const router = useRouter();
@@ -51,21 +54,54 @@ const FacultyView: React.FC<FacultyViewProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const { collegeEducationType } = useAdmin();
+  const [resolvedEduType, setResolvedEduType] = useState<string | undefined>(educationType);
+
+  useEffect(() => {
+    if (educationType) {
+      setResolvedEduType(educationType);
+      return;
+    }
+    if (!collegeEducationId) return;
+    let mounted = true;
+    supabase.from("college_education").select("collegeEducationType")
+      .eq("collegeEducationId", collegeEducationId).maybeSingle()
+      .then(({ data }) => {
+        if (mounted && data?.collegeEducationType) setResolvedEduType(data.collegeEducationType);
+      });
+    return () => { mounted = false; };
+  }, [collegeEducationId, educationType]);
+
+  const effectiveEduType = resolvedEduType ?? collegeEducationType;
+  const isSchool = isSchoolEducation(effectiveEduType);
 
   useEffect(() => {
     let mounted = true;
     async function fetchBranchCounts() {
       setBranchCountsLoading(true);
+      const studentPromise = isSchool && activeYearId
+        ? supabase.from("student_academic_history")
+            .select("studentId, students!inner(collegeId, isActive, deletedAt)", { count: "exact", head: true })
+            .eq("collegeAcademicYearId", activeYearId)
+            .eq("students.collegeId", collegeId)
+            .eq("students.isActive", true).is("students.deletedAt", null)
+            .eq("isCurrent", true)
+            .then((res) => ({ count: res.count ?? 0, error: null }))
+        : supabase.from("students").select("studentId", { count: "exact", head: true })
+            .eq("collegeId", collegeId).eq("collegeEducationId", collegeEducationId)
+            .match(departmentId ? { collegeBranchId: departmentId } : {}).eq("isActive", true).is("deletedAt", null);
+
+      const sectionPromise = supabase.from("college_sections").select("collegeSections")
+        .eq("collegeId", collegeId).eq("collegeEducationId", collegeEducationId)
+        .match(departmentId ? { collegeBranchId: departmentId } : {})
+        .match(isSchool && activeYearId ? { collegeAcademicYearId: activeYearId } : {})
+        .eq("isActive", true).is("deletedAt", null);
+
       const [studentsResult, sectionsResult] = await Promise.all([
-        supabase.from("students").select("studentId", { count: "exact", head: true })
-          .eq("collegeId", collegeId).eq("collegeEducationId", collegeEducationId)
-          .eq("collegeBranchId", departmentId).eq("isActive", true).is("deletedAt", null),
-        supabase.from("college_sections").select("collegeSections")
-          .eq("collegeId", collegeId).eq("collegeEducationId", collegeEducationId)
-          .eq("collegeBranchId", departmentId).eq("isActive", true).is("deletedAt", null),
+        studentPromise,
+        sectionPromise,
       ]);
       if (!mounted) return;
-      if (studentsResult.error) console.error("Failed to load branch student count", studentsResult.error);
+      if (studentsResult.error) console.error("Failed to load student count", studentsResult.error);
       if (sectionsResult.error) console.error("Failed to load branch section count", sectionsResult.error);
       const uniqueSections = new Set(
         (sectionsResult.data ?? [])
@@ -80,19 +116,25 @@ const FacultyView: React.FC<FacultyViewProps> = ({
     }
     fetchBranchCounts();
     return () => { mounted = false; };
-  }, [collegeId, collegeEducationId, departmentId]);
+  }, [collegeId, collegeEducationId, departmentId, activeYearId, isSchool]);
 
   useEffect(() => {
     async function fetchYears() {
-      const { data, error } = await supabase
+      setYearsLoading(true);
+      let query = supabase
         .from("college_academic_year")
         .select("collegeAcademicYearId, collegeAcademicYear")
         .eq("collegeId", collegeId)
         .eq("collegeEducationId", collegeEducationId)
-        .eq("collegeBranchId", departmentId)
         .eq("isActive", true)
         .is("deletedAt", null)
         .order("collegeAcademicYearId", { ascending: true });
+
+      if (departmentId != null) {
+        query = query.eq("collegeBranchId", departmentId);
+      }
+
+      const { data, error } = await query;
 
       if (!error && data) {
         const yearOptions = data.map((yr) => ({
@@ -118,16 +160,21 @@ const FacultyView: React.FC<FacultyViewProps> = ({
 
     async function fetchSections() {
       setSectionsLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from("college_sections")
         .select("collegeSectionsId, collegeSections")
         .eq("collegeId", collegeId)
         .eq("collegeEducationId", collegeEducationId)
-        .eq("collegeBranchId", departmentId)
         .eq("collegeAcademicYearId", activeYearId)
         .eq("isActive", true)
         .is("deletedAt", null)
         .order("collegeSectionsId", { ascending: true });
+
+      if (departmentId != null) {
+        query = query.eq("collegeBranchId", departmentId);
+      }
+
+      const { data, error } = await query;
 
       if (!error && data) {
         const sectionOptions = data.map((sec) => ({
@@ -136,11 +183,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
         }));
         setAvailableSections(sectionOptions);
 
-        if (data.length > 0 && !activeSectionId) {
-          const params = new URLSearchParams(searchParams.toString());
-          params.set("sectionId", data[0].collegeSectionsId.toString());
-          router.replace(`?${params.toString()}`);
-        } else if (data.length === 0 && activeSectionId) {
+        if (activeSectionId && !data.some((sec) => sec.collegeSectionsId === activeSectionId)) {
           const params = new URLSearchParams(searchParams.toString());
           params.delete("sectionId");
           router.replace(`?${params.toString()}`);
@@ -178,8 +221,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
   const studentScopeLoading =
     yearsLoading ||
     sectionsLoading ||
-    (!activeYearId && availableYears.length > 0) ||
-    (availableSections.length > 0 && !activeSectionId);
+    (!activeYearId && availableYears.length > 0);
   const studentLoading = stuLoading || studentScopeLoading;
   const loading = activeTab === "Faculty" ? facLoading : studentLoading;
   const activeTotalItems = activeTab === "Faculty" ? facultyTotal : studentTotal;
@@ -188,7 +230,9 @@ const FacultyView: React.FC<FacultyViewProps> = ({
   const dynamicHeader =
     activeTab === "Faculty"
       ? `${departmentName} Faculty`
-      : `${currentYearOption ? currentYearOption.label : "Academic Year"} – ${departmentName} Students`;
+      : isSchool
+        ? `${currentYearOption ? currentYearOption.label : departmentName} Students`
+        : `${currentYearOption ? currentYearOption.label : "Academic Year"} – ${departmentName} Students`;
 
   const handleTabChange = (tab: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -201,13 +245,21 @@ const FacultyView: React.FC<FacultyViewProps> = ({
     const params = new URLSearchParams(searchParams.toString());
     params.set("yearId", yrId.toString());
     params.delete("sectionId");
+    const selectedYr = availableYears.find((y) => y.id === yrId);
+    if (isSchool && selectedYr) {
+      params.set("deptName", selectedYr.label);
+    }
     router.replace(`?${params.toString()}`);
     setCurrentPage(1);
   };
 
-  const handleSectionChange = (secId: number) => {
+  const handleSectionChange = (secId: number | null) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("sectionId", secId.toString());
+    if (secId !== null && secId !== undefined) {
+      params.set("sectionId", secId.toString());
+    } else {
+      params.delete("sectionId");
+    }
     router.push(`?${params.toString()}`);
     setCurrentPage(1);
   };
@@ -215,6 +267,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
   const facultyList = faculty.map((f: any) => ({
     name: f.users.fullName,
     subject: f.subject,
+    section: f.sections || "—",
     role: f.designation,
     contact: f.mobile,
     email: f.users.email,
@@ -227,6 +280,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
   const studentList = students.map((s: any) => ({
     name: s.users.fullName,
     rollNo: s.rollNumber,
+    section: s.section || "—",
     semester: s.semester,
     avatar: s.users.avatar || null,
     attendance: s.attendance,
@@ -290,7 +344,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
 
           {activeTab === "Faculty" ? (
             <p className="text-[#282828] mt-1 ml-8 text-sm">
-              Overview of all faculty in this branch
+              Overview of all faculty in this {isSchool ? "class" : "branch"}
             </p>
           ) : null}
         </div>
@@ -315,13 +369,20 @@ const FacultyView: React.FC<FacultyViewProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-sm text-[#525252]">Section :</span>
                 <CustomDropdown
-                  value={activeSectionId ?? ""}
+                  value={activeSectionId ?? "All"}
                   options={availableSections.map((section) => ({ value: section.id, label: section.label }))}
-                  onChange={(value) => handleSectionChange(Number(value))}
+                  onChange={(value) => {
+                    if (value === "All" || value === "" || value === "all") {
+                      handleSectionChange(null);
+                    } else {
+                      handleSectionChange(Number(value));
+                    }
+                  }}
                   disabled={sectionsLoading}
                   placeholder={sectionsLoading ? "Loading..." : "Select Section"}
                   widthClassName="w-[130px]"
                   theme="always-green"
+                  includeAll
                   hideCheckmark
                 />
               </div>
@@ -377,6 +438,9 @@ const FacultyView: React.FC<FacultyViewProps> = ({
                     Subject
                   </th>
                   <th className="py-2.5 px-2 font-semibold text-[#4A5568] text-md text-center">
+                    Section
+                  </th>
+                  <th className="py-2.5 px-2 font-semibold text-[#4A5568] text-md text-center">
                     Role
                   </th>
                   <th className="py-2.5 px-6 font-semibold text-[#4A5568] text-md text-right">
@@ -395,26 +459,26 @@ const FacultyView: React.FC<FacultyViewProps> = ({
                     Student Name
                   </th>
                   <th className="py-2.5 px-2 font-semibold text-[#4A5568] text-md text-center">
+                    Section
+                  </th>
+                  <th className="py-2.5 px-2 font-semibold text-[#4A5568] text-md text-center">
                     Attendance
                   </th>
                   <th className="py-2.5 px-2 font-semibold text-[#4A5568] text-md text-center">
                     Performance
                   </th>
-                  {/* <th className="py-2.5 px-6 font-semibold text-[#4A5568] text-md text-right">
-                    Actions
-                  </th> */}
                 </>
               )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {loading ? (
-              <TableShimmer columns={activeTab === "Faculty" ? 6 : 5} rows={8} />
+              <TableShimmer columns={activeTab === "Faculty" ? 7 : 6} rows={8} />
             ) : activeTab === "Faculty" ? (
               facultyList.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-gray-400">
-                    No faculty found in this branch.
+                  <td colSpan={7} className="py-8 text-center text-gray-400">
+                    No faculty found in this {isSchool ? "class" : "branch"}.
                   </td>
                 </tr>
               ) : (
@@ -425,11 +489,6 @@ const FacultyView: React.FC<FacultyViewProps> = ({
                         onClick={() => setSelectedFaculty(prof)}
                         className="w-10 h-10 cursor-pointer rounded-full bg-gray-100 inline-flex items-center justify-center overflow-hidden border border-gray-100 hover:ring-2 hover:ring-[#3EAD6F] transition"
                       >
-                        {/* <img
-                          src={prof.avatar}
-                          alt={prof.name}
-                          className="w-full h-full object-cover"
-                        /> */}
                         <Avatar src={prof.avatar} alt={prof.name} size={40} />
                       </button>
                     </td>
@@ -438,6 +497,9 @@ const FacultyView: React.FC<FacultyViewProps> = ({
                     </td>
                     <td className="py-2 px-2 text-center text-[#4A5568] text-[13px] max-w-[150px] truncate">
                       {prof.subject}
+                    </td>
+                    <td className="py-2 px-2 text-center text-[#4A5568] text-[13px] font-medium">
+                      {prof.section}
                     </td>
                     <td className="py-2 px-2 text-center text-[#4A5568] text-[13px]">
                       {prof.role}
@@ -468,11 +530,6 @@ const FacultyView: React.FC<FacultyViewProps> = ({
                   <tr key={idx} className="hover:bg-gray-50 transition-colors">
                     <td className="py-2 px-4 text-center">
                       <div className="w-10 h-10 rounded-full bg-gray-100 inline-block overflow-hidden border border-gray-100">
-                        {/* <img
-                          src={stud.avatar}
-                          alt={stud.name}
-                          className="w-full h-full object-cover"
-                        /> */}
                         <Avatar src={stud.avatar} alt={stud.name} size={40} />
                       </div>
                     </td>
@@ -482,15 +539,15 @@ const FacultyView: React.FC<FacultyViewProps> = ({
                     <td className="py-2 px-2 text-center font-medium text-[#2D3748] text-[14px]">
                       {stud.name}
                     </td>
+                    <td className="py-2 px-2 text-center text-[#4A5568] text-[13px] font-medium">
+                      {stud.section}
+                    </td>
                     <td className="py-2 px-2 text-center text-[#4A5568] text-[13px] font-semibold text-[#43C17A]">
                       {stud.attendance}
                     </td>
                     <td className="py-2 px-2 text-center text-[#4A5568] text-[13px]">
                       {stud.performance}
                     </td>
-                    {/* <td className="py-2 px-6 text-right font-bold text-[#2D3748] text-[13px] underline underline-offset-4 cursor-pointer hover:text-black">
-                      View
-                    </td> */}
                   </tr>
                 ))
               ))
