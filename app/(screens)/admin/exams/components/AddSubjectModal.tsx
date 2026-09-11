@@ -269,7 +269,7 @@ export function AddSubjectModal({
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col col-span-2 md:col-span-1">
-              <label className="text-sm font-bold text-gray-700 mb-1.5">Subject Name</label>
+              <label className="text-sm font-bold text-gray-700 mb-1.5">Subject Name <span className="text-red-500">*</span></label>
               {subjectsList.length > 0 ? (
                 <CustomSelect
                   value={newSubjectName}
@@ -292,18 +292,18 @@ export function AddSubjectModal({
             </div>
 
             <div className="flex flex-col col-span-2 md:col-span-1">
-              <label className="text-sm font-bold text-gray-700 mb-1.5">Exam Date</label>
+              <label className="text-sm font-bold text-gray-700 mb-1.5">Exam Date <span className="text-red-500">*</span></label>
               <DatePickerComponent value={newSubjectDate} onChange={setNewSubjectDate} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col">
-              <label className="text-sm font-bold text-gray-700 mb-1.5">Start Time</label>
+              <label className="text-sm font-bold text-gray-700 mb-1.5">Start Time <span className="text-red-500">*</span></label>
               <TimePickerWrapper value={newSubjectTime} onChange={setNewSubjectTime} />
             </div>
             <div className="flex flex-col">
-              <label className="text-sm font-bold text-gray-700 mb-1.5">End Time</label>
+              <label className="text-sm font-bold text-gray-700 mb-1.5">End Time <span className="text-red-500">*</span></label>
               <TimePickerWrapper value={newSubjectEndTime} onChange={setNewSubjectEndTime} />
             </div>
           </div>

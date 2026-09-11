@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { getAdminStudentProgressSummary } from "@/lib/helpers/admin/studentProgress/getAdminStudentProgressSummary";
 
 export function useStudentsByDepartment(
-  departmentId: number,
+  departmentId: number | null,
   yearId: number | null,
   shouldFetch: boolean,
   sectionId: number | null,
@@ -17,8 +17,9 @@ export function useStudentsByDepartment(
   const [totalCount, setTotalCount] = useState<number>(0);
 
   useEffect(() => {
+    let mounted = true;
     async function load() {
-      if (!shouldFetch || !collegeId || !collegeEducationId || !yearId) {
+      if (!shouldFetch || !collegeId || !collegeEducationId) {
         setLoading(false);
         return;
       }
@@ -44,26 +45,29 @@ export function useStudentsByDepartment(
             pinNumber,
             isActive
           ),
-          student_academic_history!inner(
+          student_academic_history${yearId || sectionId ? "!inner" : "!left"}(
+            collegeAcademicYearId,
             collegeSectionsId,
             collegeSemesterId,
             college_semester(collegeSemester),
-            college_sections!inner(collegeAcademicYearId)
+            college_sections!left(collegeAcademicYearId, collegeSections)
           )
         `,
           { count: "exact" }
         )
         .eq("collegeId", collegeId)
         .eq("collegeEducationId", collegeEducationId)
-        .eq("collegeBranchId", departmentId)
+        .match(departmentId ? { collegeBranchId: departmentId } : {})
         .eq("student_academic_history.isCurrent", true)
         .eq("isActive", true)
+        .is("deletedAt", null)
+        .eq("users.isActive", true).eq("users.is_deleted", false)
+        .order("studentId")
         .range(from, to);
 
       if (yearId) {
-        query = query.filter(
-          "student_academic_history.college_sections.collegeAcademicYearId",
-          "eq",
+        query = query.eq(
+          "student_academic_history.collegeAcademicYearId",
           yearId,
         );
       }
@@ -76,6 +80,7 @@ export function useStudentsByDepartment(
       }
 
       const { data, count, error } = await query;
+      if (!mounted) return;
 
       if (error) {
         setStudents([]);
@@ -103,14 +108,14 @@ export function useStudentsByDepartment(
           progressPercent: number;
         }>();
 
-        if (sectionIds.length) {
+        if (sectionIds.length && yearId) {
           try {
             let subjectsQuery = supabase
               .from("college_subjects")
               .select("collegeSubjectId")
               .eq("collegeId", collegeId)
               .eq("collegeEducationId", collegeEducationId)
-              .eq("collegeBranchId", departmentId)
+              .match(departmentId ? { collegeBranchId: departmentId } : {})
               .eq("collegeAcademicYearId", yearId)
               .eq("isActive", true)
               .is("deletedAt", null);
@@ -127,7 +132,7 @@ export function useStudentsByDepartment(
               const progress = await getAdminStudentProgressSummary({
                 collegeId,
                 collegeEducationId,
-                collegeBranchIds: [departmentId],
+                collegeBranchIds: departmentId ? [departmentId] : [],
                 academicYearIds: [yearId],
                 semesterIds,
                 sectionIds,
@@ -154,6 +159,11 @@ export function useStudentsByDepartment(
             ? s.student_academic_history[0]
             : s.student_academic_history;
 
+          const sectionData = history?.college_sections;
+          const sectionName = Array.isArray(sectionData)
+            ? sectionData[0]?.collegeSections
+            : sectionData?.collegeSections;
+
           const semData =
             history?.college_semester ||
             history?.student_academic_history?.college_semester;
@@ -172,6 +182,7 @@ export function useStudentsByDepartment(
             studentId: s.studentId,
             rollNumber: studentPin ?? s.studentId.toString(),
             semester: sem ? `Sem ${sem}` : "—",
+            section: sectionName ? String(sectionName).trim() : "—",
             attendance: progressMetrics
               ? `${progressMetrics.attendancePercentage}%`
               : "—",
@@ -189,6 +200,7 @@ export function useStudentsByDepartment(
           };
         });
 
+        if (!mounted) return;
         setStudents(mapped);
         setLoading(false);
       } else {
@@ -197,7 +209,11 @@ export function useStudentsByDepartment(
         setLoading(false);
       }
     }
-    load();
+    load().catch((error) => {
+      console.error("Failed to load students", error);
+      if (mounted) { setStudents([]); setTotalCount(0); setLoading(false); }
+    });
+    return () => { mounted = false; };
   }, [
     departmentId,
     yearId,

@@ -23,17 +23,17 @@ export default function SelectAdminModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center">
+    <div className="fixed inset-0 z-[1010] flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/30 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative w-[500px] max-h-[80vh] bg-white rounded-2xl shadow-xl overflow-y-auto p-6">
-        <h2 className="text-xl font-semibold text-[#282828] mb-6">
+      <div role="dialog" aria-modal="true" aria-labelledby="select-meeting-admin-title" className="relative flex w-full max-w-[500px] max-h-[calc(100dvh-2rem)] flex-col bg-white rounded-2xl shadow-xl overflow-hidden">
+        <h2 id="select-meeting-admin-title" className="shrink-0 px-6 pt-6 pb-4 text-xl font-semibold text-[#282828]">
           Select Admin
         </h2>
 
-        <div className="space-y-5">
+        <div className="custom-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 pb-6">
           {admins.map((admin) => (
             <div
               key={admin.id}
@@ -60,7 +60,7 @@ export default function SelectAdminModal({
           ))}
         </div>
 
-        <div className="flex gap-4 mt-8">
+        <div className="flex shrink-0 gap-4 border-t border-gray-100 px-6 py-4">
           <button
             onClick={onClose}
             className="flex-1 bg-[#D9D9D9] text-[#282828] py-1 rounded-md font-medium cursor-pointer"

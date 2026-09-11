@@ -404,7 +404,7 @@ export default function ClientLayout({
           </div>
 
           {isSidebarOpen && (
-            <div className="fixed inset-0 z-[105] lg:hidden">
+            <div className="fixed inset-0 z-[35] lg:hidden">
               <div
                 className="absolute inset-0 bg-black/40"
                 onClick={() => setIsSidebarOpen(false)}
@@ -421,7 +421,8 @@ export default function ClientLayout({
           {/* <div className="bg-yellow-00 flex flex-col h-full w-[100%] md:w-[100%] lg:w-[83%]"> */}
           <div className="flex h-[100dvh] min-h-0 flex-col w-full bg-[#F4F4F4] lg:w-[83%]">
             {/* <div className="bg-red-00 h-[100px] landscape:h-[110px] md:h-[120px] md:landscape:h-[120px] lg:h-[13%] lg:landscape:h-[13%] flex justify-end bg-[#F4F4F4]"> */}
-            <div className="shrink-0 h-auto w-full lg:h-[92px] flex justify-end bg-[#F4F4F4] z-[100] relative">
+            {/* Keep navigation below the shared modal layers (z-40 and above). */}
+            <div className="shrink-0 h-auto w-full lg:h-[92px] flex justify-end bg-[#F4F4F4] z-30 relative">
               <Header
                 onMenuClick={handleMenuClick}
                 onAddTaskClick={handleAddTaskClick}
