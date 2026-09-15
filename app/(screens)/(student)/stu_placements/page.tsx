@@ -296,7 +296,11 @@ function ConfirmActionModal({
   );
 }
 
+import { useRouter } from "next/navigation";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+
 export default function Page() {
+  const router = useRouter();
   const {
     loading: studentLoading,
     studentId,
@@ -304,7 +308,16 @@ export default function Page() {
     collegeEducationId,
     collegeBranchId,
     collegeAcademicYearId,
+    collegeEducationType,
   } = useStudent();
+
+  useEffect(() => {
+    if (!studentLoading) {
+      if (isSchoolEducation(collegeEducationType) || collegeEducationType === "Inter") {
+        router.replace("/stu_dashboard");
+      }
+    }
+  }, [studentLoading, collegeEducationType, router]);
   const searchParams = useSearchParams();
   const selectedDate = searchParams.get("selectedDate");
   const t = useTranslations("Placements.student");
@@ -643,6 +656,10 @@ export default function Page() {
 
   const pageLoading = studentLoading || isLoading;
   const filterRefreshing = filterLoadingKey !== null;
+
+  if (!studentLoading && (isSchoolEducation(collegeEducationType) || collegeEducationType === "Inter")) {
+    return null;
+  }
 
   return (
     <main className="flex min-h-full flex-col p-2 bg-red-00 max-md:p-0 max-md:bg-[#F4F5F6]">

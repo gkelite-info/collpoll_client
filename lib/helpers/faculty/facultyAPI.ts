@@ -121,14 +121,19 @@ export async function fetchFacultyYears(facultyId: number, branchId?: number): P
 }
 
 
-export async function fetchFacultySubjects(facultyId: number, academicYearId: number) {
-    const { data, error } = await supabase
+export async function fetchFacultySubjects(facultyId: number, academicYearId: number, branchId?: number) {
+    let query = supabase
         .from("faculty_sections")
         .select(`
             collegeSubjectId,
+            collegeBranchId,
             college_subjects (
                 collegeSubjectId,
-                subjectName
+                subjectName,
+                collegeBranchId
+            ),
+            college_sections:collegeSectionsId (
+                collegeBranchId
             )
         `)
         .eq("facultyId", facultyId)
@@ -136,14 +141,31 @@ export async function fetchFacultySubjects(facultyId: number, academicYearId: nu
         .eq("isActive", true)
         .is("deletedAt", null);
 
+    const { data, error } = await query;
+
     if (error) {
         console.error("fetchFacultySubjects error:", error);
         throw error;
     }
 
+    let filteredData = data || [];
+    if (branchId) {
+        filteredData = filteredData.filter((item: any) => {
+            const subjectBranch = Array.isArray(item.college_subjects) 
+                ? item.college_subjects[0]?.collegeBranchId 
+                : item.college_subjects?.collegeBranchId;
+                
+            return (
+                item.collegeBranchId === branchId || 
+                item.college_sections?.collegeBranchId === branchId ||
+                subjectBranch === branchId
+            );
+        });
+    }
+
     const subjects = Array.from(
         new Map<any, any>(
-            data
+            filteredData
                 .filter(item => item.college_subjects)
                 .map(item => {
                     const subject: any = Array.isArray(item.college_subjects)

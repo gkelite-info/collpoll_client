@@ -12,12 +12,12 @@ export function getSecureAttachmentUrl(url: string) {
     if (!url) return url;
     
     try {
-        if (url.includes(".supabase.co/storage/v1/object/public/")) {
-            const urlParts = url.split("/storage/v1/object/public/");
-            if (urlParts.length > 1) {
-                const bucketAndPath = urlParts[1];
-                return `/api/files/${bucketAndPath}`;
-            }
+        const match = url.match(/\/storage\/v1\/object\/(?:public|sign)\/(.+)$/);
+        if (match && match[1]) {
+            let bucketAndPath = match[1];
+            // Remove any query parameters like ?token=
+            bucketAndPath = bucketAndPath.split('?')[0];
+            return `/api/files/${bucketAndPath}`;
         }
     } catch (e) {
         console.error("Failed to parse attachment url:", e);

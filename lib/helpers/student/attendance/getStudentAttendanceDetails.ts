@@ -254,8 +254,8 @@ export async function getStudentAttendanceDetails({
     }))
     .sort(
       (first, second) =>
-        first.date.localeCompare(second.date) ||
-        first.time.localeCompare(second.time),
+        second.date.localeCompare(first.date) ||
+        second.time.localeCompare(first.time),
     );
 
   const paginatedRows = allRows.slice(from, to);

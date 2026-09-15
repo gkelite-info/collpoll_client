@@ -6,6 +6,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
+import { useInstitutionTerminology } from "@/app/utils/hooks/useInstitutionTerminology";
 
 export default function UserInfoCard() {
   const {
@@ -26,6 +27,7 @@ export default function UserInfoCard() {
     collegeAcademicYear,
   } = useStudent();
 
+  const { isSchool } = useInstitutionTerminology();
   const t = useTranslations("Dashboard.student");
 
   const [completedCount, setCompletedCount] = useState(0);
@@ -187,10 +189,10 @@ export default function UserInfoCard() {
           <div className="flex flex-col gap-3 max-w-[65%] my-auto lg:pl-5 max-md:max-w-[65%] max-md:gap-1.5">
             <div className="flex items-center gap-3 max-md:flex-wrap max-md:gap-1">
               <p className="text-[#714EF2] text-sm font-medium max-md:text-[11px] max-md:font-bold">
-                {collegeEducationType && collegeBranchCode
-                  ? `${collegeEducationType} ${collegeBranchCode}`
-                  : "—"}{" "}
-                - {collegeAcademicYear ? `${collegeAcademicYear}` : "—"}
+                {isSchool
+                  ? `${collegeEducationType ? collegeEducationType + ' - ' : ''}${collegeAcademicYear || "—"}`
+                  : `${collegeEducationType && collegeBranchCode ? `${collegeEducationType} ${collegeBranchCode}` : "—"} - ${collegeAcademicYear || "—"}`
+                }
               </p>
               <p className="text-[#089144] text-sm font-medium max-md:text-[11px] max-md:font-bold max-md:italic">
                 {t("Student Id - ")}{" "}

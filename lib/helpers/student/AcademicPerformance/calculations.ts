@@ -58,8 +58,19 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
         let subjectsQuery = supabase
             .from("college_subjects")
             .select("collegeSubjectId, subjectName, subjectKey")
-            .eq("collegeBranchId", student.collegeBranchId)
             .is("deletedAt", null);
+
+        if (student.collegeBranchId) {
+            subjectsQuery = subjectsQuery.eq("collegeBranchId", student.collegeBranchId);
+        } else {
+            subjectsQuery = subjectsQuery.is("collegeBranchId", null);
+        }
+
+        if (history?.collegeAcademicYearId) {
+            subjectsQuery = subjectsQuery.eq("collegeAcademicYearId", history.collegeAcademicYearId);
+        } else {
+            subjectsQuery = subjectsQuery.is("collegeAcademicYearId", null);
+        }
 
         if (history?.collegeSemesterId) {
             subjectsQuery = subjectsQuery.or(`collegeSemesterId.eq.${history.collegeSemesterId},collegeSemesterId.is.null`);

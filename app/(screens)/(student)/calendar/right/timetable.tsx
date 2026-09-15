@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import TimetableCardShimmer from "./TimetableCardShimmer";
 import { useTranslations } from "next-intl";
 import { fetchTopicResources } from "@/lib/helpers/faculty/Savetopicresource";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 const formatTimeToAMPM = (time24: string) => {
   const [h, m] = time24.split(":");
@@ -96,10 +97,10 @@ export default function CalendarTimeTable({
         if (!userRow) throw new Error("Internal user not found");
 
         const studentContext = await fetchStudentContext(userRow.userId);
+
         if (
           !studentContext ||
           studentContext.collegeEducationId === null ||
-          studentContext.collegeBranchId === null ||
           studentContext.collegeAcademicYearId === null ||
           studentContext.collegeSectionsId === null
         ) {

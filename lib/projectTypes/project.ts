@@ -9,6 +9,10 @@ export type ProjectCardProps = {
     marks: number;
     fileUrls: string[];
     subject?: string;
+    branchName?: string;
+    yearName?: string;
+    sectionName?: string;
+    classContext?: string;
     status?: string;
     endDate?: string | null;
     collegeSubjectId?: number | null;

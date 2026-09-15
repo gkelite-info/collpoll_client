@@ -9,6 +9,7 @@ import { fetchStudentTimetableByDate } from "@/lib/helpers/profile/calender/fetc
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { getUserIdFromAuth } from "@/lib/helpers/fetchUserDetails";
 import { fetchFacultyTasksForStudent } from "@/lib/helpers/faculty/facultyTasks";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 function getWeekDays(locale: string) {
   const today = new Date();
@@ -91,10 +92,10 @@ export default function CalendarLeft({
         if (!userResult.success || !userResult.userId) return;
 
         const studentContext = await fetchStudentContext(userResult.userId);
+
         if (
           !studentContext ||
           studentContext.collegeEducationId === null ||
-          studentContext.collegeBranchId === null ||
           studentContext.collegeAcademicYearId === null ||
           studentContext.collegeSectionsId === null ||
           studentContext.collegeId === null

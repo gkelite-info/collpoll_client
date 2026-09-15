@@ -95,6 +95,17 @@ export const ProjectCard = ({
               </span>
             </div>
 
+            {project.classContext && (
+              <div className="grid grid-cols-[120px_1fr] md:flex md:gap-4 items-start md:items-center">
+                <span className="font-semibold text-[#111827] md:w-28 text-xs sm:text-sm">
+                  Class
+                </span>
+                <p className="text-xs sm:text-sm md:text-base text-[#374151] break-words md:truncate md:max-w-sm leading-relaxed font-medium">
+                  {project.classContext}
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-[120px_1fr] md:flex md:gap-4 items-start md:items-center">
               <span className="font-semibold text-[#111827] md:w-28 text-xs sm:text-sm">
                 Tech Stack
@@ -284,6 +295,17 @@ export const ProjectDetailsModal = ({
               {project.duration}
             </span>
           </section>
+
+          {project.classContext && (
+            <section className="mb-4">
+              <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-2">
+                Class
+              </h2>
+              <span className="inline-flex px-4 py-1.5 rounded-full bg-[#f3f4f6] text-[#374151] text-sm font-medium">
+                {project.classContext}
+              </span>
+            </section>
+          )}
 
           <section className="mb-4">
             <div className="flex flex-wrap gap-10">

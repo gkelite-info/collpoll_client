@@ -3,6 +3,7 @@
 import { useState, ReactNode, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useUser } from "@/app/utils/context/UserContext";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import {
   BuildingOffice,
   Calendar,
@@ -45,7 +46,7 @@ export default function Navbar({ onClose }: StudentNavbarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const t = useTranslations("Navbars");
   const [loading, setLoading] = useState(false);
-  const { collegeEducationType } = useUser();
+  const { collegeEducationType, loading: contextLoading } = useUser();
 
   const items: NavItem[] = useMemo(() => {
     const allItems: NavItem[] = [
@@ -126,19 +127,26 @@ export default function Navbar({ onClose }: StudentNavbarProps) {
     },
     ];
 
-    if (collegeEducationType === "Inter") {
-      return allItems.filter((item) => item.path !== "/stu_placements");
+    let filteredItems = allItems;
+    if (isSchoolEducation(collegeEducationType)) {
+      filteredItems = filteredItems.filter(
+        (item) => item.path !== "/stu_placements" && item.path !== "/drive"
+      );
+    } else if (collegeEducationType === "Inter") {
+      filteredItems = filteredItems.filter(
+        (item) => item.path !== "/stu_placements"
+      );
     }
-
-    return allItems;
+    
+    return filteredItems;
   }, [t, collegeEducationType]);
 
   useEffect(() => {
     const current = [...items]
       .sort((a, b) => b.path.length - a.path.length)
       .find((item) => pathname === item.path || pathname.startsWith(`${item.path}/`));
-    if (current) setActive(current.label);
-  }, [pathname, items]);
+    if (current && !contextLoading) setActive(current.label);
+  }, [pathname, items, contextLoading]);
 
   const handleLogout = async () => {
     try {
@@ -173,34 +181,45 @@ export default function Navbar({ onClose }: StudentNavbarProps) {
         </div>
 
         <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4 lg:pl-4 lg:pb-5 overflow-y-auto focus:outline-none">
-          {items.map((item) => {
-            const isActive = active === item.label;
-
-            return (
-              <Link
-                key={item.path}
-                href={item.path}
-                onClick={() => onClose?.()}
-                className={`flex relative items-center gap-3 w-full pl-4 py-2 rounded-l-full cursor-pointer transition-all duration-300
-                  before:transition-all before:duration-300
-                  after:transition-all after:duration-300
-                  ${isActive
-                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
-                    : "text-white hover:bg-[#50D689]/30 focus:outline-none"
-                  }
-                `}
-              >
-                <div className={`${isActive ? "text-[#43C17A]" : "text-white"}`}>
-                  {item.icon(isActive)}
+          {contextLoading ? (
+            <div className="flex flex-col gap-[11px] w-full pr-4">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="flex relative items-center gap-3 w-full pl-4 py-2">
+                  <div className="h-[18px] w-[18px] bg-white/20 rounded-full animate-pulse"></div>
+                  <div className="h-4 w-3/4 bg-white/20 rounded animate-pulse"></div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            items.map((item) => {
+              const isActive = active === item.label;
 
-                <p className={`text-sm sm:text-sm md:text-base lg:text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
-                  }`}>
-                  {item.label}
-                </p>
-              </Link>
-            );
-          })}
+              return (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  onClick={() => onClose?.()}
+                  className={`flex relative items-center gap-3 w-full pl-4 py-2 rounded-l-full cursor-pointer transition-all duration-300
+                    before:transition-all before:duration-300
+                    after:transition-all after:duration-300
+                    ${isActive
+                      ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
+                      : "text-white hover:bg-[#50D689]/30 focus:outline-none"
+                    }
+                  `}
+                >
+                  <div className={`${isActive ? "text-[#43C17A]" : "text-white"}`}>
+                    {item.icon(isActive)}
+                  </div>
+
+                  <p className={`text-sm sm:text-sm md:text-base lg:text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
+                    }`}>
+                    {item.label}
+                  </p>
+                </Link>
+              );
+            })
+          )}
 
           <button
             onClick={() => setShowLogoutModal(true)}

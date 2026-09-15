@@ -10,6 +10,7 @@ import { useStudent } from "@/app/utils/context/student/useStudent";
 import { useTranslations } from "next-intl";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { CustomDropdown } from "@/app/components/CustomDropdown";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 const ProjectCardShimmer = () => (
   <div className="bg-white rounded-[26px] shadow-sm border border-gray-100 px-5 py-6 md:px-7 md:py-7 animate-pulse">
@@ -41,9 +42,11 @@ const Page = () => {
   const {
     collegeBranchCode,
     collegeAcademicYear,
+    collegeAcademicYearId,
     studentId,
     collegeSectionsId,
     subjects: studentSubjects,
+    collegeEducationType,
   } = useStudent();
   const [subjectFilter, setSubjectFilter] = useState<string | number>("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -60,7 +63,8 @@ const Page = () => {
         const enriched = await fetchEnrichedProjectsByStudent(
           studentId, 
           collegeSectionsId, 
-          subjectIds
+          subjectIds,
+          collegeAcademicYearId ?? undefined
         );
 
         const mapped: ProjectCardProps[] = enriched.map((p) => {
@@ -70,18 +74,33 @@ const Page = () => {
 
           const currentStatus = pDate && pDate < today ? "Completed" : "Active";
 
+          const isSchool = isSchoolEducation(collegeEducationType);
+          const isInter = collegeEducationType === "Inter" || collegeEducationType === "BIEAP" || collegeEducationType === "TSBIE";
+
+          const parts = [];
+          if (!isSchool && p.branchName) {
+            parts.push(p.branchName);
+          }
+          if (p.yearName) parts.push(p.yearName);
+          if (p.sectionName) {
+            const cleanSection = p.sectionName.replace(/Section\s*-?\s*/gi, "").trim();
+            parts.push(`Section - ${cleanSection}`);
+          }
+          const classContext = parts.join(", ");
+
           return {
             ...p,
             collegeSubjectId: p.collegeSubjectId,
             title: p.title,
             description: p.description ?? "",
             duration: p.duration,
-            techStack: p.domain.join(", "),
+            techStack: Array.isArray(p.domain) ? p.domain.join(", ") : (p.domain || ""),
             mentors: p.mentors,
             teamMembers: p.teamMembers,
             marks: p.marks ?? 0,
             fileUrls: p.fileUrls,
             subject: p.subjectName || "",
+            classContext: classContext,
             status: currentStatus,
           };
         });
@@ -141,7 +160,7 @@ const Page = () => {
       <section className="flex justify-between items-center mb-4">
         <div className="flex flex-col">
           <h1 className="text-black text-2xl font-semibold">
-            {t("Projects")} - {collegeBranchCode ?? "..."} {collegeAcademicYear}
+            {t("Projects")} - {!isSchoolEducation(collegeEducationType) ? `${collegeBranchCode ?? "..."} ` : ""}{collegeAcademicYear}
           </h1>
           <p className="text-[#282828] text-sm">
             {t("View and track your assigned projects")}

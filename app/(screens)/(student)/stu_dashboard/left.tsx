@@ -26,6 +26,8 @@ import { useStudent } from "@/app/utils/context/student/useStudent";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { getStudentExamEnrollmentCount } from "@/lib/helpers/student/exams/getStudentExamEnrollmentCount";
+import UpcomingClassesShimmer from "@/app/components/shimmers/UpcomingClassesShimmer";
+import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 const formatTimeToAMPM = (time24: string) => {
   const [h, m] = time24.split(":");
@@ -169,10 +171,15 @@ export default function StuDashLeft() {
           )
         `,
         )
-        .eq("collegeBranchId", studentContext.collegeBranchId)
         .eq("collegeEducationId", studentContext.collegeEducationId)
         .eq("isActive", true)
         .is("deletedAt", null);
+
+      if (studentContext.collegeBranchId) {
+        query = query.eq("collegeBranchId", studentContext.collegeBranchId);
+      } else {
+        query = query.is("collegeBranchId", null);
+      }
 
       if (studentContext.collegeAcademicYearId) {
         query = query.eq("collegeAcademicYearId", studentContext.collegeAcademicYearId);
@@ -414,24 +421,37 @@ export default function StuDashLeft() {
       const internalUserId = userRow.userId;
 
       const studentContext = await fetchStudentContext(internalUserId);
+      const isSchool = studentContext ? isSchoolEducation(studentContext.collegeEducationType) : false;
+      console.log("[DEBUG] studentContext:", JSON.stringify(studentContext, null, 2));
+
       if (
         !studentContext ||
         studentContext.collegeEducationId === null ||
-        studentContext.collegeBranchId === null ||
         studentContext.collegeAcademicYearId === null ||
         studentContext.collegeSectionsId === null
       ) {
+        console.log("[DEBUG] Early return - missing context fields:", {
+          hasContext: !!studentContext,
+          collegeEducationId: studentContext?.collegeEducationId,
+          collegeAcademicYearId: studentContext?.collegeAcademicYearId,
+          collegeSectionsId: studentContext?.collegeSectionsId,
+        });
         setLectures([]);
         return;
       }
 
-      const data = await fetchUpcomingClassesForStudent({
+      const filters = {
         collegeEducationId: studentContext.collegeEducationId,
         collegeBranchId: studentContext.collegeBranchId,
         collegeAcademicYearId: studentContext.collegeAcademicYearId,
         collegeSemesterId: studentContext.collegeSemesterId,
         collegeSectionId: studentContext.collegeSectionsId,
-      });
+        isSchool,
+      };
+      console.log("[DEBUG] Calling fetchUpcomingClassesForStudent with filters:", JSON.stringify(filters, null, 2));
+
+      const data = await fetchUpcomingClassesForStudent(filters);
+      console.log("[DEBUG] fetchUpcomingClassesForStudent returned:", data.length, "events", JSON.stringify(data, null, 2));
 
       setLectures(data);
     } catch (err) {
@@ -554,9 +574,7 @@ export default function StuDashLeft() {
 
                   <div className="overflow-y-auto pr-1 max-md:overflow-visible max-md:pr-0">
                     {loadingLectures ? (
-                      <div className="flex justify-center items-center h-[120px]">
-                        <div className="w-8 h-8 border-4 border-[#E8EAED] border-t-[#16284F] rounded-full animate-spin"></div>
-                      </div>
+                      <UpcomingClassesShimmer />
                     ) : lectures.length === 0 ? (
                       <div className="bg-red-00 min-h-[5vh] flex items-center justify-center">
                         <p className="text-[#282828] text-sm">

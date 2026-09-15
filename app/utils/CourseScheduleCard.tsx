@@ -16,7 +16,7 @@ type Props = {
   isLoading?: boolean;
 };
 
-const formatSchoolClass = (year?: string) => {
+const formatSchoolClass = (year?: string | null) => {
   if (!year) return "";
   const num = Number(year);
   if (isNaN(num)) return year; 
@@ -116,9 +116,9 @@ export default function CourseScheduleCard({
             </div>
           ) : role === "Student" ? (
             <p className="text-[#EFEFEF] text-sm font-medium">
-              {collegeEducationType && collegeBranchCode
-                ? `${collegeEducationType} ${collegeBranchCode}`
-                : "—"} – {academicYearNumber ? `${academicYearNumber}` : "—"}
+              {isSchool
+                ? formatSchoolClass(collegeAcademicYear) || collegeEducationType || "—"
+                : `${collegeEducationType && collegeBranchCode ? `${collegeEducationType} ${collegeBranchCode}` : "—"} – ${academicYearNumber || "—"}`}
             </p>
           ) : role === "Faculty" ? (
             <p className="text-[#EFEFEF] text-md font-medium text-center">
