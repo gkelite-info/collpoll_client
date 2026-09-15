@@ -56,8 +56,13 @@ export async function fetchStudentTimetableByDate(params: {
     .eq("type", "class")
     .eq("is_deleted", false)
     .eq("date", params.date)
-    .eq("sections.collegeEducationId", params.collegeEducationId)
-    .eq("sections.collegeBranchId", params.collegeBranchId);
+    .eq("sections.collegeEducationId", params.collegeEducationId);
+
+  if (params.collegeBranchId !== null && params.collegeBranchId !== undefined) {
+    query = query.eq("sections.collegeBranchId", params.collegeBranchId);
+  } else {
+    query = query.is("sections.collegeBranchId", null);
+  }
 
   if (params.collegeAcademicYearId !== null && params.collegeAcademicYearId !== undefined) {
     query = query.eq("sections.collegeAcademicYearId", params.collegeAcademicYearId);
@@ -115,8 +120,13 @@ export async function fetchStudentTimetableByDate(params: {
     .eq("is_deleted", false)
     .lte("fromDate", params.date)
     .gte("toDate", params.date)
-    .eq("sections.collegeEducationId", params.collegeEducationId)
-    .eq("sections.collegeBranchId", params.collegeBranchId);
+    .eq("sections.collegeEducationId", params.collegeEducationId);
+
+  if (params.collegeBranchId !== null && params.collegeBranchId !== undefined) {
+    bulkQuery = bulkQuery.eq("sections.collegeBranchId", params.collegeBranchId);
+  } else {
+    bulkQuery = bulkQuery.is("sections.collegeBranchId", null);
+  }
 
   if (params.collegeAcademicYearId !== null && params.collegeAcademicYearId !== undefined) {
     bulkQuery = bulkQuery.eq("sections.collegeAcademicYearId", params.collegeAcademicYearId);

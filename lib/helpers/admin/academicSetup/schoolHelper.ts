@@ -50,11 +50,14 @@
  */
 
 
-export const SCHOOL_BOARDS = ["CBSE", "SSC", "ICSE", "ISC", "IB"];
+export const SCHOOL_BOARDS = ["CBSE", "SSC", "ICSE", "ISC", "IB", "STATE BOARD", "STATEBOARD", "IGCSE", "NURSERY", "KINDERGARTEN", "SCHOOL"];
 
 export const isSchoolEducation = (type: string | null | undefined): boolean => {
   if (!type) return false;
-  return SCHOOL_BOARDS.includes(type.trim().toUpperCase());
+  const normalized = type.trim().toUpperCase();
+  if (SCHOOL_BOARDS.includes(normalized)) return true;
+  if (normalized.includes("BOARD") || normalized.includes("SCHOOL")) return true;
+  return false;
 };
 
 export const parseEducationTypes = (input: any): string[] => {

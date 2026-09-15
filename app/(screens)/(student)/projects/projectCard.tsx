@@ -101,6 +101,17 @@ export const ProjectCard = ({
               </span>
             </div>
 
+            {project.classContext && (
+              <div className="flex gap-4 items-start md:items-center">
+                <span className="w-28 shrink-0 font-semibold text-[#111827] max-md:text-[15px]">
+                  Class
+                </span>
+                <p className="truncate md:max-w-sm text-[#374151] max-md:whitespace-normal max-md:text-[15px] font-medium">
+                  {project.classContext}
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-4">
               <span className="w-28 shrink-0 font-semibold text-[#111827] max-md:text-[15px]">
                 {t("Tech Stack")}
@@ -355,8 +366,8 @@ export const ProjectDetailsModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/10 max-md:bg-white max-md:items-stretch">
-      <div className="mt-8 w-full max-w-3xl rounded-3xl bg-white p-6 md:p-8 shadow-lg overflow-y-auto max-h-[90vh] max-md:mt-0 max-md:rounded-none max-md:max-h-none max-md:h-full max-md:shadow-none max-md:p-4">
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-4 max-md:mb-2 max-md:text-black">
+      <div className="mt-8 w-full max-w-3xl rounded-3xl bg-white shadow-lg flex flex-col max-h-[90vh] max-md:mt-0 max-md:rounded-none max-md:max-h-none max-md:h-full max-md:shadow-none">
+        <div className="shrink-0 flex items-center gap-2 text-sm text-gray-600 pt-6 px-6 md:pt-8 md:px-8 pb-4 max-md:pt-4 max-md:px-4 max-md:pb-2 max-md:text-black bg-white rounded-t-3xl max-md:rounded-none z-10">
           <CaretLeft
             onClick={onClose}
             size={22}
@@ -366,6 +377,8 @@ export const ProjectDetailsModal = ({
             {t("Project Details")}
           </p>
         </div>
+
+        <div className="overflow-y-auto px-6 md:px-8 pb-6 md:pb-8 max-md:px-4 max-md:pb-4 custom-scrollbar">
 
         <h1 className="text-lg lg:text-2xl font-semibold text-[#16a34a] mb-6 max-md:mb-5 max-md:text-sm">
           {project.title}
@@ -410,6 +423,17 @@ export const ProjectDetailsModal = ({
             {project.duration}
           </span>
         </section>
+
+        {project.classContext && (
+          <section className="mb-6 max-md:mb-5">
+            <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-2 max-md:text-[15px] max-md:mb-1.5">
+              Class
+            </h2>
+            <span className="inline-flex px-4 py-1.5 rounded-full bg-[#f3f4f6] text-[#374151] text-sm font-medium">
+              {project.classContext}
+            </span>
+          </section>
+        )}
 
         <section className="mb-6 max-md:mb-5">
           <div className="flex flex-wrap gap-10 max-md:flex-col max-md:gap-5">
@@ -538,7 +562,7 @@ export const ProjectDetailsModal = ({
             {existingFileUrl && (
               <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm">
                 <a
-                  href={existingFileUrl}
+                  href={getSecureAttachmentUrl(existingFileUrl)}
                   target="_blank"
                   rel="noreferrer"
                   className="min-w-0 truncate text-sm font-medium text-blue-600 underline"
@@ -658,7 +682,7 @@ export const ProjectDetailsModal = ({
                       {project.studentFileUrl.split(".").pop()?.substring(0, 3)}
                     </div>
                     <a
-                      href={project.studentFileUrl}
+                      href={getSecureAttachmentUrl(project.studentFileUrl)}
                       target="_blank"
                       rel="noreferrer"
                       className="text-sm text-blue-600 truncate font-medium max-md:text-[13px] hover:underline"
@@ -691,6 +715,7 @@ export const ProjectDetailsModal = ({
             />
           </div>
         )}
+        </div>
       </div>
     </div>
   );

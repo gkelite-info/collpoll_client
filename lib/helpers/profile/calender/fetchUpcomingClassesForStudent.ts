@@ -2,10 +2,11 @@ import { supabase } from "@/lib/supabaseClient";
 
 export async function fetchUpcomingClassesForStudent(filters: {
   collegeEducationId: number;
-  collegeBranchId: number;
+  collegeBranchId: number | null;
   collegeAcademicYearId: number;
   collegeSemesterId: number | null;
   collegeSectionId: number;
+  isSchool?: boolean;
 }) {
   const today = new Date().toISOString().split("T")[0];
 
@@ -43,7 +44,13 @@ export async function fetchUpcomingClassesForStudent(filters: {
     .order("fromTime", { ascending: true });
 
   if (error) {
+    console.error("[DEBUG] calendar_event query error:", error);
     return [];
+  }
+
+  console.log("[DEBUG] Raw calendar_event data count:", (data ?? []).length);
+  if ((data ?? []).length > 0) {
+    console.log("[DEBUG] First event sections:", JSON.stringify((data as any[])[0]?.sections, null, 2));
   }
 
   const { data: bulkData, error: bulkError } = await supabase
@@ -80,27 +87,33 @@ export async function fetchUpcomingClassesForStudent(filters: {
     .gte("toDate", today)
     .order("fromTime", { ascending: true });
 
+  console.log("[DEBUG] Raw bulk_calendar_events data count:", (bulkData ?? []).length);
+
   const filtered = (data ?? []).filter((event: any) =>
     event.sections?.some(
       (s: any) =>
-        s.collegeEducationId === filters.collegeEducationId &&
-        s.collegeBranchId === filters.collegeBranchId &&
-        s.collegeAcademicYearId === filters.collegeAcademicYearId &&
-        s.collegeSemesterId === filters.collegeSemesterId &&
-        s.collegeSectionId === filters.collegeSectionId,
+        s.collegeEducationId == filters.collegeEducationId &&
+        (filters.isSchool || !filters.collegeBranchId || s.collegeBranchId == filters.collegeBranchId || (!s.collegeBranchId && !filters.collegeBranchId)) &&
+        s.collegeAcademicYearId == filters.collegeAcademicYearId &&
+        (filters.isSchool || !filters.collegeSemesterId || s.collegeSemesterId == filters.collegeSemesterId || (!s.collegeSemesterId && !filters.collegeSemesterId)) &&
+        s.collegeSectionId == filters.collegeSectionId,
     ),
   );
+
+  console.log("[DEBUG] Filtered calendar_event count:", filtered.length);
 
   const filteredBulk = (bulkData ?? []).filter((event: any) =>
     event.sections?.some(
       (s: any) =>
-        s.collegeEducationId === filters.collegeEducationId &&
-        s.collegeBranchId === filters.collegeBranchId &&
-        s.collegeAcademicYearId === filters.collegeAcademicYearId &&
-        s.collegeSemesterId === filters.collegeSemesterId &&
-        s.collegeSectionId === filters.collegeSectionId,
+        s.collegeEducationId == filters.collegeEducationId &&
+        (filters.isSchool || !filters.collegeBranchId || s.collegeBranchId == filters.collegeBranchId || (!s.collegeBranchId && !filters.collegeBranchId)) &&
+        s.collegeAcademicYearId == filters.collegeAcademicYearId &&
+        (filters.isSchool || !filters.collegeSemesterId || s.collegeSemesterId == filters.collegeSemesterId || (!s.collegeSemesterId && !filters.collegeSemesterId)) &&
+        s.collegeSectionId == filters.collegeSectionId,
     ),
   );
+
+  console.log("[DEBUG] Filtered bulk_calendar_events count:", filteredBulk.length);
 
   const processEvent = (item: any, isBulk: boolean) => {
     const isMeeting = item.type === "meeting";

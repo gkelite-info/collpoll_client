@@ -25,7 +25,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Pagination } from "../../admin/academic-setup/components/pagination";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { CustomDropdown } from "@/app/components/CustomDropdown";
-import { fetchFacultyBranches, fetchFacultyYears } from "@/lib/helpers/faculty/facultyAPI";
+import { fetchFacultyBranches, fetchFacultyYears, fetchFacultySubjects, fetchFacultySections } from "@/lib/helpers/faculty/facultyAPI";
 
 type DropdownOption = {
   value: string | number;
@@ -104,17 +104,23 @@ const Page = () => {
   const limit = 10;
   const [branch, setBranch] = useState<string>("All");
   const [year, setYear] = useState<string>("All");
+  const [subject, setSubject] = useState<string>("All");
+  const [section, setSection] = useState<string>("All");
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
 
   useEffect(() => {
     const savedBranch = sessionStorage.getItem("projects_filter_branch");
     const savedYear = sessionStorage.getItem("projects_filter_year");
+    const savedSubject = sessionStorage.getItem("projects_filter_subject");
+    const savedSection = sessionStorage.getItem("projects_filter_section");
     const savedFrom = sessionStorage.getItem("projects_filter_from");
     const savedTo = sessionStorage.getItem("projects_filter_to");
 
     if (savedBranch) setBranch(savedBranch);
     if (savedYear) setYear(savedYear);
+    if (savedSubject) setSubject(savedSubject);
+    if (savedSection) setSection(savedSection);
     if (savedFrom) setFromDate(savedFrom);
     if (savedTo) setToDate(savedTo);
   }, []);
@@ -122,13 +128,17 @@ const Page = () => {
   useEffect(() => {
     sessionStorage.setItem("projects_filter_branch", branch);
     sessionStorage.setItem("projects_filter_year", year);
+    sessionStorage.setItem("projects_filter_subject", subject);
+    sessionStorage.setItem("projects_filter_section", section);
     sessionStorage.setItem("projects_filter_from", fromDate);
     sessionStorage.setItem("projects_filter_to", toDate);
-  }, [branch, year, fromDate, toDate]);
+  }, [branch, year, subject, section, fromDate, toDate]);
 
   // Options State
   const [branchOptions, setBranchOptions] = useState<DropdownOption[]>([]);
   const [yearOptions, setYearOptions] = useState<DropdownOption[]>([]);
+  const [subjectOptions, setSubjectOptions] = useState<DropdownOption[]>([]);
+  const [sectionOptions, setSectionOptions] = useState<DropdownOption[]>([]);
 
   const isSchool = isSchoolEducation(faculty_edu_type);
   const isInter = faculty_edu_type === "Inter" || faculty_edu_type === "BIEAP" || faculty_edu_type === "TSBIE";
@@ -159,10 +169,58 @@ const Page = () => {
              years = await fetchFacultyYears(facultyId!);
         }
 
-        const formattedYears = years.map(y => ({ value: String(y.id), label: y.label || "" }));
+        const formattedYears = [
+            { value: "All", label: "All" },
+            ...years.map(y => ({ value: String(y.id), label: y.label || "" }))
+        ];
         return { formattedYears };
     },
     enabled: !!facultyId && !contextLoading,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: subjectsData, isLoading: isSubjectsLoading, isError: isSubjectsError } = useQuery({
+    queryKey: ["projectsSubjects", facultyId, isSchool, branch, year],
+    queryFn: async () => {
+        if (year === "All") return { formattedSubjects: [{ value: "All", label: "All" }] };
+        
+        const branchId = (!isSchool && branch !== "All") ? parseInt(branch) : undefined;
+        const subjects = await fetchFacultySubjects(facultyId!, parseInt(year), branchId);
+
+        const formattedSubjects = [
+            { value: "All", label: "All" },
+            ...subjects.map(s => ({ value: String(s.id), label: s.label || "" }))
+        ];
+        return { formattedSubjects };
+    },
+    enabled: !!facultyId && !contextLoading && year !== "All",
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: sectionsData, isLoading: isSectionsLoading, isError: isSectionsError } = useQuery({
+    queryKey: ["projectsSections", facultyId, isSchool, branch, year, subject],
+    queryFn: async () => {
+        if (year === "All" || subject === "All") return { formattedSections: [{ value: "All", label: "All" }] };
+        
+        // branchId filter isn't directly supported by fetchFacultySections currently,
+        // but fetchFacultySections restricts it to what's in faculty_sections.
+        const sections = await fetchFacultySections(facultyId!, parseInt(year), parseInt(subject));
+
+        // deduplicate and filter
+        const uniqueSections = Array.from(
+            new Map(sections
+                .filter(s => s.college_sections)
+                .map(s => [s.college_sections!.collegeSectionsId, s.college_sections!])
+            ).values()
+        );
+
+        const formattedSections = [
+            { value: "All", label: "All" },
+            ...uniqueSections.map((s: any) => ({ value: String(s.collegeSectionsId), label: s.collegeSections || "" }))
+        ];
+        return { formattedSections };
+    },
+    enabled: !!facultyId && !contextLoading && year !== "All" && subject !== "All",
     staleTime: 1000 * 60 * 5,
   });
 
@@ -199,35 +257,77 @@ const Page = () => {
   }, [yearsData]);
 
   useEffect(() => {
+    if (subjectsData && subjectsData.formattedSubjects) {
+        setSubjectOptions(subjectsData.formattedSubjects);
+        if (subjectsData.formattedSubjects.length === 2) {
+            setSubject(subjectsData.formattedSubjects[1].value as string);
+        } else if (subjectsData.formattedSubjects.length > 0) {
+          setSubject((prev) => {
+            if (!subjectsData.formattedSubjects.some((s: any) => s.value === prev)) {
+              return "All";
+            }
+            return prev;
+          });
+        } else {
+          setSubject("All");
+        }
+    }
+  }, [subjectsData]);
+
+  useEffect(() => {
+    if (sectionsData && sectionsData.formattedSections) {
+        setSectionOptions(sectionsData.formattedSections);
+        if (sectionsData.formattedSections.length === 2) {
+            setSection(sectionsData.formattedSections[1].value as string);
+        } else if (sectionsData.formattedSections.length > 0) {
+          setSection((prev) => {
+            if (!sectionsData.formattedSections.some((s: any) => s.value === prev)) {
+              return "All";
+            }
+            return prev;
+          });
+        } else {
+          setSection("All");
+        }
+    }
+  }, [sectionsData]);
+
+  useEffect(() => {
     if (isYearsError) {
         toast.error("Failed to load year filters", { id: "filters-error" });
     }
-  }, [isYearsError]);
+    if (isSubjectsError) {
+        toast.error("Failed to load subject filters", { id: "filters-error-subj" });
+    }
+  }, [isYearsError, isSubjectsError]);
 
-  const filtersLoading = isBranchesLoading || isYearsLoading || contextLoading;
+  const filtersLoading = isBranchesLoading || isYearsLoading || isSubjectsLoading || isSectionsLoading || contextLoading;
   
   const debouncedFromDate = useDebounce(fromDate, 800);
   const debouncedToDate = useDebounce(toDate, 800);
 
   const { data, isLoading: isQueryLoading, isError } = useQuery({
-    queryKey: ["projects", facultyId, activeTab, page, limit, branch, year, debouncedFromDate, debouncedToDate],
+    queryKey: ["projects", facultyId, activeTab, page, limit, branch, year, subject, section, debouncedFromDate, debouncedToDate],
     queryFn: async () => {
       if (!facultyId) return { data: [], total: 0 };
       const parsedBranch = branch !== "All" ? parseInt(branch) : undefined;
       const parsedYear = year !== "All" ? parseInt(year) : undefined;
+      const parsedSubject = subject !== "All" ? parseInt(subject) : undefined;
+      const parsedSection = section !== "All" ? parseInt(section) : undefined;
       const parsedFromDate = debouncedFromDate || undefined;
       const parsedToDate = debouncedToDate || undefined;
 
       const res = await fetchEnrichedProjectsByFaculty(
         facultyId,
-        undefined,
+        parsedSubject,
         page,
         limit,
         activeTab,
         parsedBranch,
         parsedYear,
         parsedFromDate,
-        parsedToDate
+        parsedToDate,
+        parsedSection
       );
       return res;
     },
@@ -246,6 +346,17 @@ const Page = () => {
         ? new Date(p.endDate).getTime() < new Date().getTime()
         : false;
 
+      const parts = [];
+      if (!isSchool && p.branchName) {
+        parts.push(p.branchName);
+      }
+      if (p.yearName) parts.push(p.yearName);
+      if (p.sectionName) {
+        const cleanSection = p.sectionName.replace(/Section\s*-?\s*/gi, "").trim();
+        parts.push(`Section - ${cleanSection}`);
+      }
+      const classContext = parts.join(", ");
+
       return {
         projectId: p.projectId,
         title: p.title,
@@ -257,6 +368,8 @@ const Page = () => {
         marks: p.marks ?? 0,
         fileUrls: p.fileUrls,
         status: isPast ? "previous" : "active",
+        classContext: classContext,
+        subject: p.subjectName,
       };
     });
   }, [projects]);
@@ -269,7 +382,7 @@ const Page = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [branch, year, fromDate, toDate]);
+  }, [branch, year, subject, fromDate, toDate]);
 
   const handledModalId = useRef<string | null>(null);
 
@@ -387,15 +500,7 @@ const Page = () => {
       </div>
 
       {/* Filter Row */}
-      {contextLoading || isBranchesLoading || isYearsLoading ? (
-        <div className="flex flex-col md:flex-row gap-4 mb-6 w-full items-start md:items-end">
-          {!isSchool && <div className="flex-1 w-full h-[62px] bg-gray-200 animate-pulse rounded-md"></div>}
-          <div className="flex-1 w-full h-[62px] bg-gray-200 animate-pulse rounded-md"></div>
-          <div className="flex-1 min-w-[140px] h-[62px] bg-gray-200 animate-pulse rounded-md"></div>
-          <div className="flex-1 min-w-[140px] h-[62px] bg-gray-200 animate-pulse rounded-md"></div>
-        </div>
-      ) : (
-        <div className="flex flex-col md:flex-row gap-4 mb-6 w-full items-start md:items-end">
+      <div className="flex flex-col md:flex-row flex-wrap lg:flex-nowrap gap-3 lg:gap-4 mb-6 w-full items-start md:items-end">
           {!isSchool && (
             <div className="flex-1 w-full">
               <CustomDropdown
@@ -416,6 +521,26 @@ const Page = () => {
             onChange={(val) => { setYear(val as string); setPage(1); }}
             placeholder={filtersLoading ? "Loading..." : "Select Year"}
             disabled={filtersLoading || yearOptions.length <= 1}
+          />
+        </div>
+        <div className="flex-1 w-full">
+          <CustomDropdown
+            label="Subject"
+            options={subjectOptions}
+            value={subject}
+            onChange={(val) => { setSubject(val as string); setPage(1); }}
+            placeholder={filtersLoading ? "Loading..." : "Select Subject"}
+            disabled={filtersLoading || subjectOptions.length <= 1}
+          />
+        </div>
+        <div className="flex-1 w-full">
+          <CustomDropdown
+            label="Section"
+            options={sectionOptions}
+            value={section}
+            onChange={(val) => { setSection(val as string); setPage(1); }}
+            placeholder={filtersLoading ? "Loading..." : "Select Section"}
+            disabled={filtersLoading || sectionOptions.length <= 1}
           />
         </div>
           <div className="flex-1 min-w-[140px] flex flex-col gap-1.5">
@@ -453,7 +578,6 @@ const Page = () => {
             />
           </div>
         </div>
-      )}
 
       <div className="flex justify-center mb-6 w-full">
         <div className="relative flex items-center bg-gray-50 p-1.5 rounded-full border border-gray-100 max-w-full overflow-x-auto scrollbar-hide">

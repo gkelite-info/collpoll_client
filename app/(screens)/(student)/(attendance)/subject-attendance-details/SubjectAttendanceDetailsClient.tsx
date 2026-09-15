@@ -193,22 +193,13 @@ export default function SubjectAttendanceDetailsClient() {
   ];
 
   const tableData: AttendanceTableRow[] =
-    data?.rows
-      .slice()
-      .sort((first, second) => {
-        const firstDate = new Date(first.date).getTime();
-        const secondDate = new Date(second.date).getTime();
-        const dateDifference = firstDate - secondDate;
-
-        return dateDifference || first.time.localeCompare(second.time);
-      })
-      .map((r) => ({
-        date: formatDateDMY(r.date),
-        time: r.time,
-        rawStatus: r.status as AttendanceTableRow["rawStatus"],
-        status: <StatusBadge status={normalizeStatus(r.status)} />,
-        reason: r.reason,
-      })) ?? [];
+    data?.rows.map((r) => ({
+      date: formatDateDMY(r.date),
+      time: r.time,
+      rawStatus: r.status as AttendanceTableRow["rawStatus"],
+      status: <StatusBadge status={normalizeStatus(r.status)} />,
+      reason: r.reason,
+    })) ?? [];
 
   const filteredTableData = (() => {
     if (activeView === "ATTENDED") {

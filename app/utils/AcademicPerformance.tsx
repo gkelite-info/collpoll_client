@@ -4,6 +4,7 @@ import { getStudentAcademicPerformance } from "@/lib/helpers/student/AcademicPer
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import AcademicPerformanceShimmer from "@/app/components/shimmers/AcademicPerformanceShimmer";
 import { FaChevronRight } from "react-icons/fa6";
 import {
   BarChart,
@@ -53,8 +54,14 @@ export default function AcademicPerformance({
       return;
     }
 
+    if (!studentId) {
+      // Keep loading state until studentId is available
+      return;
+    }
+
     async function loadData() {
       try {
+        setLoading(true);
         const performance = await getStudentAcademicPerformance(studentId);
         setData(performance);
       } catch {
@@ -68,13 +75,7 @@ export default function AcademicPerformance({
   }, [studentId, externalData]);
 
   if (loading) {
-    return (
-      <div className="flex h-80 items-center justify-center rounded-lg bg-white shadow-md">
-        <p className="animate-pulse text-gray-500">
-          {t("Calculating performance")}
-        </p>
-      </div>
-    );
+    return <AcademicPerformanceShimmer />;
   }
 
   return (

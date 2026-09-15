@@ -96,23 +96,32 @@ export async function fetchStudentContext(userId: number) {
         collegeBranchId: student.collegeBranchId,
         collegeEducationId: student.collegeEducationId,
 
-        collegeEducationType:
-            student.college_education?.collegeEducationType ?? null,
+        collegeEducationType: Array.isArray(student.college_education) 
+            ? student.college_education[0]?.collegeEducationType ?? null 
+            : student.college_education?.collegeEducationType ?? null,
 
-        collegeBranchCode:
-            student.college_branch?.collegeBranchCode ?? null,
+        collegeBranchCode: Array.isArray(student.college_branch)
+            ? student.college_branch[0]?.collegeBranchCode ?? null
+            : student.college_branch?.collegeBranchCode ?? null,
 
-        collegeBranchType:
-            student.college_branch?.collegeBranchType ?? null,
+        collegeBranchType: Array.isArray(student.college_branch)
+            ? student.college_branch[0]?.collegeBranchType ?? null
+            : student.college_branch?.collegeBranchType ?? null,
 
         collegeAcademicYearId: academic?.collegeAcademicYearId ?? null,
         collegeSemesterId: academic?.collegeSemesterId ?? null,
-        collegeSemester: academic?.college_semester?.collegeSemester ?? null,
+        collegeSemester: Array.isArray(academic?.college_semester)
+            ? academic?.college_semester[0]?.collegeSemester ?? null
+            : academic?.college_semester?.collegeSemester ?? null,
         collegeSectionsId: academic?.collegeSectionsId ?? null,
 
-        collegeSections: academic?.college_sections?.collegeSections ?? null,
+        collegeSections: Array.isArray(academic?.college_sections)
+            ? academic?.college_sections[0]?.collegeSections ?? null
+            : academic?.college_sections?.collegeSections ?? null,
 
-        collegeAcademicYear: academic?.college_academic_year?.collegeAcademicYear ?? null,
+        collegeAcademicYear: Array.isArray(academic?.college_academic_year)
+            ? academic?.college_academic_year[0]?.collegeAcademicYear ?? null
+            : academic?.college_academic_year?.collegeAcademicYear ?? null,
         entryType: student.entryType,
         status: student.status,
     };

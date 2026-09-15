@@ -34,6 +34,9 @@ export type EnrichedProject = {
     teamMembers: { name: string; image: string }[];
     fileUrls: string[];
     subjectName?: string;
+    sectionName?: string;
+    branchName?: string;
+    yearName?: string;
     status?: string;
 };
 
@@ -255,7 +258,8 @@ export async function fetchEnrichedProjectsByFaculty(
     collegeBranchId?: number,
     collegeAcademicYearId?: number,
     fromDate?: string,
-    toDate?: string
+    toDate?: string,
+    collegeSectionsId?: number
 ): Promise<{ data: EnrichedProject[], total: number }> {
 
     const today = new Date().toISOString();
@@ -273,6 +277,16 @@ export async function fetchEnrichedProjectsByFaculty(
             collegeSubjectId,
             college_subjects (
                 subjectName
+            ),
+            college_sections (
+                collegeSections
+            ),
+            college_academic_year (
+                collegeAcademicYear,
+                college_branch (
+                    collegeBranchCode,
+                    collegeBranchType
+                )
             )
         `, { count: "exact" })
         .is("deletedAt", null)
@@ -284,6 +298,10 @@ export async function fetchEnrichedProjectsByFaculty(
 
     if (collegeSubjectId !== undefined && collegeSubjectId !== null) {
         query = query.eq("collegeSubjectId", collegeSubjectId);
+    }
+
+    if (collegeSectionsId !== undefined && collegeSectionsId !== null) {
+        query = query.eq("collegeSectionsId", collegeSectionsId);
     }
 
     if (collegeBranchId !== undefined && collegeBranchId !== null) {
@@ -455,6 +473,10 @@ export async function fetchEnrichedProjectsByFaculty(
             mentors,
             teamMembers,
             fileUrls,
+            subjectName: (project.college_subjects as any)?.subjectName,
+            sectionName: (project.college_sections as any)?.collegeSections,
+            branchName: (project.college_academic_year as any)?.college_branch?.collegeBranchCode || (project.college_academic_year as any)?.college_branch?.collegeBranchType,
+            yearName: (project.college_academic_year as any)?.collegeAcademicYear,
         };
     });
 
@@ -467,7 +489,8 @@ export async function fetchEnrichedProjectsByFaculty(
 export async function fetchEnrichedProjectsByStudent(
     studentId: number,
     collegeSectionsId?: number | null,
-    subjectIds?: number[]
+    subjectIds?: number[],
+    collegeAcademicYearId?: number
 ): Promise<EnrichedProject[]> {
 
     const { data: memberRows, error: memberError } = await supabase
@@ -490,6 +513,16 @@ export async function fetchEnrichedProjectsByStudent(
             collegeSubjectId,
             college_subjects (
                 subjectName
+            ),
+            college_sections (
+                collegeSections
+            ),
+            college_academic_year (
+                collegeAcademicYear,
+                college_branch (
+                    collegeBranchCode,
+                    collegeBranchType
+                )
             )
         `)
         .is("deletedAt", null)
@@ -498,6 +531,10 @@ export async function fetchEnrichedProjectsByStudent(
     const orConditions: string[] = [];
     if (teamProjectIds.length > 0) {
         orConditions.push(`projectId.in.(${teamProjectIds.join(",")})`);
+    }
+
+    if (collegeAcademicYearId !== undefined && collegeAcademicYearId !== null) {
+        query = query.eq("collegeAcademicYearId", collegeAcademicYearId);
     }
 
     if (subjectIds && subjectIds.length > 0) {
@@ -647,7 +684,10 @@ export async function fetchEnrichedProjectsByStudent(
             startDate: project.startDate,
             endDate: project.endDate,
             collegeSubjectId: project.collegeSubjectId,
-            subjectName: project.college_subjects?.subjectName || "General",
+            subjectName: (project.college_subjects as any)?.subjectName || "General",
+            sectionName: (project.college_sections as any)?.collegeSections,
+            branchName: (project.college_academic_year as any)?.college_branch?.collegeBranchCode || (project.college_academic_year as any)?.college_branch?.collegeBranchType,
+            yearName: (project.college_academic_year as any)?.collegeAcademicYear,
             duration: startDate && endDate ? `${startDate} - ${endDate}` : "N/A",
             mentors,
             teamMembers,

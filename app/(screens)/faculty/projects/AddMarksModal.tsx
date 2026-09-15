@@ -115,7 +115,25 @@ export default function AddMarksModal({
           <input
             type="number"
             value={marks}
-            onChange={(e) => setMarks(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              const maxMarks = submission?.totalMarks || 0;
+              if (val !== "") {
+                const parsed = parseInt(val);
+                if (!isNaN(parsed)) {
+                  if (parsed > maxMarks) {
+                    toast.error(`Marks cannot exceed ${maxMarks}`);
+                    setMarks("");
+                    return;
+                  }
+                  if (parsed < 0) {
+                    setMarks("");
+                    return;
+                  }
+                }
+              }
+              setMarks(val);
+            }}
             className="w-20 h-16 bg-[#fff0f3] text-[#0d1b2a] font-bold text-3xl text-center rounded-xl focus:outline-none focus:ring-2 focus:ring-[#ffb3c1]"
           />
           <div className="w-20 h-16 bg-[#0d1b2a] text-white font-bold text-3xl flex items-center justify-center rounded-xl">

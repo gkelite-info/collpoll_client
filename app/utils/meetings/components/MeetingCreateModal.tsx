@@ -518,7 +518,7 @@ export default function MeetingFormModal({ isOpen, onClose, initialData, timings
                         </form>
 
                         <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/80 flex flex-col sm:flex-row justify-end gap-3 sticky bottom-0">
-                            <button type="button" onClick={onClose} disabled={isSubmitting} className="cursor-pointer w-full sm:w-auto px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50 shadow-sm">
+                            <button type="button" onClick={onClose} disabled={isSubmitting} className="cursor-pointer w-full sm:w-auto px-6 py-2.5 rounded-xl text-[15px] font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
                                 Cancel
                             </button>
                             <button type="submit" form="meeting-form" disabled={isSubmitting} className="cursor-pointer w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
