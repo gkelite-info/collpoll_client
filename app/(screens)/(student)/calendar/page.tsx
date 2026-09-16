@@ -20,6 +20,7 @@ function PageContent() {
     quizzes: 0,
     assignments: 0,
     discussions: 0,
+    isLoading: true,
   });
 
   const t = useTranslations("Calendar.student");

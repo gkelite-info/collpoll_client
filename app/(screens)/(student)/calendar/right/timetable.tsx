@@ -7,7 +7,7 @@ import { FilePdf } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import TimetableCardShimmer from "./TimetableCardShimmer";
 import { useTranslations } from "next-intl";
-import { fetchTopicResources } from "@/lib/helpers/faculty/Savetopicresource";
+import { fetchTopicResources, fetchUnitResources } from "@/lib/helpers/faculty/Savetopicresource";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
 const formatTimeToAMPM = (time24: string) => {
@@ -46,6 +46,7 @@ interface RawTimetableItem {
   facultyName: string;
   roomNo: string;
   isCancelled?: boolean;
+  isBulk?: boolean;
 }
 
 export default function CalendarTimeTable({
@@ -108,7 +109,9 @@ export default function CalendarTimeTable({
           return;
         }
 
-        const isInter = collegeEducationType === "Inter";
+        const effectiveEduType = studentContext.collegeEducationType || collegeEducationType;
+        const isInter = effectiveEduType === "Inter" || effectiveEduType === "Intermediate";
+        const isSchool = isSchoolEducation(effectiveEduType);
 
         const rawData = await fetchStudentTimetableByDate({
           date: selectedDate,
@@ -117,16 +120,35 @@ export default function CalendarTimeTable({
           collegeAcademicYearId: studentContext.collegeAcademicYearId,
           collegeSemesterId: studentContext.collegeSemesterId,
           collegeSectionId: studentContext.collegeSectionsId,
+          collegeSectionName: studentContext.collegeSections,
           isInter: isInter,
+          isSchool: isSchool,
         });
 
         const timetableWithResources = await Promise.all(
           (rawData as RawTimetableItem[]).map(async (item) => {
             let pdfUrl = null;
-            if (item.topicId) {
+            
+            const getSecurePdfUrl = (url: string | null) => {
+              if (!url) return null;
+              const match = url.match(/\/storage\/v1\/object\/public\/(.*)/);
+              if (match && match[1]) {
+                const b64 = btoa(match[1]).replace(/=/g, ''); // strip padding for cleaner URL
+                return `/api/files/${b64}`;
+              }
+              return url;
+            };
+
+            if (item.topicId && !item.isBulk) {
               const resources = await fetchTopicResources(item.topicId);
               if (resources && resources.length > 0) {
-                pdfUrl = resources[0].resourceUrl;
+                pdfUrl = getSecurePdfUrl(resources[0].resourceUrl);
+              }
+            } else if (item.topicId && item.isBulk) {
+              // Note: For bulk events, topicId is actually mapping to unitId in fetchStudentTimetable
+              const resources = await fetchUnitResources(item.topicId);
+              if (resources && resources.length > 0) {
+                pdfUrl = getSecurePdfUrl(resources[0].resourceUrl);
               }
             }
             return {
@@ -220,9 +242,9 @@ export default function CalendarTimeTable({
                             {item.title}
                           </p>
                           <p className="text-[#282828] font-medium text-sm truncate">
-                            Topic:{" "}
+                            Topic / Unit:{" "}
                             <span className="text-[#282828] font-normal text-xs ml-1">
-                              {item.topic}
+                              {item.topic || "-"}
                             </span>
                           </p>
                           <div className="flex gap-2">
@@ -290,9 +312,9 @@ export default function CalendarTimeTable({
 
                     <p className="text-gray-700 text-[11px] md:text-[13px] mt-1.5 md:mt-2 truncate">
                       <span className="font-semibold text-gray-800">
-                        Topic:
+                        Topic / Unit:
                       </span>{" "}
-                      {item.topic}
+                      {item.topic || "-"}
                     </p>
                     <p className="text-gray-700 text-[11px] md:text-[13px] truncate mt-0.5 md:mt-1">
                       <span className="font-semibold text-gray-800">Room:</span>{" "}

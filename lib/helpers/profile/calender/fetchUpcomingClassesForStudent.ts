@@ -1,4 +1,17 @@
-import { supabase } from "@/lib/supabaseClient";
+"use server";
+
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  }
+);
 
 export async function fetchUpcomingClassesForStudent(filters: {
   collegeEducationId: number;
@@ -6,6 +19,7 @@ export async function fetchUpcomingClassesForStudent(filters: {
   collegeAcademicYearId: number;
   collegeSemesterId: number | null;
   collegeSectionId: number;
+  collegeSectionName?: string | null;
   isSchool?: boolean;
 }) {
   const today = new Date().toISOString().split("T")[0];
@@ -33,24 +47,22 @@ export async function fetchUpcomingClassesForStudent(filters: {
         collegeBranchId,
         collegeAcademicYearId,
         collegeSemesterId,
-        collegeSectionId
+        collegeSectionId,
+        section:college_sections (
+          collegeSections
+        )
       )
     `,
     )
-    .eq("is_deleted", false)
+    .or("is_deleted.eq.false,is_deleted.is.null")
     .in("type", ["class", "meeting", "exam"])
     .eq("date", today)
     .order("date", { ascending: true })
     .order("fromTime", { ascending: true });
 
   if (error) {
-    console.error("[DEBUG] calendar_event query error:", error);
+    console.error("fetchUpcomingClassesForStudent calendar_event error:", error);
     return [];
-  }
-
-  console.log("[DEBUG] Raw calendar_event data count:", (data ?? []).length);
-  if ((data ?? []).length > 0) {
-    console.log("[DEBUG] First event sections:", JSON.stringify((data as any[])[0]?.sections, null, 2));
   }
 
   const { data: bulkData, error: bulkError } = await supabase
@@ -77,17 +89,39 @@ export async function fetchUpcomingClassesForStudent(filters: {
         collegeBranchId,
         collegeAcademicYearId,
         collegeSemesterId,
-        collegeSectionId
+        collegeSectionId,
+        section:college_sections (
+          collegeSections
+        )
+      ),
+      units:bulk_calendar_event_units (
+        collegeSubjectUnitId,
+        college_subject_units (
+          unitTitle
+        )
       )
     `,
     )
-    .eq("is_deleted", false)
+    .or("is_deleted.eq.false,is_deleted.is.null")
     .in("type", ["class", "meeting", "exam"])
     .lte("fromDate", today)
     .gte("toDate", today)
     .order("fromTime", { ascending: true });
 
-  console.log("[DEBUG] Raw bulk_calendar_events data count:", (bulkData ?? []).length);
+  if (bulkError) {
+    console.error("fetchUpcomingClassesForStudent bulk_calendar_events error:", bulkError);
+  }
+
+  const matchesSection = (s: any) => {
+    if (s.collegeSectionId == filters.collegeSectionId) return true;
+    if (filters.collegeSectionName && s.section?.collegeSections) {
+      return (
+        String(s.section.collegeSections).trim().toLowerCase() ===
+        String(filters.collegeSectionName).trim().toLowerCase()
+      );
+    }
+    return false;
+  };
 
   const filtered = (data ?? []).filter((event: any) =>
     event.sections?.some(
@@ -96,24 +130,23 @@ export async function fetchUpcomingClassesForStudent(filters: {
         (filters.isSchool || !filters.collegeBranchId || s.collegeBranchId == filters.collegeBranchId || (!s.collegeBranchId && !filters.collegeBranchId)) &&
         s.collegeAcademicYearId == filters.collegeAcademicYearId &&
         (filters.isSchool || !filters.collegeSemesterId || s.collegeSemesterId == filters.collegeSemesterId || (!s.collegeSemesterId && !filters.collegeSemesterId)) &&
-        s.collegeSectionId == filters.collegeSectionId,
+        matchesSection(s),
     ),
   );
 
-  console.log("[DEBUG] Filtered calendar_event count:", filtered.length);
-
-  const filteredBulk = (bulkData ?? []).filter((event: any) =>
-    event.sections?.some(
-      (s: any) =>
-        s.collegeEducationId == filters.collegeEducationId &&
-        (filters.isSchool || !filters.collegeBranchId || s.collegeBranchId == filters.collegeBranchId || (!s.collegeBranchId && !filters.collegeBranchId)) &&
-        s.collegeAcademicYearId == filters.collegeAcademicYearId &&
-        (filters.isSchool || !filters.collegeSemesterId || s.collegeSemesterId == filters.collegeSemesterId || (!s.collegeSemesterId && !filters.collegeSemesterId)) &&
-        s.collegeSectionId == filters.collegeSectionId,
-    ),
-  );
-
-  console.log("[DEBUG] Filtered bulk_calendar_events count:", filteredBulk.length);
+  const isSunday = new Date(today).getDay() === 0;
+  const filteredBulk = isSunday
+    ? []
+    : (bulkData ?? []).filter((event: any) =>
+        event.sections?.some(
+          (s: any) =>
+            s.collegeEducationId == filters.collegeEducationId &&
+            (filters.isSchool || !filters.collegeBranchId || s.collegeBranchId == filters.collegeBranchId || (!s.collegeBranchId && !filters.collegeBranchId)) &&
+            s.collegeAcademicYearId == filters.collegeAcademicYearId &&
+            (filters.isSchool || !filters.collegeSemesterId || s.collegeSemesterId == filters.collegeSemesterId || (!s.collegeSemesterId && !filters.collegeSemesterId)) &&
+            matchesSection(s),
+        ),
+      );
 
   const processEvent = (item: any, isBulk: boolean) => {
     const isMeeting = item.type === "meeting";
@@ -141,7 +174,12 @@ export async function fetchUpcomingClassesForStudent(filters: {
         : "Exam Location TBA";
     } else {
       if (isBulk) {
-        topicDescription = item.meetingTitle ?? "";
+        const units = (item.units || []).map((u: any) => ({
+          unitId: u.collegeSubjectUnitId,
+          unitTitle: u.college_subject_units?.unitTitle
+        }));
+        const firstUnit = units[0];
+        topicDescription = firstUnit ? firstUnit.unitTitle : (item.meetingTitle ?? "");
       } else {
         topicDescription = item.topic?.topicTitle ?? "";
       }
@@ -160,11 +198,63 @@ export async function fetchUpcomingClassesForStudent(filters: {
       ),
       type: item.type,
       meetingLink: item.meetingLink,
+      sessionStatus: item.sessionStatus,
     };
   };
 
-  const mapped = filtered.map((item: any) => processEvent(item, false));
-  const mappedBulk = filteredBulk.map((item: any) => processEvent(item, true));
+  const allEvents = [...filtered, ...filteredBulk];
+  if (allEvents.length === 0) return [];
+
+  const eventIds = filtered.map((e: any) => e.calendarEventId);
+  const bulkEventIds = filteredBulk.map((e: any) => e.bulkCalendarEventId);
+  
+  const orConditions = [];
+  if (eventIds.length > 0) orConditions.push(`calendarEventId.in.(${eventIds.join(",")})`);
+  if (bulkEventIds.length > 0) orConditions.push(`bulkCalendarEventId.in.(${bulkEventIds.join(",")})`);
+
+  let sessionRecords: any[] = [];
+  if (orConditions.length > 0) {
+    const { data: sessionData } = await supabase
+      .from("faculty_class_sessions")
+      .select("calendarEventId, bulkCalendarEventId, status, createdAt")
+      .or(orConditions.join(","));
+    if (sessionData) sessionRecords = sessionData;
+  }
+
+  const singleSessionMap = new Map<number, any[]>();
+  const bulkSessionMap = new Map<number, any[]>();
+
+  sessionRecords.forEach((record: any) => {
+    if (record.calendarEventId) {
+      const arr = singleSessionMap.get(record.calendarEventId) || [];
+      arr.push(record);
+      singleSessionMap.set(record.calendarEventId, arr);
+    }
+    if (record.bulkCalendarEventId) {
+      const arr = bulkSessionMap.get(record.bulkCalendarEventId) || [];
+      arr.push(record);
+      bulkSessionMap.set(record.bulkCalendarEventId, arr);
+    }
+  });
+
+  const getSessionStatus = (event: any, sessions: any[]) => {
+    if (event.type !== "class") return "scheduled"; 
+    if (!sessions || sessions.length === 0) return "scheduled";
+    sessions.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return sessions[0].status; // e.g. "accepted", "scheduled", "cancelled"
+  };
+
+  const finalFiltered = filtered.map((event: any) => ({
+    ...event,
+    sessionStatus: getSessionStatus(event, singleSessionMap.get(event.calendarEventId) || [])
+  }));
+  const finalFilteredBulk = filteredBulk.map((event: any) => ({
+    ...event,
+    sessionStatus: getSessionStatus(event, bulkSessionMap.get(event.bulkCalendarEventId) || [])
+  }));
+
+  const mapped = finalFiltered.map((item: any) => processEvent(item, false));
+  const mappedBulk = finalFilteredBulk.map((item: any) => processEvent(item, true));
 
   const allMapped = [...mapped, ...mappedBulk];
   

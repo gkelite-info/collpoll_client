@@ -165,10 +165,14 @@ function LeaveLeftContent() {
       attachments:
         item.attachments && item.attachments.length > 0 ? (
           <div className="flex items-center justify-center gap-1 overflow-x-auto custom-scrollbar pb-1 max-w-[120px]">
-            {item.attachments.map((url: string, idx: number) => (
+            {item.attachments.map((url: string, idx: number) => {
+              const marker = "/storage/v1/object/public/";
+              const urlIdx = url.indexOf(marker);
+              const secureUrl = urlIdx !== -1 ? `/api/files/${url.slice(urlIdx + marker.length)}` : url;
+              return (
               <a
                 key={idx}
-                href={url}
+                href={secureUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 flex-shrink-0 text-blue-600 hover:bg-blue-100 bg-blue-50 px-2 py-0.5 rounded text-xs font-medium border border-blue-100 transition-colors"
@@ -176,7 +180,8 @@ function LeaveLeftContent() {
               >
                 <Paperclip size={12} /> {idx + 1}
               </a>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <span className="text-gray-400 text-sm">-</span>

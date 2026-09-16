@@ -75,7 +75,9 @@ export async function fetchStudentContext(userId: number) {
     ),
 
     college_sections:collegeSectionsId (
-    collegeSections
+      collegeSections,
+      isActive,
+      deletedAt
     ),
 
     college_semester:collegeSemesterId (
@@ -86,9 +88,47 @@ export async function fetchStudentContext(userId: number) {
         .eq("studentId", student.studentId)
         .eq("isCurrent", true)
         .is("deletedAt", null)
-        .maybeSingle<AcademicJoin>();
+        .maybeSingle<any>();
 
     if (academicErr) throw academicErr;
+
+    let resolvedSectionsId = academic?.collegeSectionsId ?? null;
+    const rawSection = Array.isArray(academic?.college_sections)
+        ? academic?.college_sections[0]
+        : academic?.college_sections;
+    const sectionName = rawSection?.collegeSections ?? null;
+    const isSectionInvalid = !rawSection || rawSection.isActive === false || rawSection.deletedAt !== null;
+
+    if (isSectionInvalid && sectionName && academic?.collegeAcademicYearId) {
+        try {
+            let secQuery = supabase
+                .from("college_sections")
+                .select("collegeSectionsId")
+                .eq("collegeAcademicYearId", academic.collegeAcademicYearId)
+                .eq("collegeSections", sectionName)
+                .eq("isActive", true)
+                .is("deletedAt", null);
+
+            if (student.collegeBranchId) {
+                secQuery = secQuery.eq("collegeBranchId", student.collegeBranchId);
+            } else {
+                secQuery = secQuery.is("collegeBranchId", null);
+            }
+
+            const { data: activeSec } = await secQuery.maybeSingle();
+            if (activeSec?.collegeSectionsId) {
+                resolvedSectionsId = activeSec.collegeSectionsId;
+                // Self-heal student_academic_history in background
+                supabase
+                    .from("student_academic_history")
+                    .update({ collegeSectionsId: resolvedSectionsId })
+                    .eq("studentAcademicHistoryId", academic.studentAcademicHistoryId)
+                    .then();
+            }
+        } catch (e) {
+            console.error("Failed to auto-heal section ID", e);
+        }
+    }
 
     return {
         studentId: student.studentId,
@@ -113,11 +153,9 @@ export async function fetchStudentContext(userId: number) {
         collegeSemester: Array.isArray(academic?.college_semester)
             ? academic?.college_semester[0]?.collegeSemester ?? null
             : academic?.college_semester?.collegeSemester ?? null,
-        collegeSectionsId: academic?.collegeSectionsId ?? null,
+        collegeSectionsId: resolvedSectionsId,
 
-        collegeSections: Array.isArray(academic?.college_sections)
-            ? academic?.college_sections[0]?.collegeSections ?? null
-            : academic?.college_sections?.collegeSections ?? null,
+        collegeSections: sectionName,
 
         collegeAcademicYear: Array.isArray(academic?.college_academic_year)
             ? academic?.college_academic_year[0]?.collegeAcademicYear ?? null

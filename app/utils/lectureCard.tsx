@@ -43,7 +43,13 @@ export default function LectureCard({
           </>
 
           {status && (
-            <p className="text-red-500 text-xs font-semibold max-md:mt-1">
+            <p className={`text-xs font-semibold max-md:mt-1 ${
+              status.toLowerCase() === 'cancelled' || status.toLowerCase() === 'rejected' 
+                ? 'text-red-500' 
+                : status.toLowerCase() === 'pending'
+                ? 'text-yellow-600'
+                : 'text-[#43C17A]'
+            }`}>
               {status}
             </p>
           )}
