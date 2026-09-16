@@ -113,15 +113,8 @@ export default function CourseScheduleCard({
               <div className="h-2.5 w-14 animate-pulse rounded bg-white/30" />
             </div>
           ) : role === "Student" ? (
-<<<<<<< Updated upstream
-            <p className="text-[#EFEFEF] text-sm font-medium">
-              {isSchool
-                ? formatSchoolClass(collegeAcademicYear) || collegeEducationType || "—"
-                : `${collegeEducationType && collegeBranchCode ? `${collegeEducationType} ${collegeBranchCode}` : "—"} – ${academicYearNumber || "—"}`}
-=======
             <p className="max-w-full break-words text-center text-[#EFEFEF] text-sm font-medium">
               {identifierId || "—"}
->>>>>>> Stashed changes
             </p>
           ) : role === "Faculty" ? (
             <p className="text-[#EFEFEF] text-md font-medium text-center">
