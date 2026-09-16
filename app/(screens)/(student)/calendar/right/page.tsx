@@ -1,6 +1,7 @@
 "use client";
 import { useTranslations } from "next-intl";
 import CalendarTimeTable from "./timetable";
+import CalendarStatsShimmer from "@/app/components/shimmers/CalendarStatsShimmer";
 
 interface CalendarRightProps {
   selectedDate: string;
@@ -8,6 +9,7 @@ interface CalendarRightProps {
     quizzes: number;
     assignments: number;
     discussions: number;
+    isLoading?: boolean;
   };
 }
 
@@ -21,7 +23,10 @@ export default function CalendarRight({ selectedDate, extraInfo }: any) {
           height="lg:h-[580px] max-md:h-auto"
         />
 
-        <div className="bg-white grid grid-cols-3 gap-2 lg:gap-3 rounded-lg shadow-md p-2 lg:p-3 max-md:mt-3">
+        {extraInfo?.isLoading ? (
+          <CalendarStatsShimmer />
+        ) : (
+          <div className="bg-white grid grid-cols-3 gap-2 lg:gap-3 rounded-lg shadow-md p-2 lg:p-3 max-md:mt-3">
           <div className="bg-pink-100 border border-pink-400 rounded-lg p-2 flex flex-col items-center justify-center text-center">
             <span className="text-2xl lg:text-3xl font-black text-black">
               {extraInfo?.quizzes || 0}
@@ -47,6 +52,7 @@ export default function CalendarRight({ selectedDate, extraInfo }: any) {
             </span>
           </div>
         </div>
+        )}
       </div>
     </>
   );

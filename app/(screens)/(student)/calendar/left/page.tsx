@@ -5,11 +5,12 @@ import { CaretCircleRight, CaretRight } from "@phosphor-icons/react";
 import { useTranslations, useLocale } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
-import { fetchStudentTimetableByDate } from "@/lib/helpers/profile/calender/fetchStudentTimetable";
+import { fetchStudentTimetableByDate, fetchStudentCalendarLeftTasks } from "@/lib/helpers/profile/calender/fetchStudentTimetable";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { getUserIdFromAuth } from "@/lib/helpers/fetchUserDetails";
 import { fetchFacultyTasksForStudent } from "@/lib/helpers/faculty/facultyTasks";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
+import CalendarLeftShimmer from "@/app/components/shimmers/CalendarLeftShimmer";
 
 function getWeekDays(locale: string) {
   const today = new Date();
@@ -75,7 +76,10 @@ export default function CalendarLeft({
         discussions: data.discussionCount,
         focus: data.focus,
         tip: data.tip,
+        isLoading: false,
       });
+    } else {
+      setExtraInfo((prev: any) => ({ ...prev, isLoading: loading }));
     }
   }, [selectedDate, weeklyData, setExtraInfo]);
 
@@ -83,6 +87,7 @@ export default function CalendarLeft({
     const loadAllData = async () => {
       try {
         setLoading(true);
+        setExtraInfo((prev: any) => ({ ...prev, isLoading: true }));
         const {
           data: { user },
         } = await supabase.auth.getUser();
@@ -115,8 +120,12 @@ export default function CalendarLeft({
 
         const resultsMap: Record<string, DayData> = {};
 
+        const effectiveEduType = studentContext.collegeEducationType || collegeEducationType;
+        const isSchool = isSchoolEducation(effectiveEduType);
+        const isInter = effectiveEduType === "Inter" || effectiveEduType === "Intermediate";
+
         const promises = week.map(async (day) => {
-          const [classes, quizRes, discRes, facultyTasks] = await Promise.all([
+          const [classes, tasksData] = await Promise.all([
             fetchStudentTimetableByDate({
               date: day.fullDate,
               collegeEducationId,
@@ -124,30 +133,23 @@ export default function CalendarLeft({
               collegeAcademicYearId,
               collegeSemesterId,
               collegeSectionId: collegeSectionsId,
-              isInter: collegeEducationType === "Inter",
+              collegeSectionName: studentContext.collegeSections,
+              isInter,
+              isSchool,
             }),
-            supabase
-              .from("quizzes")
-              .select("*")
-              .eq("collegeSectionsId", collegeSectionsId)
-              .eq("isActive", true)
-              .gte("startDate", `${day.fullDate}T00:00:00`)
-              .lte("startDate", `${day.fullDate}T23:59:59`),
-            supabase
-              .from("discussion_forum_sections")
-              .select(
-                "discussionSectionId, discussion_forum!inner(deadline, title)",
-              )
-              .eq("collegeSectionsId", collegeSectionsId)
-              .eq("is_deleted", false)
-              .gte("discussion_forum.deadline", `${day.fullDate}T00:00:00`)
-              .lte("discussion_forum.deadline", `${day.fullDate}T23:59:59`),
-            fetchFacultyTasksForStudent({
+            fetchStudentCalendarLeftTasks({
               date: day.fullDate,
               collegeAcademicYearId,
-              collegeSectionsId,
-            }),
+              collegeSectionId: collegeSectionsId,
+              collegeSectionName: studentContext.collegeSections,
+              collegeBranchId,
+              isSchool,
+            })
           ]);
+
+          const quizRes = { data: tasksData.quizzes };
+          const discRes = { data: tasksData.discussions };
+          const facultyTasks = tasksData.facultyTasks;
 
           const qCount = quizRes.data?.length || 0;
           const aCount = facultyTasks?.length || 0;
@@ -155,7 +157,7 @@ export default function CalendarLeft({
 
           let focus = t("General Revision");
           if (aCount > 0) {
-            focus = facultyTasks[0].taskTitle;
+            focus = facultyTasks[0].topicName;
           } else if (qCount > 0) {
             focus = quizRes.data![0].quizTitle;
           }
@@ -202,9 +204,12 @@ export default function CalendarLeft({
 
       {/* DESKTOP VIEW */}
       <div className="hidden md:flex flex-col lg:mt-2">
-        {week.map((item, index) => {
-          const isActive = item.fullDate === selectedDate;
-          const dayInfo = weeklyData[item.fullDate];
+        {loading ? (
+          <CalendarLeftShimmer count={7} />
+        ) : (
+          week.map((item, index) => {
+            const isActive = item.fullDate === selectedDate;
+            const dayInfo = weeklyData[item.fullDate];
 
           return (
             <div
@@ -283,7 +288,8 @@ export default function CalendarLeft({
               </div>
             </div>
           );
-        })}
+        })
+      )}
       </div>
 
       {/*  MOBILE VIEW */}

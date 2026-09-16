@@ -16,7 +16,20 @@ export async function GET(
     }
 
     const resolvedParams = await params;
-    const pathSegments = resolvedParams.path;
+    let pathSegments = resolvedParams.path;
+    
+    // Check if it's a base64 encoded path (single segment, no file extension in the segment itself)
+    if (pathSegments.length === 1 && !pathSegments[0].includes('.')) {
+        try {
+            const decoded = Buffer.from(pathSegments[0], 'base64').toString('utf-8');
+            if (decoded.includes('/')) {
+                pathSegments = decoded.split('/');
+            }
+        } catch (e) {
+            // Ignore if it's not valid base64
+        }
+    }
+
     const bucket = pathSegments[0];
     const filePath = pathSegments.slice(1).join("/");
 

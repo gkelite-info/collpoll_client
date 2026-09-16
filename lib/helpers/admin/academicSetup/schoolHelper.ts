@@ -52,14 +52,6 @@
 
 export const SCHOOL_BOARDS = ["CBSE", "SSC", "ICSE", "ISC", "IB", "STATE BOARD", "STATEBOARD", "IGCSE", "NURSERY", "KINDERGARTEN", "SCHOOL"];
 
-export const isSchoolEducation = (type: string | null | undefined): boolean => {
-  if (!type) return false;
-  const normalized = type.trim().toUpperCase();
-  if (SCHOOL_BOARDS.includes(normalized)) return true;
-  if (normalized.includes("BOARD") || normalized.includes("SCHOOL")) return true;
-  return false;
-};
-
 export const parseEducationTypes = (input: any): string[] => {
   if (!input) return [];
   let arr: any[] = [];
@@ -80,6 +72,20 @@ export const parseEducationTypes = (input: any): string[] => {
     return String(item);
   }).map(s => s.trim().toUpperCase()).filter(Boolean);
 };
+
+export const isSchoolEducation = (type: any): boolean => {
+  if (!type) return false;
+  const types = parseEducationTypes(type);
+  if (types.length === 0) return false;
+  
+  return types.some(t => {
+    if (SCHOOL_BOARDS.includes(t)) return true;
+    if (t.includes("BOARD") || t.includes("SCHOOL")) return true;
+    return false;
+  });
+};
+
+
 
 export const isStrictlySchoolAssigned = (collegeEducationTypeStr: any): boolean => {
   if (!collegeEducationTypeStr) return false;
@@ -127,3 +133,15 @@ export const getRestrictedPlacementsToastMessage = (collegeEducationTypeStr: any
   
   return "Placements are restricted for your profile.";
 };
+
+export const hasBranchContext = (educationType: any): boolean => {
+  return !isSchoolEducation(educationType);
+};
+
+export const hasSemesterContext = (educationType: any): boolean => {
+  if (isSchoolEducation(educationType)) return false;
+  const types = parseEducationTypes(educationType);
+  if (types.some(t => t === "INTER" || t === "INTERMEDIATE")) return false;
+  return true;
+};
+

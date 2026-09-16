@@ -404,6 +404,8 @@ import toast from "react-hot-toast";
 const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_ATTACHMENT_SIZE_LABEL = "10 MB";
 
+const Marquee = "marquee" as any;
+
 interface RequestLeaveModalProps {
   isOpen: boolean;
   studentId: number | null;
@@ -443,7 +445,20 @@ export default function RequestLeaveModal({
     if (isOpen && studentId) {
       setLoadingFaculties(true);
       fetchStudentFaculties(studentId)
-        .then((data) => setFaculties(data))
+        .then((data) => {
+          const aggregated = data.reduce((acc: any[], curr: any) => {
+            const existing = acc.find((f: any) => f.id === curr.id);
+            if (existing) {
+              if (curr.subject && !existing.subject.includes(curr.subject)) {
+                existing.subject += `, ${curr.subject}`;
+              }
+            } else {
+              acc.push({ ...curr });
+            }
+            return acc;
+          }, []);
+          setFaculties(aggregated);
+        })
         .finally(() => setLoadingFaculties(false));
     }
   }, [isOpen, studentId]);
@@ -567,6 +582,16 @@ export default function RequestLeaveModal({
         }
         .hover-marquee:hover {
           animation: scrollBackForth 4s ease-in-out infinite alternate;
+        }
+        @keyframes marquee-scroll {
+          0% { transform: translateX(100%); }
+          100% { transform: translateX(-100%); }
+        }
+        .css-marquee {
+          display: inline-block;
+          white-space: nowrap;
+          padding-left: 100%;
+          animation: marquee-scroll 10s linear infinite;
         }
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
@@ -727,12 +752,22 @@ export default function RequestLeaveModal({
                       size={24}
                       alt="faculty"
                     />
-                    <span className="truncate text-[#282828] font-medium">
-                      {formData.faculty.name} •{" "}
-                      <span className="text-gray-500 font-normal">
-                        {formData.faculty.subject}
+                    <div className="flex-1 overflow-hidden relative flex items-center">
+                      <span className="truncate text-[#282828] font-medium mr-1">
+                        {formData.faculty.name} •
                       </span>
-                    </span>
+                      <div className="flex-1 overflow-hidden">
+                        {formData.faculty.subject && formData.faculty.subject.length > 20 ? (
+                          <div className="css-marquee text-gray-500 font-normal block pt-1">
+                            {formData.faculty.subject}
+                          </div>
+                        ) : (
+                          <span className="text-gray-500 font-normal whitespace-nowrap block">
+                            {formData.faculty.subject}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <span className="text-[#525252]">
@@ -749,7 +784,7 @@ export default function RequestLeaveModal({
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 shadow-xl rounded-md max-h-64 overflow-y-auto z-50 py-1">
                   {faculties.map((fac) => (
                     <div
-                      key={`${fac.id}-${fac.subjectId}`}
+                      key={fac.id}
                       onClick={() => {
                         setFormData({ ...formData, faculty: fac });
                         setIsDropdownOpen(false);
@@ -761,14 +796,19 @@ export default function RequestLeaveModal({
                         size={32}
                         alt={fac.name}
                       />
-                      <div className="flex-1 overflow-hidden relative">
-                        <p className="whitespace-nowrap inline-block text-sm text-[#282828] hover-marquee">
-                          <span className="font-semibold">{fac.name}</span> •{" "}
-                          <span className="text-gray-500">{fac.subject}</span>
-                        </p>
+                      <div className="flex-1 overflow-hidden relative flex items-center">
+                        <span className="font-semibold text-sm text-[#282828] whitespace-nowrap mr-1">{fac.name} •</span>
+                        <div className="flex-1 overflow-hidden">
+                          {fac.subject && fac.subject.length > 20 ? (
+                            <div className="css-marquee text-sm text-gray-500 block pt-1">
+                              {fac.subject}
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-500 whitespace-nowrap block">{fac.subject}</span>
+                          )}
+                        </div>
                       </div>
-                      {formData.faculty?.id === fac.id &&
-                        formData.faculty?.subjectId === fac.subjectId && (
+                      {formData.faculty?.id === fac.id && (
                           <Check
                             size={16}
                             weight="bold"

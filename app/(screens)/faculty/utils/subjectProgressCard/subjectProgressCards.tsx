@@ -109,17 +109,23 @@ export default function SubjectProgressCards({
                   </div>
                 </div>
                 <div className="h-full w-[78%] max-md:w-[80%] rounded-md p-2 flex justify-between">
-                  <div className="flex flex-col gap-2 w-auto">
+                  <div className="flex flex-col gap-2 w-full overflow-hidden min-w-0 pr-2">
                     <p
+                      className="truncate"
                       style={{
                         fontSize: 10,
                         fontWeight: "600",
                         color: "#16284F",
                       }}
+                      title={subject.title}
                     >
                       {subject.title}
                     </p>
-                    <p style={{ fontSize: 10, color: "#454545" }}>
+                    <p 
+                      title={subject.professor}
+                      className="whitespace-nowrap overflow-x-auto overflow-y-hidden w-full [&::-webkit-scrollbar]:hidden"
+                      style={{ fontSize: 10, color: "#454545", scrollbarWidth: 'none' }}
+                    >
                       {subject.professor}
                     </p>
                   </div>

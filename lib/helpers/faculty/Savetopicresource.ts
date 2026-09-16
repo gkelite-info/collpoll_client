@@ -173,3 +173,43 @@ export async function deactivateTopicResource(
 
   return { success: true };
 }
+
+export async function fetchUnitResources(
+  collegeSubjectUnitId: number
+): Promise<TopicResourceRow[]> {
+  const { data: topics, error: topicsError } = await supabase
+    .from("college_subject_unit_topics")
+    .select("collegeSubjectUnitTopicId")
+    .eq("collegeSubjectUnitId", collegeSubjectUnitId)
+    .eq("isActive", true);
+    
+  if (topicsError || !topics || topics.length === 0) return [];
+  
+  const topicIds = topics.map(t => t.collegeSubjectUnitTopicId);
+  
+  const { data, error } = await supabase
+    .from("college_subject_unit_topic_resources")
+    .select(`
+      collegeSubjectUnitTopicResourceId,
+      resourceType,
+      resourceName,
+      resourceUrl,
+      collegeSubjectUnitTopicId,
+      collegeId,
+      createdBy,
+      isAdmin,
+      isActive,
+      createdAt,
+      updatedAt
+    `)
+    .in("collegeSubjectUnitTopicId", topicIds)
+    .eq("isActive", true)
+    .order("createdAt", { ascending: false });
+
+  if (error) {
+    console.error("fetchUnitResources error:", error);
+    return [];
+  }
+
+  return data ?? [];
+}

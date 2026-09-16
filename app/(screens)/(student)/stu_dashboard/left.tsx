@@ -48,6 +48,7 @@ interface UpcomingLecture {
   isCancelled?: boolean;
   type: string;
   meetingLink?: string | null;
+  sessionStatus?: string;
 }
 
 interface SubjectProgress {
@@ -168,6 +169,13 @@ export default function StuDashLeft() {
           college_subject_units (
             completionPercentage,
             createdBy
+          ),
+          faculty_sections (
+            collegeSectionsId,
+            isActive,
+            faculty:facultyId (
+              fullName
+            )
           )
         `,
         )
@@ -202,24 +210,6 @@ export default function StuDashLeft() {
         return;
       }
 
-      const facultyIds = new Set<number>();
-      (subjectData as SubjectData[]).forEach((sub) => {
-        sub.college_subject_units?.forEach((unit) => {
-          if (unit.createdBy) facultyIds.add(unit.createdBy);
-        });
-      });
-
-      const facultyMap: Record<number, string> = {};
-      if (facultyIds.size > 0) {
-        const { data: facultyData } = await supabase
-          .from("faculty")
-          .select("facultyId, fullName")
-          .in("facultyId", Array.from(facultyIds));
-        (facultyData as FacultyRow[])?.forEach((f) => {
-          facultyMap[f.facultyId] = f.fullName;
-        });
-      }
-
       const colorPalettes = [
         {
           radialStart: "#10FD77",
@@ -243,7 +233,7 @@ export default function StuDashLeft() {
         },
       ];
 
-      const mappedSubjects = (subjectData as SubjectData[]).map((sub, index: number) => {
+      const mappedSubjects = (subjectData as any[]).map((sub, index: number) => {
         const units = sub.college_subject_units || [];
         const totalUnits = units.length;
 
@@ -258,12 +248,24 @@ export default function StuDashLeft() {
             )
             : 0;
 
-        const firstUnit = units[0];
-        const profId = firstUnit?.createdBy;
-        const professor =
-          profId != null && facultyMap[profId]
-            ? t("Prof {name}", { name: facultyMap[profId] })
-            : t("Faculty not assigned");
+        let assignedFaculties = (sub.faculty_sections || [])
+          .filter((fs: any) => fs.collegeSectionsId === studentContext.collegeSectionsId && fs.isActive !== false)
+          .map((fs: any) => fs.faculty?.fullName)
+          .filter(Boolean);
+
+        if (assignedFaculties.length === 0) {
+          assignedFaculties = (sub.faculty_sections || [])
+            .filter((fs: any) => fs.isActive !== false)
+            .map((fs: any) => fs.faculty?.fullName)
+            .filter(Boolean);
+        }
+          
+        const uniqueProfessors = Array.from(new Set(assignedFaculties));
+
+        const professor = uniqueProfessors.length > 0
+          ? t("Prof {name}", { name: uniqueProfessors.join(", ") })
+          : t("Faculty not assigned");
+          
         const colors = colorPalettes[index % colorPalettes.length];
 
         return {
@@ -422,7 +424,6 @@ export default function StuDashLeft() {
 
       const studentContext = await fetchStudentContext(internalUserId);
       const isSchool = studentContext ? isSchoolEducation(studentContext.collegeEducationType) : false;
-      console.log("[DEBUG] studentContext:", JSON.stringify(studentContext, null, 2));
 
       if (
         !studentContext ||
@@ -430,12 +431,6 @@ export default function StuDashLeft() {
         studentContext.collegeAcademicYearId === null ||
         studentContext.collegeSectionsId === null
       ) {
-        console.log("[DEBUG] Early return - missing context fields:", {
-          hasContext: !!studentContext,
-          collegeEducationId: studentContext?.collegeEducationId,
-          collegeAcademicYearId: studentContext?.collegeAcademicYearId,
-          collegeSectionsId: studentContext?.collegeSectionsId,
-        });
         setLectures([]);
         return;
       }
@@ -446,12 +441,11 @@ export default function StuDashLeft() {
         collegeAcademicYearId: studentContext.collegeAcademicYearId,
         collegeSemesterId: studentContext.collegeSemesterId,
         collegeSectionId: studentContext.collegeSectionsId,
+        collegeSectionName: studentContext.collegeSections,
         isSchool,
       };
-      console.log("[DEBUG] Calling fetchUpcomingClassesForStudent with filters:", JSON.stringify(filters, null, 2));
 
       const data = await fetchUpcomingClassesForStudent(filters);
-      console.log("[DEBUG] fetchUpcomingClassesForStudent returned:", data.length, "events", JSON.stringify(data, null, 2));
 
       setLectures(data);
     } catch (err) {
@@ -594,7 +588,7 @@ export default function StuDashLeft() {
                               name: lec.facultyName,
                             })}
                             description={`${lec.eventTopic} • ${formatDate(lec.date)}`}
-                            status={lec.isCancelled ? t("Cancelled") : ""}
+                            status={lec.isCancelled ? t("Cancelled") : (lec.sessionStatus && lec.sessionStatus.toLowerCase() !== 'scheduled' ? lec.sessionStatus.charAt(0).toUpperCase() + lec.sessionStatus.slice(1).toLowerCase() : "")}
                           />
                           {lec.meetingLink && !lec.isCancelled && (
                             <a

@@ -33,6 +33,14 @@ interface StudentLeaveDetailsModalProps {
   currentStudentId: number;
 }
 
+const getSecureUrl = (url: string) => {
+  if (!url) return url;
+  const marker = "/storage/v1/object/public/";
+  const idx = url.indexOf(marker);
+  if (idx !== -1) return `/api/files/${url.slice(idx + marker.length)}`;
+  return url;
+};
+
 export default function StudentLeaveDetailsModal({
   isOpen,
   onClose,
@@ -560,18 +568,18 @@ export default function StudentLeaveDetailsModal({
                             <div className="mb-1.5">
                               {msg.mediaType === "image" ? (
                                 <img
-                                  src={msg.mediaUrl}
+                                  src={getSecureUrl(msg.mediaUrl)}
                                   alt="attachment"
                                   className="max-w-[150px] rounded-md cursor-pointer hover:opacity-90"
                                   onClick={(e) => {
                                     if (isSelectionMode) return;
                                     e.stopPropagation();
-                                    window.open(msg.mediaUrl, "_blank");
+                                    window.open(getSecureUrl(msg.mediaUrl), "_blank");
                                   }}
                                 />
                               ) : (
                                 <a
-                                  href={msg.mediaUrl}
+                                  href={getSecureUrl(msg.mediaUrl)}
                                   target="_blank"
                                   rel="noreferrer"
                                   onClick={(e) => {
