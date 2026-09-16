@@ -109,7 +109,8 @@ export default function AssignmentTable({
       });
 
       setRows(mergedRows);
-    } catch {
+    } catch (err) {
+      console.error("Error loading assignment table data:", err);
       toast.error("Error loading table data");
     } finally {
       setLoading(false);
@@ -449,14 +450,16 @@ export default function AssignmentTable({
           </tbody>
         </table>
       </div>
-      <Pagination
-        currentPage={page}
-        totalItems={totalCount}
-        itemsPerPage={pageSize}
-        onPageChange={setPage}
-        alwaysShow
-        bgClassName="bg-transparent border-t border-gray-200"
-      />
+      <div className="mt-4">
+        <Pagination
+          currentPage={page}
+          totalItems={totalCount}
+          itemsPerPage={pageSize}
+          onPageChange={setPage}
+          alwaysShow
+          bgClassName="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3"
+        />
+      </div>
     </div>
   );
 }

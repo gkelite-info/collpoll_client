@@ -145,6 +145,7 @@ function AssignmentsLeftContent() {
   const LAB_PER_PAGE = 10;
   const [labs, setLabs] = useState<LabManual[]>([]);
   const [labsLoading, setLabsLoading] = useState(false);
+  const [labsError, setLabsError] = useState<string | null>(null);
   const [labTotalRecords, setLabTotalRecords] = useState(0);
 
   const [performanceData, setPerformanceData] = useState<any>(null);
@@ -365,7 +366,6 @@ function AssignmentsLeftContent() {
     if (
       !collegeId ||
       !collegeEducationId ||
-      !collegeBranchId ||
       !collegeAcademicYearId ||
       !collegeSectionsId
     ) {
@@ -374,6 +374,7 @@ function AssignmentsLeftContent() {
 
     try {
       setLabsLoading(true);
+      setLabsError(null);
       const response = await fetchLabManualsForStudent(
         {
           collegeId,
@@ -413,6 +414,7 @@ function AssignmentsLeftContent() {
       setLabTotalRecords(response.totalCount || 0);
     } catch (err) {
       console.error("loadLabs error:", err);
+      setLabsError("Unable to load lab manuals. Please try again.");
     } finally {
       setLabsLoading(false);
     }
@@ -1146,6 +1148,13 @@ function AssignmentsLeftContent() {
             <div className="flex flex-col gap-4 pb-10 h-full mt-2">
               {labsLoading || tabSwitchLoading ? (
                 <StudentDiscussionCardSkeletonGroup count={3} />
+              ) : labsError ? (
+                <div role="alert" className="py-20 text-center text-gray-500">
+                  <p>{labsError}</p>
+                  <button type="button" onClick={loadLabs} className="mt-3 text-[#43C17A] underline">
+                    Retry
+                  </button>
+                </div>
               ) : labs.length === 0 ? (
                 <div className="flex items-center justify-center h-1/3 mt-10">
                   <p className="text-sm text-gray-500">

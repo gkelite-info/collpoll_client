@@ -56,12 +56,23 @@ export function useStudentsByDepartment(
           { count: "exact" }
         )
         .eq("collegeId", collegeId)
-        .eq("collegeEducationId", collegeEducationId)
-        .match(departmentId ? { collegeBranchId: departmentId } : {})
+        .eq("collegeEducationId", collegeEducationId);
+
+      if (departmentId !== null && departmentId !== undefined) {
+        if (departmentId > 0) {
+          query = query.eq("collegeBranchId", departmentId);
+        } else if (departmentId < 0) {
+          // For schools, departmentId is -yearId, and collegeBranchId should be null
+          query = query.is("collegeBranchId", null);
+        }
+      }
+
+      query = query
         .eq("student_academic_history.isCurrent", true)
         .eq("isActive", true)
         .is("deletedAt", null)
-        .eq("users.isActive", true).eq("users.is_deleted", false)
+        .eq("users.isActive", true)
+        .eq("users.is_deleted", false)
         .order("studentId")
         .range(from, to);
 
@@ -114,8 +125,17 @@ export function useStudentsByDepartment(
               .from("college_subjects")
               .select("collegeSubjectId")
               .eq("collegeId", collegeId)
-              .eq("collegeEducationId", collegeEducationId)
-              .match(departmentId ? { collegeBranchId: departmentId } : {})
+              .eq("collegeEducationId", collegeEducationId);
+
+            if (departmentId !== null && departmentId !== undefined) {
+              if (departmentId > 0) {
+                subjectsQuery = subjectsQuery.eq("collegeBranchId", departmentId);
+              } else if (departmentId < 0) {
+                subjectsQuery = subjectsQuery.is("collegeBranchId", null);
+              }
+            }
+
+            subjectsQuery = subjectsQuery
               .eq("collegeAcademicYearId", yearId)
               .eq("isActive", true)
               .is("deletedAt", null);
@@ -132,7 +152,7 @@ export function useStudentsByDepartment(
               const progress = await getAdminStudentProgressSummary({
                 collegeId,
                 collegeEducationId,
-                collegeBranchIds: departmentId ? [departmentId] : [],
+                collegeBranchIds: departmentId && departmentId > 0 ? [departmentId] : [],
                 academicYearIds: [yearId],
                 semesterIds,
                 sectionIds,

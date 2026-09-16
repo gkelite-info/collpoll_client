@@ -20,10 +20,10 @@ export async function fetchActiveStudentCount(
             .eq("student_academic_history.isCurrent", true)
             .is("student_academic_history.deletedAt", null);
 
-        if (collegeBranchId === null) {
+        if (collegeBranchId === null || collegeBranchId === undefined || String(collegeBranchId) === "null" || Number(collegeBranchId) <= 0) {
             query = query.is("collegeBranchId", null);
         } else {
-            query = query.eq("collegeBranchId", collegeBranchId);
+            query = query.eq("collegeBranchId", Number(collegeBranchId));
         }
 
         const { count, error } = await query;

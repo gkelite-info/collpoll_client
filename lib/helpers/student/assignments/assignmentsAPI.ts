@@ -34,12 +34,19 @@ export const fetchAssignmentsForStudent = async (
     let sectionIds = [collegeSectionsId];
     if (!secError && sectionRow?.collegeSections) {
       // Fetch all matching section IDs (including soft-deleted ones)
-      const { data: sectionsList, error: listError } = await supabase
+      let sectionsQuery = supabase
         .from("college_sections")
         .select("collegeSectionsId")
-        .eq("collegeBranchId", collegeBranchId)
         .eq("collegeAcademicYearId", collegeAcademicYearId)
         .eq("collegeSections", sectionRow.collegeSections);
+
+      if (collegeBranchId !== null && collegeBranchId !== undefined) {
+        sectionsQuery = sectionsQuery.eq("collegeBranchId", collegeBranchId);
+      } else {
+        sectionsQuery = sectionsQuery.is("collegeBranchId", null);
+      }
+
+      const { data: sectionsList, error: listError } = await sectionsQuery;
 
       if (!listError && sectionsList) {
         sectionIds = sectionsList.map((s: any) => s.collegeSectionsId);
@@ -70,10 +77,15 @@ export const fetchAssignmentsForStudent = async (
       `,
         { count: "exact" }
       )
-      .eq("collegeBranchId", collegeBranchId)
       .eq("collegeAcademicYearId", collegeAcademicYearId)
       .in("collegeSectionsId", sectionIds)
       .eq("is_deleted", false);
+
+    if (collegeBranchId !== null && collegeBranchId !== undefined) {
+      query = query.eq("collegeBranchId", collegeBranchId);
+    } else {
+      query = query.is("collegeBranchId", null);
+    }
 
     let targetDateInt = todayInt;
 

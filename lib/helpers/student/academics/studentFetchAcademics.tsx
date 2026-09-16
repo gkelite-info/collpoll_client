@@ -11,7 +11,7 @@ type StudentProfile = {
   degree: string;
   year: string;
   semester: string;
-  collegeBranchId: number;
+  collegeBranchId: number | null;
   collegeEducationId: number;
   collegeId: number;
   collegeSectionsId: number | null;
@@ -43,6 +43,7 @@ const fetchStudentAcademicData = async (userId: number): Promise<FetchResult> =>
         college_education ( collegeEducationType )
       `)
       .eq("userId", userId)
+      .is("deletedAt", null)
       .single();
 
     if (studentError || !studentData) {
@@ -61,6 +62,7 @@ const fetchStudentAcademicData = async (userId: number): Promise<FetchResult> =>
       `)
       .eq("studentId", studentData.studentId)
       .eq("isCurrent", true)
+      .is("deletedAt", null)
       .maybeSingle();
 
     if (historyError) {
@@ -120,11 +122,16 @@ const fetchStudentAcademicData = async (userId: number): Promise<FetchResult> =>
       college_subject_unit_topics ( * )
     )
   `)
-      .eq("collegeBranchId", studentData.collegeBranchId)
+      .eq("collegeId", studentData.collegeId)
       .eq("collegeEducationId", studentData.collegeEducationId)
       .eq("collegeAcademicYearId", currentYearId)
       .eq("isActive", true)
       .is("deletedAt", null);
+
+    // School students and subjects have no branch. Equality cannot match SQL NULL.
+    query = studentData.collegeBranchId == null
+      ? query.is("collegeBranchId", null)
+      : query.eq("collegeBranchId", studentData.collegeBranchId);
 
     if (currentSemesterId !== null && currentSemesterId !== undefined) {
       query = query.or(`collegeSemesterId.eq.${currentSemesterId},collegeSemesterId.is.null`);

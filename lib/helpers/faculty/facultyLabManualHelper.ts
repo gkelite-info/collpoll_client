@@ -27,7 +27,7 @@ export async function fetchLabManualsForStudent(
     params: {
         collegeId: number;
         collegeEducationId: number;
-        collegeBranchId: number;
+        collegeBranchId: number | null;
         collegeAcademicYearId: number;
         collegeSectionsId: number;
     },
@@ -37,7 +37,7 @@ export async function fetchLabManualsForStudent(
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    const { data, error, count } = await supabase
+    let query = supabase
         .from("faculty_lab_manuals")
         .select(`
       *,
@@ -55,16 +55,22 @@ export async function fetchLabManualsForStudent(
         .eq("collegeAcademicYearId", params.collegeAcademicYearId)
         .eq("college_subjects.collegeId", params.collegeId)
         .eq("college_subjects.collegeEducationId", params.collegeEducationId)
-        .eq("college_subjects.collegeBranchId", params.collegeBranchId)
         .eq("college_subjects.collegeAcademicYearId", params.collegeAcademicYearId)
         .eq("isActive", true)
-        .is("deletedAt", null)
+        .is("deletedAt", null);
+
+    // School subjects have no branch; SQL equality does not match NULL.
+    query = params.collegeBranchId == null
+        ? query.is("college_subjects.collegeBranchId", null)
+        : query.eq("college_subjects.collegeBranchId", params.collegeBranchId);
+
+    const { data, error, count } = await query
         .order("createdAt", { ascending: false })
         .range(from, to);
 
     if (error) {
         console.error("fetchLabManualsForStudent error:", error);
-        return { data: [], totalCount: 0 };
+        throw error;
     }
 
     if (!data) return { data: [], totalCount: 0 };

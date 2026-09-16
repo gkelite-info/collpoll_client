@@ -49,12 +49,41 @@ export default function AdminAssignmentDetailPage() {
         .select("*", { count: "exact", head: true })
         .eq("assignmentId", assignmentId);
 
-      const { count: expectedCount } = await supabase
+      let expectedQuery = supabase
         .from("students")
-        .select("*", { count: "exact", head: true })
-        .eq("collegeBranchId", data.collegeBranchId)
-        .eq("collegeAcademicYearId", data.collegeAcademicYearId)
-        .eq("isActive", true);
+        .select(
+          "studentId, student_academic_history!inner(collegeAcademicYearId, collegeSectionsId)",
+          { count: "exact", head: true }
+        )
+        .eq("isActive", true)
+        .is("deletedAt", null);
+
+      if (data.collegeAcademicYearId) {
+        expectedQuery = expectedQuery.eq(
+          "student_academic_history.collegeAcademicYearId",
+          data.collegeAcademicYearId
+        );
+      }
+
+      if (data.collegeSectionsId) {
+        expectedQuery = expectedQuery.eq(
+          "student_academic_history.collegeSectionsId",
+          data.collegeSectionsId
+        );
+      }
+
+      if (data.collegeBranchId && Number(data.collegeBranchId) > 0) {
+        expectedQuery = expectedQuery.eq(
+          "collegeBranchId",
+          data.collegeBranchId
+        );
+      }
+
+      expectedQuery = expectedQuery
+        .eq("student_academic_history.isCurrent", true)
+        .is("student_academic_history.deletedAt", null);
+
+      const { count: expectedCount } = await expectedQuery;
 
       setAssignment({
         ...data,
@@ -119,13 +148,13 @@ export default function AdminAssignmentDetailPage() {
       </section>
 
       <section className="flex flex-col lg:flex-row items-start gap-4 w-full mb-3">
-        <div className="flex flex-col md:flex-row gap-4 flex-[1.8] min-w-0 w-full md:h-32">
+        <div className="flex flex-col md:flex-row gap-4 flex-[1.8] min-w-0 w-full md:h-40">
           {loading ? (
             <>
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="flex-1 h-[100px] md:h-[142px] bg-gray-200 rounded-xl relative overflow-hidden animate-pulse"
+                  className="flex-1 h-[120px] md:h-40 bg-gray-200 rounded-2xl relative overflow-hidden animate-pulse"
                 >
                   <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
                 </div>
@@ -133,15 +162,15 @@ export default function AdminAssignmentDetailPage() {
             </>
           ) : (
             cardData.map((item, index) => (
-              <div key={index} className="flex-1 min-w-0">
+              <div key={index} className="flex-1 min-w-0 h-full">
                 <CardComponent
                   icon={item.icon}
                   value={item.value}
                   label={item.label}
                   iconBgColor={item.iconBgColor}
-                  style={`${item.bgColor} w-full`}
+                  style={`${item.bgColor} w-full !h-40 !rounded-2xl p-4 md:p-5 flex flex-col justify-between shadow-sm`}
                   textSize="whitespace-nowrap"
-                  iconStyle="rounded-lg"
+                  iconStyle="w-10 h-10 rounded-xl"
                 />
               </div>
             ))

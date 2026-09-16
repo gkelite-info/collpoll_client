@@ -19,12 +19,45 @@ export const fetchAssignmentDetailsStats = async (
 
     if (subError) throw subError;
 
-    const { count: expectedCount, error: expError } = await supabase
+    let expectedQuery = supabase
       .from("students")
-      .select("*", { count: "exact", head: true })
-      .eq("collegeBranchId", assignmentData.collegeBranchId)
-      .eq("collegeAcademicYearId", assignmentData.collegeAcademicYearId)
-      .eq("isActive", true);
+      .select(
+        "studentId, student_academic_history!inner(collegeAcademicYearId, collegeSectionsId)",
+        { count: "exact", head: true }
+      )
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    if (assignmentData.collegeAcademicYearId) {
+      expectedQuery = expectedQuery.eq(
+        "student_academic_history.collegeAcademicYearId",
+        assignmentData.collegeAcademicYearId
+      );
+    }
+
+    if (assignmentData.collegeSectionsId) {
+      expectedQuery = expectedQuery.eq(
+        "student_academic_history.collegeSectionsId",
+        assignmentData.collegeSectionsId
+      );
+    }
+
+    if (
+      assignmentData.collegeBranchId !== null &&
+      assignmentData.collegeBranchId !== undefined &&
+      Number(assignmentData.collegeBranchId) > 0
+    ) {
+      expectedQuery = expectedQuery.eq(
+        "collegeBranchId",
+        assignmentData.collegeBranchId
+      );
+    }
+
+    expectedQuery = expectedQuery
+      .eq("student_academic_history.isCurrent", true)
+      .is("student_academic_history.deletedAt", null);
+
+    const { count: expectedCount, error: expError } = await expectedQuery;
 
     if (expError) throw expError;
 

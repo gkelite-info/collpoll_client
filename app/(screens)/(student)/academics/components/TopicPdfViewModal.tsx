@@ -76,6 +76,8 @@ export function TopicPdfViewModal({
   const [resources, setResources] = useState<StudentTopicResource[]>([]);
   const [loadingResources, setLoadingResources] = useState(false);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<number | null>(0);
+  const [downloadBatchActive, setDownloadBatchActive] = useState(false);
   const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>([]);
   const [visibleResourceCount, setVisibleResourceCount] = useState(RESOURCES_PER_PAGE);
   const { ref: loadMoreRef, inView } = useInView({ rootMargin: "80px" });
@@ -126,6 +128,7 @@ export function TopicPdfViewModal({
   }, [inView, resources.length]);
 
   const toggleSelectedResource = (resourceId: number) => {
+    if (downloadBatchActive) return;
     setSelectedResourceIds((prev) =>
       prev.includes(resourceId)
         ? prev.filter((id) => id !== resourceId)
@@ -135,6 +138,7 @@ export function TopicPdfViewModal({
 
   const handleDownload = async (resource: StudentTopicResource) => {
     try {
+      setDownloadProgress(0);
       setDownloadingId(resource.collegeSubjectUnitTopicResourceId);
       const response = await fetch(
         `/api/student/topic-resources?resourceId=${resource.collegeSubjectUnitTopicResourceId}&download=1`,
@@ -148,7 +152,29 @@ export function TopicPdfViewModal({
         throw new Error(t("Failed to download file"));
       }
 
-      const blob = await response.blob();
+      const totalBytes = Number(response.headers.get("X-File-Size") || response.headers.get("Content-Length"));
+      const reader = response.body?.getReader();
+      let blob: Blob;
+      if (reader) {
+        const chunks: BlobPart[] = [];
+        let receivedBytes = 0;
+        setDownloadProgress(totalBytes > 0 ? 0 : null);
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(new Uint8Array(value));
+            receivedBytes += value.byteLength;
+            if (totalBytes > 0) setDownloadProgress(Math.min(99, Math.floor(receivedBytes / totalBytes * 100)));
+          }
+        } finally {
+          reader.releaseLock();
+        }
+        blob = new Blob(chunks, { type: "application/pdf" });
+      } else {
+        blob = await response.blob();
+      }
+      setDownloadProgress(100);
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = objectUrl;
@@ -156,7 +182,7 @@ export function TopicPdfViewModal({
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(objectUrl);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     } catch (error: unknown) {
       toast.error(
         error instanceof Error ? error.message : t("Failed to download file"),
@@ -257,10 +283,12 @@ export function TopicPdfViewModal({
                             </div>
                           </div>
 
-                          {isDownloading && isSelected ? (
-                            <div className="shrink-0 inline-flex items-center gap-2 text-xs font-semibold text-[#43C17A]">
-                              <SpinnerGap size={14} className="animate-spin" />
-                              {t("Downloading")}
+                          {isDownloading ? (
+                            <div className="w-28 shrink-0 text-xs font-semibold text-[#43C17A]">
+                              <span>{t("Downloading")} {downloadProgress !== null ? downloadProgress + "%" : "..."}</span>
+                              <div role="progressbar" aria-label={resource.resourceName} aria-valuemin={0} aria-valuemax={100} aria-valuenow={downloadProgress ?? undefined} className="mt-2 h-1.5 overflow-hidden rounded-full bg-green-100">
+                                <div className={downloadProgress === null ? "h-full bg-[#43C17A] animate-pulse" : "h-full bg-[#43C17A] transition-[width]"} style={{ width: downloadProgress === null ? "40%" : downloadProgress + "%" }} />
+                              </div>
                             </div>
                           ) : null}
                         </li>
@@ -300,23 +328,27 @@ export function TopicPdfViewModal({
               <button
                 type="button"
                 onClick={async () => {
-                  for (const resource of selectedResources) {
-                    await handleDownload(resource);
+                  if (downloadBatchActive) return;
+                  setDownloadBatchActive(true);
+                  try {
+                    for (const resource of selectedResources) await handleDownload(resource);
+                  } finally {
+                    setDownloadBatchActive(false);
                   }
                 }}
                 disabled={
-                  selectedResources.length === 0 || downloadingId !== null
+                  selectedResources.length === 0 || downloadBatchActive
                 }
                 className={`flex-1 py-2.5 rounded-lg text-sm font-semibold text-white transition flex items-center justify-center gap-2 cursor-pointer ${
-                  selectedResources.length === 0 || downloadingId !== null
+                  selectedResources.length === 0 || downloadBatchActive
                     ? "bg-[#43C17A]/50 cursor-not-allowed"
                     : "bg-[#43C17A] hover:bg-[#3aad6c]"
                 }`}
               >
-                {downloadingId !== null ? (
+                {downloadBatchActive ? (
                   <>
                     <SpinnerGap size={16} className="animate-spin" />
-                    {t("Downloading")}...
+                    {t("Downloading")} {downloadProgress !== null ? downloadProgress + "%" : "..."}
                   </>
                 ) : (
                   <>

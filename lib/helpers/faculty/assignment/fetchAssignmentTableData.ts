@@ -15,7 +15,7 @@ export async function fetchAssignmentTableData(
 ) {
   const { data: assign, error: assignErr } = await supabase
     .from("assignments")
-    .select("collegeBranchId, marks")
+    .select("collegeBranchId, marks, collegeSectionsId, collegeAcademicYearId")
     .eq("assignmentId", assignmentId)
     .single();
 
@@ -62,14 +62,44 @@ export async function fetchAssignmentTableData(
     }
   }
 
-  let studentsQuery = supabase
-    .from("students")
-    .select(
-      `studentId, student_pins ( pinNumber ), users (fullName, email, userId, user_profile ( profileUrl, is_deleted ))`,
-      { count: "exact" },
-    )
-    .eq("collegeBranchId", assign.collegeBranchId)
-    .eq("isActive", true);
+  const hasAcademicFilter = Boolean(
+    assign?.collegeSectionsId || assign?.collegeAcademicYearId
+  );
+
+  // Keep each select literal separate so Supabase can infer both result shapes.
+  const studentSelection = hasAcademicFilter
+    ? supabase.from("students").select(
+        "studentId, student_pins ( pinNumber ), users (fullName, email, userId, user_profile ( profileUrl, is_deleted )), student_academic_history!inner(collegeSectionsId, collegeAcademicYearId, isCurrent)",
+        { count: "exact" },
+      )
+    : supabase.from("students").select(
+        "studentId, student_pins ( pinNumber ), users (fullName, email, userId, user_profile ( profileUrl, is_deleted ))",
+        { count: "exact" },
+      );
+
+  let studentsQuery = studentSelection
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (
+    assign?.collegeBranchId !== null &&
+    assign?.collegeBranchId !== undefined &&
+    Number(assign.collegeBranchId) > 0
+  ) {
+    studentsQuery = studentsQuery.eq("collegeBranchId", assign.collegeBranchId);
+  }
+
+  if (assign?.collegeSectionsId) {
+    studentsQuery = studentsQuery
+      .eq("student_academic_history.collegeSectionsId", assign.collegeSectionsId)
+      .eq("student_academic_history.isCurrent", true)
+      .is("student_academic_history.deletedAt", null);
+  } else if (assign?.collegeAcademicYearId) {
+    studentsQuery = studentsQuery
+      .eq("student_academic_history.collegeAcademicYearId", assign.collegeAcademicYearId)
+      .eq("student_academic_history.isCurrent", true)
+      .is("student_academic_history.deletedAt", null);
+  }
 
   if (filter === "Not Submitted" && matchingSubmissionStudentIds.length > 0) {
     studentsQuery = studentsQuery.not(
