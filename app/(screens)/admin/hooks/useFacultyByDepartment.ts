@@ -27,11 +27,13 @@ export function useFacultyByDepartment(
       const from = (page - 1) * limit;
       const to = from + limit - 1;
 
+      const branchId = departmentId !== null && departmentId > 0 ? departmentId : null;
+
       const [scopedFacultyIds, scopedAssignments, branchResult] = await Promise.all([
-        getFacultyIds({ collegeId, educationId: collegeEducationId, branchId: departmentId }),
-        getFacultyAssignments({ collegeId, educationId: collegeEducationId, branchId: departmentId }, yearId, sectionId),
-        departmentId ? supabase.from("college_branch").select("collegeBranchCode, collegeBranchType")
-          .eq("collegeBranchId", departmentId).maybeSingle() : Promise.resolve({ data: null }),
+        getFacultyIds({ collegeId, educationId: collegeEducationId, branchId }),
+        getFacultyAssignments({ collegeId, educationId: collegeEducationId, branchId }, yearId, sectionId),
+        branchId ? supabase.from("college_branch").select("collegeBranchCode, collegeBranchType")
+          .eq("collegeBranchId", branchId).maybeSingle() : Promise.resolve({ data: null }),
       ]);
 
       const facultyIds = yearId || sectionId ? [...new Set(scopedAssignments.map((assignment) => assignment.facultyId))] : scopedFacultyIds;

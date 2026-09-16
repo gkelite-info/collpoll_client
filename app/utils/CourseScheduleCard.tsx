@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
-import { extractAcademicYearNumber } from "@/app/utils/academicYear";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import { useAssignedAdminEducationTypes } from "@/app/(screens)/admin/my-attendance/useAssignedAdminEducationTypes";
@@ -50,7 +49,7 @@ export default function CourseScheduleCard({
   const {
     collegeEducationType,
     collegeBranchCode,
-    collegeAcademicYear,
+    identifierId,
     role,
     adminId,
     loading: userLoading,
@@ -59,7 +58,6 @@ export default function CourseScheduleCard({
     role === "Admin" ? adminId : null,
     collegeEducationType || "",
   );
-  const academicYearNumber = extractAcademicYearNumber(collegeAcademicYear);
   const { college_branch, faculty_edu_type, sections, selectedSectionIndex, loading: facultyLoading } = useFaculty();
 
   const loading = isLoading || userLoading || facultyLoading;
@@ -115,10 +113,15 @@ export default function CourseScheduleCard({
               <div className="h-2.5 w-14 animate-pulse rounded bg-white/30" />
             </div>
           ) : role === "Student" ? (
+<<<<<<< Updated upstream
             <p className="text-[#EFEFEF] text-sm font-medium">
               {isSchool
                 ? formatSchoolClass(collegeAcademicYear) || collegeEducationType || "—"
                 : `${collegeEducationType && collegeBranchCode ? `${collegeEducationType} ${collegeBranchCode}` : "—"} – ${academicYearNumber || "—"}`}
+=======
+            <p className="max-w-full break-words text-center text-[#EFEFEF] text-sm font-medium">
+              {identifierId || "—"}
+>>>>>>> Stashed changes
             </p>
           ) : role === "Faculty" ? (
             <p className="text-[#EFEFEF] text-md font-medium text-center">

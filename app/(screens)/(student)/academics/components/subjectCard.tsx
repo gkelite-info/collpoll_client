@@ -51,7 +51,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { collegeEducationType } = useStudent();
+  const { collegeEducationType, collegeAcademicYear, college_sections, loading } = useStudent();
   const t = useTranslations("Academics.student");
   const normalizedEducationType = collegeEducationType?.trim().toLowerCase();
   const shouldShowSemester =
@@ -64,9 +64,6 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
   const [selectedSubject, setSelectedSubject] = useState<string>("All");
   const [selectedSemester, setSelectedSemester] = useState<string>(
     subjectProps[0]?.semester != null ? String(subjectProps[0].semester) : "",
-  );
-  const [selectedYear, setSelectedYear] = useState<string>(
-    subjectProps[0]?.academicYear ?? "",
   );
   const [currentPage, setCurrentPage] = useState(1);
   const ballSize = "10px";
@@ -97,10 +94,9 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
     return subjectProps.filter(
       (subject) =>
         (selectedSubject === "All" || subject.subjectTitle === selectedSubject) &&
-        (!selectedSemester || String(subject.semester ?? "") === selectedSemester) &&
-        (!selectedYear || subject.academicYear === selectedYear),
+        (!selectedSemester || String(subject.semester ?? "") === selectedSemester),
     );
-  }, [subjectProps, selectedSubject, selectedSemester, selectedYear]);
+  }, [subjectProps, selectedSubject, selectedSemester]);
 
   const uniqueSubjects = useMemo(() => {
     const titles = new Set(subjectProps.map((s) => s.subjectTitle));
@@ -114,18 +110,6 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
           subjectProps
             .map((subject) => subject.semester)
             .filter((semester): semester is number => semester != null),
-        ),
-      ),
-    [subjectProps],
-  );
-
-  const uniqueYears = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          subjectProps
-            .map((subject) => subject.academicYear)
-            .filter((year): year is string => Boolean(year)),
         ),
       ),
     [subjectProps],
@@ -207,20 +191,15 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
             <p className="text-[#525252] text-[12px] md:text-sm whitespace-nowrap">
               {t("Year :")}
             </p>
-            <div className="w-[130px]">
-              <CustomDropdown
-                value={selectedYear}
-                onChange={(value) => {
-                  setSelectedYear(String(value));
-                  setCurrentPage(1);
-                }}
-                options={uniqueYears.map((year) => ({ value: year, label: year }))}
-                placeholder="N/A"
-                disabled={uniqueYears.length === 0}
-                theme="always-green"
-                className="rounded-full py-1"
-              />
-            </div>
+            <span className="min-w-[130px] rounded-xl border border-[#43C17A]/40 bg-[#43C17A]/5 px-3 py-2 text-sm font-semibold text-[#43C17A]">
+              {loading ? "..." : collegeAcademicYear || "N/A"}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <p className="text-[#525252] text-sm">{t.has("Section :") ? t("Section :") : "Section :"}</p>
+            <span className="min-w-[100px] rounded-xl border border-[#43C17A]/40 bg-[#43C17A]/5 px-3 py-2 text-sm font-semibold text-[#43C17A]">
+              {loading ? "..." : college_sections || "N/A"}
+            </span>
           </div>
         </div>
       </div>

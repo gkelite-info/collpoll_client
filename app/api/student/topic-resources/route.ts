@@ -135,6 +135,8 @@ export async function GET(req: Request) {
       return new NextResponse(fileData, {
         headers: {
           "Content-Type": "application/pdf",
+          "Content-Length": String(fileData.size),
+          "X-File-Size": String(fileData.size),
           "Content-Disposition": `attachment; filename="${encodeURIComponent(resource.resourceName)}"`,
           "Cache-Control": "no-store",
         },

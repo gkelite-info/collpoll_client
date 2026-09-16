@@ -493,6 +493,7 @@ export default function AssignmentTable({
             itemsPerPage={pageSize}
             onPageChange={(p) => setPage(p)}
             alwaysShow
+            bgClassName="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3"
           />
         </div>
       )}

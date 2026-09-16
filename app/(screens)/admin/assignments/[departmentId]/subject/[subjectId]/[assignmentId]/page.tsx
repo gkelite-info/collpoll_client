@@ -52,12 +52,41 @@ export default function AdminAssignmentDetailPage() {
         .select("*", { count: "exact", head: true })
         .eq("assignmentId", assignmentId);
 
-      const { count: expectedCount } = await supabase
+      let expectedQuery = supabase
         .from("students")
-        .select("*", { count: "exact", head: true })
-        .eq("collegeBranchId", data.collegeBranchId)
-        .eq("collegeAcademicYearId", data.collegeAcademicYearId)
-        .eq("isActive", true);
+        .select(
+          "studentId, student_academic_history!inner(collegeAcademicYearId, collegeSectionsId)",
+          { count: "exact", head: true }
+        )
+        .eq("isActive", true)
+        .is("deletedAt", null);
+
+      if (data.collegeAcademicYearId) {
+        expectedQuery = expectedQuery.eq(
+          "student_academic_history.collegeAcademicYearId",
+          data.collegeAcademicYearId
+        );
+      }
+
+      if (data.collegeSectionsId) {
+        expectedQuery = expectedQuery.eq(
+          "student_academic_history.collegeSectionsId",
+          data.collegeSectionsId
+        );
+      }
+
+      if (data.collegeBranchId && Number(data.collegeBranchId) > 0) {
+        expectedQuery = expectedQuery.eq(
+          "collegeBranchId",
+          data.collegeBranchId
+        );
+      }
+
+      expectedQuery = expectedQuery
+        .eq("student_academic_history.isCurrent", true)
+        .is("student_academic_history.deletedAt", null);
+
+      const { count: expectedCount } = await expectedQuery;
 
       setAssignment({
         ...data,
