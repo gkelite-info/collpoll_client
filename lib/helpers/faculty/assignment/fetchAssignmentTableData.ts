@@ -66,16 +66,18 @@ export async function fetchAssignmentTableData(
     assign?.collegeSectionsId || assign?.collegeAcademicYearId
   );
 
-  let studentsQuery = supabase
-    .from("students")
-    .select(
-      `studentId, student_pins ( pinNumber ), users (fullName, email, userId, user_profile ( profileUrl, is_deleted ))${
-        hasAcademicFilter
-          ? ", student_academic_history!inner(collegeSectionsId, collegeAcademicYearId, isCurrent)"
-          : ""
-      }`,
-      { count: "exact" },
-    )
+  // Keep each select literal separate so Supabase can infer both result shapes.
+  const studentSelection = hasAcademicFilter
+    ? supabase.from("students").select(
+        "studentId, student_pins ( pinNumber ), users (fullName, email, userId, user_profile ( profileUrl, is_deleted )), student_academic_history!inner(collegeSectionsId, collegeAcademicYearId, isCurrent)",
+        { count: "exact" },
+      )
+    : supabase.from("students").select(
+        "studentId, student_pins ( pinNumber ), users (fullName, email, userId, user_profile ( profileUrl, is_deleted ))",
+        { count: "exact" },
+      );
+
+  let studentsQuery = studentSelection
     .eq("isActive", true)
     .is("deletedAt", null);
 
