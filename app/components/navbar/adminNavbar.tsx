@@ -19,6 +19,7 @@ import {
   X,
   SignOut,
   SmileyIcon,
+  UserPlus,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -46,11 +47,12 @@ export default function AdminNavbar({ onClose }: AdminNavbarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const t = useTranslations("Navbars");
   const [loading, setLoading] = useState(false);
-
-  const { collegeEducationType, loading: contextLoading } = useUser();
+  const { collegeEducationType, loading: contextLoading, collegeCode } = useUser();
   const hideClubs = isStrictlySchoolAssigned(collegeEducationType);
   const hidePlacements = isStrictlySchoolOrInterAssigned(collegeEducationType);
   const isSchool = isSchoolEducation(collegeEducationType);
+  
+  const isAJC = collegeCode?.toLowerCase() === "ajc";
 
   const items: NavItem[] = useMemo(() => {
     const allItems = [
@@ -141,13 +143,21 @@ export default function AdminNavbar({ onClose }: AdminNavbarProps) {
       },
     ];
     
+    if (isAJC) {
+      allItems.splice(4, 0, {
+        icon: (isActive: boolean) => <UserPlus size={18} weight={isActive ? "fill" : "regular"} />,
+        label: "Admissions",
+        path: "/admin/admissions",
+      });
+    }
+
     return allItems.filter(item => {
       if (item.path === "/admin/clubs" && (hideClubs || contextLoading)) return false;
       if (item.path === "/admin/placements" && (hidePlacements || contextLoading)) return false;
       if (item.path === "/admin/wellbeing" && (isSchool || contextLoading)) return false;
       return true;
     });
-  }, [t, hideClubs, hidePlacements, isSchool, contextLoading]);
+  }, [t, hideClubs, hidePlacements, isSchool, contextLoading, isAJC]);
 
   useEffect(() => {
     const current = [...items]
