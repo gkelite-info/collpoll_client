@@ -1,25 +1,23 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense } from "react";
 import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import CourseAdmissions from "./components/CourseAdmissions";
 import AdmissionFee from "./components/AdmissionFee";
+import AdmissionApplications from "./components/AdmissionApplications";
+
+type AdmissionsTab = "courses" | "fees" | "applications";
 
 function AdmissionsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab") as "courses" | "fees" | null;
-  const [activeTab, setActiveTab] = useState<"courses" | "fees">(tabParam || "courses");
+  const tabParam = searchParams.get("tab") as AdmissionsTab | null;
+  const activeTab: AdmissionsTab = tabParam && ["courses", "fees", "applications"].includes(tabParam)
+    ? tabParam
+    : "courses";
 
-  useEffect(() => {
-    if (tabParam && (tabParam === "courses" || tabParam === "fees")) {
-      setActiveTab(tabParam);
-    }
-  }, [tabParam]);
-
-  const handleTabChange = (tab: "courses" | "fees") => {
-    setActiveTab(tab);
+  const handleTabChange = (tab: AdmissionsTab) => {
     router.replace(`?tab=${tab}`);
   };
 
@@ -61,10 +59,26 @@ function AdmissionsContent() {
           )}
           Admission Fee Structure
         </button>
+        <button
+          onClick={() => handleTabChange("applications")}
+          className={`relative px-5 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer z-10 ${activeTab === "applications" ? "text-white" : "text-gray-600 hover:text-gray-900"
+            }`}
+        >
+          {activeTab === "applications" && (
+            <motion.div
+              layoutId="admissions-active-tab"
+              className="absolute inset-0 bg-[#43C17A] rounded-full -z-10"
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            />
+          )}
+          Admission Applications
+        </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 min-h-[500px]">
-        {activeTab === "courses" ? <CourseAdmissions /> : <AdmissionFee />}
+        {activeTab === "courses" && <CourseAdmissions />}
+        {activeTab === "fees" && <AdmissionFee />}
+        {activeTab === "applications" && <AdmissionApplications />}
       </div>
     </div>
   );
