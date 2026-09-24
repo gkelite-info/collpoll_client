@@ -5,8 +5,8 @@ import toast from "react-hot-toast";
 export async function getKpiCounts(collegeFilter: string | null = null) {
   try {
     let submissionsQuery = gkeliteSupabase.from('lead_applications').select('*', { count: 'exact', head: true });
-    let visitorsQuery = gkeliteSupabase.from('application_analytics_logs').select('visitorId').eq('eventType', 'SITE_VISIT');
-    let opensQuery = gkeliteSupabase.from('application_analytics_logs').select('visitorId').eq('eventType', 'FORM_OPEN');
+    let visitorsQuery = gkeliteSupabase.from('application_analytics_logs').select('visitorId').in('eventType', ['SITE_VISIT', 'page_view']);
+    let opensQuery = gkeliteSupabase.from('application_analytics_logs').select('visitorId').in('eventType', ['FORM_OPEN', 'admission_open']);
     
     if (collegeFilter) {
       submissionsQuery = submissionsQuery.ilike('college', collegeFilter);
@@ -289,8 +289,9 @@ export function subscribeToAnalytics(collegeFilter: string | null, onVisit: (vis
       if (collegeFilter && payload.new.college && payload.new.college.toLowerCase() !== collegeFilter.toLowerCase()) {
          return;
       }
-      if (payload.new.eventType === 'SITE_VISIT') onVisit(payload.new.visitorId);
-      if (payload.new.eventType === 'FORM_OPEN') onOpen(payload.new.visitorId);
+      const ev = (payload.new.eventType || '').toLowerCase();
+      if (ev === 'site_visit' || ev === 'page_view') onVisit(payload.new.visitorId);
+      if (ev === 'form_open' || ev === 'admission_open') onOpen(payload.new.visitorId);
     })
     .subscribe();
 }
