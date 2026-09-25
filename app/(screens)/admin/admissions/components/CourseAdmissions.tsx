@@ -126,7 +126,8 @@ export default function CourseAdmissions() {
         </div>
         <button
           onClick={handleToggleGlobal}
-          className={`relative inline-flex h-6 w-11 items-center cursor-pointer rounded-full transition-colors ${
+          disabled={!collegeId || !adminId}
+          className={`relative inline-flex h-6 w-11 cursor-pointer items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
             globalAdmissions ? "bg-[#43C17A]" : "bg-gray-300"
           }`}
         >
@@ -172,7 +173,8 @@ export default function CourseAdmissions() {
                     </span>
                     <button
                       onClick={() => handleToggleCourse(course.collegeBranchId)}
-                      className={`relative inline-flex h-5 w-9 items-center cursor-pointer rounded-full transition-colors ${
+                      disabled={!collegeId || !adminId}
+                      className={`relative inline-flex h-5 w-9 cursor-pointer items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                         isOpen ? "bg-[#43C17A]" : "bg-gray-300"
                       }`}
                     >

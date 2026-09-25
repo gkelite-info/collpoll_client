@@ -1,11 +1,27 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import nodemailer from "nodemailer";
-import { achieversSupabase } from "@/lib/achieversSupabaseClient";
+import { createClient } from "@supabase/supabase-js";
 import { gkeliteSupabase } from "@/lib/gkeliteSupabaseClient";
 import { formatCourseWithCode } from "@/lib/helpers/admin/achieversAdmissionsHelper";
+import {
+  completeAdmissionsEmailSend,
+  resolveAchieversServiceKey,
+  resolveAdmissionsSender,
+} from "./service.mjs";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy");
+
+type AdmissionEmailRecipient = {
+  applicationId?: number;
+  applicationNumber: string;
+  emailId: string;
+  firstName?: string;
+  lastName?: string;
+  course?: string;
+  applicationFor?: string;
+  createdAt?: string;
+};
 
 export async function POST(req: Request) {
   try {
@@ -19,12 +35,65 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Template type is required." }, { status: 400 });
     }
 
+    if (!recipients.every((recipient: AdmissionEmailRecipient) => recipient.emailId && recipient.applicationNumber)) {
+      return NextResponse.json(
+        { success: false, error: "Every recipient requires an email address and application number." },
+        { status: 400 },
+      );
+    }
+
+    const hasAjcRecipients = recipients.some(
+      (recipient: AdmissionEmailRecipient) => recipient.applicationNumber.startsWith("AJC-"),
+    );
+    const achieversUrl = process.env.NEXT_PUBLIC_ACHIEVERS_SUPABASE_URL;
+    const achieversServiceKey = resolveAchieversServiceKey(
+      process.env.ACHIEVERS_SUPABASE_SERVICE_ROLE_KEY,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+    );
+    if (hasAjcRecipients && (!achieversUrl || !achieversServiceKey)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "AJC database server credentials are not configured. Set ACHIEVERS_SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_ROLE_KEY.",
+        },
+        { status: 500 },
+      );
+    }
+    const achieversServerSupabase = hasAjcRecipients
+      ? createClient(achieversUrl!, achieversServiceKey!, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+      : null;
+
+    if (achieversServerSupabase) {
+      const ajcApplicationNumbers = recipients
+        .map((recipient: AdmissionEmailRecipient) => recipient.applicationNumber)
+        .filter((applicationNumber: string) => applicationNumber.startsWith("AJC-"));
+      const { data: matchedApplications, error: credentialError } = await achieversServerSupabase
+        .from("users")
+        .select("applicationNumber")
+        .in("applicationNumber", ajcApplicationNumbers);
+
+      if (credentialError) {
+        return NextResponse.json(
+          { success: false, error: `AJC database credential check failed: ${credentialError.message}` },
+          { status: 500 },
+        );
+      }
+      if ((matchedApplications?.length || 0) !== ajcApplicationNumbers.length) {
+        return NextResponse.json(
+          { success: false, error: "One or more AJC applications were not found in public.users." },
+          { status: 404 },
+        );
+      }
+    }
+
     const formatDate = (dateStr?: string) => {
       const d = dateStr ? new Date(dateStr) : new Date();
       return `${String(d.getDate()).padStart(2, "0")}-${d.toLocaleString("en-US", { month: "short" })}-${d.getFullYear()}`;
     };
 
-    const emailPayloads = recipients.map((recipient: any) => {
+    const emailPayloads = recipients.map((recipient: AdmissionEmailRecipient) => {
       const { emailId, firstName, lastName, applicationNumber, course, applicationFor, createdAt } = recipient;
       const formattedCourse = formatCourseWithCode(course || "Intermediate");
 
@@ -128,7 +197,7 @@ export async function POST(req: Request) {
       }
 
       return {
-        from: process.env.RESEND_FROM_EMAIL || "Achievers Admissions <onboarding@resend.dev>",
+        from: resolveAdmissionsSender(process.env.RESEND_FROM_EMAIL),
         to: [emailId],
         subject: subject,
         html: `
@@ -154,8 +223,8 @@ export async function POST(req: Request) {
     const smtpPass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
     const smtpPort = Number(process.env.SMTP_PORT || 587);
 
-    if (smtpHost && smtpUser && smtpPass) {
-      try {
+    const deliver = async () => {
+      if (smtpHost && smtpUser && smtpPass) {
         const transporter = nodemailer.createTransport({
           host: smtpHost,
           port: smtpPort,
@@ -174,65 +243,55 @@ export async function POST(req: Request) {
             html: payload.html,
           });
         }
-      } catch (smtpErr) {
-        console.error("SMTP delivery notice:", smtpErr);
+        return;
       }
-    } else if (process.env.RESEND_API_KEY) {
-      const BATCH_SIZE = 100;
-      for (let i = 0; i < emailPayloads.length; i += BATCH_SIZE) {
-        const chunk = emailPayloads.slice(i, i + BATCH_SIZE);
-        try {
-          await resend.batch.send(chunk);
-        } catch (resendErr) {
-          console.error("Resend delivery notice:", resendErr);
+
+      if (process.env.RESEND_API_KEY) {
+        const BATCH_SIZE = 100;
+        for (let i = 0; i < emailPayloads.length; i += BATCH_SIZE) {
+          const chunk = emailPayloads.slice(i, i + BATCH_SIZE);
+          const result = await resend.batch.send(chunk);
+          if (result.error) {
+            throw new Error(result.error.message || "Resend delivery failed.");
+          }
         }
-      }
-    }
-
-    // Map template to database status
-    let dbStatus = "Pending Payment";
-    if (templateType === "congratulate") dbStatus = "Selected";
-    else if (templateType === "verification") dbStatus = "Verification";
-    else if (templateType === "regret") dbStatus = "Regret";
-
-    // 1. Update Achievers lead_applications table
-    const appNumbers = recipients.map((r: any) => r.applicationNumber).filter(Boolean);
-    if (appNumbers.length > 0) {
-      const { error: leadUpdateError } = await achieversSupabase
-        .from("lead_applications")
-        .update({ admissionStatus: dbStatus, updatedAt: new Date().toISOString() })
-        .in("applicationNumber", appNumbers);
-
-      if (leadUpdateError) {
-        console.error("Failed to update Achievers lead_applications admissionStatus:", leadUpdateError);
+        return;
       }
 
-      // 2. Also update users table
-      const { error: userUpdateError } = await achieversSupabase
-        .from("users")
-        .update({ applicationStatus: dbStatus, updatedAt: new Date().toISOString() })
-        .in("applicationNumber", appNumbers);
+      throw new Error("Email delivery is not configured. Set SMTP credentials or RESEND_API_KEY.");
+    };
 
-      if (userUpdateError) {
-        console.error("Failed to update Achievers users applicationStatus:", userUpdateError);
-      }
-    }
+    const result = await completeAdmissionsEmailSend({
+      recipients,
+      templateType,
+      deliver,
+      updateAjcStatus: async (applicationNumbers: string[], status: string) => {
+        if (!achieversServerSupabase) throw new Error("AJC database server client is unavailable.");
+        const { error, count } = await achieversServerSupabase
+          .from("users")
+          .update(
+            { admissionStatus: status, updatedAt: new Date().toISOString() },
+            { count: "exact" },
+          )
+          .in("applicationNumber", applicationNumbers);
+        if (error) throw new Error(`AJC status update failed: ${error.message}`);
+        if (count !== applicationNumbers.length) {
+          throw new Error(`AJC status update matched ${count ?? 0} of ${applicationNumbers.length} applications.`);
+        }
+      },
+      updateCollegeStatus: async (applicationIds: number[], status: string) => {
+        const { error } = await gkeliteSupabase
+          .from("lead_applications")
+          .update({ admissionStatus: status })
+          .in("applicationId", applicationIds);
+        if (error) throw new Error(`College status update failed: ${error.message}`);
+      },
+    });
 
-    // 2. Also update lead_applications table if numeric IDs exist
-    const applicationIds = recipients
-      .map((r: any) => r.applicationId)
-      .filter((id: any) => typeof id === "number");
-
-    if (applicationIds.length > 0) {
-      await gkeliteSupabase
-        .from("lead_applications")
-        .update({ admissionStatus: dbStatus })
-        .in("applicationId", applicationIds);
-    }
-
-    return NextResponse.json({ success: true, count: recipients.length });
-  } catch (error: any) {
+    return NextResponse.json({ success: true, count: result.count });
+  } catch (error: unknown) {
     console.error("Send email route exception:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to send admission emails.";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

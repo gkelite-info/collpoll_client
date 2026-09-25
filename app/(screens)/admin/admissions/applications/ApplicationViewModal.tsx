@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
@@ -30,6 +30,46 @@ type ApplicationViewModalProps = {
   isOpen: boolean;
   onClose: () => void;
 };
+
+function ApplicationDetailsShimmer() {
+  return (
+    <div className="flex-1 space-y-6 overflow-hidden p-6" aria-label="Loading application details">
+      <div className="grid animate-pulse gap-6 rounded-2xl border border-gray-100 bg-white p-6 md:grid-cols-[240px_1fr]">
+        <div className="space-y-4">
+          <div className="mx-auto h-44 w-44 rounded-2xl bg-gray-200" />
+          <div className="mx-auto h-6 w-40 rounded bg-gray-200" />
+          <div className="mx-auto h-5 w-48 rounded-full bg-gray-100" />
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-xl bg-gray-100" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-20 rounded bg-gray-100" />
+                <div className="h-5 w-4/5 rounded bg-gray-200" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="grid animate-pulse gap-6 md:grid-cols-2">
+        <div className="h-56 rounded-2xl bg-white" />
+        <div className="h-56 rounded-2xl bg-white" />
+      </div>
+    </div>
+  );
+}
+
+function ApplicationDetailsLoadingGate({ children }: { children: React.ReactNode }) {
+  const [detailsLoading, setDetailsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDetailsLoading(false), 250);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  return detailsLoading ? <ApplicationDetailsShimmer /> : children;
+}
 
 export default function ApplicationViewModal({ application, isOpen, onClose }: ApplicationViewModalProps) {
   if (!isOpen || !application) return null;
@@ -97,6 +137,7 @@ export default function ApplicationViewModal({ application, isOpen, onClose }: A
           </div>
 
           {/* Content Body */}
+          <ApplicationDetailsLoadingGate key={application.id}>
           <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
             <div className="space-y-5">
               
@@ -229,6 +270,7 @@ export default function ApplicationViewModal({ application, isOpen, onClose }: A
 
             </div>
           </div>
+          </ApplicationDetailsLoadingGate>
         </motion.div>
       </div>
     </AnimatePresence>
