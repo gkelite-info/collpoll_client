@@ -141,7 +141,7 @@ export default function AdmissionFee() {
               <button
                 onClick={handleSaveGlobalFee}
                 disabled={savingGlobal || globalFee < 0}
-                className="flex items-center justify-center min-w-[100px] gap-2 px-4 py-2 bg-[#43C17A] text-white rounded-lg text-sm font-medium hover:bg-[#3ba869] transition-colors disabled:opacity-50 cursor-pointer"
+                className="flex min-w-[100px] cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#43C17A] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#3ba869] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {savingGlobal ? <SpinnerGap size={16} className="animate-spin" /> : "Apply to All"}
               </button>
@@ -202,7 +202,7 @@ export default function AdmissionFee() {
                       <button
                         onClick={() => handleSaveFee(course.collegeBranchId)}
                         disabled={savingId === course.collegeBranchId}
-                        className="text-[#43C17A] hover:bg-[#43C17A]/10 p-1 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                        className="cursor-pointer rounded-md p-1 text-[#43C17A] transition-colors hover:bg-[#43C17A]/10 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {savingId === course.collegeBranchId ? (
                           <SpinnerGap size={16} className="animate-spin" />

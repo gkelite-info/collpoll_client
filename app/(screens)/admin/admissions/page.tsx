@@ -9,6 +9,26 @@ import AdmissionApplications from "./components/AdmissionApplications";
 
 type AdmissionsTab = "courses" | "fees" | "applications";
 
+function AdmissionsScreenShimmer() {
+  return (
+    <div className="min-h-screen space-y-6 bg-[#f3f4f6] p-4" aria-label="Loading admissions">
+      <div className="space-y-2">
+        <div className="h-7 w-64 animate-pulse rounded bg-gray-200" />
+        <div className="h-4 w-96 max-w-full animate-pulse rounded bg-gray-200" />
+      </div>
+      <div className="mx-auto h-12 w-[520px] max-w-full animate-pulse rounded-full bg-white" />
+      <div className="min-h-[500px] space-y-5 rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+        <div className="h-9 w-60 animate-pulse rounded bg-gray-100" />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="h-36 animate-pulse rounded-xl bg-gray-100" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdmissionsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -33,7 +53,7 @@ function AdmissionsContent() {
       <div className="flex gap-2 mb-6 bg-white w-max mx-auto p-1 rounded-full shadow-sm border border-gray-100 relative">
         <button
           onClick={() => handleTabChange("courses")}
-          className={`relative px-5 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer z-10 ${activeTab === "courses" ? "text-white" : "text-gray-600 hover:text-gray-900"
+          className={`relative z-10 cursor-pointer rounded-full px-5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed ${activeTab === "courses" ? "text-white" : "text-gray-600 hover:text-gray-900"
             }`}
         >
           {activeTab === "courses" && (
@@ -47,7 +67,7 @@ function AdmissionsContent() {
         </button>
         <button
           onClick={() => handleTabChange("fees")}
-          className={`relative px-5 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer z-10 ${activeTab === "fees" ? "text-white" : "text-gray-600 hover:text-gray-900"
+          className={`relative z-10 cursor-pointer rounded-full px-5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed ${activeTab === "fees" ? "text-white" : "text-gray-600 hover:text-gray-900"
             }`}
         >
           {activeTab === "fees" && (
@@ -61,7 +81,7 @@ function AdmissionsContent() {
         </button>
         <button
           onClick={() => handleTabChange("applications")}
-          className={`relative px-5 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer z-10 ${activeTab === "applications" ? "text-white" : "text-gray-600 hover:text-gray-900"
+          className={`relative z-10 cursor-pointer rounded-full px-5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed ${activeTab === "applications" ? "text-white" : "text-gray-600 hover:text-gray-900"
             }`}
         >
           {activeTab === "applications" && (
@@ -86,11 +106,7 @@ function AdmissionsContent() {
 
 export default function AdmissionsPage() {
   return (
-    <Suspense fallback={
-      <div className="p-4 bg-[#f3f4f6] min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Loading admissions...</p>
-      </div>
-    }>
+    <Suspense fallback={<AdmissionsScreenShimmer />}>
       <AdmissionsContent />
     </Suspense>
   );

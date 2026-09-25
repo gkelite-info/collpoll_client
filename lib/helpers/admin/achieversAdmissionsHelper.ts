@@ -89,13 +89,9 @@ export function formatUserToApplication(user: any, tx?: any, eduList?: any[]): A
     if (s === "success") paymentStatus = "Success";
     else if (s === "failed") paymentStatus = "Failed";
     else paymentStatus = "Pending";
-  } else if (user.admissionStatus || user.applicationStatus) {
-    const s = (user.admissionStatus || user.applicationStatus || "").toLowerCase();
-    if (s.includes("success") || s.includes("paid")) paymentStatus = "Success";
-    else if (s.includes("failed")) paymentStatus = "Failed";
   }
 
-  const rawStatus = (user.admissionStatus || user.applicationStatus || "").toLowerCase();
+  const rawStatus = (user.admissionStatus || "").toLowerCase();
   let admissionStatus: AchieversApplication["admission"] = "Pending";
   if (rawStatus) {
     if (rawStatus.includes("selected")) admissionStatus = "Selected";
@@ -295,31 +291,19 @@ export async function getAchieversKpiCounts() {
 // --- Recent Applications: Joining lead_applications, application_transactions, and user_education ---
 export async function getAchieversRecentApplications(limit = 5): Promise<AchieversApplication[]> {
   try {
-    // 1. Fetch recent applications from lead_applications (fallback to users)
-    let appRecords: any[] = [];
-    const { data: leadData, error: lErr } = await achieversSupabase
-      .from("lead_applications")
+    // AJC applications are authoritative in users; payment is joined separately.
+    const { data: usersData, error: usersError } = await achieversSupabase
+      .from("users")
       .select("*")
       .eq("is_deleted", false)
       .order("createdAt", { ascending: false })
       .limit(limit);
 
-    if (!lErr && leadData && leadData.length > 0) {
-      appRecords = leadData;
-    } else {
-      const { data: usersData, error: uErr } = await achieversSupabase
-        .from("users")
-        .select("*")
-        .eq("is_deleted", false)
-        .order("createdAt", { ascending: false })
-        .limit(limit);
-
-      if (uErr) {
-        console.error("Failed to fetch Achievers recent applications:", uErr);
-        return [];
-      }
-      appRecords = usersData || [];
+    if (usersError) {
+      console.error("Failed to fetch Achievers recent applications:", usersError);
+      return [];
     }
+    const appRecords = usersData || [];
 
     if (appRecords.length === 0) return [];
 
@@ -429,31 +413,60 @@ export async function getAchieversApplicationsByYear(year: number): Promise<numb
   }
 }
 
-// --- All Applications (Inner View / Table) ---
-export async function getAchieversAllApplications(): Promise<AchieversApplication[]> {
+export async function getAchieversAllApplications(filters?: {
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  paymentFilter?: string;
+  admissionFilter?: string;
+  minGrade?: number;
+  maxGrade?: number;
+}): Promise<AchieversApplication[]> {
   try {
-    let appRecords: any[] = [];
-    const { data: leadData, error: lErr } = await achieversSupabase
-      .from("lead_applications")
+    // AJC applications are authoritative in users; payment is joined separately.
+    const cleanSearch = (filters?.search || "").trim();
+    let usersQuery = achieversSupabase
+      .from("users")
       .select("*")
-      .eq("is_deleted", false)
-      .order("createdAt", { ascending: false });
-
-    if (!lErr && leadData && leadData.length > 0) {
-      appRecords = leadData;
-    } else {
-      const { data: usersData, error: uErr } = await achieversSupabase
-        .from("users")
-        .select("*")
-        .eq("is_deleted", false)
-        .order("createdAt", { ascending: false });
-
-      if (uErr) {
-        console.error("Failed to fetch Achievers all applications:", uErr);
-        return [];
-      }
-      appRecords = usersData || [];
+      .eq("is_deleted", false);
+        
+    if (cleanSearch) {
+        const words = cleanSearch.split(/\s+/).filter(Boolean);
+        const isEmailSearch = cleanSearch.includes("@");
+        const usersConds: string[] = [];
+        words.forEach((w) => {
+          const s = `%${w}%`;
+          usersConds.push(`firstName.ilike.${s}`);
+          usersConds.push(`lastName.ilike.${s}`);
+          usersConds.push(`applicationNumber.ilike.${s}`);
+          usersConds.push(`mobileNumber.ilike.${s}`);
+          if (isEmailSearch) {
+            usersConds.push(`email.ilike.${s}`);
+          }
+        });
+        if (usersConds.length > 0) {
+          usersQuery = usersQuery.or(usersConds.join(","));
+        }
     }
+    if (filters?.dateFrom) usersQuery = usersQuery.gte("createdAt", new Date(filters.dateFrom).toISOString());
+    if (filters?.dateTo) {
+      const to = new Date(filters.dateTo);
+      to.setHours(23, 59, 59, 999);
+      usersQuery = usersQuery.lte("createdAt", to.toISOString());
+    }
+    if (filters?.admissionFilter && filters.admissionFilter !== "All") {
+      usersQuery = filters.admissionFilter === "Pending"
+        ? usersQuery.or('admissionStatus.is.null,admissionStatus.eq.,admissionStatus.ilike.%pending%')
+        : usersQuery.ilike("admissionStatus", `%${filters.admissionFilter}%`);
+    }
+    usersQuery = usersQuery.order("createdAt", { ascending: false });
+
+    const { data: usersData, error: usersError } = await usersQuery;
+    if (usersError) {
+      console.error("Failed to fetch Achievers all applications:", usersError);
+      return [];
+    }
+    const appRecords = usersData || [];
 
     if (appRecords.length === 0) return [];
 
@@ -510,12 +523,28 @@ export async function getAchieversAllApplications(): Promise<AchieversApplicatio
       }
     }
 
-    return appRecords.map((record) => {
+    let finalApps = appRecords.map((record) => {
       const tx = txMap.get(record.applicationNumber);
       const uid = record.userId || userNumberToId.get(record.applicationNumber);
       const eduList = uid ? eduMap.get(uid) || [] : [];
       return formatUserToApplication(record, tx, eduList);
     });
+
+    // Apply remaining filters in-memory
+    if (filters?.paymentFilter && filters.paymentFilter !== "All") {
+      finalApps = finalApps.filter((a) => a.payment === filters.paymentFilter);
+    }
+    
+    if (filters?.minGrade !== undefined || filters?.maxGrade !== undefined) {
+      finalApps = finalApps.filter((a) => {
+        const s = parseFloat((a.score || "").replace(/[^0-9.]/g, "")) || 0;
+        const min = filters.minGrade ?? 0;
+        const max = filters.maxGrade ?? 100;
+        return s >= min && s <= max;
+      });
+    }
+
+    return finalApps;
   } catch (err) {
     console.error("Failed to fetch Achievers all applications:", err);
     return [];
