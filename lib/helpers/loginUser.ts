@@ -10,7 +10,7 @@ export async function loginUser(email: string, password: string) {
 
     const host = (await headers()).get("host") || "";
 
-    const cleanHost = host.replace(":3000", "");
+    const cleanHost = host.replace(/:\d+$/, "");
 
     const parts = cleanHost.split(".");
 
