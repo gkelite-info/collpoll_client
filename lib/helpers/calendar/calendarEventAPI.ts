@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { buildFacultyClassSessionInsert } from "./studentCalendarRules";
 import { updateDeviceSessionForEvent } from "@/lib/helpers/devices/classSessionActivation";
 
 export type CalendarEventRow = {
@@ -204,15 +205,18 @@ export async function saveCalendarEvent(payload: {
   }
 
   if (payload.type === "class") {
-    await supabase.from("faculty_class_sessions").insert({
-      calendarEventId: data.calendarEventId,
-      facultyId: payload.facultyId,
-      collegeId: payload.collegeId,
-      status: "scheduled",
-      acceptedAt: "00:00:00",
-      createdAt: now,
-      updatedAt: now,
-    });
+    const { error: sessionError } = await supabase
+      .from("faculty_class_sessions")
+      .insert(buildFacultyClassSessionInsert({
+        calendarEventId: data.calendarEventId,
+        facultyId: payload.facultyId,
+        collegeRoomId: payload.collegeRoomId ?? null,
+        now,
+      }));
+
+    if (sessionError) {
+      console.error("insertCalendarEvent faculty session error:", sessionError);
+    }
   }
 
   return {

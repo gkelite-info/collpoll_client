@@ -12,6 +12,13 @@ import { fetchFacultyTasksForStudent } from "@/lib/helpers/faculty/facultyTasks"
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 import CalendarLeftShimmer from "@/app/components/shimmers/CalendarLeftShimmer";
 
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function getWeekDays(locale: string) {
   const today = new Date();
   const day = today.getDay();
@@ -29,7 +36,7 @@ function getWeekDays(locale: string) {
         { weekday: "short" },
       ),
       dateNum: date.getDate(),
-      fullDate: date.toISOString().split("T")[0],
+      fullDate: formatLocalDate(date),
       isToday: date.toDateString() === today.toDateString(),
     });
   }
@@ -214,7 +221,8 @@ export default function CalendarLeft({
           return (
             <div
               key={index}
-              className={`flex items-center p-3 rounded-md mt-2 gap-2 transition-all duration-200 ${isActive ? "bg-[#43C17A]" : "bg-[#FFFFFF] border border-[#D4D4D4]"}`}
+              onClick={() => onDateSelect(item.fullDate)}
+              className={`flex items-center p-3 rounded-md mt-2 gap-2 transition-all duration-200 cursor-pointer ${isActive ? "bg-[#43C17A]" : "bg-[#FFFFFF] border border-[#D4D4D4] hover:border-[#43C17A]"}`}
             >
               <div
                 className={`flex flex-col items-center justify-center gap-0.5 h-[73.1px] w-[73.1px] rounded-md ${isActive ? "bg-[#FFFFFF]" : "bg-[#D3F1E0]"}`}
