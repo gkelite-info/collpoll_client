@@ -36,22 +36,19 @@ export function buildFacultyClassSessionInsert(params: {
   };
 }
 
-type AssignmentFilterResult = {
-  data: unknown[] | null;
-  error: unknown;
+type AssignmentFilterQuery<TQuery> = {
+  eq(column: string, value: unknown): TQuery;
+  is(column: string, value: null): TQuery;
+  gte(column: string, value: number): TQuery;
+  lte(column: string, value: number): TQuery;
 };
 
-type AssignmentFilterQuery = PromiseLike<AssignmentFilterResult> & {
-  eq(column: string, value: unknown): AssignmentFilterQuery;
-  is(column: string, value: null): AssignmentFilterQuery;
-  gte(column: string, value: number): AssignmentFilterQuery;
-  lte(column: string, value: number): AssignmentFilterQuery;
-};
-
-export function applyActiveAssignmentFilters(
-  query: AssignmentFilterQuery,
+export function applyActiveAssignmentFilters<
+  TQuery extends AssignmentFilterQuery<TQuery>,
+>(
+  query: TQuery,
   dateInt: number,
-): AssignmentFilterQuery {
+): TQuery {
   return query
     .eq("status", "Active")
     .eq("is_deleted", false)
