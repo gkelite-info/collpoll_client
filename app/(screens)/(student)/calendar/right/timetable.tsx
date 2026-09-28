@@ -10,12 +10,14 @@ import { useTranslations } from "next-intl";
 import { fetchTopicResources, fetchUnitResources } from "@/lib/helpers/faculty/Savetopicresource";
 import { isSchoolEducation } from "@/lib/helpers/admin/academicSetup/schoolHelper";
 
-const formatTimeToAMPM = (time24: string) => {
-  const [h, m] = time24.split(":");
-  let hour = Number(h);
+const formatTimeToAMPM = (time24?: string | null) => {
+  if (!time24) return "";
+  const parts = time24.split(":");
+  if (parts.length < 2) return time24;
+  let hour = Number(parts[0]);
   const period = hour >= 12 ? "PM" : "AM";
   hour = hour % 12 || 12;
-  return `${hour}:${m} ${period}`;
+  return `${hour}:${parts[1]} ${period}`;
 };
 
 export const Loader = () => (
@@ -56,126 +58,196 @@ export default function CalendarTimeTable({
   selectedDate: string;
   height?: string;
 }) {
-  const [todayDate, setTodayDate] = useState("");
-  const [todayDay, setTodayDay] = useState("");
-  const [mobileDayName, setMobileDayName] = useState("");
-
   const [timetable, setTimetable] = useState<TimetableItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const { collegeEducationType } = useStudent();
+  const student = useStudent();
+  const {
+    collegeEducationType,
+    collegeEducationId,
+    collegeBranchId,
+    collegeAcademicYearId,
+    collegeSemesterId,
+    collegeSectionsId,
+    college_sections,
+    loading: studentLoading,
+    userId,
+  } = student;
   const t = useTranslations("Calendar.student");
 
-  useEffect(() => {
-    const now = new Date();
-    setTodayDate(String(now.getDate()).padStart(2, "0"));
-    setTodayDay(
-      now.toLocaleString("en-US", { weekday: "short" }).replace(".", ""),
-    );
-  }, []);
+  // Derive display date and weekday name from selectedDate
+  const dateObj = (() => {
+    if (selectedDate) {
+      const parts = selectedDate.split("-").map(Number);
+      if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+      }
+    }
+    return new Date();
+  })();
+
+  const displayDateNum = String(dateObj.getDate()).padStart(2, "0");
+  const displayDayName = dateObj
+    .toLocaleDateString("en-US", { weekday: "short" })
+    .replace(".", "");
 
   useEffect(() => {
-    if (selectedDate) {
-      const dateObj = new Date(selectedDate);
-      setMobileDayName(
-        dateObj.toLocaleDateString("en-US", { weekday: "short" }),
-      );
-    }
+    let isCancelled = false;
 
     const loadTimetable = async () => {
+      // If student context is still loading from provider, wait for it
+      if (studentLoading) {
+        setLoading(true);
+        return;
+      }
+
       try {
         setLoading(true);
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) throw new Error("No auth user");
 
-        const { data: userRow } = await supabase
-          .from("users")
-          .select("userId")
-          .eq("auth_id", user.id)
-          .single();
+        let eduId = collegeEducationId;
+        let branchId = collegeBranchId;
+        let acadYearId = collegeAcademicYearId;
+        let semId = collegeSemesterId;
+        let secId = collegeSectionsId;
+        let secName = college_sections;
+        let eduType = collegeEducationType;
 
-        if (!userRow) throw new Error("Internal user not found");
+        // Fallback: if student context fields are missing, fetch directly
+        if (!eduId || !acadYearId || !secId) {
+          let resolvedUserId = userId;
+          if (!resolvedUserId) {
+            const {
+              data: { user },
+            } = await supabase.auth.getUser();
+            if (user) {
+              const { data: userRow } = await supabase
+                .from("users")
+                .select("userId")
+                .eq("auth_id", user.id)
+                .maybeSingle();
+              if (userRow?.userId) resolvedUserId = userRow.userId;
+            }
+          }
 
-        const studentContext = await fetchStudentContext(userRow.userId);
+          if (resolvedUserId) {
+            const ctx = await fetchStudentContext(resolvedUserId);
+            if (ctx) {
+              eduId = ctx.collegeEducationId;
+              branchId = ctx.collegeBranchId;
+              acadYearId = ctx.collegeAcademicYearId;
+              semId = ctx.collegeSemesterId;
+              secId = ctx.collegeSectionsId;
+              secName = ctx.collegeSections;
+              eduType = ctx.collegeEducationType;
+            }
+          }
+        }
 
-        if (
-          !studentContext ||
-          studentContext.collegeEducationId === null ||
-          studentContext.collegeAcademicYearId === null ||
-          studentContext.collegeSectionsId === null
-        ) {
-          setTimetable([]);
+        if (!eduId || !acadYearId || !secId) {
+          if (!isCancelled) {
+            setTimetable([]);
+            setLoading(false);
+          }
           return;
         }
 
-        const effectiveEduType = studentContext.collegeEducationType || collegeEducationType;
-        const isInter = effectiveEduType === "Inter" || effectiveEduType === "Intermediate";
-        const isSchool = isSchoolEducation(effectiveEduType);
+        const isInter =
+          eduType === "Inter" || eduType === "Intermediate";
+        const isSchool = isSchoolEducation(eduType);
 
         const rawData = await fetchStudentTimetableByDate({
           date: selectedDate,
-          collegeEducationId: studentContext.collegeEducationId,
-          collegeBranchId: studentContext.collegeBranchId,
-          collegeAcademicYearId: studentContext.collegeAcademicYearId,
-          collegeSemesterId: studentContext.collegeSemesterId,
-          collegeSectionId: studentContext.collegeSectionsId,
-          collegeSectionName: studentContext.collegeSections,
-          isInter: isInter,
-          isSchool: isSchool,
+          collegeEducationId: eduId,
+          collegeBranchId: branchId,
+          collegeAcademicYearId: acadYearId,
+          collegeSemesterId: semId,
+          collegeSectionId: secId,
+          collegeSectionName: secName,
+          isInter,
+          isSchool,
         });
+
+        if (isCancelled) return;
+
+        const getSecurePdfUrl = (url: string | null) => {
+          if (!url) return null;
+          const match = url.match(/\/storage\/v1\/object\/public\/(.*)/);
+          if (match && match[1]) {
+            try {
+              const b64 = btoa(encodeURIComponent(match[1])).replace(/=/g, "");
+              return `/api/files/${b64}`;
+            } catch {
+              return url;
+            }
+          }
+          return url;
+        };
 
         const timetableWithResources = await Promise.all(
           (rawData as RawTimetableItem[]).map(async (item) => {
-            let pdfUrl = null;
-            
-            const getSecurePdfUrl = (url: string | null) => {
-              if (!url) return null;
-              const match = url.match(/\/storage\/v1\/object\/public\/(.*)/);
-              if (match && match[1]) {
-                const b64 = btoa(match[1]).replace(/=/g, ''); // strip padding for cleaner URL
-                return `/api/files/${b64}`;
-              }
-              return url;
-            };
+            let pdfUrl: string | null = null;
 
-            if (item.topicId && !item.isBulk) {
-              const resources = await fetchTopicResources(item.topicId);
-              if (resources && resources.length > 0) {
-                pdfUrl = getSecurePdfUrl(resources[0].resourceUrl);
+            try {
+              if (item.topicId && !item.isBulk) {
+                const resources = await fetchTopicResources(Number(item.topicId));
+                if (resources && resources.length > 0) {
+                  pdfUrl = getSecurePdfUrl(resources[0].resourceUrl);
+                }
+              } else if (item.topicId && item.isBulk) {
+                const resources = await fetchUnitResources(Number(item.topicId));
+                if (resources && resources.length > 0) {
+                  pdfUrl = getSecurePdfUrl(resources[0].resourceUrl);
+                }
               }
-            } else if (item.topicId && item.isBulk) {
-              // Note: For bulk events, topicId is actually mapping to unitId in fetchStudentTimetable
-              const resources = await fetchUnitResources(item.topicId);
-              if (resources && resources.length > 0) {
-                pdfUrl = getSecurePdfUrl(resources[0].resourceUrl);
-              }
+            } catch (resErr) {
+              console.warn("Topic resource fetch skipped:", resErr);
             }
+
             return {
               start: formatTimeToAMPM(item.fromTime),
               end: formatTimeToAMPM(item.toTime),
-              title: item.eventTitle,
-              topic: item.eventTopic,
-              room: item.roomNo,
-              faculty: item.facultyName,
+              title: item.eventTitle || "Class",
+              topic: item.eventTopic || "",
+              room: item.roomNo || "",
+              faculty: item.facultyName || "Faculty",
               img: "/stu_class.png",
               isCancelled: item.isCancelled,
               pdfUrl: pdfUrl,
             };
           }),
         );
-        setTimetable(timetableWithResources);
+
+        if (!isCancelled) {
+          setTimetable(timetableWithResources);
+        }
       } catch (err) {
         console.error("Failed to load timetable", err);
-        setTimetable([]);
+        if (!isCancelled) {
+          setTimetable([]);
+        }
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
-    loadTimetable();
-  }, [selectedDate, collegeEducationType]);
 
-  const mobileDateNum = selectedDate ? new Date(selectedDate).getDate() : "";
+    loadTimetable();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    selectedDate,
+    studentLoading,
+    collegeEducationId,
+    collegeAcademicYearId,
+    collegeSectionsId,
+    collegeEducationType,
+    collegeBranchId,
+    collegeSemesterId,
+    college_sections,
+    userId,
+  ]);
 
   return (
     <div
@@ -185,8 +257,8 @@ export default function CalendarTimeTable({
         {/* DESKTOP HEADER */}
         <div className="hidden lg:flex bg-[#E8EAED] w-max h-[54px] rounded-md shadow-md mb-2">
           <div className="bg-[#16284F] w-[45px] h-[54px] rounded-l-md flex flex-col items-center justify-center">
-            <p className="text-md font-black text-[#EFEFEF]">{todayDate}</p>
-            <p className="text-xs text-[#FFFFFF] font-light">{todayDay}</p>
+            <p className="text-md font-black text-[#EFEFEF]">{displayDateNum}</p>
+            <p className="text-xs text-[#FFFFFF] font-light">{displayDayName}</p>
           </div>
           <div className="flex items-center justify-center px-6 rounded-r-md">
             <p className="text-[#16284F] font-medium text-lg">
@@ -199,10 +271,10 @@ export default function CalendarTimeTable({
         <div className="hidden max-lg:flex items-center gap-0 mt-2 mb-3">
           <div className="bg-[#16284F] text-white flex flex-col items-center justify-center w-10 h-10 md:w-14 md:h-14 rounded-l-md">
             <span className="text-[14px] md:text-[18px] font-bold leading-none">
-              {mobileDateNum}
+              {displayDateNum}
             </span>
             <span className="text-[10px] md:text-[12px] font-light leading-none">
-              {mobileDayName}
+              {displayDayName}
             </span>
           </div>
           <div className="bg-[#E8EAED] text-[#16284F] font-semibold text-sm md:text-base h-10 md:h-14 flex items-center px-4 rounded-r-md">
@@ -214,9 +286,27 @@ export default function CalendarTimeTable({
           {loading ? (
             <TimetableCardShimmer count={6} />
           ) : timetable.length === 0 ? (
-            <div className="flex items-center justify-center h-[15vh] w-full">
-              <p className="text-center text-[#282828]">
+            <div className="flex flex-col items-center justify-center py-16 px-4 w-full text-center">
+              <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-3 text-gray-400">
+                <svg
+                  className="w-7 h-7"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <p className="text-[#282828] font-semibold text-base">
                 {t("No classes scheduled")}
+              </p>
+              <p className="text-gray-400 text-xs mt-1">
+                There are no classes scheduled for this date.
               </p>
             </div>
           ) : (

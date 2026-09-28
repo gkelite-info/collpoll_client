@@ -1,6 +1,10 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
+import {
+  applyActiveAssignmentFilters,
+  isStudentClassVisible,
+} from "@/lib/helpers/calendar/studentCalendarRules";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -150,7 +154,7 @@ export async function fetchStudentTimetableByDate(params: {
     ),
   );
 
-  const isSunday = new Date(params.date).getDay() === 0;
+  const isSunday = new Date(`${params.date}T00:00:00`).getDay() === 0;
   const filteredBulk = isSunday
     ? []
     : (bulkData ?? []).filter((event: any) =>
@@ -176,6 +180,8 @@ export async function fetchStudentTimetableByDate(params: {
     const { data: sessionData } = await supabase
       .from("faculty_class_sessions")
       .select("calendarEventId, bulkCalendarEventId, status, createdAt")
+      .or("is_deleted.eq.false,is_deleted.is.null")
+      .is("deletedAt", null)
       .or(orConditions.join(","));
     if (sessionData) sessionRecords = sessionData;
   }
@@ -196,14 +202,12 @@ export async function fetchStudentTimetableByDate(params: {
     }
   });
 
-  const isAccepted = (sessions: any[]) => {
-    if (!sessions || sessions.length === 0) return false;
-    sessions.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return sessions[0].status?.toLowerCase() === "accepted";
-  };
-
-  const finalData = filtered.filter((event: any) => isAccepted(singleSessionMap.get(event.calendarEventId) || []));
-  const finalBulkData = filteredBulk.filter((event: any) => isAccepted(bulkSessionMap.get(event.bulkCalendarEventId) || []));
+  const finalData = filtered.filter((event: any) =>
+    isStudentClassVisible(singleSessionMap.get(event.calendarEventId) || []),
+  );
+  const finalBulkData = filteredBulk.filter((event: any) =>
+    isStudentClassVisible(bulkSessionMap.get(event.bulkCalendarEventId) || []),
+  );
 
   const mapped = finalData.map((item: any) => {
     const isCancelled = item.attendance_record?.some(
@@ -290,26 +294,42 @@ export async function fetchStudentCalendarLeftTasks(params: {
     }
   }
 
-  const { data: quizzes } = await supabase
+  const { data: quizzes, error: quizzesError } = await supabase
     .from("quizzes")
     .select("*")
     .in("collegeSectionsId", validSectionIds)
+    .eq("collegeAcademicYearId", params.collegeAcademicYearId)
+    .eq("status", "Active")
     .eq("isActive", true)
+    .is("deletedAt", null)
     .lte("startDate", `${params.date}T23:59:59`)
     .gte("endDate", `${params.date}T00:00:00`);
 
-  const { data: discussions } = await supabase
+  if (quizzesError) {
+    console.error("fetchStudentCalendarLeftTasks quizzes error:", quizzesError);
+  }
+
+  const { data: discussions, error: discussionsError } = await supabase
     .from("discussion_forum_sections")
     .select("discussionSectionId, discussion_forum!inner(deadline, title, createdAt)")
     .in("collegeSectionsId", validSectionIds)
+    .eq("isActive", true)
     .eq("is_deleted", false)
+    .is("deletedAt", null)
+    .eq("discussion_forum.isActive", true)
+    .eq("discussion_forum.is_deleted", false)
+    .is("discussion_forum.deletedAt", null)
     .gte("discussion_forum.deadline", `${params.date}`)
     .lte("discussion_forum.createdAt", `${params.date}T23:59:59`);
+
+  if (discussionsError) {
+    console.error("fetchStudentCalendarLeftTasks discussions error:", discussionsError);
+  }
 
   const dateParts = params.date.split('-');
   const dateInt = parseInt(`${dateParts[0]}${dateParts[1]}${dateParts[2]}`);
 
-  const { data: assignments } = await supabase
+  const assignmentQuery = supabase
     .from("assignments")
     .select(`
       assignmentId,
@@ -327,12 +347,14 @@ export async function fetchStudentCalendarLeftTasks(params: {
       collegeSectionsId
     `)
     .eq("collegeAcademicYearId", params.collegeAcademicYearId)
-    .in("collegeSectionsId", validSectionIds)
-    .in("status", ["Active", "Published"])
-    .is("deletedAt", null)
-    .is("is_deleted", false)
-    .gte("submissionDeadlineInt", dateInt)
-    .lte("dateAssignedInt", dateInt);
+    .in("collegeSectionsId", validSectionIds);
+
+  const { data: assignments, error: assignmentsError } =
+    await applyActiveAssignmentFilters(assignmentQuery, dateInt);
+
+  if (assignmentsError) {
+    console.error("fetchStudentCalendarLeftTasks assignments error:", assignmentsError);
+  }
 
   return {
     quizzes: quizzes || [],
