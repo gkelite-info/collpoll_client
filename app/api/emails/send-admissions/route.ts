@@ -45,16 +45,20 @@ export async function POST(req: Request) {
     const hasAjcRecipients = recipients.some(
       (recipient: AdmissionEmailRecipient) => recipient.applicationNumber.startsWith("AJC-"),
     );
-    const achieversUrl = process.env.NEXT_PUBLIC_ACHIEVERS_SUPABASE_URL;
-    const achieversServiceKey = resolveAchieversServiceKey(
-      process.env.ACHIEVERS_SUPABASE_SERVICE_ROLE_KEY,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-    );
+    const achieversUrl =
+      process.env.NEXT_PUBLIC_ACHIEVERS_SUPABASE_URL ||
+      process.env.ACHIEVERS_SUPABASE_URL ||
+      process.env.SUPABASE_URL ||
+      "https://mzbctopjpftwnkqpuqhf.supabase.co";
+    const achieversServiceKey =
+      process.env.ACHIEVERS_SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SERVICE_ROLE_KEY;
     if (hasAjcRecipients && (!achieversUrl || !achieversServiceKey)) {
       return NextResponse.json(
         {
           success: false,
-          error: "AJC database server credentials are not configured. Set ACHIEVERS_SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_ROLE_KEY.",
+          error: "AJC database server credentials are not configured. Set ACHIEVERS_SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SERVICE_ROLE_KEY, or SERVICE_ROLE_KEY in your deployment environment variables.",
         },
         { status: 500 },
       );
