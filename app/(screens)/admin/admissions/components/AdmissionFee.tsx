@@ -74,6 +74,7 @@ export default function AdmissionFee() {
     if (!collegeId || !adminId) return;
     const amount = feeState[id] ?? 0;
     
+    
     setSavingId(id);
     try {
       await upsertCourseAdmissionConfig(collegeId, adminId, id, { admissionFee: amount });

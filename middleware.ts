@@ -49,7 +49,7 @@ export async function middleware(request: NextRequest) {
     }
 
     const host = request.headers.get("host") || "";
-    const parts = host.replace(':3000', '').split(".");
+    const parts = host.replace(/:\d+$/, '').split(".");
     let currentUrlCode = "GK";
     const isLocalhost = host.includes('localhost');
 
